@@ -4,7 +4,7 @@
 
 ## Overview
 
-FSx for NetApp ONTAP を Snowflake の External Stage として統合し、
+Amazon FSx for NetApp ONTAP（FSx for ONTAP）を Snowflake の External Stage として統合し、
 External Table / Iceberg Table のストレージレイヤーとして使用するパターンです。
 
 ## Architecture

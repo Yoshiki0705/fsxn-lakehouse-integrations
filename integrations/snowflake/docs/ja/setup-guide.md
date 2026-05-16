@@ -8,7 +8,7 @@ External Table / Iceberg Table のストレージレイヤーとして使用す�
 ## 前提条件
 
 - AWS アカウントに FSx for NetApp ONTAP がデプロイ済み
-- FSxN SVM で S3 プロトコルが有効化済み
+- FSx for ONTAP SVM で S3 プロトコルが有効化済み
 - Snowflake アカウント（Enterprise Edition 以上推奨）
 - AWS CLI v2 設定済み
 - ACCOUNTADMIN ロールへのアクセス
@@ -40,7 +40,7 @@ aws cloudformation deploy \
     VpcId=vpc-0123456789abcdef0 \
     SubnetIds=subnet-xxx,subnet-yyy \
   --capabilities CAPABILITY_NAMED_IAM \
-  --region ap-northeast-1
+  --region <YOUR_REGION>
 ```
 
 出力値を確認:
@@ -124,7 +124,7 @@ SQL スクリプトを順番に実行:
 
 ### 問題: Snowpipe がファイルを検出しない
 
-**原因**: FSxN は S3 Event Notification を直接サポートしない
+**原因**: FSx for ONTAP は S3 Event Notification を直接サポートしない
 
 **解決**: Lambda ポーリングパターンを使用（`06_snowpipe.sql` 参照）
 

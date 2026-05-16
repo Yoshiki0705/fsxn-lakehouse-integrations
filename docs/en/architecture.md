@@ -1,6 +1,6 @@
 # Architecture Overview
 
-## FSxN × S3 Access Points × Lakehouse Integration Architecture
+## Amazon FSx for NetApp ONTAP (FSx for ONTAP) × S3 Access Points × Lakehouse Integration Architecture
 
 ### High-Level Architecture
 
@@ -26,7 +26,7 @@
 
 ### Component Description
 
-#### 1. FSx for NetApp ONTAP
+#### 1. FSx for ONTAP
 
 Functions as the enterprise storage layer.
 
@@ -42,7 +42,7 @@ Functions as the enterprise storage layer.
 
 #### 2. S3 Access Points
 
-Connection layer between FSxN and lakehouse platforms.
+Connection layer between FSx for ONTAP and lakehouse platforms.
 
 **Key Roles:**
 - Network-level access control via VPC restrictions
@@ -64,7 +64,7 @@ Connection layer between FSxN and lakehouse platforms.
 
 #### 3. Lakehouse Platforms
 
-Each platform accesses FSxN via S3 API.
+Each platform accesses FSx for ONTAP via S3 API.
 
 ---
 
@@ -73,15 +73,15 @@ Each platform accesses FSxN via S3 API.
 ### Pattern A: Read-Only Analytics
 
 ```
-┌────────────┐    S3 GetObject     ┌─────────┐    NFS/S3    ┌──────────┐
-│ Databricks │──────────────────▶│  S3 AP  │────────────▶│  FSxN    │
-│ Athena     │    ListObjectsV2   │ (read)  │             │  Volume  │
-│ Snowflake  │◀──────────────────│         │◀────────────│          │
-└────────────┘                    └─────────┘             └──────────┘
+┌────────────┐    S3 GetObject     ┌─────────┐    NFS/S3    ┌──────────────┐
+│ Databricks │──────────────────▶│  S3 AP  │────────────▶│FSx for ONTAP │
+│ Athena     │    ListObjectsV2   │ (read)  │             │   Volume     │
+│ Snowflake  │◀──────────────────│         │◀────────────│              │
+└────────────┘                    └─────────┘             └──────────────┘
 ```
 
 **Use Cases:**
-- Analytics queries on existing NFS/SMB data
+- Analytics queries on existing NFS/SMB data on FSx for ONTAP
 - ETL-free data exploration
 - Ad-hoc analysis
 
@@ -92,16 +92,16 @@ Each platform accesses FSxN via S3 API.
 ### Pattern B: Read-Write Managed Tables
 
 ```
-┌────────────┐  Get/Put/Delete   ┌─────────┐             ┌──────────┐
-│ Databricks │◀────────────────▶│  S3 AP  │◀──────────▶│  FSxN    │
-│ (Delta)    │  Multipart Upload │ (r/w)   │             │  Volume  │
-│ Snowflake  │                   │         │             │          │
-│ (Iceberg)  │                   └─────────┘             └──────────┘
+┌────────────┐  Get/Put/Delete   ┌─────────┐             ┌──────────────┐
+│ Databricks │◀────────────────▶│  S3 AP  │◀──────────▶│FSx for ONTAP │
+│ (Delta)    │  Multipart Upload │ (r/w)   │             │   Volume     │
+│ Snowflake  │                   │         │             │              │
+│ (Iceberg)  │                   └─────────┘             └──────────────┘
 └────────────┘
 ```
 
 **Use Cases:**
-- Delta Lake / Iceberg table storage
+- Delta Lake / Iceberg table storage on FSx for ONTAP
 - ACID transaction-capable tables
 - Time Travel + ONTAP Snapshot combination
 
@@ -113,12 +113,12 @@ Each platform accesses FSxN via S3 API.
 ### Pattern C: ETL Pipeline (Medallion Architecture)
 
 ```
-┌──────────┐    ┌─────────┐    ┌──────────┐    ┌─────────┐    ┌──────────┐
-│  Source   │──▶│  S3 AP  │──▶│  Glue/   │──▶│  S3 AP  │──▶│  FSxN    │
-│  (Raw)    │   │  (read) │   │  EMR/    │   │  (write)│   │  (Gold)  │
-│  FSxN Vol │   │         │   │  Lambda  │   │         │   │  Volume  │
-└──────────┘    └─────────┘    └──────────┘    └─────────┘    └──────────┘
-     Raw            Bronze          Transform       Silver/Gold      Curated
+┌──────────────┐  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌──────────────┐
+│    Source     │─▶│  S3 AP  │─▶│  Glue/   │─▶│  S3 AP  │─▶│ FSx for ONTAP│
+│    (Raw)     │  │  (read) │  │  EMR/    │  │  (write)│  │    (Gold)    │
+│FSx for ONTAP │  │         │  │  Lambda  │  │         │  │    Volume    │
+└──────────────┘  └─────────┘  └──────────┘  └─────────┘  └──────────────┘
+     Raw             Bronze         Transform      Silver/Gold      Curated
 ```
 
 **Use Cases:**
@@ -134,14 +134,14 @@ Each platform accesses FSxN via S3 API.
 ### Pattern D: Data Sharing
 
 ```
-┌──────────┐    ┌─────────────┐    ┌────────────┐
-│  FSxN    │──▶│  S3 AP (A)  │──▶│ Consumer A │ (Databricks)
-│  Volume  │   │  prefix=/a/ │   └────────────┘
-│ (Producer)│   └─────────────┘
-│          │    ┌─────────────┐    ┌────────────┐
-│          │──▶│  S3 AP (B)  │──▶│ Consumer B │ (Snowflake)
-│          │   │  prefix=/b/ │   └────────────┘
-└──────────┘    └─────────────┘
+┌──────────────┐  ┌─────────────┐    ┌────────────┐
+│FSx for ONTAP │─▶│  S3 AP (A)  │──▶│ Consumer A │ (Databricks)
+│    Volume    │  │  prefix=/a/ │   └────────────┘
+│  (Producer)  │  └─────────────┘
+│              │  ┌─────────────┐    ┌────────────┐
+│              │─▶│  S3 AP (B)  │──▶│ Consumer B │ (Snowflake)
+│              │  │  prefix=/b/ │   └────────────┘
+└──────────────┘  └─────────────┘
 ```
 
 **Use Cases:**
@@ -161,21 +161,21 @@ Each platform accesses FSxN via S3 API.
 ### VPC-Internal Access (Recommended)
 
 ```
-┌─────────────────────────────────────────────────┐
-│                    VPC                            │
-│                                                   │
-│  ┌──────────┐    ┌──────────────┐    ┌────────┐ │
-│  │ Platform │──▶│ VPC Endpoint │──▶│ S3 AP  │ │
-│  │ (Private │   │ (Interface)  │   │        │ │
-│  │  Subnet) │   │ com.aws.s3   │   │        │ │
-│  └──────────┘    └──────────────┘    └───┬────┘ │
-│                                          │       │
-│                                    ┌─────▼─────┐ │
-│                                    │   FSxN    │ │
-│                                    │  (Private │ │
-│                                    │   Subnet) │ │
-│                                    └───────────┘ │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                       VPC                             │
+│                                                       │
+│  ┌──────────┐    ┌──────────────┐    ┌────────┐     │
+│  │ Platform │──▶│ VPC Endpoint │──▶│ S3 AP  │     │
+│  │ (Private │   │ (Interface)  │   │        │     │
+│  │  Subnet) │   │ com.aws.s3   │   │        │     │
+│  └──────────┘    └──────────────┘    └───┬────┘     │
+│                                          │           │
+│                                  ┌───────▼────────┐  │
+│                                  │ FSx for ONTAP  │  │
+│                                  │ (Private       │  │
+│                                  │  Subnet)       │  │
+│                                  └────────────────┘  │
+└──────────────────────────────────────────────────────┘
 ```
 
 ### Security Layers
@@ -206,6 +206,6 @@ Each platform accesses FSxN via S3 API.
 ## Next Steps
 
 - [Getting Started](getting-started.md) — First deployment
-- [S3 AP Fundamentals](s3ap-fundamentals.md) — S3 Access Points × FSxN details
+- [S3 AP Fundamentals](s3ap-fundamentals.md) — S3 Access Points × FSx for ONTAP details
 - [Vendor Comparison](vendor-comparison.md) — Platform selection guide
 - [Data Formats](data-formats.md) — Per-format recommended configurations

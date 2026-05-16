@@ -8,7 +8,7 @@ storage layer for External Tables and Iceberg Tables.
 ## Prerequisites
 
 - AWS account with FSx for NetApp ONTAP deployed
-- FSxN SVM with S3 protocol enabled
+- FSx for ONTAP SVM with S3 protocol enabled
 - Snowflake account (Enterprise Edition or higher recommended)
 - AWS CLI v2 configured
 - ACCOUNTADMIN role access
@@ -40,7 +40,7 @@ aws cloudformation deploy \
     VpcId=vpc-0123456789abcdef0 \
     SubnetIds=subnet-xxx,subnet-yyy \
   --capabilities CAPABILITY_NAMED_IAM \
-  --region ap-northeast-1
+  --region <YOUR_REGION>
 ```
 
 Check outputs:
@@ -124,6 +124,6 @@ Run SQL scripts in order:
 
 ### Issue: Snowpipe not detecting files
 
-**Cause**: FSxN does not natively support S3 Event Notifications
+**Cause**: FSx for ONTAP does not natively support S3 Event Notifications
 
 **Resolution**: Use Lambda polling pattern (see `06_snowpipe.sql`)

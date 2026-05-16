@@ -3,8 +3,8 @@
 ## Overview
 
 Databricks Unity Catalog provides a unified governance and access control layer.
-By registering FSxN as an External Location, Unity Catalog governance features
-apply to data stored on FSxN.
+By registering FSx for ONTAP as an External Location, Unity Catalog governance features
+apply to data stored on FSx for ONTAP.
 
 ## Unity Catalog Object Hierarchy
 
@@ -60,7 +60,7 @@ USING PARQUET
 LOCATION 's3://<s3ap-alias>/bronze/raw_data/'
 ```
 
-- Data resides on FSxN (not managed by Databricks)
+- Data resides on FSx for ONTAP (not managed by Databricks)
 - DROP TABLE does not delete data
 - Same data accessible via NFS/SMB
 - Ideal for analyzing existing data
@@ -84,13 +84,13 @@ LOCATION 's3://<s3ap-alias>/silver/processed_data/'
 
 | Setting | Value | Reason |
 |---------|-------|--------|
-| File size | 128MB-256MB | Optimal I/O size for FSxN |
+| File size | 128MB-256MB | Optimal I/O size for FSx for ONTAP |
 | Partitioning | Date-based | Compatible with FabricPool tiering |
 | Compression | ZSTD | High ratio + complements ONTAP compression |
 | Delta OPTIMIZE | Weekly | Small file consolidation |
 
-### FSxN Throughput Considerations
+### FSx for ONTAP Throughput Considerations
 
-- Adjust cluster size based on FSxN throughput capacity
+- Adjust cluster size based on FSx for ONTAP throughput capacity
 - Limit parallelism for large queries (`spark.sql.shuffle.partitions`)
-- Leverage caching to reduce FSxN read operations
+- Leverage caching to reduce FSx for ONTAP read operations

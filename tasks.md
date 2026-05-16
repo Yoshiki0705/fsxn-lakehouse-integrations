@@ -62,20 +62,20 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 #### Task D: Demo Scenario Execution
 
 **Scenario 1: External Table Query (Pattern A)**
-- [ ] Upload sample Parquet data to FSxN via NFS
+- [ ] Upload sample Parquet data to FSx for ONTAP via NFS
 - [ ] Create External Table pointing to S3 AP
 - [ ] Execute SELECT query and verify results
 - [ ] Measure query latency
 
 **Scenario 2: Delta Lake CRUD (Pattern B)**
-- [ ] Create Delta table on FSxN via S3 AP
+- [ ] Create Delta table on FSx for ONTAP via S3 AP
 - [ ] Execute INSERT, UPDATE, DELETE operations
 - [ ] Verify Delta Time Travel (VERSION AS OF)
 - [ ] Run OPTIMIZE and verify file compaction
 
 **Scenario 3: Iceberg Table (Cross-Platform)**
-- [ ] Create Iceberg table on FSxN
-- [ ] Verify metadata files on FSxN volume
+- [ ] Create Iceberg table on FSx for ONTAP
+- [ ] Verify metadata files on FSx for ONTAP volume
 - [ ] Query from Databricks
 - [ ] (Optional) Query same table from Athena
 
@@ -102,7 +102,7 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 - [ ] Create/confirm Snowflake account (Enterprise Edition+)
 - [ ] Verify ACCOUNTADMIN role access
-- [ ] Confirm Snowflake region matches FSxN region (ap-northeast-1)
+- [ ] Confirm Snowflake region matches FSx for ONTAP region
 - [ ] Document Snowflake account locator and URL
 - [ ] Install SnowSQL CLI
 - [ ] Verify Snowflake AWS Account ID (from DESCRIBE INTEGRATION)
@@ -141,16 +141,16 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 - [ ] Create Iceberg Table (Snowflake-managed catalog)
 - [ ] Execute DML operations (INSERT, UPDATE, DELETE)
 - [ ] Verify Iceberg Time Travel
-- [ ] Check metadata files on FSxN
+- [ ] Check metadata files on FSx for ONTAP
 
 **Scenario 3: Snowpipe Auto-Ingest**
 - [ ] Configure Lambda polling function
-- [ ] Add new file to FSxN via NFS
+- [ ] Add new file to FSx for ONTAP via NFS
 - [ ] Verify Snowpipe detects and loads file
 - [ ] Check COPY_HISTORY for load confirmation
 
 **Scenario 4: Secure Data Sharing**
-- [ ] Create Secure View on FSxN data
+- [ ] Create Secure View on FSx for ONTAP data
 - [ ] Create Share and add consumer
 - [ ] Verify consumer can query shared data
 - [ ] Verify access revocation works
@@ -172,7 +172,7 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 - [ ] Verify AWS account has Athena access
 - [ ] Configure Athena workgroup and result location
 - [ ] Verify Glue Data Catalog permissions
-- [ ] Confirm FSxN S3 AP has internet network origin (required for Athena)
+- [ ] Confirm FSx for ONTAP S3 AP has internet network origin (required for Athena)
 
 #### Task B: AWS Infrastructure Deploy & Validation
 
@@ -193,16 +193,16 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task D: Demo Scenario Execution
 
-**Scenario 1: Direct Query on FSxN Data**
+**Scenario 1: Direct Query on FSx for ONTAP Data**
 - [ ] Query Parquet files via Athena
 - [ ] Query CSV files with SerDe
 - [ ] Verify partition projection
 - [ ] Measure query cost and latency
 
 **Scenario 2: CTAS (Create Table As Select)**
-- [ ] Create curated table from raw FSxN data
-- [ ] Write results back to FSxN via S3 AP
-- [ ] Verify data on FSxN volume
+- [ ] Create curated table from raw FSx for ONTAP data
+- [ ] Write results back to FSx for ONTAP via S3 AP
+- [ ] Verify data on FSx for ONTAP volume
 
 #### Task E: Verification & Final Check
 
@@ -240,14 +240,14 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 #### Task D: Demo Scenario Execution
 
 **Scenario 1: Medallion Architecture ETL**
-- [ ] Run Crawler on bronze data (FSxN)
+- [ ] Run Crawler on bronze data (FSx for ONTAP)
 - [ ] Execute ETL Job: Bronze → Silver transformation
 - [ ] Execute ETL Job: Silver → Gold aggregation
-- [ ] Verify output on FSxN gold volume
+- [ ] Verify output on FSx for ONTAP gold volume
 
 **Scenario 2: Data Quality Checks**
 - [ ] Configure Glue Data Quality rules
-- [ ] Run quality checks on FSxN data
+- [ ] Run quality checks on FSx for ONTAP data
 - [ ] Verify quality metrics
 
 #### Task E: Verification & Final Check
@@ -277,13 +277,13 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 - [ ] External schema creation
   - Screenshot: Redshift Query Editor showing external tables
 - [ ] Query execution
-  - Screenshot: Query results with FSxN data
+  - Screenshot: Query results with FSx for ONTAP data
 
 #### Task D: Demo Scenario Execution
 
 **Scenario 1: Federated Query**
-- [ ] Query FSxN data via Spectrum
-- [ ] Join external (FSxN) and local Redshift tables
+- [ ] Query FSx for ONTAP data via Spectrum
+- [ ] Join external (FSx for ONTAP) and local Redshift tables
 - [ ] Verify predicate pushdown
 
 #### Task E: Verification & Final Check
@@ -374,20 +374,20 @@ Generates final verification reports:
 #### タスク D: デモシナリオ実行
 
 **シナリオ 1: External Table クエリ（パターン A）**
-- [ ] NFS 経由で FSxN にサンプル Parquet データをアップロード
+- [ ] NFS 経由で FSx for ONTAP にサンプル Parquet データをアップロード
 - [ ] S3 AP を指す External Table を作成
 - [ ] SELECT クエリを実行し結果を検証
 - [ ] クエリレイテンシを計測
 
 **シナリオ 2: Delta Lake CRUD（パターン B）**
-- [ ] S3 AP 経由で FSxN 上に Delta テーブルを作成
+- [ ] S3 AP 経由で FSx for ONTAP 上に Delta テーブルを作成
 - [ ] INSERT, UPDATE, DELETE 操作を実行
 - [ ] Delta Time Travel を検証（VERSION AS OF）
 - [ ] OPTIMIZE を実行しファイル圧縮を確認
 
 **シナリオ 3: Iceberg テーブル（クロスプラットフォーム）**
-- [ ] FSxN 上に Iceberg テーブルを作成
-- [ ] FSxN ボリューム上のメタデータファイルを確認
+- [ ] FSx for ONTAP 上に Iceberg テーブルを作成
+- [ ] FSx for ONTAP ボリューム上のメタデータファイルを確認
 - [ ] Databricks からクエリ
 - [ ] （オプション）同じテーブルを Athena からクエリ
 

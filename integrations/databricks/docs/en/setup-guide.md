@@ -8,7 +8,7 @@ to use as the storage layer for Delta Lake / Iceberg tables.
 ## Prerequisites
 
 - AWS account with FSx for NetApp ONTAP deployed
-- FSxN SVM with S3 protocol enabled
+- FSx for ONTAP SVM with S3 protocol enabled
 - Databricks workspace (Unity Catalog enabled)
 - AWS CLI v2 configured
 - Terraform 1.5+ (for Unity Catalog resource management)
@@ -24,7 +24,7 @@ Databricks Unity Catalog
     │
     └── External Location
             │
-            └── s3://<s3ap-alias>/ ──→ S3 Access Point ──→ FSxN Volume
+            └── s3://<s3ap-alias>/ ──→ S3 Access Point ──→ FSx for ONTAP Volume
 ```
 
 ## Step 1: Deploy CloudFormation Stack
@@ -33,8 +33,8 @@ Databricks Unity Catalog
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
-| S3BucketName | FSxN SVM S3 bucket name | `svm-lakehouse` |
-| VpcId | VPC where FSxN resides | `vpc-0123456789abcdef0` |
+| S3BucketName | FSx for ONTAP SVM S3 bucket name | `svm-lakehouse` |
+| VpcId | VPC where FSx for ONTAP resides | `vpc-0123456789abcdef0` |
 | SubnetIds | Platform subnets | `subnet-xxx,subnet-yyy` |
 | DatabricksAccountId | Databricks AWS account | `414351767826` |
 | DatabricksWorkspaceId | Workspace ID | `1234567890` |
@@ -53,7 +53,7 @@ aws cloudformation deploy \
     DatabricksWorkspaceId=1234567890 \
     ExternalId=<databricks-external-id> \
   --capabilities CAPABILITY_NAMED_IAM \
-  --region ap-northeast-1
+  --region <YOUR_REGION>
 ```
 
 ### Check Outputs
@@ -157,7 +157,7 @@ Run notebooks in order:
 
 ### Issue: ListObjects returns empty
 
-**Cause**: No data in FSxN SVM S3 bucket, or incorrect path
+**Cause**: No data in FSx for ONTAP SVM S3 bucket, or incorrect path
 
 **Resolution**:
 1. Verify S3 bucket contents via ONTAP CLI

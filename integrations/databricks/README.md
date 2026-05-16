@@ -4,7 +4,7 @@
 
 ## Overview
 
-FSx for NetApp ONTAP を Databricks Unity Catalog の External Location として統合し、
+Amazon FSx for NetApp ONTAP（FSx for ONTAP）を Databricks Unity Catalog の External Location として統合し、
 Delta Lake / Iceberg テーブルのストレージレイヤーとして使用するパターンです。
 
 ## Architecture

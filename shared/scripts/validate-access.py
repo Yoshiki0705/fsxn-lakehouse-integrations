@@ -2,17 +2,19 @@
 """
 validate-access.py - S3 Access Point Access Validation Script
 
-Validates connectivity and permissions for FSxN S3 Access Point.
+Validates connectivity and permissions for FSx for ONTAP S3 Access Point.
 Tests read, write, list, and delete operations.
 
 Usage:
-    python validate-access.py --access-point-alias <alias> [--region <region>]
-    python validate-access.py --access-point-arn <arn> [--region <region>]
+    python validate-access.py --access-point-alias <alias> --region <region>
+    python validate-access.py --access-point-arn <arn> --region <region>
+    AWS_DEFAULT_REGION=us-east-1 python validate-access.py --access-point-alias <alias>
 """
 
 import argparse
 import boto3
 import json
+import os
 import sys
 import time
 from datetime import datetime
@@ -26,7 +28,11 @@ def create_parser():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--access-point-alias", help="S3 Access Point alias")
     group.add_argument("--access-point-arn", help="S3 Access Point ARN")
-    parser.add_argument("--region", default="ap-northeast-1", help="AWS region")
+    parser.add_argument(
+        "--region",
+        default=None,
+        help="AWS region (defaults to AWS_DEFAULT_REGION env var; required if env var is not set)",
+    )
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     parser.add_argument(
         "--skip-write", action="store_true", help="Skip write/delete tests"
@@ -144,6 +150,14 @@ def test_multipart_upload(s3_client, bucket, key):
 def main():
     parser = create_parser()
     args = parser.parse_args()
+
+    # Resolve region: CLI flag > env var > error
+    if args.region is None:
+        args.region = os.environ.get("AWS_DEFAULT_REGION")
+    if args.region is None:
+        parser.error(
+            "AWS region is required. Specify --region or set AWS_DEFAULT_REGION environment variable."
+        )
 
     # Determine bucket identifier
     bucket = args.access_point_alias or args.access_point_arn

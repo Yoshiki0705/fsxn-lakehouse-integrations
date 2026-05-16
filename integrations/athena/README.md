@@ -10,7 +10,7 @@
 
 ### Overview
 
-Query data on FSx for NetApp ONTAP directly from Amazon Athena using
+Query data on Amazon FSx for NetApp ONTAP (FSx for ONTAP) directly from Amazon Athena using
 Glue Data Catalog and S3 Access Points. Serverless, pay-per-query analytics.
 
 ### Architecture
@@ -20,7 +20,7 @@ Athena (Serverless SQL)
     │
     └── Glue Data Catalog
             │
-            └── S3 Access Point (internet origin) ──→ FSxN Volume
+            └── S3 Access Point (internet origin) ──→ FSx for ONTAP Volume
 ```
 
 ### Important: Network Origin
@@ -49,7 +49,7 @@ Reference: [AWS Tutorial - Query files with Athena](https://docs.aws.amazon.com/
 
 ### 概要
 
-Amazon Athena から FSx for NetApp ONTAP のデータを直接クエリします。
+Amazon Athena から Amazon FSx for NetApp ONTAP（FSx for ONTAP）のデータを直接クエリします。
 Glue Data Catalog と S3 Access Points を使用したサーバーレス分析です。
 
 ### アーキテクチャ
@@ -59,7 +59,7 @@ Athena (サーバーレス SQL)
     │
     └── Glue Data Catalog
             │
-            └── S3 Access Point (インターネットオリジン) ──→ FSxN Volume
+            └── S3 Access Point (インターネットオリジン) ──→ FSx for ONTAP Volume
 ```
 
 ### 重要: ネットワークオリジン

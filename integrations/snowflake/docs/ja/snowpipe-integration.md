@@ -1,13 +1,13 @@
-# Snowpipe + FSxN 統合ガイド
+# Snowpipe + FSx for ONTAP 統合ガイド
 
 ## 概要
 
 Snowpipe を使用して FSx for NetApp ONTAP に新しいファイルが追加された際に
 自動的に Snowflake テーブルにデータを取り込む方法を説明します。
 
-## 課題: FSxN と S3 Event Notification
+## 課題: FSx for ONTAP と S3 Event Notification
 
-FSxN の S3 プロトコルは S3 Event Notification を直接サポートしていません。
+FSx for ONTAP の S3 プロトコルは S3 Event Notification を直接サポートしていません。
 そのため、Snowpipe の `AUTO_INGEST` を使用するには代替パターンが必要です。
 
 ## 推奨パターン
@@ -23,7 +23,8 @@ FSxN の S3 プロトコルは S3 Event Notification を直接サポートして
                      │
                      ▼
               ┌──────────────┐
-              │ S3 AP → FSxN │
+              │ S3 AP → FSx  │
+              │  for ONTAP   │
               │ (ListObjects)│
               └──────────────┘
 ```

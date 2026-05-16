@@ -10,13 +10,13 @@
 
 ### Overview
 
-Use AWS Glue for ETL pipelines with FSx for NetApp ONTAP as both
+Use AWS Glue for ETL pipelines with Amazon FSx for NetApp ONTAP (FSx for ONTAP) as both
 source and target storage via S3 Access Points. Implements Medallion Architecture.
 
 ### Architecture
 
 ```
-FSxN (Raw/Bronze)                              FSxN (Silver/Gold)
+FSx for ONTAP (Raw/Bronze)                     FSx for ONTAP (Silver/Gold)
     │                                               ▲
     └── S3 AP (read) ──→ Glue ETL Job ──→ S3 AP (write) ──┘
                               │
@@ -52,13 +52,13 @@ Reference: [AWS Tutorial - Build ETL pipelines with Glue](https://docs.aws.amazo
 
 ### 概要
 
-AWS Glue を使用して FSx for NetApp ONTAP をソースおよびターゲットストレージとする
+AWS Glue を使用して Amazon FSx for NetApp ONTAP（FSx for ONTAP）をソースおよびターゲットストレージとする
 ETL パイプラインを構築します。メダリオンアーキテクチャを実装します。
 
 ### アーキテクチャ
 
 ```
-FSxN (Raw/Bronze)                              FSxN (Silver/Gold)
+FSx for ONTAP (Raw/Bronze)                     FSx for ONTAP (Silver/Gold)
     │                                               ▲
     └── S3 AP (読み取り) ──→ Glue ETL Job ──→ S3 AP (書き込み) ──┘
                                   │

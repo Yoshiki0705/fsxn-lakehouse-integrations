@@ -3,8 +3,8 @@
 ## 概要
 
 Databricks Unity Catalog は、データガバナンスとアクセス制御の統一レイヤーです。
-FSxN を External Location として登録することで、Unity Catalog のガバナンス機能を
-FSxN 上のデータに適用できます。
+FSx for ONTAP を External Location として登録することで、Unity Catalog のガバナンス機能を
+FSx for ONTAP 上のデータに適用できます。
 
 ## Unity Catalog オブジェクト階層
 
@@ -60,7 +60,7 @@ USING PARQUET
 LOCATION 's3://<s3ap-alias>/bronze/raw_data/'
 ```
 
-- データは FSxN 上に存在（Databricks が管理しない）
+- データは FSx for ONTAP 上に存在（Databricks が管理しない）
 - DROP TABLE してもデータは削除されない
 - NFS/SMB 経由で同じデータにアクセス可能
 - 既存データの分析に最適
@@ -108,20 +108,20 @@ df = spark.read.parquet("s3://<s3ap-alias>/bronze/transactions/")
 ### Spark 設定（S3 AP アクセス用）
 
 ```
-spark.hadoop.fs.s3a.endpoint = s3.ap-northeast-1.amazonaws.com
+spark.hadoop.fs.s3a.endpoint = s3.<YOUR_REGION>.amazonaws.com
 spark.hadoop.fs.s3a.path.style.access = true
 ```
 
 ### クラスタポリシー
 
 Terraform で作成されるクラスタポリシーにより、
-FSxN アクセスに必要な設定が自動的に適用されます。
+FSx for ONTAP アクセスに必要な設定が自動的に適用されます。
 
 ## ガバナンス機能
 
 ### データリネージ
 
-Unity Catalog は FSxN 上のテーブル間のリネージを自動追跡:
+Unity Catalog は FSx for ONTAP 上のテーブル間のリネージを自動追跡:
 
 ```
 bronze.raw_data → (ETL) → silver.cleaned_data → (Aggregate) → gold.summary
@@ -151,13 +151,13 @@ SET ROW FILTER fsxn_lakehouse.bronze.region_filter ON (region);
 
 | 設定 | 値 | 理由 |
 |------|-----|------|
-| ファイルサイズ | 128MB-256MB | FSxN の最適 I/O サイズ |
+| ファイルサイズ | 128MB-256MB | FSx for ONTAP の最適 I/O サイズ |
 | パーティション | 日付ベース | FabricPool 階層化と相性良好 |
 | 圧縮 | ZSTD | 高圧縮率 + ONTAP 圧縮と補完 |
 | Delta OPTIMIZE | 週次 | 小ファイル統合 |
 
-### FSxN スループット考慮
+### FSx for ONTAP スループット考慮
 
-- FSxN のスループットキャパシティに応じてクラスタサイズを調整
+- FSx for ONTAP のスループットキャパシティに応じてクラスタサイズを調整
 - 大規模クエリは並列度を制限（`spark.sql.shuffle.partitions`）
-- キャッシュ活用で FSxN への読み取り回数を削減
+- キャッシュ活用で FSx for ONTAP への読み取り回数を削減

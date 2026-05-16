@@ -4,7 +4,7 @@
 
 ## 概要
 
-FSxN S3 Access Points は構造化データ（Parquet, CSV）だけでなく、
+Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Points は構造化データ（Parquet, CSV）だけでなく、
 画像・動画・音声・ドキュメントなどの非構造化データへのアクセスも提供します。
 
 エンタープライズのファイルサーバーに蓄積された非構造化データを、
@@ -39,12 +39,12 @@ FSxN S3 Access Points は構造化データ（Parquet, CSV）だけでなく、
 ### パターン F: Lambda によるファイル処理パイプライン
 
 ```
-FSxN Volume (NFS/SMB)
+FSx for ONTAP Volume (NFS/SMB)
     │
     └── S3 Access Point
             │
-            ├── Lambda: サムネイル生成 (画像 → リサイズ → FSxN に書き戻し)
-            ├── Lambda: テキスト抽出 (PDF/DOCX → テキスト → FSxN に書き戻し)
+            ├── Lambda: サムネイル生成 (画像 → リサイズ → FSx for ONTAP に書き戻し)
+            ├── Lambda: テキスト抽出 (PDF/DOCX → テキスト → FSx for ONTAP に書き戻し)
             ├── Lambda: 音声文字起こし (WAV/MP3 → Transcribe → テキスト)
             └── Lambda: メタデータ抽出 (EXIF, 動画長, ページ数)
 ```
@@ -97,11 +97,11 @@ FSxN Volume (NFS/SMB)
 ### 1. AI/ML 学習データ（SageMaker + Bedrock）
 
 ```
-研究者 → NFS マウント → FSxN Volume → S3 AP → SageMaker Training Job
-                         (画像データセット)         (モデル学習)
+研究者 → NFS マウント → FSx for ONTAP Volume → S3 AP → SageMaker Training Job
+                         (画像データセット)               (モデル学習)
 
-                                              → Bedrock Knowledge Base
-                                                (RAG 用ドキュメント)
+                                                       → Bedrock Knowledge Base
+                                                         (RAG 用ドキュメント)
 ```
 
 **ONTAP の価値:**
@@ -113,9 +113,9 @@ FSxN Volume (NFS/SMB)
 ### 2. メディアアセット管理（Rekognition + MediaConvert）
 
 ```
-カメラマン → SMB 共有 → FSxN Volume → S3 AP → Rekognition (タグ付け)
-                         (RAW 画像)            → MediaConvert (変換)
-                                               → Lambda (サムネイル)
+カメラマン → SMB 共有 → FSx for ONTAP Volume → S3 AP → Rekognition (タグ付け)
+                         (RAW 画像)                    → MediaConvert (変換)
+                                                       → Lambda (サムネイル)
 ```
 
 **ONTAP の価値:**
@@ -127,9 +127,9 @@ FSxN Volume (NFS/SMB)
 ### 3. ドキュメント処理パイプライン（Textract + Comprehend）
 
 ```
-スキャナー → NFS → FSxN Volume → S3 AP → Textract (OCR)
-                    (PDF/TIFF)           → Comprehend (NLP)
-                                         → OpenSearch (検索インデックス)
+スキャナー → NFS → FSx for ONTAP Volume → S3 AP → Textract (OCR)
+                    (PDF/TIFF)                    → Comprehend (NLP)
+                                                  → OpenSearch (検索インデックス)
 ```
 
 **ONTAP の価値:**
@@ -140,9 +140,9 @@ FSxN Volume (NFS/SMB)
 ### 4. 監視カメラ映像分析
 
 ```
-カメラ → NFS → FSxN Volume → S3 AP → Rekognition Video (分析)
-               (MPEG-TS)            → Kinesis Video (ストリーム)
-                                    → Lambda (アラート)
+カメラ → NFS → FSx for ONTAP Volume → S3 AP → Rekognition Video (分析)
+               (MPEG-TS)                      → Kinesis Video (ストリーム)
+                                              → Lambda (アラート)
 ```
 
 **ONTAP の価値:**
@@ -215,16 +215,16 @@ SELECT GET_PRESIGNED_URL(@MEDIA_STAGE, 'images/photo001.jpg', 3600);
 
 | 項目 | 推奨 | 理由 |
 |------|------|------|
-| 同時アクセス数 | FSxN スループットに依存 | 256 MBps〜4096 MBps |
+| 同時アクセス数 | FSx for ONTAP スループットに依存 | 256 MBps〜4096 MBps |
 | 大ファイル読み取り | Multipart Download 推奨 | 並列化で高速化 |
 | 小ファイル大量アクセス | バッチ処理推奨 | ListObjects のオーバーヘッド |
 | 書き戻し | Multipart Upload 使用 | 5MB 以上のファイル |
 
 ### セキュリティ考慮
 
-- **UNIX パーミッション**: FSxN のファイルパーミッションが S3 AP 経由でも適用
+- **UNIX パーミッション**: FSx for ONTAP のファイルパーミッションが S3 AP 経由でも適用
 - **AD 統合**: Active Directory ユーザーマッピングによるアクセス制御
-- **暗号化**: FSxN の保存時暗号化 + S3 AP の転送時暗号化（TLS）
+- **暗号化**: FSx for ONTAP の保存時暗号化 + S3 AP の転送時暗号化（TLS）
 - **監査**: ONTAP FPolicy + CloudTrail で全アクセスを記録
 
 ### ONTAP 固有の価値（非構造化データ）

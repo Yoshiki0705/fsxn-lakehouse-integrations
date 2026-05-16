@@ -5,8 +5,8 @@
 ## 前提条件
 
 - AWS アカウント
-- FSx for NetApp ONTAP ファイルシステム（デプロイ済み）
-- FSxN SVM で S3 Access Point が有効
+- Amazon FSx for NetApp ONTAP（FSx for ONTAP）ファイルシステム（デプロイ済み）
+- FSx for ONTAP SVM で S3 Access Point が有効
 - AWS CLI v2 設定済み
 - Python 3.12+
 
@@ -19,6 +19,8 @@ cd fsxn-lakehouse-integrations
 
 ## Step 2: 基本インフラのデプロイ
 
+> **注意:** `<YOUR_REGION>` を対象の AWS リージョン（例: `us-east-1`, `ap-northeast-1`）に置き換えてください。リージョンは設定可能で、FSx for ONTAP ファイルシステムがデプロイされているリージョンと一致させる必要があります。
+
 ### VPC + ネットワーク
 
 ```bash
@@ -26,10 +28,10 @@ aws cloudformation deploy \
   --template-file shared/cloudformation/vpc-networking.yaml \
   --stack-name fsxn-lakehouse-vpc \
   --capabilities CAPABILITY_IAM \
-  --region ap-northeast-1
+  --region <YOUR_REGION>
 ```
 
-### FSxN + S3 Access Point
+### FSx for ONTAP + S3 Access Point
 
 ```bash
 aws cloudformation deploy \
@@ -42,7 +44,7 @@ aws cloudformation deploy \
     FSxNSecurityGroupId=<sg-id> \
     S3BucketName=<svm-bucket-name> \
   --capabilities CAPABILITY_IAM \
-  --region ap-northeast-1
+  --region <YOUR_REGION>
 ```
 
 ## Step 3: 接続テスト
@@ -54,8 +56,8 @@ AP_ALIAS=$(aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs[?OutputKey==`S3AccessPointAlias`].OutputValue' \
   --output text)
 
-# 接続テスト実行
-python shared/scripts/validate-access.py --access-point-alias $AP_ALIAS
+# 接続テスト実行（AWS_DEFAULT_REGION 環境変数を使用、または --region を指定）
+python shared/scripts/validate-access.py --access-point-alias $AP_ALIAS --region <YOUR_REGION>
 ```
 
 ## Step 4: ベンダー統合の選択
@@ -72,5 +74,5 @@ python shared/scripts/validate-access.py --access-point-alias $AP_ALIAS
 ## 次のステップ
 
 - [アーキテクチャ概要](architecture.md)
-- [S3 AP 基礎](s3ap-fundamentals.md)
+- [対応リージョン](supported-regions.md)
 - [ベンダー比較](vendor-comparison.md)

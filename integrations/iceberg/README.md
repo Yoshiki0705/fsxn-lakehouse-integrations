@@ -10,7 +10,7 @@
 
 ### Overview
 
-Vendor-neutral Apache Iceberg table management on FSx for NetApp ONTAP.
+Vendor-neutral Apache Iceberg table management on Amazon FSx for NetApp ONTAP (FSx for ONTAP).
 Uses REST Catalog for metadata management, accessible from any Iceberg-compatible engine.
 
 ### Architecture
@@ -20,7 +20,7 @@ Any Engine (Spark/Trino/Flink/Databricks/Snowflake)
     │
     └── REST Catalog (Lambda/ECS)
             │
-            └── S3 Access Point ──→ FSxN Volume (Parquet data + Iceberg metadata)
+            └── S3 Access Point ──→ FSx for ONTAP Volume (Parquet data + Iceberg metadata)
 ```
 
 ### Status: 🚧 Planned
@@ -51,7 +51,7 @@ Any Engine (Spark/Trino/Flink/Databricks/Snowflake)
 
 ### 概要
 
-FSx for NetApp ONTAP 上でのベンダー中立な Apache Iceberg テーブル管理です。
+FSx for ONTAP 上でのベンダー中立な Apache Iceberg テーブル管理です。
 REST Catalog でメタデータを管理し、Iceberg 互換の任意のエンジンからアクセスできます。
 
 ### アーキテクチャ
@@ -61,7 +61,7 @@ REST Catalog でメタデータを管理し、Iceberg 互換の任意のエン�
     │
     └── REST Catalog (Lambda/ECS)
             │
-            └── S3 Access Point ──→ FSxN Volume (Parquet データ + Iceberg メタデータ)
+            └── S3 Access Point ──→ FSx for ONTAP Volume (Parquet データ + Iceberg メタデータ)
 ```
 
 ### ステータス: 🚧 計画中

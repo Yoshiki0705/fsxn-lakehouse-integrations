@@ -4,7 +4,7 @@
 
 ## Overview
 
-FSxN S3 Access Points provide access not only to structured data (Parquet, CSV)
+Amazon FSx for NetApp ONTAP (FSx for ONTAP) S3 Access Points provide access not only to structured data (Parquet, CSV)
 but also to unstructured data such as images, video, audio, and documents.
 
 Enterprise file data accumulated on file servers can be directly accessed by
@@ -39,12 +39,12 @@ AI/ML services and analytics platforms without data copying.
 ### Pattern F: Lambda File Processing Pipeline
 
 ```
-FSxN Volume (NFS/SMB)
+FSx for ONTAP Volume (NFS/SMB)
     │
     └── S3 Access Point
             │
-            ├── Lambda: Thumbnail generation (image → resize → write back to FSxN)
-            ├── Lambda: Text extraction (PDF/DOCX → text → write back to FSxN)
+            ├── Lambda: Thumbnail generation (image → resize → write back to FSx for ONTAP)
+            ├── Lambda: Text extraction (PDF/DOCX → text → write back to FSx for ONTAP)
             ├── Lambda: Audio transcription (WAV/MP3 → Transcribe → text)
             └── Lambda: Metadata extraction (EXIF, video duration, page count)
 ```
@@ -97,11 +97,11 @@ Reference: [AWS Tutorial - Process files serverlessly with Lambda](https://docs.
 ### 1. AI/ML Training Data (SageMaker + Bedrock)
 
 ```
-Researcher → NFS mount → FSxN Volume → S3 AP → SageMaker Training Job
-                          (image dataset)         (model training)
+Researcher → NFS mount → FSx for ONTAP Volume → S3 AP → SageMaker Training Job
+                          (image dataset)                  (model training)
 
-                                              → Bedrock Knowledge Base
-                                                (RAG documents)
+                                                        → Bedrock Knowledge Base
+                                                          (RAG documents)
 ```
 
 **ONTAP Value:**
@@ -113,9 +113,9 @@ Researcher → NFS mount → FSxN Volume → S3 AP → SageMaker Training Job
 ### 2. Media Asset Management (Rekognition + MediaConvert)
 
 ```
-Photographer → SMB share → FSxN Volume → S3 AP → Rekognition (tagging)
-                            (RAW images)         → MediaConvert (transcode)
-                                                 → Lambda (thumbnails)
+Photographer → SMB share → FSx for ONTAP Volume → S3 AP → Rekognition (tagging)
+                            (RAW images)                  → MediaConvert (transcode)
+                                                          → Lambda (thumbnails)
 ```
 
 **ONTAP Value:**
@@ -127,9 +127,9 @@ Photographer → SMB share → FSxN Volume → S3 AP → Rekognition (tagging)
 ### 3. Document Processing Pipeline (Textract + Comprehend)
 
 ```
-Scanner → NFS → FSxN Volume → S3 AP → Textract (OCR)
-                (PDF/TIFF)           → Comprehend (NLP)
-                                     → OpenSearch (search index)
+Scanner → NFS → FSx for ONTAP Volume → S3 AP → Textract (OCR)
+                (PDF/TIFF)                     → Comprehend (NLP)
+                                               → OpenSearch (search index)
 ```
 
 **ONTAP Value:**
@@ -140,9 +140,9 @@ Scanner → NFS → FSxN Volume → S3 AP → Textract (OCR)
 ### 4. Surveillance Video Analytics
 
 ```
-Camera → NFS → FSxN Volume → S3 AP → Rekognition Video (analysis)
-               (MPEG-TS)            → Kinesis Video (streaming)
-                                    → Lambda (alerting)
+Camera → NFS → FSx for ONTAP Volume → S3 AP → Rekognition Video (analysis)
+               (MPEG-TS)                      → Kinesis Video (streaming)
+                                              → Lambda (alerting)
 ```
 
 **ONTAP Value:**
@@ -215,16 +215,16 @@ SELECT GET_PRESIGNED_URL(@MEDIA_STAGE, 'images/photo001.jpg', 3600);
 
 | Item | Recommendation | Reason |
 |------|---------------|--------|
-| Concurrent access | Depends on FSxN throughput | 256 MBps to 4096 MBps |
+| Concurrent access | Depends on FSx for ONTAP throughput | 256 MBps to 4096 MBps |
 | Large file reads | Use Multipart Download | Parallelization for speed |
 | Many small files | Batch processing recommended | ListObjects overhead |
 | Write-back | Use Multipart Upload | For files >5MB |
 
 ### Security Considerations
 
-- **UNIX permissions**: FSxN file permissions enforced via S3 AP
+- **UNIX permissions**: FSx for ONTAP file permissions enforced via S3 AP
 - **AD integration**: Active Directory user mapping for access control
-- **Encryption**: FSxN at-rest encryption + S3 AP in-transit encryption (TLS)
+- **Encryption**: FSx for ONTAP at-rest encryption + S3 AP in-transit encryption (TLS)
 - **Audit**: ONTAP FPolicy + CloudTrail for complete access logging
 
 ### ONTAP Value for Unstructured Data

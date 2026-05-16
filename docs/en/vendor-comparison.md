@@ -4,10 +4,10 @@
 
 ## Project Concept
 
-FSxN × S3 Access Points × Lakehouse/Data Lake Integrations
+Amazon FSx for NetApp ONTAP (FSx for ONTAP) × S3 Access Points × Lakehouse/Data Lake Integrations
 
 A pattern library enabling direct access from Lakehouse/Data Lake platforms to
-FSx for NetApp ONTAP enterprise storage via S3 Access Points.
+FSx for ONTAP enterprise storage via S3 Access Points.
 Leverages ONTAP deduplication, compression, Snapshot, and tiering while integrating
 with modern analytics platforms.
 
@@ -22,7 +22,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 | Vendor | Integration Method | Use Case | Status |
 |--------|-------------------|----------|--------|
-| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSxN, ML Feature Store | ✅ Implemented |
+| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSx for ONTAP, ML Feature Store | ✅ Implemented |
 | **Snowflake** | External Stage / External Table / Iceberg Table | Data sharing, ELT pipelines | ✅ Implemented |
 
 ### Databricks

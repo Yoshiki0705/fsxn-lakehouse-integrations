@@ -8,7 +8,7 @@ Delta Lake / Iceberg テーブルのストレージレイヤーとして使用�
 ## 前提条件
 
 - AWS アカウントに FSx for NetApp ONTAP がデプロイ済み
-- FSxN SVM で S3 プロトコルが有効化済み
+- FSx for ONTAP SVM で S3 プロトコルが有効化済み
 - Databricks ワークスペース（Unity Catalog 有効）
 - AWS CLI v2 設定済み
 - Terraform 1.5+ (Unity Catalog リソース管理用)
@@ -24,7 +24,7 @@ Databricks Unity Catalog
     │
     └── External Location
             │
-            └── s3://<s3ap-alias>/ ──→ S3 Access Point ──→ FSxN Volume
+            └── s3://<s3ap-alias>/ ──→ S3 Access Point ──→ FSx for ONTAP Volume
 ```
 
 ## Step 1: CloudFormation スタックのデプロイ
@@ -33,8 +33,8 @@ Databricks Unity Catalog
 
 | パラメータ | 説明 | 例 |
 |-----------|------|-----|
-| S3BucketName | FSxN SVM の S3 バケット名 | `svm-lakehouse` |
-| VpcId | FSxN が存在する VPC | `vpc-0123456789abcdef0` |
+| S3BucketName | FSx for ONTAP SVM の S3 バケット名 | `svm-lakehouse` |
+| VpcId | FSx for ONTAP が存在する VPC | `vpc-0123456789abcdef0` |
 | SubnetIds | プラットフォームサブネット | `subnet-xxx,subnet-yyy` |
 | DatabricksAccountId | Databricks AWS アカウント | `414351767826` |
 | DatabricksWorkspaceId | ワークスペース ID | `1234567890` |
@@ -53,7 +53,7 @@ aws cloudformation deploy \
     DatabricksWorkspaceId=1234567890 \
     ExternalId=<databricks-external-id> \
   --capabilities CAPABILITY_NAMED_IAM \
-  --region ap-northeast-1
+  --region <YOUR_REGION>
 ```
 
 ### 出力値の確認
@@ -157,7 +157,7 @@ print(f"Files found: {len(files)}")
 
 ### 問題: ListObjects が空を返す
 
-**原因**: FSxN SVM の S3 バケットにデータがない、またはパスが間違っている
+**原因**: FSx for ONTAP SVM の S3 バケットにデータがない、またはパスが間違っている
 
 **解決**:
 1. ONTAP CLI で S3 バケットの内容を確認

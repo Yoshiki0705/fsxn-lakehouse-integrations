@@ -1,6 +1,6 @@
 # アーキテクチャ概要
 
-## FSxN × S3 Access Points × Lakehouse 統合アーキテクチャ
+## Amazon FSx for NetApp ONTAP（FSx for ONTAP）× S3 Access Points × Lakehouse 統合アーキテクチャ
 
 ### 全体構成図
 
@@ -26,7 +26,7 @@
 
 ### コンポーネント説明
 
-#### 1. FSx for NetApp ONTAP
+#### 1. FSx for ONTAP
 
 エンタープライズストレージレイヤーとして機能します。
 
@@ -42,7 +42,7 @@
 
 #### 2. S3 Access Points
 
-FSxN と Lakehouse プラットフォーム間の接続レイヤーです。
+FSx for ONTAP と Lakehouse プラットフォーム間の接続レイヤーです。
 
 **主な役割:**
 - VPC 制限によるネットワークレベルのアクセス制御
@@ -64,7 +64,7 @@ FSxN と Lakehouse プラットフォーム間の接続レイヤーです。
 
 #### 3. Lakehouse プラットフォーム
 
-各プラットフォームが S3 API 経由で FSxN にアクセスします。
+各プラットフォームが S3 API 経由で FSx for ONTAP にアクセスします。
 
 ---
 
@@ -73,11 +73,11 @@ FSxN と Lakehouse プラットフォーム間の接続レイヤーです。
 ### パターン A: 読み取り専用（分析クエリ）
 
 ```
-┌────────────┐    S3 GetObject     ┌─────────┐    NFS/S3    ┌──────────┐
-│ Databricks │──────────────────▶│  S3 AP  │────────────▶│  FSxN    │
-│ Athena     │    ListObjectsV2   │ (read)  │             │  Volume  │
-│ Snowflake  │◀──────────────────│         │◀────────────│          │
-└────────────┘                    └─────────┘             └──────────┘
+┌────────────┐    S3 GetObject     ┌─────────┐    NFS/S3    ┌──────────────┐
+│ Databricks │──────────────────▶│  S3 AP  │────────────▶│FSx for ONTAP │
+│ Athena     │    ListObjectsV2   │ (read)  │             │   Volume     │
+│ Snowflake  │◀──────────────────│         │◀────────────│              │
+└────────────┘                    └─────────┘             └──────────────┘
 ```
 
 **ユースケース:**
@@ -92,11 +92,11 @@ FSxN と Lakehouse プラットフォーム間の接続レイヤーです。
 ### パターン B: 読み書き（マネージドテーブル）
 
 ```
-┌────────────┐  Get/Put/Delete   ┌─────────┐             ┌──────────┐
-│ Databricks │◀────────────────▶│  S3 AP  │◀──────────▶│  FSxN    │
-│ (Delta)    │  Multipart Upload │ (r/w)   │             │  Volume  │
-│ Snowflake  │                   │         │             │          │
-│ (Iceberg)  │                   └─────────┘             └──────────┘
+┌────────────┐  Get/Put/Delete   ┌─────────┐             ┌──────────────┐
+│ Databricks │◀────────────────▶│  S3 AP  │◀──────────▶│FSx for ONTAP │
+│ (Delta)    │  Multipart Upload │ (r/w)   │             │   Volume     │
+│ Snowflake  │                   │         │             │              │
+│ (Iceberg)  │                   └─────────┘             └──────────────┘
 └────────────┘
 ```
 
@@ -113,12 +113,12 @@ FSxN と Lakehouse プラットフォーム間の接続レイヤーです。
 ### パターン C: ETL パイプライン（メダリオンアーキテクチャ）
 
 ```
-┌──────────┐    ┌─────────┐    ┌──────────┐    ┌─────────┐    ┌──────────┐
-│  Source   │──▶│  S3 AP  │──▶│  Glue/   │──▶│  S3 AP  │──▶│  FSxN    │
-│  (Raw)    │   │  (read) │   │  EMR/    │   │  (write)│   │  (Gold)  │
-│  FSxN Vol │   │         │   │  Lambda  │   │         │   │  Volume  │
-└──────────┘    └─────────┘    └──────────┘    └─────────┘    └──────────┘
-     Raw            Bronze          Transform       Silver/Gold      Curated
+┌──────────────┐  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌──────────────┐
+│    Source     │─▶│  S3 AP  │─▶│  Glue/   │─▶│  S3 AP  │─▶│ FSx for ONTAP│
+│    (Raw)     │  │  (read) │  │  EMR/    │  │  (write)│  │    (Gold)    │
+│FSx for ONTAP │  │         │  │  Lambda  │  │         │  │    Volume    │
+└──────────────┘  └─────────┘  └──────────┘  └─────────┘  └──────────────┘
+     Raw             Bronze         Transform      Silver/Gold      Curated
 ```
 
 **ユースケース:**
@@ -134,14 +134,14 @@ FSxN と Lakehouse プラットフォーム間の接続レイヤーです。
 ### パターン D: データ共有
 
 ```
-┌──────────┐    ┌─────────────┐    ┌────────────┐
-│  FSxN    │──▶│  S3 AP (A)  │──▶│ Consumer A │ (Databricks)
-│  Volume  │   │  prefix=/a/ │   └────────────┘
-│ (Producer)│   └─────────────┘
-│          │    ┌─────────────┐    ┌────────────┐
-│          │──▶│  S3 AP (B)  │──▶│ Consumer B │ (Snowflake)
-│          │   │  prefix=/b/ │   └────────────┘
-└──────────┘    └─────────────┘
+┌──────────────┐  ┌─────────────┐    ┌────────────┐
+│FSx for ONTAP │─▶│  S3 AP (A)  │──▶│ Consumer A │ (Databricks)
+│    Volume    │  │  prefix=/a/ │   └────────────┘
+│  (Producer)  │  └─────────────┘
+│              │  ┌─────────────┐    ┌────────────┐
+│              │─▶│  S3 AP (B)  │──▶│ Consumer B │ (Snowflake)
+│              │  │  prefix=/b/ │   └────────────┘
+└──────────────┘  └─────────────┘
 ```
 
 **ユースケース:**
@@ -161,21 +161,21 @@ FSxN と Lakehouse プラットフォーム間の接続レイヤーです。
 ### VPC 内アクセス（推奨）
 
 ```
-┌─────────────────────────────────────────────────┐
-│                    VPC                            │
-│                                                   │
-│  ┌──────────┐    ┌──────────────┐    ┌────────┐ │
-│  │ Platform │──▶│ VPC Endpoint │──▶│ S3 AP  │ │
-│  │ (Private │   │ (Interface)  │   │        │ │
-│  │  Subnet) │   │ com.aws.s3   │   │        │ │
-│  └──────────┘    └──────────────┘    └───┬────┘ │
-│                                          │       │
-│                                    ┌─────▼─────┐ │
-│                                    │   FSxN    │ │
-│                                    │  (Private │ │
-│                                    │   Subnet) │ │
-│                                    └───────────┘ │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                       VPC                             │
+│                                                       │
+│  ┌──────────┐    ┌──────────────┐    ┌────────┐     │
+│  │ Platform │──▶│ VPC Endpoint │──▶│ S3 AP  │     │
+│  │ (Private │   │ (Interface)  │   │        │     │
+│  │  Subnet) │   │ com.aws.s3   │   │        │     │
+│  └──────────┘    └──────────────┘    └───┬────┘     │
+│                                          │           │
+│                                  ┌───────▼────────┐  │
+│                                  │ FSx for ONTAP  │  │
+│                                  │ (Private       │  │
+│                                  │  Subnet)       │  │
+│                                  └────────────────┘  │
+└──────────────────────────────────────────────────────┘
 ```
 
 ### セキュリティレイヤー
@@ -206,6 +206,6 @@ FSxN と Lakehouse プラットフォーム間の接続レイヤーです。
 ## 次のステップ
 
 - [クイックスタート](getting-started.md) — 最初のデプロイ
-- [S3 AP 基礎](s3ap-fundamentals.md) — S3 Access Points × FSxN の詳細
+- [S3 AP 基礎](s3ap-fundamentals.md) — S3 Access Points × FSx for ONTAP の詳細
 - [ベンダー比較](vendor-comparison.md) — プラットフォーム選定ガイド
 - [データフォーマット](data-formats.md) — フォーマット別の推奨構成
