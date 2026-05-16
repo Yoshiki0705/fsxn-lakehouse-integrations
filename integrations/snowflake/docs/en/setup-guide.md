@@ -127,3 +127,7 @@ Run SQL scripts in order:
 **Cause**: FSx for ONTAP does not natively support S3 Event Notifications
 
 **Resolution**: Use Lambda polling pattern (see `06_snowpipe.sql`)
+
+## Next Steps
+
+- [Snowpipe Integration Details](snowpipe-integration.md)

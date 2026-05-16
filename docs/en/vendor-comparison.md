@@ -153,6 +153,20 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Unstructured**: Parquet/CSV only (no binary support)
 - **Use Case**: Lightweight analytics in Lambda, edge computing
 
+### ClickHouse
+
+- **Auth**: Access Key
+- **Network**: Internet network origin
+- **Features**: Columnar, real-time analytics, high-speed aggregation
+- **Unstructured**: Not supported (structured data only)
+
+### Firebolt
+
+- **Auth**: IAM Role
+- **Network**: Internet network origin
+- **Features**: High-speed OLAP, sub-second queries
+- **Unstructured**: Not supported
+
 ---
 
 ## Unstructured Data Support Matrix
