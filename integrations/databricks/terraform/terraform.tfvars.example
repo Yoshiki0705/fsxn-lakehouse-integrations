@@ -1,0 +1,23 @@
+# =============================================================================
+# Databricks Terraform Variables - EXAMPLE
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in actual values.
+# DO NOT commit terraform.tfvars to git (it's in .gitignore).
+# =============================================================================
+
+aws_region = "ap-northeast-1"
+environment_name = "fsxn-lakehouse"
+
+# Databricks workspace configuration
+databricks_workspace_url = "https://<YOUR_WORKSPACE>.cloud.databricks.com"
+databricks_account_id    = "<YOUR_DATABRICKS_ACCOUNT_ID>"
+metastore_id             = "<YOUR_METASTORE_ID>"
+
+# From CloudFormation outputs (after deploying template.yaml)
+s3_access_point_alias = "<S3_AP_ALIAS_FROM_CFN_OUTPUT>"
+s3_access_point_arn   = "arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/fsxn-databricks-ap"
+iam_role_arn          = "arn:aws:iam::<ACCOUNT_ID>:role/fsxn-lakehouse-databricks-s3-role"
+
+# Unity Catalog configuration
+catalog_name = "fsxn_lakehouse"
+schema_name  = "default"

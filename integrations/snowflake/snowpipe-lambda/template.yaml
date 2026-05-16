@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Snowpipe Lambda Polling Function for FSxN S3 Access Point.
+  Detects new files and publishes to SNS for Snowpipe auto-ingest.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: fsxn-lakehouse
+
+  S3AccessPointAlias:
+    Type: String
+    Description: S3 Access Point alias for FSxN
+
+  S3AccessPointArn:
+    Type: String
+    Description: S3 Access Point ARN
+
+  SNSTopicArn:
+    Type: String
+    Description: SNS Topic ARN for Snowpipe notifications
+
+  Prefix:
+    Type: String
+    Default: bronze/events/
+    Description: S3 key prefix to monitor for new files
+
+  PollingIntervalMinutes:
+    Type: Number
+    Default: 5
+    Description: How often to poll for new files (minutes)
+
+  VpcId:
+    Type: String
+    Default: ''
+    Description: VPC ID (if Lambda needs VPC access to S3 AP)
+
+  SubnetIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Subnet IDs for Lambda VPC config
+
+Conditions:
+  HasVpc: !Not [!Equals [!Ref VpcId, '']]
+
+Resources:
+  # Lambda Execution Role
+  PollerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-snowpipe-poller-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: S3APReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:ListBucket'
+                  - 's3:GetBucketLocation'
+                Resource: !Ref S3AccessPointArn
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:HeadObject'
+                Resource: !Sub '${S3AccessPointArn}/object/*'
+        - PolicyName: SNSPublish
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 'sns:Publish'
+                Resource: !Ref SNSTopicArn
+
+  # Lambda Function
+  PollerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${EnvironmentName}-snowpipe-poller'
+      Description: Polls FSxN S3 AP for new files and notifies Snowpipe via SNS
+      Runtime: python3.12
+      Handler: handler.handler
+      Role: !GetAtt PollerRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          S3_ACCESS_POINT_ALIAS: !Ref S3AccessPointAlias
+          SNS_TOPIC_ARN: !Ref SNSTopicArn
+          PREFIX: !Ref Prefix
+          POLLING_INTERVAL_MINUTES: !Ref PollingIntervalMinutes
+      Code:
+        ZipFile: |
+          # Inline placeholder — deploy actual handler.py via SAM/CDK
+          # See handler.py in this directory for full implementation
+          def handler(event, context):
+              return {"statusCode": 200, "body": "Deploy handler.py"}
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Integration
+          Value: snowflake
+
+  # EventBridge Schedule Rule
+  PollingSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${EnvironmentName}-snowpipe-polling'
+      Description: Triggers Snowpipe poller Lambda on schedule
+      ScheduleExpression: !Sub 'rate(${PollingIntervalMinutes} minutes)'
+      State: ENABLED
+      Targets:
+        - Id: SnowpipePoller
+          Arn: !GetAtt PollerFunction.Arn
+
+  PollingPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PollerFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt PollingSchedule.Arn
+
+Outputs:
+  PollerFunctionArn:
+    Description: Snowpipe Poller Lambda ARN
+    Value: !GetAtt PollerFunction.Arn
+
+  PollerFunctionName:
+    Description: Snowpipe Poller Lambda Name
+    Value: !Ref PollerFunction
+
+  ScheduleRuleArn:
+    Description: EventBridge Schedule Rule ARN
+    Value: !GetAtt PollingSchedule.Arn

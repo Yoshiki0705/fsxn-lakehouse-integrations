@@ -1,0 +1,34 @@
+[
+  {
+    "ParameterKey": "EnvironmentName",
+    "ParameterValue": "fsxn-lakehouse"
+  },
+  {
+    "ParameterKey": "S3BucketName",
+    "ParameterValue": "<YOUR_FSXN_SVM_S3_BUCKET_NAME>"
+  },
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "<YOUR_VPC_ID>"
+  },
+  {
+    "ParameterKey": "SubnetIds",
+    "ParameterValue": "<SUBNET_1_ID>,<SUBNET_2_ID>"
+  },
+  {
+    "ParameterKey": "S3AccessPointName",
+    "ParameterValue": "fsxn-snowflake-ap"
+  },
+  {
+    "ParameterKey": "SnowflakeAccountId",
+    "ParameterValue": "<FROM_DESCRIBE_INTEGRATION_OUTPUT>"
+  },
+  {
+    "ParameterKey": "SnowflakeExternalId",
+    "ParameterValue": "<FROM_DESCRIBE_INTEGRATION_OUTPUT>"
+  },
+  {
+    "ParameterKey": "EnableSnowpipe",
+    "ParameterValue": "true"
+  }
+]
