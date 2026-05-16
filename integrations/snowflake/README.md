@@ -1,6 +1,6 @@
-# Snowflake Integration
+# Snowflake Integration / Snowflake 統合
 
-🌐 [日本語](docs/ja/setup-guide.md) | [English](docs/en/setup-guide.md)
+🌐 [日本語ドキュメント](docs/ja/setup-guide.md) | [English Documentation](docs/en/setup-guide.md)
 
 ## Overview
 

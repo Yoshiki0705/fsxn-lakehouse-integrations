@@ -1,61 +1,65 @@
-# Technology Stack
+---
+inclusion: auto
+---
+
+# Technology Stack & Constraints
 
 ## Infrastructure as Code
 
-- **CloudFormation (YAML)**: AWS ネイティブリソース（FSxN, S3 AP, IAM, VPC, Lambda, Glue）
-- **Terraform**: ベンダー固有リソース（Databricks Unity Catalog, Snowflake Storage Integration）
-- **cfn-lint**: CloudFormation テンプレートの静的解析
+- **CloudFormation (YAML)**: All AWS-native resources (FSxN, S3 AP, IAM, VPC, Lambda, Glue)
+- **Terraform**: Vendor-specific resources only (Databricks Unity Catalog, Snowflake objects)
+- **cfn-lint**: Required validation for all CloudFormation templates
+- **terraform validate**: Required for all Terraform configs
 
 ## Languages & Runtimes
 
-- **Python 3.12**: スクリプト、Lambda、データ生成、テスト
-- **Bash**: セットアップスクリプト、自動化
+- **Python 3.12**: Scripts, Lambda functions, data generation, tests
+- **Bash**: Setup scripts, automation
 - **SQL**: Snowflake SQL, Athena SQL, Trino SQL, Spark SQL
+- **HCL**: Terraform configurations
+
+## FSxN S3 Access Points — Technical Constraints
+
+### Supported S3 APIs
+- GetObject, HeadObject, PutObject (single + multipart)
+- DeleteObject, ListObjectsV2, CopyObject
+- CreateMultipartUpload, UploadPart, CompleteMultipartUpload, AbortMultipartUpload
+
+### NOT Supported
+- S3 Event Notifications (use Lambda polling as workaround)
+- S3 Select, S3 Inventory, S3 Batch Operations
+- Object Lock (use SnapLock instead)
+- Requester Pays
+
+### Network Origin Requirements
+- **Athena, Glue, Redshift Spectrum**: Require internet network origin
+- **Databricks (customer VPC)**: Can use VPC network origin
+- **Snowflake**: Uses internet network origin (PrivateLink optional)
+- **EMR, Lambda**: Can use VPC network origin
+
+### Access Point Configuration
+- Attach to FSxN volume (not SVM-level bucket)
+- Specify file access type: UNIX or Windows
+- Specify username for access authorization
+- One AP per volume per consumer (recommended)
 
 ## Data Formats
 
-| Format | Extension | Use Case |
-|--------|-----------|----------|
-| Apache Parquet | .parquet | 列指向分析クエリ（推奨デフォルト） |
-| Apache Iceberg | metadata + .parquet | ACID テーブル（ベンダー中立） |
-| Delta Lake | _delta_log/ + .parquet | ACID テーブル（Databricks エコシステム） |
-| Apache Hudi | .hoodie/ + .parquet | CDC + Upsert ワークロード |
-| CSV | .csv | レガシーデータ取り込み |
-| JSON / NDJSON | .json / .jsonl | セミ構造化データ |
-| ORC | .orc | Hive 互換ワークロード |
-| Avro | .avro | スキーマ進化が必要なストリーミング |
+| Format | Primary Use | Table Format |
+|--------|-------------|--------------|
+| Parquet | Analytics (default) | External Table |
+| Iceberg | ACID tables (vendor-neutral) | Managed/External |
+| Delta Lake | ACID tables (Databricks) | Managed/External |
+| CSV/JSON | Legacy ingestion | External Table |
+| ORC | Hive compatibility | External Table |
 
-## S3 API Compatibility Notes
+## Testing Requirements
 
-FSxN の S3 プロトコルは以下の API をサポート:
-
-### Fully Supported
-- `GetObject` / `HeadObject`
-- `PutObject` (single + multipart)
-- `DeleteObject`
-- `ListObjectsV2`
-- `CreateMultipartUpload` / `UploadPart` / `CompleteMultipartUpload`
-- `CopyObject`
-
-### Partially Supported / Limitations
-- `GetBucketLocation`: 常に SVM のリージョンを返す
-- `ListBuckets`: SVM 内のバケットのみ
-- Object Tagging: ONTAP 9.11.1+ で対応
-- Versioning: ONTAP Snapshot で代替（S3 versioning とは異なる）
-
-### Not Supported
-- S3 Select
-- S3 Inventory
-- S3 Batch Operations
-- Requester Pays
-- Object Lock (WORM は SnapLock で代替)
-
-## Testing
-
-- **pytest**: Python スクリプト・Lambda のユニットテスト
-- **cfn-lint**: CloudFormation テンプレート検証
-- **terraform validate**: Terraform 構文検証
-- **boto3 integration tests**: S3 AP アクセス検証
+- pytest for Python unit tests
+- cfn-lint for CloudFormation validation
+- terraform validate for Terraform syntax
+- Integration tests use boto3 against real S3 AP (not mocked)
+- Screenshots captured during UI verification tasks
 
 ## Key Dependencies
 

@@ -1,88 +1,72 @@
+---
+inclusion: auto
+---
+
 # Directory Structure & Naming Conventions
 
 ## Top-Level Structure
 
 ```
 fsxn-lakehouse-integrations/
-├── README.md                    # Bilingual (JA/EN) project overview
+├── README.md                    # Bilingual project overview
+├── tasks.md                     # E2E verification tasks (bilingual)
 ├── docs/                        # Project-wide documentation
-│   ├── ja/                      # Japanese documentation
-│   ├── en/                      # English documentation
-│   └── images/                  # Shared diagrams and images
-├── shared/                      # Common modules (reused across integrations)
+│   ├── ja/                      # Japanese docs
+│   ├── en/                      # English docs
+│   └── images/                  # Shared diagrams
+├── shared/                      # Common modules
 │   ├── cloudformation/          # Base CFn templates
-│   ├── scripts/                 # Utility scripts (Python/Bash)
-│   └── sample-data/             # Sample dataset definitions
+│   ├── scripts/                 # Utility scripts
+│   └── sample-data/             # Sample datasets
 ├── integrations/                # Per-vendor implementations
-│   └── <vendor>/                # One directory per platform
-├── use-cases/                   # Industry-specific use cases
-│   └── <industry-usecase>/      # One directory per use case
-├── .github/workflows/           # CI/CD pipelines
-├── .kiro/steering/              # Kiro steering files
+│   └── <vendor>/                # Standard structure (see below)
+├── use-cases/                   # Industry use cases
+├── .github/workflows/           # CI/CD
 ├── package.json                 # Project metadata
-└── jest.config.js               # Test configuration
+└── .gitignore                   # Excludes .kiro/, secrets, env files
 ```
 
-## Integration Directory Standard (`integrations/<vendor>/`)
-
-Each vendor integration MUST follow this structure:
+## Integration Directory Standard
 
 ```
 integrations/<vendor>/
-├── README.md                    # Integration overview (bilingual or link)
+├── README.md                    # Bilingual overview with language switcher
 ├── template.yaml                # CloudFormation template
-├── terraform/                   # Terraform configs (if vendor requires)
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   └── providers.tf
-├── notebooks/                   # Jupyter/Databricks notebooks
-│   └── NN_description.py        # Numbered for execution order
-├── sql/                         # SQL scripts (Snowflake/Athena/Trino)
-│   └── NN_description.sql       # Numbered for execution order
+├── terraform/                   # Terraform (if vendor requires)
+├── notebooks/                   # Numbered: NN_description.py
+├── sql/                         # Numbered: NN_description.sql
 ├── docs/
-│   ├── ja/                      # Japanese docs for this integration
-│   │   └── setup-guide.md
-│   └── en/                      # English docs for this integration
-│       └── setup-guide.md
-└── tests/                       # Integration-specific tests
-    └── test_*.py
+│   ├── ja/                      # Japanese docs
+│   └── en/                      # English docs
+└── tests/
+    ├── test_*.py                # Automated tests
+    ├── results/                 # Generated test results (gitignored)
+    └── screenshots/             # Captured screenshots (gitignored)
 ```
 
 ## Naming Conventions
 
-### Files
-- CloudFormation: `kebab-case.yaml` (e.g., `fsxn-s3ap-base.yaml`)
-- Terraform: `snake_case.tf` (standard Terraform convention)
-- Python scripts: `snake_case.py` (e.g., `validate_access.py`)
-- Bash scripts: `kebab-case.sh` (e.g., `setup-s3ap.sh`)
-- SQL scripts: `NN_snake_case.sql` (e.g., `01_storage_integration.sql`)
-- Notebooks: `NN_snake_case.py` (e.g., `01_setup_external_location.py`)
-- Documentation: `kebab-case.md` (e.g., `setup-guide.md`)
+- CloudFormation: `kebab-case.yaml`
+- Terraform: `snake_case.tf`
+- Python: `snake_case.py`
+- Bash: `kebab-case.sh`
+- SQL: `NN_snake_case.sql`
+- Notebooks: `NN_snake_case.py`
+- Docs: `kebab-case.md`
 
-### Resources (CloudFormation/Terraform)
-- CloudFormation Logical IDs: PascalCase (e.g., `FSxNFileSystem`, `S3AccessPoint`)
-- CloudFormation Parameters: PascalCase (e.g., `EnvironmentName`, `VpcId`)
-- Terraform resources: snake_case (e.g., `databricks_external_location`)
-- S3 Access Point names: kebab-case (e.g., `fsxn-databricks-ap`)
-- IAM Role names: kebab-case with environment prefix (e.g., `fsxn-lakehouse-databricks-role`)
+## What Goes in .gitignore
 
-### Tags
-All AWS resources MUST include:
-- `Name`: Human-readable name
-- `Environment`: dev/staging/prod
-- `Project`: fsxn-lakehouse-integrations
-- `Integration`: vendor name (databricks/snowflake/etc.)
+### Excluded from repo:
+- `.kiro/` — IDE-specific configuration
+- `*.env`, `env.yaml` — Environment variables with real values
+- `*.tfvars` (except examples) — Terraform variables with real values
+- `*-params.json` — CloudFormation parameters with real values
+- `*.pem`, `*.key` — Secrets and keys
+- `**/tests/results/` — Generated test results
+- `**/tests/screenshots/` — Captured screenshots
+- `.terraform/`, `*.tfstate` — Terraform state
 
-## Use Case Directory (`use-cases/<industry-usecase>/`)
-
-```
-use-cases/<industry-usecase>/
-├── README.md                    # Use case overview
-├── architecture.md              # Architecture specific to this use case
-├── template.yaml                # CloudFormation (if applicable)
-├── docs/
-│   ├── ja/
-│   └── en/
-└── examples/                    # Code examples
-```
+### Included in repo:
+- `*.tfvars.example` — Example variable files (with placeholder values)
+- `*-params.example.json` — Example parameter files
+- All templates, scripts, docs, notebooks

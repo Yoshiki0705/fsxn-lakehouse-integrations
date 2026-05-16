@@ -1,66 +1,64 @@
-# Multilingual Documentation Rules
+---
+inclusion: auto
+---
+
+# Bilingual Documentation Rules
 
 ## Language Policy
 
-- **Default language**: 日本語 (Japanese)
+- **Default language**: Japanese (日本語)
 - **Required translations**: English (must be kept in sync)
 - **Code comments**: English only
 - **Variable/function names**: English only
 - **Commit messages**: English
 - **Issue/PR titles**: English
 
-## Documentation Structure
+## Language Switcher
 
-### Project-level docs (`docs/`)
-```
-docs/
-├── ja/          # Japanese (primary)
-│   ├── architecture.md
-│   ├── getting-started.md
-│   └── ...
-├── en/          # English (synchronized)
-│   ├── architecture.md
-│   ├── getting-started.md
-│   └── ...
-└── images/      # Shared (language-neutral diagrams)
-```
-
-### Integration-level docs (`integrations/<vendor>/docs/`)
-```
-integrations/<vendor>/docs/
-├── ja/
-│   └── setup-guide.md
-└── en/
-    └── setup-guide.md
-```
-
-## README.md Convention
-
-Top-level README.md uses a language switcher:
+Every user-facing document MUST include a language switcher at the top:
 
 ```markdown
-🌐 [日本語](docs/ja/architecture.md) | [English](docs/en/architecture.md)
+🌐 [日本語](path/to/ja/doc.md) | [English](path/to/en/doc.md)
 ```
 
-Integration README.md files may be:
-- Bilingual (both languages in one file with sections), OR
-- Link-based (pointing to `docs/ja/` and `docs/en/`)
+For single-file bilingual documents (like README.md, tasks.md):
+
+```markdown
+🌐 [日本語](#日本語) | [English](#english)
+```
+
+## What Requires Bilingual Support
+
+### MUST be bilingual:
+- README.md (all levels)
+- docs/ja/ and docs/en/ (all files)
+- integrations/<vendor>/docs/ja/ and docs/en/
+- integrations/<vendor>/README.md
+- tasks.md
+- use-cases/<name>/README.md
+
+### English only (no translation needed):
+- Code files (.py, .tf, .yaml, .sql, .sh)
+- Code comments
+- .gitignore, LICENSE, package.json
+- .kiro/ steering files (developer-facing)
+- Test files
 
 ## Synchronization Rules
 
-1. When updating Japanese docs, English docs MUST be updated in the same PR
-2. Diagrams in `images/` use English labels (universal)
-3. Code snippets are identical in both languages (only surrounding text differs)
-4. Technical terms may remain in English in Japanese docs (e.g., "S3 Access Point", "FlexClone")
+1. JA and EN docs must have matching section structure
+2. Code blocks must be identical in both languages
+3. Diagrams use English labels (shared in docs/images/)
+4. Technical terms remain in English in Japanese docs
+5. When updating one language, the other MUST be updated in the same commit
 
 ## Writing Style
 
 ### Japanese
 - 「です・ます」調（丁寧語）
-- 技術用語は英語のまま使用可（初出時にカッコ書きで日本語補足）
-- 例: 「S3 Access Point（アクセスポイント）を作成します」
+- Technical terms in English with optional Japanese gloss: 「S3 Access Point（アクセスポイント）」
+- First occurrence only needs gloss
 
 ### English
-- Technical writing style (clear, concise)
-- Use active voice
+- Technical writing style (clear, concise, active voice)
 - Avoid jargon without explanation

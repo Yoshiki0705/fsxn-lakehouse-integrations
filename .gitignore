@@ -1,10 +1,70 @@
-# Node
+# =============================================================================
+# FSxN Lakehouse Integrations - .gitignore
+# =============================================================================
+# Design Policy:
+#   - INCLUDE: CloudFormation templates, Terraform configs, scripts, docs, notebooks
+#   - EXCLUDE: .kiro (IDE-specific), secrets, environment-specific configs,
+#              build artifacts, test results with screenshots
+# =============================================================================
+
+# =============================================================================
+# Kiro IDE Configuration (development-specific, not for public repo)
+# =============================================================================
+.kiro/
+
+# =============================================================================
+# Environment-Specific Files (contain AWS Account IDs, endpoints, etc.)
+# =============================================================================
+*.env
+.env.*
+.env.local
+.env.*.local
+env.yaml
+env.yml
+
+# Terraform variable files with actual values
+*.auto.tfvars
+terraform.tfvars
+!example.tfvars
+!terraform.tfvars.example
+
+# CloudFormation parameter files with actual values
+*-params.json
+*-parameters.json
+!*-params.example.json
+
+# AWS credentials and config
+.aws/
+credentials.json
+aws-exports.js
+
+# =============================================================================
+# Secrets and Keys
+# =============================================================================
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*secret*
+*credential*
+!**/docs/**/*credential*
+!**/docs/**/*secret*
+
+# =============================================================================
+# Node.js
+# =============================================================================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.npm
+.yarn-integrity
 
+# =============================================================================
 # Python
+# =============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -28,29 +88,36 @@ wheels/
 .venv/
 venv/
 ENV/
+.python-version
 
+# =============================================================================
 # Terraform
+# =============================================================================
 .terraform/
 *.tfstate
 *.tfstate.*
-*.tfvars
-!example.tfvars
+*.tfstate.backup
 .terraform.lock.hcl
+crash.log
+crash.*.log
 
-# IDE
+# =============================================================================
+# IDE and Editor
+# =============================================================================
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 .DS_Store
+Thumbs.db
 
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Test coverage
+# =============================================================================
+# Test Results and Screenshots (generated during verification)
+# =============================================================================
+**/tests/results/
+**/tests/screenshots/
+**/tests/.cache/
 htmlcov/
 .tox/
 .nox/
@@ -63,12 +130,30 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+junit-*.xml
 
-# Build
+# =============================================================================
+# Build Artifacts
+# =============================================================================
 *.js.map
 dist/
+out/
+*.zip
+*.tar.gz
 
-# Secrets
-*.pem
-*.key
-credentials.json
+# =============================================================================
+# Logs
+# =============================================================================
+*.log
+logs/
+
+# =============================================================================
+# OS-specific
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
