@@ -1,0 +1,281 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  FSx for NetApp ONTAP file system with S3 Access Point base configuration.
+  Deploys FSxN with S3 protocol enabled and creates a base S3 Access Point.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: fsxn-lakehouse
+    Description: Environment name prefix for resource naming
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where FSxN will be deployed
+
+  PreferredSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Preferred subnet for FSxN (primary)
+
+  StandbySubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Standby subnet for FSxN (HA pair)
+
+  FSxNSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group for FSxN
+
+  StorageCapacityGiB:
+    Type: Number
+    Default: 1024
+    MinValue: 1024
+    Description: Storage capacity in GiB (minimum 1024)
+
+  ThroughputCapacity:
+    Type: Number
+    Default: 256
+    AllowedValues: [128, 256, 512, 1024, 2048, 4096]
+    Description: Throughput capacity in MBps
+
+  SvmName:
+    Type: String
+    Default: svm-lakehouse
+    Description: Storage Virtual Machine name
+
+  VolumeName:
+    Type: String
+    Default: vol_lakehouse
+    Description: Volume name for lakehouse data
+
+  VolumeSizeGiB:
+    Type: Number
+    Default: 500
+    Description: Volume size in GiB
+
+  S3AccessPointName:
+    Type: String
+    Default: fsxn-lakehouse-ap
+    Description: S3 Access Point name
+
+  S3BucketName:
+    Type: String
+    Description: >
+      S3 bucket name exposed by FSxN SVM (format: svm-name).
+      This is the bucket name configured on the ONTAP SVM S3 server.
+
+  EnableTiering:
+    Type: String
+    Default: 'AUTO'
+    AllowedValues: ['NONE', 'SNAPSHOT_ONLY', 'AUTO', 'ALL']
+    Description: FabricPool tiering policy
+
+  DeploymentType:
+    Type: String
+    Default: MULTI_AZ_1
+    AllowedValues: [MULTI_AZ_1, MULTI_AZ_2, SINGLE_AZ_1, SINGLE_AZ_2]
+    Description: FSxN deployment type
+
+Resources:
+  # ============================================================
+  # FSx for NetApp ONTAP File System
+  # ============================================================
+  FSxNFileSystem:
+    Type: AWS::FSx::FileSystem
+    Properties:
+      FileSystemType: ONTAP
+      StorageCapacity: !Ref StorageCapacityGiB
+      SubnetIds:
+        - !Ref PreferredSubnetId
+        - !Ref StandbySubnetId
+      SecurityGroupIds:
+        - !Ref FSxNSecurityGroupId
+      OntapConfiguration:
+        DeploymentType: !Ref DeploymentType
+        AutomaticBackupRetentionDays: 7
+        DailyAutomaticBackupStartTime: '03:00'
+        PreferredSubnetId: !Ref PreferredSubnetId
+        ThroughputCapacity: !Ref ThroughputCapacity
+        WeeklyMaintenanceStartTime: '7:04:00'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-fsxn'
+        - Key: Purpose
+          Value: LakehouseStorage
+
+  # ============================================================
+  # Storage Virtual Machine (SVM)
+  # ============================================================
+  StorageVirtualMachine:
+    Type: AWS::FSx::StorageVirtualMachine
+    Properties:
+      FileSystemId: !Ref FSxNFileSystem
+      Name: !Ref SvmName
+      RootVolumeSecurityStyle: UNIX
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-svm'
+
+  # ============================================================
+  # Volume for Lakehouse Data
+  # ============================================================
+  LakehouseVolume:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: !Ref VolumeName
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: !Sub '/${VolumeName}'
+        StorageVirtualMachineId: !Ref StorageVirtualMachine
+        SizeInMegabytes: !Sub '${VolumeSizeGiB}000'
+        StorageEfficiencyEnabled: true
+        TieringPolicy:
+          Name: !Ref EnableTiering
+          CoolingPeriod: 31
+        SecurityStyle: UNIX
+        SnapshotPolicy: default
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vol-lakehouse'
+        - Key: DataLayer
+          Value: all
+
+  # ============================================================
+  # Volumes for Medallion Architecture (Bronze/Silver/Gold)
+  # ============================================================
+  BronzeVolume:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: vol_bronze
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: /vol_bronze
+        StorageVirtualMachineId: !Ref StorageVirtualMachine
+        SizeInMegabytes: 200000
+        StorageEfficiencyEnabled: true
+        TieringPolicy:
+          Name: AUTO
+          CoolingPeriod: 14
+        SecurityStyle: UNIX
+        SnapshotPolicy: default
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vol-bronze'
+        - Key: DataLayer
+          Value: bronze
+
+  SilverVolume:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: vol_silver
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: /vol_silver
+        StorageVirtualMachineId: !Ref StorageVirtualMachine
+        SizeInMegabytes: 200000
+        StorageEfficiencyEnabled: true
+        TieringPolicy:
+          Name: SNAPSHOT_ONLY
+          CoolingPeriod: 31
+        SecurityStyle: UNIX
+        SnapshotPolicy: default
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vol-silver'
+        - Key: DataLayer
+          Value: silver
+
+  GoldVolume:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: vol_gold
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: /vol_gold
+        StorageVirtualMachineId: !Ref StorageVirtualMachine
+        SizeInMegabytes: 100000
+        StorageEfficiencyEnabled: true
+        TieringPolicy:
+          Name: NONE
+        SecurityStyle: UNIX
+        SnapshotPolicy: default
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vol-gold'
+        - Key: DataLayer
+          Value: gold
+
+  # ============================================================
+  # S3 Access Point (Base)
+  # ============================================================
+  LakehouseAccessPoint:
+    Type: AWS::S3::AccessPoint
+    Properties:
+      Name: !Ref S3AccessPointName
+      Bucket: !Ref S3BucketName
+      VpcConfiguration:
+        VpcId: !Ref VpcId
+      Policy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowVPCAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:DeleteObject'
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+            Resource:
+              - !Sub 'arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}'
+              - !Sub 'arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/*'
+
+Outputs:
+  FileSystemId:
+    Description: FSx for ONTAP File System ID
+    Value: !Ref FSxNFileSystem
+    Export:
+      Name: !Sub '${EnvironmentName}-FileSystemId'
+
+  StorageVirtualMachineId:
+    Description: Storage Virtual Machine ID
+    Value: !Ref StorageVirtualMachine
+    Export:
+      Name: !Sub '${EnvironmentName}-SvmId'
+
+  LakehouseVolumeId:
+    Description: Lakehouse Volume ID
+    Value: !Ref LakehouseVolume
+    Export:
+      Name: !Sub '${EnvironmentName}-LakehouseVolumeId'
+
+  BronzeVolumeId:
+    Description: Bronze Volume ID
+    Value: !Ref BronzeVolume
+    Export:
+      Name: !Sub '${EnvironmentName}-BronzeVolumeId'
+
+  SilverVolumeId:
+    Description: Silver Volume ID
+    Value: !Ref SilverVolume
+    Export:
+      Name: !Sub '${EnvironmentName}-SilverVolumeId'
+
+  GoldVolumeId:
+    Description: Gold Volume ID
+    Value: !Ref GoldVolume
+    Export:
+      Name: !Sub '${EnvironmentName}-GoldVolumeId'
+
+  S3AccessPointArn:
+    Description: S3 Access Point ARN
+    Value: !Sub 'arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}'
+    Export:
+      Name: !Sub '${EnvironmentName}-S3AccessPointArn'
+
+  S3AccessPointAlias:
+    Description: S3 Access Point Alias (use as bucket name in S3 API calls)
+    Value: !GetAtt LakehouseAccessPoint.Alias
+    Export:
+      Name: !Sub '${EnvironmentName}-S3AccessPointAlias'

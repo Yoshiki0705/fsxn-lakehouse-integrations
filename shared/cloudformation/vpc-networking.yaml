@@ -1,0 +1,411 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  VPC networking infrastructure for FSxN Lakehouse Integrations.
+  Creates VPC, subnets, route tables, and S3 VPC endpoints.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: fsxn-lakehouse
+    Description: Environment name prefix for resource naming
+
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC
+
+  PrivateSubnet1Cidr:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for private subnet 1 (FSxN)
+
+  PrivateSubnet2Cidr:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for private subnet 2 (FSxN)
+
+  PlatformSubnet1Cidr:
+    Type: String
+    Default: 10.0.10.0/24
+    Description: CIDR block for platform subnet 1 (Databricks/Snowflake/etc.)
+
+  PlatformSubnet2Cidr:
+    Type: String
+    Default: 10.0.11.0/24
+    Description: CIDR block for platform subnet 2
+
+  EnableNatGateway:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Whether to create NAT Gateway for outbound internet access
+
+Conditions:
+  CreateNatGateway: !Equals [!Ref EnableNatGateway, 'true']
+
+Resources:
+  # ============================================================
+  # VPC
+  # ============================================================
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vpc'
+
+  # ============================================================
+  # Internet Gateway (for NAT Gateway)
+  # ============================================================
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Condition: CreateNatGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-igw'
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Condition: CreateNatGateway
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  # ============================================================
+  # Subnets - FSxN (Private)
+  # ============================================================
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-subnet-1'
+        - Key: Purpose
+          Value: FSxN
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-subnet-2'
+        - Key: Purpose
+          Value: FSxN
+
+  # ============================================================
+  # Subnets - Platform (Databricks/Snowflake/etc.)
+  # ============================================================
+  PlatformSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PlatformSubnet1Cidr
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-platform-subnet-1'
+        - Key: Purpose
+          Value: LakehousePlatform
+
+  PlatformSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PlatformSubnet2Cidr
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-platform-subnet-2'
+        - Key: Purpose
+          Value: LakehousePlatform
+
+  # ============================================================
+  # NAT Gateway
+  # ============================================================
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Condition: CreateNatGateway
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-nat-eip'
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Condition: CreateNatGateway
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.255.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-subnet'
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Condition: CreateNatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-nat'
+
+  # ============================================================
+  # Route Tables
+  # ============================================================
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateNatGateway
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Condition: CreateNatGateway
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateNatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-rt'
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Condition: CreateNatGateway
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  PlatformSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PlatformSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PlatformSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PlatformSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  # ============================================================
+  # VPC Endpoints
+  # ============================================================
+  S3GatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PrivateRouteTable
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 's3:DeleteObject'
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:ListBucketMultipartUploads'
+              - 's3:AbortMultipartUpload'
+              - 's3:CreateMultipartUpload'
+              - 's3:UploadPart'
+              - 's3:CompleteMultipartUpload'
+            Resource: '*'
+
+  S3InterfaceEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PlatformSubnet1
+        - !Ref PlatformSubnet2
+      SecurityGroupIds:
+        - !Ref S3EndpointSecurityGroup
+      PrivateDnsEnabled: false
+
+  # ============================================================
+  # Security Groups
+  # ============================================================
+  FSxNSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for FSx for NetApp ONTAP
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        # NFS
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: !Ref VpcCidr
+          Description: NFS
+        # SMB
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          CidrIp: !Ref VpcCidr
+          Description: SMB
+        # iSCSI
+        - IpProtocol: tcp
+          FromPort: 3260
+          ToPort: 3260
+          CidrIp: !Ref VpcCidr
+          Description: iSCSI
+        # ONTAP Management
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr
+          Description: ONTAP REST API
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref VpcCidr
+          Description: SSH (ONTAP CLI)
+        # S3 protocol
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref VpcCidr
+          Description: S3 HTTP
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr
+          Description: S3 HTTPS
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-fsxn-sg'
+
+  S3EndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for S3 Interface VPC Endpoint
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr
+          Description: HTTPS from VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-s3-endpoint-sg'
+
+  PlatformSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for lakehouse platform resources
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS outbound
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-platform-sg'
+
+Outputs:
+  VpcId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${EnvironmentName}-VpcId'
+
+  PrivateSubnet1Id:
+    Description: Private Subnet 1 ID (FSxN preferred)
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub '${EnvironmentName}-PrivateSubnet1Id'
+
+  PrivateSubnet2Id:
+    Description: Private Subnet 2 ID (FSxN standby)
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub '${EnvironmentName}-PrivateSubnet2Id'
+
+  PlatformSubnet1Id:
+    Description: Platform Subnet 1 ID
+    Value: !Ref PlatformSubnet1
+    Export:
+      Name: !Sub '${EnvironmentName}-PlatformSubnet1Id'
+
+  PlatformSubnet2Id:
+    Description: Platform Subnet 2 ID
+    Value: !Ref PlatformSubnet2
+    Export:
+      Name: !Sub '${EnvironmentName}-PlatformSubnet2Id'
+
+  FSxNSecurityGroupId:
+    Description: FSxN Security Group ID
+    Value: !Ref FSxNSecurityGroup
+    Export:
+      Name: !Sub '${EnvironmentName}-FSxNSecurityGroupId'
+
+  PlatformSecurityGroupId:
+    Description: Platform Security Group ID
+    Value: !Ref PlatformSecurityGroup
+    Export:
+      Name: !Sub '${EnvironmentName}-PlatformSecurityGroupId'
+
+  S3InterfaceEndpointId:
+    Description: S3 Interface VPC Endpoint ID
+    Value: !Ref S3InterfaceEndpoint
+    Export:
+      Name: !Sub '${EnvironmentName}-S3InterfaceEndpointId'

@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Common IAM policies for FSxN Lakehouse Integrations.
+  Provides reusable IAM roles and policies for S3 Access Point access.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: fsxn-lakehouse
+    Description: Environment name prefix for resource naming
+
+  S3AccessPointArn:
+    Type: String
+    Description: ARN of the S3 Access Point
+
+  AllowedVpcId:
+    Type: String
+    Default: ''
+    Description: VPC ID to restrict access (optional)
+
+Conditions:
+  HasVpcRestriction: !Not [!Equals [!Ref AllowedVpcId, '']]
+
+Resources:
+  # ============================================================
+  # Read-Only Access Policy
+  # ============================================================
+  S3APReadOnlyPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${EnvironmentName}-s3ap-readonly'
+      Description: Read-only access to FSxN via S3 Access Point
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowS3APReadAccess
+            Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:GetObjectVersion'
+              - 's3:GetObjectTagging'
+              - 's3:ListBucket'
+              - 's3:ListBucketVersions'
+              - 's3:GetBucketLocation'
+              - 's3:HeadObject'
+            Resource:
+              - !Ref S3AccessPointArn
+              - !Sub '${S3AccessPointArn}/object/*'
+
+  # ============================================================
+  # Read-Write Access Policy
+  # ============================================================
+  S3APReadWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${EnvironmentName}-s3ap-readwrite'
+      Description: Read-write access to FSxN via S3 Access Point
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowS3APReadWriteAccess
+            Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:GetObjectVersion'
+              - 's3:GetObjectTagging'
+              - 's3:PutObject'
+              - 's3:PutObjectTagging'
+              - 's3:DeleteObject'
+              - 's3:DeleteObjectVersion'
+              - 's3:ListBucket'
+              - 's3:ListBucketVersions'
+              - 's3:ListBucketMultipartUploads'
+              - 's3:ListMultipartUploadParts'
+              - 's3:GetBucketLocation'
+              - 's3:HeadObject'
+              - 's3:AbortMultipartUpload'
+              - 's3:CreateMultipartUpload'
+              - 's3:UploadPart'
+              - 's3:CompleteMultipartUpload'
+            Resource:
+              - !Ref S3AccessPointArn
+              - !Sub '${S3AccessPointArn}/object/*'
+
+  # ============================================================
+  # Lakehouse Platform Role (Generic)
+  # ============================================================
+  LakehousePlatformRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-platform-role'
+      Description: Generic role for lakehouse platform access to FSxN via S3 AP
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'sts:AssumeRole'
+            Condition: !If
+              - HasVpcRestriction
+              - StringEquals:
+                  'aws:SourceVpc': !Ref AllowedVpcId
+              - !Ref 'AWS::NoValue'
+      ManagedPolicyArns:
+        - !Ref S3APReadWritePolicy
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-platform-role'
+
+  # ============================================================
+  # ETL Pipeline Role
+  # ============================================================
+  ETLPipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-etl-role'
+      Description: Role for ETL pipelines (Glue, EMR, Lambda) accessing FSxN
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+                - lambda.amazonaws.com
+                - elasticmapreduce.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Ref S3APReadWritePolicy
+        - 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
+      Policies:
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-etl-role'
+
+  # ============================================================
+  # Data Consumer Role (Read-Only)
+  # ============================================================
+  DataConsumerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-consumer-role'
+      Description: Read-only role for data consumers
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Ref S3APReadOnlyPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-consumer-role'
+
+Outputs:
+  S3APReadOnlyPolicyArn:
+    Description: ARN of the S3 AP read-only policy
+    Value: !Ref S3APReadOnlyPolicy
+    Export:
+      Name: !Sub '${EnvironmentName}-S3APReadOnlyPolicyArn'
+
+  S3APReadWritePolicyArn:
+    Description: ARN of the S3 AP read-write policy
+    Value: !Ref S3APReadWritePolicy
+    Export:
+      Name: !Sub '${EnvironmentName}-S3APReadWritePolicyArn'
+
+  LakehousePlatformRoleArn:
+    Description: ARN of the lakehouse platform role
+    Value: !GetAtt LakehousePlatformRole.Arn
+    Export:
+      Name: !Sub '${EnvironmentName}-PlatformRoleArn'
+
+  ETLPipelineRoleArn:
+    Description: ARN of the ETL pipeline role
+    Value: !GetAtt ETLPipelineRole.Arn
+    Export:
+      Name: !Sub '${EnvironmentName}-ETLRoleArn'
+
+  DataConsumerRoleArn:
+    Description: ARN of the data consumer role
+    Value: !GetAtt DataConsumerRole.Arn
+    Export:
+      Name: !Sub '${EnvironmentName}-ConsumerRoleArn'

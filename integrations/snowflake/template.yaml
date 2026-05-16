@@ -1,0 +1,244 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Snowflake integration with FSx for NetApp ONTAP via S3 Access Point.
+  Creates S3 AP, IAM Role for Snowflake Storage Integration,
+  and optional SNS Topic for Snowpipe auto-ingest.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: fsxn-lakehouse
+    Description: Environment name prefix for resource naming
+
+  S3BucketName:
+    Type: String
+    Description: >
+      FSxN SVM S3 bucket name (the bucket exposed by ONTAP S3 server).
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where FSxN resides
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnet IDs for VPC Endpoint
+
+  SnowflakeAccountId:
+    Type: String
+    Description: >
+      Snowflake's AWS Account ID for your region.
+      Obtain from DESCRIBE INTEGRATION output (STORAGE_AWS_IAM_USER_ARN).
+    Default: ''
+
+  SnowflakeExternalId:
+    Type: String
+    Description: >
+      External ID from Snowflake Storage Integration.
+      Obtain from DESCRIBE INTEGRATION output (STORAGE_AWS_EXTERNAL_ID).
+    Default: ''
+
+  S3AccessPointName:
+    Type: String
+    Default: fsxn-snowflake-ap
+    Description: Name for the S3 Access Point
+
+  EnableSnowpipe:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Whether to create SNS Topic for Snowpipe auto-ingest
+
+  SnowflakeSqsArn:
+    Type: String
+    Default: ''
+    Description: >
+      Snowflake SQS ARN for Snowpipe notifications.
+      Obtain from SHOW PIPES output (notification_channel).
+
+Conditions:
+  CreateSnowpipe: !Equals [!Ref EnableSnowpipe, 'true']
+  HasSnowflakeAccount: !Not [!Equals [!Ref SnowflakeAccountId, '']]
+
+Resources:
+  # ============================================================
+  # S3 Access Point for Snowflake
+  # ============================================================
+  SnowflakeAccessPoint:
+    Type: AWS::S3::AccessPoint
+    Properties:
+      Name: !Ref S3AccessPointName
+      Bucket: !Ref S3BucketName
+      VpcConfiguration:
+        VpcId: !Ref VpcId
+      Policy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowSnowflakeRoleAccess
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt SnowflakeS3AccessRole.Arn
+            Action:
+              - 's3:GetObject'
+              - 's3:GetObjectVersion'
+              - 's3:PutObject'
+              - 's3:DeleteObject'
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:ListBucketMultipartUploads'
+              - 's3:ListMultipartUploadParts'
+              - 's3:AbortMultipartUpload'
+              - 's3:CreateMultipartUpload'
+              - 's3:UploadPart'
+              - 's3:CompleteMultipartUpload'
+            Resource:
+              - !Sub 'arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}'
+              - !Sub 'arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/*'
+
+  # ============================================================
+  # IAM Role for Snowflake Storage Integration
+  # ============================================================
+  SnowflakeS3AccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-snowflake-s3-role'
+      Description: >
+        IAM Role assumed by Snowflake Storage Integration to access FSxN via S3 AP.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowSnowflakeAssumeRole
+            Effect: Allow
+            Principal:
+              AWS: !If
+                - HasSnowflakeAccount
+                - !Sub 'arn:aws:iam::${SnowflakeAccountId}:root'
+                - !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'sts:AssumeRole'
+            Condition: !If
+              - HasSnowflakeAccount
+              - StringEquals:
+                  'sts:ExternalId': !Ref SnowflakeExternalId
+              - !Ref 'AWS::NoValue'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-snowflake-s3-role'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Integration
+          Value: snowflake
+
+  # ============================================================
+  # IAM Policy for S3 AP Access
+  # ============================================================
+  SnowflakeS3AccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${EnvironmentName}-snowflake-s3ap-access'
+      Roles:
+        - !Ref SnowflakeS3AccessRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowS3APReadWrite
+            Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:GetObjectVersion'
+              - 's3:PutObject'
+              - 's3:DeleteObject'
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+              - 's3:ListBucketMultipartUploads'
+              - 's3:ListMultipartUploadParts'
+              - 's3:AbortMultipartUpload'
+              - 's3:CreateMultipartUpload'
+              - 's3:UploadPart'
+              - 's3:CompleteMultipartUpload'
+            Resource:
+              - !Sub 'arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}'
+              - !Sub 'arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/*'
+          - Sid: AllowBucketLevelOps
+            Effect: Allow
+            Action:
+              - 's3:GetBucketLocation'
+              - 's3:ListBucket'
+            Resource:
+              - !Sub 'arn:aws:s3:::${S3BucketName}'
+
+  # ============================================================
+  # SNS Topic for Snowpipe (Optional)
+  # ============================================================
+  SnowpipeSNSTopic:
+    Type: AWS::SNS::Topic
+    Condition: CreateSnowpipe
+    Properties:
+      TopicName: !Sub '${EnvironmentName}-snowpipe-notifications'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-snowpipe-notifications'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Integration
+          Value: snowflake
+
+  SnowpipeSNSPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Condition: CreateSnowpipe
+    Properties:
+      Topics:
+        - !Ref SnowpipeSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowSnowflakeSubscribe
+            Effect: Allow
+            Principal:
+              AWS: !If
+                - HasSnowflakeAccount
+                - !Sub 'arn:aws:iam::${SnowflakeAccountId}:root'
+                - !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action:
+              - 'sns:Subscribe'
+              - 'sns:Receive'
+            Resource: !Ref SnowpipeSNSTopic
+
+Outputs:
+  SnowflakeRoleArn:
+    Description: >
+      IAM Role ARN for Snowflake Storage Integration.
+      Use in CREATE STORAGE INTEGRATION ... STORAGE_AWS_ROLE_ARN.
+    Value: !GetAtt SnowflakeS3AccessRole.Arn
+    Export:
+      Name: !Sub '${EnvironmentName}-SnowflakeRoleArn'
+
+  S3AccessPointArn:
+    Description: S3 Access Point ARN
+    Value: !Sub 'arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}'
+    Export:
+      Name: !Sub '${EnvironmentName}-SnowflakeS3APArn'
+
+  S3AccessPointAlias:
+    Description: >
+      S3 Access Point Alias for use in Snowflake STORAGE_ALLOWED_LOCATIONS.
+    Value: !GetAtt SnowflakeAccessPoint.Alias
+    Export:
+      Name: !Sub '${EnvironmentName}-SnowflakeS3APAlias'
+
+  ExternalStageUrl:
+    Description: >
+      URL for Snowflake External Stage.
+      Format: s3://<access-point-alias>/
+    Value: !Sub 's3://${SnowflakeAccessPoint.Alias}/'
+
+  SnowpipeSNSTopicArn:
+    Condition: CreateSnowpipe
+    Description: SNS Topic ARN for Snowpipe notifications
+    Value: !Ref SnowpipeSNSTopic
+
+  TrustPolicyUpdateInstructions:
+    Description: >
+      After creating the Snowflake Storage Integration, update the IAM Role trust policy
+      with the actual Snowflake AWS Account ID and External ID from DESCRIBE INTEGRATION output.
+    Value: >
+      Run: DESCRIBE INTEGRATION fsxn_storage_integration;
+      Then update CloudFormation parameters: SnowflakeAccountId and SnowflakeExternalId

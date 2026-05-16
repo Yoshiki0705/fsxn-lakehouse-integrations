@@ -1,0 +1,211 @@
+# Architecture Overview
+
+## FSxN × S3 Access Points × Lakehouse Integration Architecture
+
+### High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         AWS Account                                   │
+│                                                                       │
+│  ┌──────────────┐     ┌──────────────────┐     ┌─────────────────┐ │
+│  │  Lakehouse   │     │  S3 Access Point │     │  FSx for ONTAP  │ │
+│  │  Platform    │────▶│  (VPC-scoped)    │────▶│  Volume (S3)    │ │
+│  │              │◀────│                  │◀────│                 │ │
+│  └──────────────┘     └──────────────────┘     └─────────────────┘ │
+│        │                       │                        │            │
+│        │                       │                        │            │
+│  ┌─────▼──────┐         ┌─────▼──────┐          ┌─────▼──────┐    │
+│  │ Unity Cat. │         │ S3 AP      │          │ ONTAP      │    │
+│  │ Ext Stage  │         │ Policy     │          │ Features   │    │
+│  │ Ext Table  │         │ (IAM+VPC)  │          │ Dedup/Snap │    │
+│  └────────────┘         └────────────┘          └────────────┘    │
+│                                                                       │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Component Description
+
+#### 1. FSx for NetApp ONTAP
+
+Functions as the enterprise storage layer.
+
+| Feature | Lakehouse Benefit |
+|---------|-------------------|
+| S3 Protocol | Direct access from lakehouse platforms |
+| Deduplication | Storage reduction for similar datasets (dev/staging/prod) |
+| Compression | Cost optimization via inline compression |
+| Snapshot | Point-in-time table recovery |
+| FlexClone | Instant dataset cloning for dev environments |
+| FabricPool | Automatic S3 tiering for cold partitions |
+| SnapMirror | Cross-region DR |
+
+#### 2. S3 Access Points
+
+Connection layer between FSxN and lakehouse platforms.
+
+**Key Roles:**
+- Network-level access control via VPC restrictions
+- Fine-grained permission management via IAM policies
+- Per-platform access point isolation
+- Data isolation via path (prefix) restrictions
+
+**S3 API Compatibility:**
+
+| API | Supported | Notes |
+|-----|-----------|-------|
+| GetObject | ✅ | Read queries |
+| PutObject | ✅ | Table writes |
+| DeleteObject | ✅ | Table maintenance |
+| ListObjectsV2 | ✅ | Table discovery |
+| HeadObject | ✅ | Metadata checks |
+| CreateMultipartUpload | ✅ | Large file writes |
+| GetBucketLocation | ⚠️ | Required by some platforms |
+
+#### 3. Lakehouse Platforms
+
+Each platform accesses FSxN via S3 API.
+
+---
+
+## Architecture Patterns
+
+### Pattern A: Read-Only Analytics
+
+```
+┌────────────┐    S3 GetObject     ┌─────────┐    NFS/S3    ┌──────────┐
+│ Databricks │──────────────────▶│  S3 AP  │────────────▶│  FSxN    │
+│ Athena     │    ListObjectsV2   │ (read)  │             │  Volume  │
+│ Snowflake  │◀──────────────────│         │◀────────────│          │
+└────────────┘                    └─────────┘             └──────────┘
+```
+
+**Use Cases:**
+- Analytics queries on existing NFS/SMB data
+- ETL-free data exploration
+- Ad-hoc analysis
+
+**ONTAP Value:**
+- Query existing data without copying
+- Freeze analysis-time data with Snapshots
+
+### Pattern B: Read-Write Managed Tables
+
+```
+┌────────────┐  Get/Put/Delete   ┌─────────┐             ┌──────────┐
+│ Databricks │◀────────────────▶│  S3 AP  │◀──────────▶│  FSxN    │
+│ (Delta)    │  Multipart Upload │ (r/w)   │             │  Volume  │
+│ Snowflake  │                   │         │             │          │
+│ (Iceberg)  │                   └─────────┘             └──────────┘
+└────────────┘
+```
+
+**Use Cases:**
+- Delta Lake / Iceberg table storage
+- ACID transaction-capable tables
+- Time Travel + ONTAP Snapshot combination
+
+**ONTAP Value:**
+- Deduplication for Delta/Iceberg version files
+- Snapshot for full table recovery
+- FlexClone for dev table copies
+
+### Pattern C: ETL Pipeline (Medallion Architecture)
+
+```
+┌──────────┐    ┌─────────┐    ┌──────────┐    ┌─────────┐    ┌──────────┐
+│  Source   │──▶│  S3 AP  │──▶│  Glue/   │──▶│  S3 AP  │──▶│  FSxN    │
+│  (Raw)    │   │  (read) │   │  EMR/    │   │  (write)│   │  (Gold)  │
+│  FSxN Vol │   │         │   │  Lambda  │   │         │   │  Volume  │
+└──────────┘    └─────────┘    └──────────┘    └─────────┘    └──────────┘
+     Raw            Bronze          Transform       Silver/Gold      Curated
+```
+
+**Use Cases:**
+- Medallion architecture (Raw → Bronze → Silver → Gold)
+- Data quality checks + transformation pipelines
+- Scheduled ETL execution
+
+**ONTAP Value:**
+- Manage each layer as separate volumes
+- Snapshot consistency across layers
+- FabricPool auto-tiering for Bronze layer
+
+### Pattern D: Data Sharing
+
+```
+┌──────────┐    ┌─────────────┐    ┌────────────┐
+│  FSxN    │──▶│  S3 AP (A)  │──▶│ Consumer A │ (Databricks)
+│  Volume  │   │  prefix=/a/ │   └────────────┘
+│ (Producer)│   └─────────────┘
+│          │    ┌─────────────┐    ┌────────────┐
+│          │──▶│  S3 AP (B)  │──▶│ Consumer B │ (Snowflake)
+│          │   │  prefix=/b/ │   └────────────┘
+└──────────┘    └─────────────┘
+```
+
+**Use Cases:**
+- Data mesh data product publishing
+- Multi-tenant data sharing
+- Partner data provisioning
+
+**ONTAP Value:**
+- FlexClone for per-consumer logical copies
+- S3 AP policy for access control
+- SnapMirror for cross-region sharing
+
+---
+
+## Network Architecture
+
+### VPC-Internal Access (Recommended)
+
+```
+┌─────────────────────────────────────────────────┐
+│                    VPC                            │
+│                                                   │
+│  ┌──────────┐    ┌──────────────┐    ┌────────┐ │
+│  │ Platform │──▶│ VPC Endpoint │──▶│ S3 AP  │ │
+│  │ (Private │   │ (Interface)  │   │        │ │
+│  │  Subnet) │   │ com.aws.s3   │   │        │ │
+│  └──────────┘    └──────────────┘    └───┬────┘ │
+│                                          │       │
+│                                    ┌─────▼─────┐ │
+│                                    │   FSxN    │ │
+│                                    │  (Private │ │
+│                                    │   Subnet) │ │
+│                                    └───────────┘ │
+└─────────────────────────────────────────────────┘
+```
+
+### Security Layers
+
+1. **VPC Endpoint Policy** — Allow access only from within VPC
+2. **S3 AP Policy** — IAM Principal + VPC conditions
+3. **IAM Role Policy** — Principle of least privilege
+4. **ONTAP Export Policy** — Volume-level access control
+5. **Security Group** — Network-level filtering
+
+---
+
+## Data Format Support
+
+| Format | Read | Write | Primary Use |
+|--------|------|-------|-------------|
+| Parquet | ✅ | ✅ | Analytics queries (columnar) |
+| Apache Iceberg | ✅ | ✅ | ACID tables (vendor-neutral) |
+| Delta Lake | ✅ | ✅ | ACID tables (Databricks) |
+| Apache Hudi | ✅ | ✅ | CDC + Upsert |
+| CSV | ✅ | ✅ | Legacy data ingestion |
+| JSON / NDJSON | ✅ | ✅ | Semi-structured data |
+| ORC | ✅ | ✅ | Hive compatible |
+| Avro | ✅ | ✅ | Schema evolution |
+
+---
+
+## Next Steps
+
+- [Getting Started](getting-started.md) — First deployment
+- [S3 AP Fundamentals](s3ap-fundamentals.md) — S3 Access Points × FSxN details
+- [Vendor Comparison](vendor-comparison.md) — Platform selection guide
+- [Data Formats](data-formats.md) — Per-format recommended configurations

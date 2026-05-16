@@ -1,0 +1,37 @@
+{
+  "name": "fsxn-lakehouse-integrations",
+  "version": "0.1.0",
+  "description": "Data Lake and Lakehouse platform integrations with Amazon FSx for NetApp ONTAP via S3 Access Points",
+  "main": "index.js",
+  "scripts": {
+    "lint:cfn": "cfn-lint shared/cloudformation/*.yaml integrations/*/template.yaml",
+    "lint:python": "python -m flake8 shared/scripts/ integrations/*/tests/",
+    "test": "pytest integrations/*/tests/ -v",
+    "validate:terraform": "cd integrations/databricks/terraform && terraform validate",
+    "generate-data": "python shared/scripts/generate-sample-data.py",
+    "validate-access": "python shared/scripts/validate-access.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yoshiki/fsxn-lakehouse-integrations.git"
+  },
+  "keywords": [
+    "aws",
+    "fsx",
+    "ontap",
+    "netapp",
+    "lakehouse",
+    "data-lake",
+    "s3-access-points",
+    "databricks",
+    "snowflake",
+    "iceberg",
+    "delta-lake"
+  ],
+  "author": "yoshiki",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yoshiki/fsxn-lakehouse-integrations/issues"
+  },
+  "homepage": "https://github.com/yoshiki/fsxn-lakehouse-integrations#readme"
+}

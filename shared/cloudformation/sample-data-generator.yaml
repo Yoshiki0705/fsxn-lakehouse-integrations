@@ -1,0 +1,206 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Lambda-based sample data generator for FSxN Lakehouse testing.
+  Generates Parquet, CSV, and JSON sample data via S3 Access Point.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: fsxn-lakehouse
+    Description: Environment name prefix
+
+  S3AccessPointArn:
+    Type: String
+    Description: ARN of the S3 Access Point to write sample data
+
+  S3AccessPointAlias:
+    Type: String
+    Description: S3 Access Point alias (bucket-style access)
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnet IDs for Lambda VPC configuration
+
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group for Lambda
+
+  DatasetSize:
+    Type: String
+    Default: small
+    AllowedValues: [small, medium, large]
+    Description: >
+      Dataset size: small (1K rows), medium (100K rows), large (1M rows)
+
+Resources:
+  # ============================================================
+  # Lambda Execution Role
+  # ============================================================
+  GeneratorLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-data-generator-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+      Policies:
+        - PolicyName: S3APWriteAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetBucketLocation'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Ref S3AccessPointArn
+                  - !Sub '${S3AccessPointArn}/object/*'
+
+  # ============================================================
+  # Lambda Layer (pandas + pyarrow)
+  # ============================================================
+  DataLibsLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: !Sub '${EnvironmentName}-data-libs'
+      Description: pandas and pyarrow for data generation
+      CompatibleRuntimes:
+        - python3.12
+      Content:
+        S3Bucket: !Sub 'aws-data-wrangler-public-artifacts-${AWS::Region}'
+        S3Key: layers/aws-sdk-pandas-layer-3.7.0-py3.12-x86_64.zip
+
+  # ============================================================
+  # Sample Data Generator Lambda
+  # ============================================================
+  DataGeneratorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${EnvironmentName}-data-generator'
+      Description: Generates sample data (Parquet/CSV/JSON) to FSxN via S3 AP
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt GeneratorLambdaRole.Arn
+      Timeout: 300
+      MemorySize: 1024
+      Layers:
+        - !Ref DataLibsLayer
+      VpcConfig:
+        SubnetIds: !Ref SubnetIds
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+      Environment:
+        Variables:
+          S3_ACCESS_POINT_ALIAS: !Ref S3AccessPointAlias
+          DATASET_SIZE: !Ref DatasetSize
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import boto3
+          import pandas as pd
+          import pyarrow as pa
+          import pyarrow.parquet as pq
+          from io import BytesIO
+          from datetime import datetime, timedelta
+          import random
+          import string
+
+          s3 = boto3.client('s3')
+          AP_ALIAS = os.environ['S3_ACCESS_POINT_ALIAS']
+          DATASET_SIZE = os.environ.get('DATASET_SIZE', 'small')
+
+          SIZE_MAP = {'small': 1000, 'medium': 100000, 'large': 1000000}
+
+          def generate_transactions(n_rows):
+              """Generate sample financial transaction data."""
+              return pd.DataFrame({
+                  'transaction_id': [f'TXN-{i:08d}' for i in range(n_rows)],
+                  'timestamp': [
+                      datetime(2024, 1, 1) + timedelta(seconds=random.randint(0, 31536000))
+                      for _ in range(n_rows)
+                  ],
+                  'account_id': [f'ACC-{random.randint(1000, 9999)}' for _ in range(n_rows)],
+                  'amount': [round(random.uniform(1.0, 10000.0), 2) for _ in range(n_rows)],
+                  'currency': [random.choice(['USD', 'EUR', 'JPY', 'GBP']) for _ in range(n_rows)],
+                  'category': [random.choice(['payment', 'transfer', 'withdrawal', 'deposit']) for _ in range(n_rows)],
+                  'status': [random.choice(['completed', 'pending', 'failed']) for _ in range(n_rows)],
+              })
+
+          def generate_iot_sensors(n_rows):
+              """Generate sample IoT sensor data."""
+              return pd.DataFrame({
+                  'sensor_id': [f'SENSOR-{random.randint(1, 100):03d}' for _ in range(n_rows)],
+                  'timestamp': [
+                      datetime(2024, 1, 1) + timedelta(seconds=random.randint(0, 31536000))
+                      for _ in range(n_rows)
+                  ],
+                  'temperature': [round(random.uniform(-10.0, 50.0), 2) for _ in range(n_rows)],
+                  'humidity': [round(random.uniform(0.0, 100.0), 2) for _ in range(n_rows)],
+                  'pressure': [round(random.uniform(900.0, 1100.0), 2) for _ in range(n_rows)],
+                  'vibration': [round(random.uniform(0.0, 10.0), 4) for _ in range(n_rows)],
+                  'location': [random.choice(['plant-A', 'plant-B', 'plant-C']) for _ in range(n_rows)],
+              })
+
+          def write_parquet(df, key):
+              buffer = BytesIO()
+              df.to_parquet(buffer, index=False, engine='pyarrow')
+              buffer.seek(0)
+              s3.put_object(Bucket=AP_ALIAS, Key=key, Body=buffer.getvalue())
+
+          def write_csv(df, key):
+              buffer = BytesIO()
+              df.to_csv(buffer, index=False)
+              buffer.seek(0)
+              s3.put_object(Bucket=AP_ALIAS, Key=key, Body=buffer.getvalue())
+
+          def write_json(df, key):
+              buffer = BytesIO()
+              df.to_json(buffer, orient='records', lines=True)
+              buffer.seek(0)
+              s3.put_object(Bucket=AP_ALIAS, Key=key, Body=buffer.getvalue())
+
+          def handler(event, context):
+              n_rows = SIZE_MAP.get(DATASET_SIZE, 1000)
+              results = []
+
+              # Generate transactions
+              txn_df = generate_transactions(n_rows)
+              write_parquet(txn_df, 'sample-data/transactions/transactions.parquet')
+              write_csv(txn_df.head(100), 'sample-data/transactions/transactions_sample.csv')
+              results.append(f'transactions: {n_rows} rows')
+
+              # Generate IoT data
+              iot_df = generate_iot_sensors(n_rows)
+              write_parquet(iot_df, 'sample-data/iot-sensors/sensors.parquet')
+              write_json(iot_df.head(100), 'sample-data/iot-sensors/sensors_sample.json')
+              results.append(f'iot-sensors: {n_rows} rows')
+
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({
+                      'message': 'Sample data generated successfully',
+                      'datasets': results,
+                      'size': DATASET_SIZE,
+                      'target': AP_ALIAS
+                  })
+              }
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-data-generator'
+
+Outputs:
+  DataGeneratorFunctionArn:
+    Description: Data Generator Lambda ARN
+    Value: !GetAtt DataGeneratorFunction.Arn
+
+  DataGeneratorFunctionName:
+    Description: Data Generator Lambda Function Name
+    Value: !Ref DataGeneratorFunction
