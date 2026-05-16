@@ -102,30 +102,35 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 - S3 Access Points enabled on FSx for ONTAP SVM
 - AWS CLI v2 configured
 - Python 3.12+
+- **Important**: Analytics platform and FSx for ONTAP must be in the same AWS region.
+  See [Region Design Guide (EN)](docs/en/region-design-guide.md) / [リージョン設計ガイド (JA)](docs/ja/region-design-guide.md)
 
 ### Deploy Base Infrastructure
 
 ```bash
+# Set your target region (must match FSx for ONTAP location)
+export AWS_REGION=<YOUR_REGION>  # e.g., ap-northeast-1, us-east-1, eu-west-1
+
 # Deploy VPC + FSx for ONTAP + S3 Access Point
 aws cloudformation deploy \
   --template-file shared/cloudformation/vpc-networking.yaml \
   --stack-name fsxn-lakehouse-vpc \
   --capabilities CAPABILITY_IAM \
-  --region <YOUR_REGION>
+  --region ${AWS_REGION}
 
 aws cloudformation deploy \
   --template-file shared/cloudformation/fsxn-s3ap-base.yaml \
   --stack-name fsxn-lakehouse-base \
   --capabilities CAPABILITY_IAM \
-  --region <YOUR_REGION>
+  --region ${AWS_REGION}
 ```
 
 ### Validate S3 AP Access
 
 ```bash
 python shared/scripts/validate-access.py \
-  --access-point-arn arn:aws:s3:<YOUR_REGION>:123456789012:accesspoint/fsxn-lakehouse \
-  --region <YOUR_REGION>
+  --access-point-arn arn:aws:s3:${AWS_REGION}:<YOUR_ACCOUNT_ID>:accesspoint/fsxn-lakehouse \
+  --region ${AWS_REGION}
 ```
 
 ---
@@ -165,6 +170,19 @@ fsxn-lakehouse-integrations/
 - **SQL**: Snowflake SQL, Athena SQL, Trino SQL
 - **Testing**: pytest, cfn-lint
 - **Documentation**: Markdown (bilingual JA/EN)
+
+---
+
+## Documentation / ドキュメント
+
+| Document | 日本語 | English |
+|----------|--------|---------|
+| Architecture | [アーキテクチャ](docs/ja/architecture.md) | [Architecture](docs/en/architecture.md) |
+| Getting Started | [クイックスタート](docs/ja/getting-started.md) | [Getting Started](docs/en/getting-started.md) |
+| Region Design Guide | [リージョン設計ガイド](docs/ja/region-design-guide.md) | [Region Design Guide](docs/en/region-design-guide.md) |
+| Supported Regions | [対応リージョン](docs/ja/supported-regions.md) | [Supported Regions](docs/en/supported-regions.md) |
+| Vendor Comparison | [ベンダー比較](docs/ja/vendor-comparison.md) | [Vendor Comparison](docs/en/vendor-comparison.md) |
+| Unstructured Data | [非構造化データ](docs/ja/unstructured-data-access.md) | [Unstructured Data](docs/en/unstructured-data-access.md) |
 
 ---
 
