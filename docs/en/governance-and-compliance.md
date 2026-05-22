@@ -260,6 +260,35 @@ Components:
 
 ## Pre-Deployment Checklist
 
+> **Important**: This document provides a generic governance framework. For any real deployment, all sections must be customized with the customer's legal, security, data protection, and business stakeholders. Do not use these templates as-is without customer-specific review.
+
+### Healthcare PoC Governance Intake Questions
+
+Before starting any Healthcare PoC, answer these questions with the customer:
+
+| # | Question | Answer Options | Impact on Design |
+|---|----------|---------------|-----------------|
+| 1 | Does the data contain PHI or PII? | Yes / No / Partially | If Yes: de-identification pipeline required before S3 AP exposure |
+| 2 | Is the data de-identified, pseudonymized, or raw? | De-identified / Pseudonymized / Raw | Raw/Pseudo: cannot expose via S3 AP without processing |
+| 3 | What is the intended use? | Administrative / Research / Clinical Documentation / CDS / Patient-facing | Determines risk level and required approvals (see RAG Use Risk Classification) |
+| 4 | Who will review AI-generated responses? | Named role/person | Must be qualified for the use classification |
+| 5 | Who is the data owner? | Named role/person | Required for access approval and risk acceptance |
+| 6 | Who can accept residual risk? | Named role/person | See Risk Acceptance Authority Matrix |
+| 7 | What is the required audit log retention? | Years | Minimum 6 years (HIPAA) or 7 years (SOX) |
+| 8 | Is IRB/ethics board approval required? | Yes / No | Required for research secondary use |
+
+### Healthcare PoC Recommended Initial Scope
+
+For the first Healthcare PoC, limit to the lowest-risk configuration:
+
+- ✅ De-identified documents only (no raw PHI)
+- ✅ Research support or Administrative use only
+- ✅ Read-only S3 Access Point
+- ✅ Human review mandatory for all RAG responses
+- ❌ Patient-facing responses: NOT in initial scope
+- ❌ Clinical decision support: NOT in initial scope
+- ❌ Raw PHI: NOT in initial scope
+
 ### Healthcare
 - [ ] De-identification pipeline validated
 - [ ] No PHI in sample/test data

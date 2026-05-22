@@ -167,6 +167,50 @@ For CxO reporting, distill to 4-5 headline metrics:
 
 ---
 
+## Initial Use Case Selection
+
+For the first Investment Case, select ONE use case that minimizes risk while maximizing measurability.
+
+### Recommended First Use Case
+
+| Criterion | Enterprise IT RAG | Manufacturing Maintenance | Healthcare Research |
+|-----------|:-:|:-:|:-:|
+| PHI/PII risk | Low | Low | Medium (requires de-identification) |
+| Business KPI clarity | High (MTTR) | High (downtime) | Medium (research output) |
+| 30/60/90 day measurability | High | High | Medium |
+| Data readiness (typical) | High (docs on NAS) | Medium (mixed formats) | Low (requires pipeline) |
+| Stakeholder complexity | Low | Low | High (IRB, ethics) |
+| **Recommended priority** | **#1** | **#2** | **#3** |
+
+**Recommendation**: Start with Enterprise IT RAG or Manufacturing Maintenance. Healthcare should follow after the governance framework is validated with a lower-risk use case.
+
+### Executive Investment Case Input Requirements
+
+Before creating an Investment Case, gather these measured values:
+
+| Input | Source | Required For |
+|-------|--------|-------------|
+| Query latency (P50, P95) | Benchmark results | Time-to-insight claim |
+| Throughput (MB/s) | Benchmark results | Capacity planning |
+| Dataset size and file count | Data readiness assessment | Storage cost projection |
+| Storage + query + ingestion cost | AWS Cost Explorer + Athena billing | ROI calculation |
+| Operational effort (hours/week) | Operations team estimate | TCO comparison |
+| Data freshness (write-to-query) | Functional test | Freshness SLA claim |
+| Error/failure rate | Test results | Reliability claim |
+| Security test results | Negative test matrix | Risk posture statement |
+
+### 90-Day Decision Criteria
+
+At Day 90, make one of three decisions:
+
+| Decision | Criteria | Next Action |
+|----------|----------|-------------|
+| **Scale** | KPI improvement confirmed (≥ target); risk and cost within acceptable range; user adoption > 50% | Expand to more users/data/use cases; present to executive for investment |
+| **Adjust** | Technically feasible but data quality, user adoption, or business fit needs work | Identify specific gaps; define 30-day improvement plan; re-evaluate at Day 120 |
+| **Stop** | KPI improvement not achievable; operational burden too high; risk unacceptable; cost exceeds value | Document learnings; archive environment; redirect investment |
+
+---
+
 ## PoC Guardrails
 
 Define clear boundaries for what is allowed during PoC to enable safe experimentation.
