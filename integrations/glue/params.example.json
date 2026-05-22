@@ -1,0 +1,11 @@
+{
+  "FileSystemId": "fs-0XXXXXXXXXXXXXXXXX",
+  "VolumeId": "fsvol-0XXXXXXXXXXXXXXXXX",
+  "S3AccessPointName": "fsxn-glue-ap",
+  "ETLScriptBucket": "your-glue-scripts-bucket",
+  "GlueDatabaseName": "fsxn_glue_db",
+  "ScheduleExpression": "cron(0 2 * * ? *)",
+  "Region": "ap-northeast-1",
+  "NfsMountPoint": "/mnt/fsxn",
+  "SvmNfsEndpoint": "svm-0XXXXXXXXXXXXXXXXX.fs-0XXXXXXXXXXXXXXXXX.fsx.ap-northeast-1.amazonaws.com"
+}

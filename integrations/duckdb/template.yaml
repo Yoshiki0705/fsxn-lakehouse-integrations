@@ -1,0 +1,187 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  FSxN Lakehouse Integration — DuckDB Verification Stack.
+  Deploys Lambda function with DuckDB layer for in-process serverless analytics
+  on FSxN data via VPC-scoped S3 Access Point.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where Lambda will be deployed (must match S3 AP VPC scope)
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnet IDs for Lambda (must have NAT or VPC endpoints)
+
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group for Lambda function
+
+  S3AccessPointName:
+    Type: String
+    Default: fsxn-duckdb-ap
+    Description: Name of the VPC-scoped S3 Access Point for FSxN
+
+  S3AccessPointAlias:
+    Type: String
+    Description: >
+      S3 Access Point alias (format: <name>-<hash>-ext-s3alias).
+      Obtain via: aws s3control get-access-point --name <ap-name> --account-id <id>
+
+  LambdaMemorySize:
+    Type: Number
+    Default: 1024
+    AllowedValues: [512, 1024, 2048, 3008, 4096, 8192, 10240]
+    Description: Lambda memory in MB (more memory = more CPU for DuckDB)
+
+  LambdaTimeout:
+    Type: Number
+    Default: 300
+    MinValue: 30
+    MaxValue: 900
+    Description: Lambda timeout in seconds
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment tag
+
+Resources:
+  # --- Lambda Execution Role ---
+  DuckDBLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "fsxn-duckdb-lambda-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: S3AccessPointPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3APReadWrite
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}"
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/*"
+        - PolicyName: CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+
+  # --- DuckDB Lambda Layer ---
+  DuckDBLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: !Sub "duckdb-httpfs-layer-${Environment}"
+      Description: "DuckDB with httpfs extension for S3 access (Python 3.12, arm64)"
+      CompatibleRuntimes:
+        - python3.12
+      CompatibleArchitectures:
+        - arm64
+      Content:
+        S3Bucket: !Sub "fsxn-duckdb-layers-${AWS::AccountId}-${AWS::Region}"
+        S3Key: !Sub "layers/duckdb-layer-${Environment}.zip"
+
+  # --- Lambda Function ---
+  DuckDBQueryFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "fsxn-duckdb-query-${Environment}"
+      Description: "Execute DuckDB SQL queries on FSxN data via S3 Access Point"
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Handler: handler.lambda_handler
+      Role: !GetAtt DuckDBLambdaRole.Arn
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Layers:
+        - !Ref DuckDBLayer
+      VpcConfig:
+        SubnetIds: !Ref SubnetIds
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+      Environment:
+        Variables:
+          S3_ACCESS_POINT_ALIAS: !Ref S3AccessPointAlias
+          AWS_REGION_NAME: !Ref AWS::Region
+          ENVIRONMENT: !Ref Environment
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Vendor
+          Value: duckdb
+
+  # --- Lambda Log Group ---
+  DuckDBLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/fsxn-duckdb-query-${Environment}"
+      RetentionInDays: 14
+
+  # --- Layer S3 Bucket ---
+  LayerBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "fsxn-duckdb-layers-${AWS::AccountId}-${AWS::Region}"
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: CleanupOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+
+Outputs:
+  LambdaFunctionName:
+    Description: DuckDB Lambda function name
+    Value: !Ref DuckDBQueryFunction
+
+  LambdaFunctionArn:
+    Description: DuckDB Lambda function ARN
+    Value: !GetAtt DuckDBQueryFunction.Arn
+
+  LambdaRoleArn:
+    Description: Lambda execution role ARN
+    Value: !GetAtt DuckDBLambdaRole.Arn
+
+  LayerVersionArn:
+    Description: DuckDB Lambda Layer version ARN
+    Value: !Ref DuckDBLayer
+
+  LayerBucketName:
+    Description: S3 bucket for Lambda layer artifacts
+    Value: !Ref LayerBucket
+
+  S3AccessPointAlias:
+    Description: S3 Access Point alias for DuckDB httpfs
+    Value: !Ref S3AccessPointAlias

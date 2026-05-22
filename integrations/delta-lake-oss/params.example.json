@@ -1,0 +1,15 @@
+{
+  "FileSystemId": "fs-0XXXXXXXXXXXXXXXXX",
+  "StorageVirtualMachineId": "svm-0XXXXXXXXXXXXXXXXX",
+  "VolumeId": "fsvol-0XXXXXXXXXXXXXXXXX",
+  "VpcId": "vpc-0XXXXXXXXXXXXXXXXX",
+  "SubnetId": "subnet-0XXXXXXXXXXXXXXXXX",
+  "S3AccessPointName": "fsxn-delta-oss-ap",
+  "S3AccessPointAlias": "",
+  "Region": "ap-northeast-1",
+  "NfsMountPoint": "/mnt/fsxn",
+  "SvmNfsEndpoint": "svm-0XXXXXXXXXXXXXXXXX.fs-0XXXXXXXXXXXXXXXXX.fsx.ap-northeast-1.amazonaws.com",
+  "EmrReleaseLabel": "emr-7.1.0",
+  "SparkVersion": "3.5",
+  "DeltaSparkVersion": "3.1.0"
+}

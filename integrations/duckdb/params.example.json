@@ -1,0 +1,12 @@
+{
+  "VpcId": "vpc-0XXXXXXXXXXXXXXXXX",
+  "SubnetIds": ["subnet-0XXXXXXXXXXXXXXXXX", "subnet-0YYYYYYYYYYYYYYYYY"],
+  "SecurityGroupId": "sg-0XXXXXXXXXXXXXXXXX",
+  "S3AccessPointName": "fsxn-duckdb-ap",
+  "S3AccessPointAlias": "fsxn-duckdb-ap-XXXXXXXXXXXX-ext-s3alias",
+  "FileSystemId": "fs-09ffe72a3b2b7dbbd",
+  "LambdaMemorySize": 1024,
+  "LambdaTimeout": 300,
+  "Region": "ap-northeast-1",
+  "Environment": "dev"
+}

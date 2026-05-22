@@ -1,74 +1,78 @@
 -- =============================================================================
 -- 03 - File Format Definitions
 -- =============================================================================
--- Defines reusable file formats for Parquet, CSV, JSON, and other formats
--- used with FSxN External Stages.
+-- Defines reusable file formats for External Tables and Snowpipe ingestion.
+-- All formats are created in the BRONZE schema since that is where raw data
+-- lands from FSxN via S3 Access Point.
+--
+-- Format → External Table mapping:
+--   PARQUET_FORMAT  → TRANSACTIONS, IOT_SENSORS (04_external_table.sql)
+--   CSV_FORMAT      → CUSTOMERS_CSV (04_external_table.sql)
+--   JSON_FORMAT     → EVENTS_JSON (04_external_table.sql)
+--   NDJSON_FORMAT   → FSXN_EVENTS_PIPE / Snowpipe ingestion (06_snowpipe.sql)
+--
+-- Requirements: REQ-2 (External Table queries on structured data)
 -- =============================================================================
 
 USE DATABASE FSXN_LAKEHOUSE;
-USE SCHEMA PUBLIC;
 
 -- =============================================================================
--- Parquet Format (recommended for analytics)
+-- PARQUET_FORMAT
 -- =============================================================================
-CREATE OR REPLACE FILE FORMAT PARQUET_FORMAT
+-- Used by: TRANSACTIONS External Table, IOT_SENSORS External Table
+-- Parquet is the recommended columnar format for analytics workloads.
+-- SNAPPY compression provides a good balance of speed and compression ratio,
+-- and is the default output of most Spark/Pandas writers.
+-- =============================================================================
+CREATE OR REPLACE FILE FORMAT BRONZE.PARQUET_FORMAT
   TYPE = PARQUET
-  COMPRESSION = AUTO
-  BINARY_AS_TEXT = FALSE
-  COMMENT = 'Parquet format for columnar analytics data on FSxN';
+  COMPRESSION = SNAPPY
+  COMMENT = 'Parquet format (Snappy) — used by TRANSACTIONS and IOT_SENSORS External Tables';
 
 -- =============================================================================
--- CSV Format (legacy data ingestion)
+-- CSV_FORMAT
 -- =============================================================================
-CREATE OR REPLACE FILE FORMAT CSV_FORMAT
+-- Used by: CUSTOMERS_CSV External Table
+-- Handles standard CSV exports with a header row. FIELD_OPTIONALLY_ENCLOSED_BY
+-- ensures quoted fields with commas are parsed correctly. NULL_IF maps empty
+-- strings and literal 'NULL' to SQL NULL values.
+-- =============================================================================
+CREATE OR REPLACE FILE FORMAT BRONZE.CSV_FORMAT
   TYPE = CSV
-  COMPRESSION = AUTO
-  FIELD_DELIMITER = ','
-  RECORD_DELIMITER = '\n'
   SKIP_HEADER = 1
   FIELD_OPTIONALLY_ENCLOSED_BY = '"'
-  TRIM_SPACE = TRUE
-  NULL_IF = ('NULL', 'null', '')
-  ERROR_ON_COLUMN_COUNT_MISMATCH = FALSE
-  COMMENT = 'CSV format for legacy data on FSxN';
+  NULL_IF = ('', 'NULL')
+  COMMENT = 'CSV format (header skip, quoted fields) — used by CUSTOMERS_CSV External Table';
 
 -- =============================================================================
--- JSON Format (semi-structured data)
+-- JSON_FORMAT
 -- =============================================================================
-CREATE OR REPLACE FILE FORMAT JSON_FORMAT
+-- Used by: EVENTS_JSON External Table
+-- STRIP_OUTER_ARRAY = FALSE because each file contains a JSON array wrapper
+-- that we want to preserve (Snowflake auto-expands arrays in External Tables).
+-- COMPRESSION = NONE since FSxN stores uncompressed JSON files written via NFS.
+-- =============================================================================
+CREATE OR REPLACE FILE FORMAT BRONZE.JSON_FORMAT
   TYPE = JSON
-  COMPRESSION = AUTO
-  STRIP_OUTER_ARRAY = TRUE
-  STRIP_NULL_VALUES = FALSE
-  COMMENT = 'JSON format for semi-structured data on FSxN';
-
--- =============================================================================
--- NDJSON Format (newline-delimited JSON / JSON Lines)
--- =============================================================================
-CREATE OR REPLACE FILE FORMAT NDJSON_FORMAT
-  TYPE = JSON
-  COMPRESSION = AUTO
   STRIP_OUTER_ARRAY = FALSE
-  STRIP_NULL_VALUES = FALSE
-  COMMENT = 'NDJSON (JSON Lines) format for streaming data on FSxN';
+  COMPRESSION = NONE
+  COMMENT = 'JSON format (no array strip, uncompressed) — used by EVENTS_JSON External Table';
 
 -- =============================================================================
--- ORC Format
+-- NDJSON_FORMAT
 -- =============================================================================
-CREATE OR REPLACE FILE FORMAT ORC_FORMAT
-  TYPE = ORC
-  TRIM_SPACE = TRUE
-  COMMENT = 'ORC format for Hive-compatible data on FSxN';
+-- Used by: Snowpipe FSXN_EVENTS_PIPE (06_snowpipe.sql)
+-- Newline-delimited JSON (JSON Lines) where each line is a separate JSON object.
+-- STRIP_OUTER_ARRAY = FALSE because there is no array wrapper — each line is
+-- an independent record. This is the standard format for streaming/append
+-- workloads where new events are appended as individual lines.
+-- =============================================================================
+CREATE OR REPLACE FILE FORMAT BRONZE.NDJSON_FORMAT
+  TYPE = JSON
+  STRIP_OUTER_ARRAY = FALSE
+  COMMENT = 'NDJSON (JSON Lines) format — used by Snowpipe for streaming event ingestion';
 
 -- =============================================================================
--- Avro Format
+-- Verification
 -- =============================================================================
-CREATE OR REPLACE FILE FORMAT AVRO_FORMAT
-  TYPE = AVRO
-  TRIM_SPACE = TRUE
-  COMMENT = 'Avro format for schema-evolution data on FSxN';
-
--- =============================================================================
--- Verify formats
--- =============================================================================
-SHOW FILE FORMATS IN DATABASE FSXN_LAKEHOUSE;
+SHOW FILE FORMATS IN SCHEMA BRONZE;

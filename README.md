@@ -1,4 +1,4 @@
-# FSxN Lakehouse Integrations
+# FSx for ONTAP Lakehouse Integrations
 
 🌐 [日本語](docs/ja/architecture.md) | [English](docs/en/architecture.md)
 

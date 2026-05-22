@@ -109,7 +109,7 @@ Amazon FSx for ONTAP S3 Access Points により、FSx for ONTAP ボリューム�
 |--------------|------|---------|-------|
 | Zero-Copy NAS Analytics for Manufacturing | 製造 | 読み取り専用分析 | Good |
 | Regulated Data Lakehouse for Healthcare Research | 医療 | マネージドテーブル（読み取り） | Better |
-| Financial Data Mesh with FSxN and S3 Access Points | 金融 | データ共有 | Best |
+| Financial Data Mesh with FSx for ONTAP and S3 Access Points | 金融 | データ共有 | Best |
 | AI-Powered Document Intelligence on Enterprise Files | 全業界 | Bedrock RAG | Best |
 | Hybrid Cloud Analytics Bridge | 全業界 | ETL パイプライン | Better |
 | Media Asset Analytics without Data Migration | メディア | 読み取り専用分析 | Good |
@@ -137,7 +137,7 @@ Amazon FSx for ONTAP S3 Access Points により、FSx for ONTAP ボリューム�
 | 5 | 監査証跡とアクセス制御の検証 | Week 3 |
 | **成功基準** | PHI が VPC 外に出ない、監査証跡が完全、クエリ < 30 秒 | |
 
-### Financial Data Mesh with FSxN and S3 Access Points
+### Financial Data Mesh with FSx for ONTAP and S3 Access Points
 
 | ステップ | アクション | タイムライン |
 |---------|----------|------------|

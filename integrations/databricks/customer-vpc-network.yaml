@@ -1,0 +1,248 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Databricks Customer-managed VPC network infrastructure for FSx for ONTAP integration.
+  Deploys subnets, NAT Gateway, route tables, and security groups into an existing VPC
+  (typically the FSx for ONTAP VPC) to enable Databricks clusters with NFS access.
+
+  This template is designed for re-deployable verification environments.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: databricks-fsxn-verify
+    Description: Environment name prefix for resource naming
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: >
+      Existing VPC ID where FSx for ONTAP is deployed.
+      Databricks subnets will be created in this VPC.
+
+  VpcCidr:
+    Type: String
+    Default: '10.0.0.0/16'
+    Description: VPC CIDR block (for security group rules)
+
+  PublicSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: >
+      Existing public subnet for NAT Gateway placement.
+      Must have an Internet Gateway route.
+
+  DatabricksSubnet1Cidr:
+    Type: String
+    Default: '10.0.32.0/19'
+    Description: CIDR for Databricks private subnet 1 (AZ-a)
+
+  DatabricksSubnet2Cidr:
+    Type: String
+    Default: '10.0.64.0/19'
+    Description: CIDR for Databricks private subnet 2 (AZ-c)
+
+  AvailabilityZone1:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-1a
+    Description: AZ for Databricks subnet 1
+
+  AvailabilityZone2:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-1c
+    Description: AZ for Databricks subnet 2
+
+  FsxNfsIp:
+    Type: String
+    Default: '10.0.3.133'
+    Description: FSx for ONTAP NFS data LIF IP address
+
+  FsxMgmtIp:
+    Type: String
+    Default: '10.0.3.72'
+    Description: FSx for ONTAP management endpoint IP address
+
+  S3VpcEndpointId:
+    Type: String
+    Default: ''
+    Description: >
+      Existing S3 Gateway VPC Endpoint ID (optional).
+      If empty, a new one will be created.
+
+Conditions:
+  CreateS3Endpoint: !Equals [!Ref S3VpcEndpointId, '']
+
+Resources:
+  # ============================================================
+  # Databricks Private Subnets
+  # ============================================================
+  DatabricksSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref DatabricksSubnet1Cidr
+      AvailabilityZone: !Ref AvailabilityZone1
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-subnet-1a'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Purpose
+          Value: databricks-cluster-nodes
+
+  DatabricksSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref DatabricksSubnet2Cidr
+      AvailabilityZone: !Ref AvailabilityZone2
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-subnet-1c'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Purpose
+          Value: databricks-cluster-nodes
+
+  # ============================================================
+  # NAT Gateway (for Databricks control plane connectivity)
+  # ============================================================
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-nat-eip'
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnetId
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-nat-gw'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+
+  # ============================================================
+  # Route Table for Databricks Subnets
+  # ============================================================
+  DatabricksRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-rt'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref DatabricksRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGateway
+
+  Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DatabricksSubnet1
+      RouteTableId: !Ref DatabricksRouteTable
+
+  Subnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DatabricksSubnet2
+      RouteTableId: !Ref DatabricksRouteTable
+
+  # ============================================================
+  # S3 Gateway VPC Endpoint (if not already exists)
+  # ============================================================
+  S3GatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Condition: CreateS3Endpoint
+    Properties:
+      VpcId: !Ref VpcId
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref DatabricksRouteTable
+
+  # ============================================================
+  # Security Group for Databricks Clusters
+  # ============================================================
+  DatabricksClusterSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub '${EnvironmentName} - Databricks cluster nodes'
+      VpcId: !Ref VpcId
+      # Ingress: Allow all traffic within the same SG (Databricks requirement)
+      SecurityGroupIngress:
+        - IpProtocol: '-1'
+          SourceSecurityGroupId: !Ref DatabricksClusterSG
+          Description: Allow all intra-cluster traffic
+      # Egress: Allow all outbound (Databricks control plane + FSx NFS)
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: '0.0.0.0/0'
+          Description: Allow all outbound (NAT GW to Databricks control plane)
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-cluster-sg'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+
+  # Self-referencing ingress rule (required by Databricks)
+  DatabricksSGSelfIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DatabricksClusterSG
+      IpProtocol: '-1'
+      SourceSecurityGroupId: !Ref DatabricksClusterSG
+      Description: Self-referencing rule for Databricks cluster communication
+
+Outputs:
+  DatabricksSubnet1Id:
+    Description: Databricks private subnet 1 ID (for Network Configuration)
+    Value: !Ref DatabricksSubnet1
+    Export:
+      Name: !Sub '${EnvironmentName}-Subnet1Id'
+
+  DatabricksSubnet2Id:
+    Description: Databricks private subnet 2 ID (for Network Configuration)
+    Value: !Ref DatabricksSubnet2
+    Export:
+      Name: !Sub '${EnvironmentName}-Subnet2Id'
+
+  DatabricksSecurityGroupId:
+    Description: Security Group ID for Databricks clusters
+    Value: !Ref DatabricksClusterSG
+    Export:
+      Name: !Sub '${EnvironmentName}-ClusterSGId'
+
+  NatGatewayId:
+    Description: NAT Gateway ID
+    Value: !Ref NatGateway
+
+  NatGatewayPublicIp:
+    Description: NAT Gateway public IP (for allowlisting if needed)
+    Value: !Ref NatGatewayEIP
+
+  RouteTableId:
+    Description: Route table ID for Databricks subnets
+    Value: !Ref DatabricksRouteTable
+
+  DatabricksNetworkConfigInputs:
+    Description: >
+      Use these values in Databricks Account Console > Cloud Resources > Network:
+      VPC ID, Subnet IDs, Security Group ID
+    Value: !Sub |
+      VPC ID: ${VpcId}
+      Subnet IDs: ${DatabricksSubnet1}, ${DatabricksSubnet2}
+      Security Group ID: ${DatabricksClusterSG}
+
+  EstimatedMonthlyCost:
+    Description: Estimated monthly cost (NAT Gateway only, ~$45/month + data transfer)
+    Value: 'NAT Gateway: ~$32/month fixed + $0.062/GB data processed'

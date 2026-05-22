@@ -1,0 +1,242 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  FSxN Lakehouse Integration — Athena Verification Stack.
+  Creates S3 Access Point (internet origin), IAM Roles for Glue Crawler and Athena,
+  Glue Database, Glue Crawler, and Athena Workgroup.
+
+Parameters:
+  FileSystemId:
+    Type: String
+    Description: FSx for ONTAP File System ID (e.g., fs-0123456789abcdef0)
+
+  StorageVirtualMachineId:
+    Type: String
+    Description: FSx for ONTAP SVM ID (e.g., svm-0123456789abcdef0)
+
+  VolumeId:
+    Type: String
+    Description: FSx for ONTAP Volume ID for the data volume
+
+  S3AccessPointName:
+    Type: String
+    Default: fsxn-athena-ap
+    Description: Name for the S3 Access Point
+
+  GlueDatabaseName:
+    Type: String
+    Default: fsxn_athena_db
+    Description: Glue Data Catalog database name
+
+  AthenaWorkgroupName:
+    Type: String
+    Default: fsxn-verification
+    Description: Athena workgroup name
+
+  AthenaResultsBucket:
+    Type: String
+    Description: S3 bucket for Athena query results (must already exist)
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment tag
+
+Resources:
+  # --- IAM Role for Glue Crawler ---
+  GlueCrawlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "fsxn-athena-glue-crawler-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+      Policies:
+        - PolicyName: S3AccessPointReadPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3APRead
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}"
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/*"
+        - PolicyName: GlueCatalogPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:GetDatabase
+                  - glue:GetDatabases
+                  - glue:CreateTable
+                  - glue:UpdateTable
+                  - glue:GetTable
+                  - glue:GetTables
+                  - glue:BatchCreatePartition
+                  - glue:CreatePartition
+                  - glue:GetPartition
+                  - glue:GetPartitions
+                  - glue:BatchGetPartition
+                Resource: "*"
+        - PolicyName: CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+
+  # --- IAM Role for Athena Execution ---
+  AthenaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "fsxn-athena-execution-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: athena.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3AccessPointReadWritePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3APRead
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}"
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/*"
+              - Sid: S3APWrite
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/gold/*"
+              - Sid: AthenaResultsBucket
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub "arn:aws:s3:::${AthenaResultsBucket}"
+                  - !Sub "arn:aws:s3:::${AthenaResultsBucket}/*"
+        - PolicyName: GlueCatalogReadPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:GetDatabase
+                  - glue:GetDatabases
+                  - glue:GetTable
+                  - glue:GetTables
+                  - glue:GetPartition
+                  - glue:GetPartitions
+                  - glue:BatchGetPartition
+                Resource: "*"
+
+  # --- Glue Database ---
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Ref GlueDatabaseName
+        Description: "FSxN Athena verification database — tables discovered by Crawler from S3 AP"
+
+  # --- Glue Crawler ---
+  GlueCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Name: !Sub "fsxn-athena-crawler-${Environment}"
+      Role: !GetAtt GlueCrawlerRole.Arn
+      DatabaseName: !Ref GlueDatabaseName
+      Description: "Crawls FSxN data via S3 Access Point (internet origin)"
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${S3AccessPointName}-${AWS::AccountId}.s3-accesspoint.${AWS::Region}.amazonaws.com/"
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: LOG
+      RecrawlPolicy:
+        RecrawlBehavior: CRAWL_EVERYTHING
+      Configuration: >
+        {
+          "Version": 1.0,
+          "Grouping": {
+            "TableGroupingPolicy": "CombineCompatibleSchemas"
+          }
+        }
+      Tags:
+        Environment: !Ref Environment
+        Project: fsxn-lakehouse-integrations
+        Vendor: athena
+
+  # --- Athena Workgroup ---
+  AthenaWorkgroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: !Ref AthenaWorkgroupName
+      Description: "FSxN verification workgroup with cost controls"
+      State: ENABLED
+      WorkGroupConfiguration:
+        ResultConfiguration:
+          OutputLocation: !Sub "s3://${AthenaResultsBucket}/athena-results/"
+        EnforceWorkGroupConfiguration: true
+        PublishCloudWatchMetricsEnabled: true
+        BytesScannedCutoffPerQuery: 10737418240  # 10 GB limit
+        EngineVersion:
+          SelectedEngineVersion: "Athena engine version 3"
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+
+Outputs:
+  S3AccessPointName:
+    Description: S3 Access Point name (create separately via FSx CLI)
+    Value: !Ref S3AccessPointName
+
+  GlueCrawlerName:
+    Description: Glue Crawler name
+    Value: !Sub "fsxn-athena-crawler-${Environment}"
+
+  GlueDatabaseName:
+    Description: Glue Database name
+    Value: !Ref GlueDatabaseName
+
+  AthenaWorkgroupName:
+    Description: Athena Workgroup name
+    Value: !Ref AthenaWorkgroupName
+
+  GlueCrawlerRoleArn:
+    Description: Glue Crawler IAM Role ARN
+    Value: !GetAtt GlueCrawlerRole.Arn
+
+  AthenaExecutionRoleArn:
+    Description: Athena Execution IAM Role ARN
+    Value: !GetAtt AthenaExecutionRole.Arn
