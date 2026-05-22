@@ -171,6 +171,64 @@ For CxO reporting, distill to 4-5 headline metrics:
 
 For the first Investment Case, select ONE use case that minimizes risk while maximizing measurability.
 
+### Decision: Enterprise IT RAG
+
+Based on the selection matrix below, **Enterprise IT RAG** is the recommended first use case.
+
+```yaml
+# Value Hypothesis (define BEFORE verification)
+value_hypothesis:
+  use_case: "Enterprise IT RAG"
+  business_issue: "Incident responders spend too long searching for relevant runbooks and past incident reports"
+  target_users: "L2 support engineers, SRE team, operations staff"
+  data_source: "Runbooks, incident reports, architecture docs, FAQs on NFS/SMB file shares"
+  
+  expected_value:
+    search_time_reduction: "30-50%"
+    first_response_time_reduction: "20-30%"
+    mttr_improvement: "10-15%"
+  
+  measurement:
+    baseline_period: "30 days before PoC"
+    measurement_period: "90 days"
+    primary_kpi: "Mean time from incident start to relevant document found"
+    secondary_kpis:
+      - "MTTR (mean time to resolution)"
+      - "User satisfaction (1-5 survey)"
+      - "RAG answer accuracy (human review pass rate)"
+  
+  guardrails:
+    data_risk: "Low (no PHI/PII in IT runbooks)"
+    read_only: true
+    human_review: "Required for first 30 days; optional after accuracy > 90%"
+  
+  decision_criteria:
+    scale: "Search time reduced ≥ 30%; accuracy ≥ 85%; cost within budget"
+    adjust: "Technically works but adoption < 50% or accuracy < 85%"
+    stop: "No measurable improvement after 60 days"
+  
+  investment_case_timeline:
+    benchmark_complete: "Week 2"
+    security_test_complete: "Week 2"
+    initial_cost_estimate: "Week 3"
+    draft_investment_case: "Day 30 (based on initial usage data)"
+    final_investment_case: "Day 90 (based on full measurement period)"
+```
+
+### Measurement Sequence
+
+| Step | Activity | Timeline | Output |
+|------|----------|----------|--------|
+| 1 | Baseline KPI measurement (current search time, MTTR) | Week -2 to 0 | Baseline metrics |
+| 2 | Data readiness assessment | Week 1 | Readiness score |
+| 3 | FSx S3 AP + Athena/Bedrock deployment | Week 1-2 | Working environment |
+| 4 | Functional + Security + Benchmark tests | Week 2 | Evidence records |
+| 5 | User pilot (5-10 users) | Week 3-4 | Initial usage data |
+| 6 | 30-day review + draft Investment Case | Day 30 | Go/Adjust decision |
+| 7 | Full user rollout (if Go) | Day 30-60 | Broader adoption data |
+| 8 | 60-day optimization | Day 60 | Tuned system |
+| 9 | 90-day Scale/Adjust/Stop decision | Day 90 | Final Investment Case |
+
 ### Recommended First Use Case
 
 | Criterion | Enterprise IT RAG | Manufacturing Maintenance | Healthcare Research |
