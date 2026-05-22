@@ -1,0 +1,359 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  FPolicy Ingestion — SQS キュー + Lambda (Bridge) で FPolicy イベントを
+  SNS Topic (Snowpipe 互換 S3 Event 形式) に転送するパイプライン。
+  
+  フロー: FPolicy Server → SQS → Lambda (Bridge) → SNS Topic → Snowflake SQS (Snowpipe)
+  
+  Lambda Bridge は FPolicy イベントを Snowpipe 互換の S3 Event JSON に変換:
+  {
+    "Records": [{
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "eventName": "ObjectCreated:Put",
+      "s3": {
+        "bucket": {"name": "<s3-ap-alias>"},
+        "object": {"key": "<file_path>", "size": <size>}
+      }
+    }]
+  }
+  
+  制約事項:
+  - SQS VPC Endpoint 必須: Fargate (Private Subnet) → SQS 通信
+  - Snowpipe は特定の S3 Event 形式を期待 → Lambda Bridge で変換
+  
+  参考: https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: SQS VPC Endpoint を作成する VPC ID
+
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: SQS VPC Endpoint を配置するプライベートサブネット
+
+  VpcEndpointSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: VPC Endpoint 用セキュリティグループ (HTTPS 443 inbound)
+
+  SNSTopicArn:
+    Type: String
+    Description: Snowpipe 通知用 SNS Topic ARN（fpolicy-routing スタックで作成）
+
+  S3AccessPointAlias:
+    Type: String
+    Default: ''
+    Description: S3 Access Point エイリアス（Snowpipe S3 Event の bucket.name に使用）
+
+  EventBusName:
+    Type: String
+    Default: ''
+    Description: |
+      EventBridge Custom Bus 名（オプション）。
+      空の場合は SNS のみに送信。値がある場合は SNS + EventBridge 両方に送信。
+
+Conditions:
+  HasEventBus: !Not [!Equals [!Ref EventBusName, '']]
+  HasS3APAlias: !Not [!Equals [!Ref S3AccessPointAlias, '']]
+
+Resources:
+  # --- SQS Queue (FPolicy イベント受信) ---
+  FPolicyEventQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::StackName}-fpolicy-events'
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 1209600  # 14 days
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt FPolicyDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Purpose
+          Value: FPolicy event ingestion for Snowpipe
+
+  # --- Dead Letter Queue ---
+  FPolicyDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::StackName}-fpolicy-events-dlq'
+      MessageRetentionPeriod: 1209600
+
+  # --- SQS VPC Endpoint (Fargate → SQS 通信用) ---
+  # 制約: Fargate (Private Subnet) は SQS に直接到達できないため VPC Endpoint が必須
+  SQSVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VpcId
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.sqs'
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: !Ref PrivateSubnetIds
+      SecurityGroupIds:
+        - !Ref VpcEndpointSecurityGroupId
+
+  # --- EventBridge Custom Bus (optional, for multi-target routing) ---
+  FPolicyEventBus:
+    Type: AWS::Events::EventBus
+    Condition: HasEventBus
+    Properties:
+      Name: !Ref EventBusName
+
+  # --- Lambda Execution Role ---
+  BridgeLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-bridge-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SQSReceive
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt FPolicyEventQueue.Arn
+        - PolicyName: SNSPublish
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref SNSTopicArn
+        - !If
+          - HasEventBus
+          - PolicyName: EventBridgePut
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - events:PutEvents
+                  Resource: !GetAtt FPolicyEventBus.Arn
+          - !Ref AWS::NoValue
+
+  # --- Lambda Function (Bridge: SQS → SNS Snowpipe-compatible S3 Event) ---
+  BridgeLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-fpolicy-bridge'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt BridgeLambdaRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref SNSTopicArn
+          S3_AP_ALIAS: !If [HasS3APAlias, !Ref S3AccessPointAlias, 'fsxn-s3ap']
+          EVENT_BUS_NAME: !If [HasEventBus, !Ref EventBusName, '']
+      Code:
+        ZipFile: |
+          """
+          FPolicy Bridge Lambda — SQS メッセージを Snowpipe 互換 S3 Event 形式に変換し
+          SNS Topic に Publish する。Snowflake SQS が SNS をサブスクライブして Snowpipe を起動。
+          
+          FPolicy Server が送信する SQS メッセージ形式:
+          {
+            "event_type": "FILE_CREATE" | "FILE_RENAME" | "FILE_DELETE" | "FILE_WRITE",
+            "file_path": "/vol1/bronze/events/new_file.json",
+            "volume": "vol1",
+            "svm": "svm-name",
+            "timestamp": "2026-05-17T10:00:00Z",
+            "client_ip": "10.0.1.100",
+            "protocol": "nfs",
+            "size": 1024
+          }
+          
+          Snowpipe 互換 S3 Event 出力形式:
+          {
+            "Records": [{
+              "eventVersion": "2.1",
+              "eventSource": "aws:s3",
+              "eventName": "ObjectCreated:Put",
+              "s3": {
+                "bucket": {"name": "<s3-ap-alias>"},
+                "object": {"key": "bronze/events/new_file.json", "size": 1024}
+              }
+            }]
+          }
+          """
+          import json
+          import os
+          import boto3
+          from pathlib import PurePosixPath
+
+          sns_client = boto3.client('sns')
+          SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
+          S3_AP_ALIAS = os.environ['S3_AP_ALIAS']
+          EVENT_BUS_NAME = os.environ.get('EVENT_BUS_NAME', '')
+
+          # Optional EventBridge client
+          events_client = boto3.client('events') if EVENT_BUS_NAME else None
+
+          # FPolicy event_type → S3 eventName マッピング
+          S3_EVENT_MAP = {
+              'FILE_CREATE': 'ObjectCreated:Put',
+              'FILE_WRITE': 'ObjectCreated:Put',
+              'FILE_RENAME': 'ObjectCreated:Copy',
+              'FILE_DELETE': 'ObjectRemoved:Delete',
+          }
+
+          def handler(event, context):
+              processed = 0
+              errors = 0
+              
+              for record in event.get('Records', []):
+                  try:
+                      body = json.loads(record['body'])
+                      event_type = body.get('event_type', '')
+                      file_path = body.get('file_path', '')
+                      
+                      # Skip non-create events for Snowpipe (only ObjectCreated triggers COPY)
+                      s3_event_name = S3_EVENT_MAP.get(event_type)
+                      if not s3_event_name or 'Removed' in s3_event_name:
+                          print(f"Skipping event_type={event_type} (not a create event)")
+                          continue
+                      
+                      # Convert file_path to S3 object key
+                      # FPolicy path: /vol1/bronze/events/file.json → bronze/events/file.json
+                      path_obj = PurePosixPath(file_path)
+                      parts = path_obj.parts
+                      # Remove leading / and volume name (first two parts: '/', 'vol1')
+                      if len(parts) > 2:
+                          object_key = str(PurePosixPath(*parts[2:]))
+                      else:
+                          object_key = path_obj.name
+                      
+                      # Build Snowpipe-compatible S3 Event JSON
+                      s3_event = {
+                          "Records": [
+                              {
+                                  "eventVersion": "2.1",
+                                  "eventSource": "aws:s3",
+                                  "eventName": s3_event_name,
+                                  "s3": {
+                                      "bucket": {
+                                          "name": S3_AP_ALIAS
+                                      },
+                                      "object": {
+                                          "key": object_key,
+                                          "size": body.get('size', 0)
+                                      }
+                                  }
+                              }
+                          ]
+                      }
+                      
+                      # Publish to SNS (Snowpipe will receive via SQS subscription)
+                      sns_client.publish(
+                          TopicArn=SNS_TOPIC_ARN,
+                          Message=json.dumps(s3_event),
+                          Subject='Amazon S3 Notification'
+                      )
+                      processed += 1
+                      
+                      # Optionally also send to EventBridge for other consumers
+                      if events_client and EVENT_BUS_NAME:
+                          events_client.put_events(Entries=[{
+                              'Source': 'custom.fpolicy',
+                              'DetailType': 'FileCreated',
+                              'Detail': json.dumps({
+                                  'file_path': file_path,
+                                  'file_name': path_obj.name,
+                                  'extension': path_obj.suffix.lower(),
+                                  'volume': body.get('volume', ''),
+                                  'svm': body.get('svm', ''),
+                                  'protocol': body.get('protocol', ''),
+                                  'client_ip': body.get('client_ip', ''),
+                                  'timestamp': body.get('timestamp', ''),
+                                  'object_key': object_key,
+                              }),
+                              'EventBusName': EVENT_BUS_NAME,
+                          }])
+                      
+                  except (json.JSONDecodeError, KeyError) as e:
+                      print(f"Error processing record: {e}")
+                      errors += 1
+                      continue
+              
+              print(f"Processed {processed} events to SNS, {errors} errors")
+              
+              if errors > 0 and processed == 0:
+                  raise Exception(f"All {errors} events failed processing")
+              
+              return {'statusCode': 200, 'processed': processed, 'errors': errors}
+
+  # --- SQS → Lambda Event Source Mapping ---
+  SQSEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt FPolicyEventQueue.Arn
+      FunctionName: !Ref BridgeLambdaFunction
+      BatchSize: 10
+      MaximumBatchingWindowInSeconds: 5
+      Enabled: true
+
+  # --- CloudWatch Alarm (DLQ messages) ---
+  DLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-fpolicy-dlq-messages'
+      AlarmDescription: FPolicy events landing in DLQ — check Bridge Lambda errors
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt FPolicyDLQ.QueueName
+
+Outputs:
+  QueueUrl:
+    Description: SQS Queue URL (FPolicy Server の SQS_QUEUE_URL 環境変数に設定)
+    Value: !Ref FPolicyEventQueue
+    Export:
+      Name: !Sub '${AWS::StackName}-QueueUrl'
+
+  QueueArn:
+    Description: SQS Queue ARN (Fargate タスクロール権限用)
+    Value: !GetAtt FPolicyEventQueue.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-QueueArn'
+
+  BridgeLambdaArn:
+    Description: Bridge Lambda Function ARN
+    Value: !GetAtt BridgeLambdaFunction.Arn
+
+  DLQUrl:
+    Description: Dead Letter Queue URL
+    Value: !Ref FPolicyDLQ
+
+  SQSVpcEndpointId:
+    Description: SQS VPC Endpoint ID (Fargate → SQS 通信に必須)
+    Value: !Ref SQSVpcEndpoint
+
+  EventBusName:
+    Condition: HasEventBus
+    Description: EventBridge Custom Bus Name (multi-target routing 用)
+    Value: !Ref EventBusName
+
+  EventBusArn:
+    Condition: HasEventBus
+    Description: EventBridge Custom Bus ARN
+    Value: !GetAtt FPolicyEventBus.Arn

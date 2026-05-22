@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  VPC Peering between Databricks Managed VPC and FSx for ONTAP VPC.
+  Used for testing NFS connectivity from Databricks-managed VPC workspace.
+  Note: NFS mount is blocked by Databricks seccomp filter even with peering.
+  This template is kept for reference and potential future re-testing.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: databricks-fsxn-peering
+    Description: Environment name prefix
+
+  DatabricksVpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Databricks Managed VPC ID
+
+  DatabricksVpcCidr:
+    Type: String
+    Default: '10.53.0.0/16'
+    Description: Databricks Managed VPC CIDR
+
+  FsxVpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: FSx for ONTAP VPC ID
+
+  FsxVpcCidr:
+    Type: String
+    Default: '10.0.0.0/16'
+    Description: FSx for ONTAP VPC CIDR
+
+  DatabricksRouteTableIds:
+    Type: CommaDelimitedList
+    Description: >
+      Route table IDs in Databricks VPC to add FSx VPC route.
+      Find these in the Databricks-managed VPC (usually 2 private route tables).
+
+  FsxRouteTableIds:
+    Type: CommaDelimitedList
+    Description: >
+      Route table IDs in FSx VPC to add Databricks VPC route.
+      Include all route tables that FSx subnets use.
+
+Resources:
+  # ============================================================
+  # VPC Peering Connection
+  # ============================================================
+  VpcPeeringConnection:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      VpcId: !Ref DatabricksVpcId
+      PeerVpcId: !Ref FsxVpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-peering'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Note
+          Value: 'NFS mount blocked by Databricks seccomp - kept for reference'
+
+  # ============================================================
+  # Routes: Databricks VPC → FSx VPC
+  # ============================================================
+  # Note: CloudFormation doesn't support iterating over a list for routes.
+  # For multiple route tables, use a custom resource or deploy manually.
+  # This template handles the first route table in each list.
+
+  DatabricksToFsxRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Select [0, !Ref DatabricksRouteTableIds]
+      DestinationCidrBlock: !Ref FsxVpcCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringConnection
+
+  FsxToDatabricksRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Select [0, !Ref FsxRouteTableIds]
+      DestinationCidrBlock: !Ref DatabricksVpcCidr
+      VpcPeeringConnectionId: !Ref VpcPeeringConnection
+
+  # ============================================================
+  # Security Group for NFS access (add to Databricks cluster SG)
+  # ============================================================
+  NfsEgressRule:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub '${EnvironmentName} - NFS egress to FSx for ONTAP'
+      VpcId: !Ref DatabricksVpcId
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: !Ref FsxVpcCidr
+          Description: NFS TCP
+        - IpProtocol: udp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: !Ref FsxVpcCidr
+          Description: NFS UDP
+        - IpProtocol: tcp
+          FromPort: 111
+          ToPort: 111
+          CidrIp: !Ref FsxVpcCidr
+          Description: Portmapper TCP
+        - IpProtocol: udp
+          FromPort: 111
+          ToPort: 111
+          CidrIp: !Ref FsxVpcCidr
+          Description: Portmapper UDP
+        - IpProtocol: tcp
+          FromPort: 635
+          ToPort: 635
+          CidrIp: !Ref FsxVpcCidr
+          Description: Mountd TCP
+        - IpProtocol: udp
+          FromPort: 635
+          ToPort: 635
+          CidrIp: !Ref FsxVpcCidr
+          Description: Mountd UDP
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref FsxVpcCidr
+          Description: ONTAP REST API
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-nfs-egress-sg'
+
+Outputs:
+  VpcPeeringConnectionId:
+    Description: VPC Peering Connection ID
+    Value: !Ref VpcPeeringConnection
+
+  NfsSecurityGroupId:
+    Description: Security Group ID with NFS egress rules
+    Value: !Ref NfsEgressRule
+
+  VerificationNotes:
+    Description: Important notes about this configuration
+    Value: >
+      VERIFIED (2026-05-17): VPC Peering provides network connectivity but
+      NFS kernel mount is blocked by Databricks seccomp filter on all cluster
+      modes (Standard, Dedicated). NFS RPC calls succeed at user-space level.
+      This peering is useful for ONTAP REST API access from Databricks clusters.

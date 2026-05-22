@@ -38,8 +38,9 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Auth**: Storage Integration + IAM Role
 - **Network**: Internet network origin (PrivateLink optional)
 - **Formats**: Parquet, CSV, JSON, Avro, ORC, Iceberg
-- **Unstructured**: Directory Table + Pre-signed URLs
+- **Unstructured**: Directory Table + Pre-signed URLs (works despite AWS docs saying "Not supported")
 - **ONTAP Value**: Snapshot (beyond Time Travel retention), FlexClone (test env)
+- **Known Limitation**: High latency on S3 AP operations (30s-5min+ for stage/list)
 
 ---
 
@@ -180,7 +181,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 | **Textract** | ✅ | ❌ | ❌ | ✅ | Direct S3 AP read |
 | **Lambda** | ✅ | ✅ | ✅ | ✅ | S3 AP read/write |
 | **Databricks** | ✅ | ✅ | ✅ | ✅ | binaryFile format |
-| **Snowflake** | 📋 | 📋 | 📋 | 📋 | Directory Table + Pre-signed URL |
+| **Snowflake** | ✅ | ✅ | ✅ | ✅ | Directory Table + Pre-signed URLs |
 | **EMR Spark** | ✅ | ✅ | ✅ | ✅ | binaryFile / custom |
 | **Athena** | ❌ | ❌ | ❌ | ❌ | Structured data only |
 | **BigQuery Omni** | ✅ | ✅ | ❌ | ❌ | Object Table |

@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  FSxN Lakehouse Integration — Delta Lake OSS Verification Stack.
+  Creates S3 Access Point (VPC-scoped), IAM Role for EMR Instance Profile,
+  and supporting infrastructure for delta-spark + delta-rs verification.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID (same VPC as FSxN)
+
+  FileSystemId:
+    Type: String
+    Description: FSx for ONTAP File System ID
+
+  VolumeId:
+    Type: String
+    Description: FSx for ONTAP Volume ID for Delta Lake data
+
+  S3AccessPointName:
+    Type: String
+    Default: fsxn-delta-oss-ap
+    Description: Name for the VPC-scoped S3 Access Point
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Resources:
+  # --- IAM Role for EMR / EC2 Instance Profile ---
+  DeltaLakeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "fsxn-delta-oss-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - elasticmapreduce.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role
+      Policies:
+        - PolicyName: S3AccessPointPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3APFullAccess
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource:
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}"
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/*"
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "fsxn-delta-oss-profile-${Environment}"
+      Roles:
+        - !Ref DeltaLakeRole
+
+Outputs:
+  S3AccessPointName:
+    Value: !Ref S3AccessPointName
+  RoleArn:
+    Value: !GetAtt DeltaLakeRole.Arn
+  InstanceProfileArn:
+    Value: !GetAtt InstanceProfile.Arn

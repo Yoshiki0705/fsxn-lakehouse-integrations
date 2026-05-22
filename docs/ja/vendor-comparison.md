@@ -37,8 +37,9 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **認証**: Storage Integration + IAM Role
 - **ネットワーク**: Internet network origin（PrivateLink オプション）
 - **データ形式**: Parquet, CSV, JSON, Avro, ORC, Iceberg
-- **非構造化データ**: Directory Table + Pre-signed URL
+- **非構造化データ**: Directory Table + Pre-signed URL（AWS ドキュメントでは「非サポート」と記載されているが動作確認済み）
 - **ONTAP 活用**: Snapshot（Time Travel 超過分）、FlexClone（テスト環境）
+- **既知の制限**: S3 AP 操作の高レイテンシ（ステージ/LIST に 30秒〜5分以上）
 
 ---
 
@@ -179,7 +180,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 | **Textract** | ✅ | ❌ | ❌ | ✅ | S3 AP 直接読み取り |
 | **Lambda** | ✅ | ✅ | ✅ | ✅ | S3 AP 読み書き |
 | **Databricks** | ✅ | ✅ | ✅ | ✅ | binaryFile フォーマット |
-| **Snowflake** | 📋 | 📋 | 📋 | 📋 | Directory Table + Pre-signed URL |
+| **Snowflake** | ✅ | ✅ | ✅ | ✅ | Directory Table + Pre-signed URL |
 | **EMR Spark** | ✅ | ✅ | ✅ | ✅ | binaryFile / カスタム |
 | **Athena** | ❌ | ❌ | ❌ | ❌ | 構造化データのみ |
 | **BigQuery Omni** | ✅ | ✅ | ❌ | ❌ | Object Table |

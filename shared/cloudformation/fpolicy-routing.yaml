@@ -1,0 +1,433 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  FPolicy Routing — SNS Topic + Snowpipe サブスクリプション設定。
+  
+  Snowpipe 用途:
+    SNS Topic を作成し、Snowflake SQS Queue がサブスクライブできるよう
+    Topic Policy を設定する。Lambda Bridge が Snowpipe 互換 S3 Event 形式で
+    SNS に Publish → Snowflake SQS → Snowpipe COPY INTO が自動実行される。
+  
+  EventBridge 用途 (オプション):
+    EventBridge Custom Bus のルールとターゲットを定義し、FPolicy イベントを
+    各種 AWS サービス / 外部 API にルーティングする。
+  
+  サポートするターゲット:
+  - SNS_SNOWPIPE: SNS Topic (Snowpipe 通知) — デフォルト
+  - GLUE_JOB: AWS Glue ETL Job
+  - GLUE_CRAWLER: AWS Glue Crawler
+  - DATABRICKS_JOB: Databricks Jobs API (API Destination)
+  - STEP_FUNCTIONS_EMR: Step Functions → EMR Step
+  - LAMBDA: 任意の Lambda Function
+  
+  参考: https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns
+
+Parameters:
+  TargetType:
+    Type: String
+    Default: SNS_SNOWPIPE
+    AllowedValues:
+      - SNS_SNOWPIPE
+      - GLUE_JOB
+      - GLUE_CRAWLER
+      - DATABRICKS_JOB
+      - STEP_FUNCTIONS_EMR
+      - LAMBDA
+    Description: ルーティングターゲットの種類
+
+  # --- SNS Snowpipe Parameters ---
+  SnowflakeSqsArn:
+    Type: String
+    Default: ''
+    Description: |
+      (SNS_SNOWPIPE) Snowflake Snowpipe の notification_channel SQS ARN。
+      SHOW PIPES で取得した値を設定。
+      例: arn:aws:sqs:ap-northeast-1:123456789012:sf-snowpipe-XXXXXXXX
+
+  SnowflakeIamUserArn:
+    Type: String
+    Default: ''
+    Description: |
+      (SNS_SNOWPIPE) Snowflake の IAM User ARN (SNS サブスクリプション確認用)。
+      DESCRIBE INTEGRATION の STORAGE_AWS_IAM_USER_ARN で取得。
+
+  # --- EventBridge Parameters (for non-SNS targets) ---
+  EventBusName:
+    Type: String
+    Default: fsxn-fpolicy-events
+    Description: FPolicy EventBridge Custom Bus 名 (fpolicy-ingestion スタックで作成)
+
+  # --- Glue Job Parameters ---
+  GlueJobName:
+    Type: String
+    Default: ''
+    Description: (GLUE_JOB) トリガーする Glue Job 名
+
+  # --- Glue Crawler Parameters ---
+  GlueCrawlerName:
+    Type: String
+    Default: ''
+    Description: (GLUE_CRAWLER) トリガーする Glue Crawler 名
+
+  # --- Databricks Parameters ---
+  DatabricksWorkspaceUrl:
+    Type: String
+    Default: ''
+    Description: (DATABRICKS_JOB) Databricks Workspace URL (https://dbc-xxx.cloud.databricks.com)
+
+  DatabricksJobId:
+    Type: String
+    Default: ''
+    Description: (DATABRICKS_JOB) トリガーする Databricks Job ID
+
+  DatabricksTokenSecretArn:
+    Type: String
+    Default: ''
+    Description: (DATABRICKS_JOB) Databricks PAT を格納した Secrets Manager ARN
+
+  # --- Step Functions Parameters ---
+  StateMachineArn:
+    Type: String
+    Default: ''
+    Description: (STEP_FUNCTIONS_EMR) Step Functions State Machine ARN
+
+  # --- Lambda Parameters ---
+  LambdaFunctionArn:
+    Type: String
+    Default: ''
+    Description: (LAMBDA) ターゲット Lambda Function ARN
+
+  # --- Event Filter Parameters ---
+  FilterExtensions:
+    Type: String
+    Default: '.parquet,.csv,.json'
+    Description: フィルタするファイル拡張子 (カンマ区切り)
+
+Conditions:
+  IsSNSSnowpipe: !Equals [!Ref TargetType, 'SNS_SNOWPIPE']
+  IsGlueJob: !Equals [!Ref TargetType, 'GLUE_JOB']
+  IsGlueCrawler: !Equals [!Ref TargetType, 'GLUE_CRAWLER']
+  IsDatabricksJob: !Equals [!Ref TargetType, 'DATABRICKS_JOB']
+  IsStepFunctions: !Equals [!Ref TargetType, 'STEP_FUNCTIONS_EMR']
+  IsLambda: !Equals [!Ref TargetType, 'LAMBDA']
+  HasSnowflakeSqsArn: !Not [!Equals [!Ref SnowflakeSqsArn, '']]
+  HasSnowflakeIamUserArn: !Not [!Equals [!Ref SnowflakeIamUserArn, '']]
+
+Resources:
+  # ============================================================
+  # SNS Snowpipe Resources
+  # ============================================================
+
+  # --- SNS Topic (Snowpipe 通知用) ---
+  SnowpipeSNSTopic:
+    Type: AWS::SNS::Topic
+    Condition: IsSNSSnowpipe
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-snowpipe-notifications'
+      DisplayName: FPolicy Snowpipe Notifications
+      Tags:
+        - Key: Purpose
+          Value: Snowpipe auto-ingest notifications from FPolicy events
+
+  # --- SNS Topic Policy (Snowflake SQS サブスクリプション許可) ---
+  # Snowflake の SQS Queue が SNS Topic をサブスクライブするために必要
+  SnowpipeSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Condition: IsSNSSnowpipe
+    Properties:
+      Topics:
+        - !Ref SnowpipeSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Allow the Lambda Bridge to publish S3 Event messages
+          - Sid: AllowLambdaBridgePublish
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref SnowpipeSNSTopic
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*fpolicy-bridge*'
+          # Allow Snowflake SQS to subscribe to this topic
+          - !If
+            - HasSnowflakeSqsArn
+            - Sid: AllowSnowflakeSQSSubscription
+              Effect: Allow
+              Principal:
+                AWS: '*'
+              Action:
+                - sns:Subscribe
+                - sns:Receive
+              Resource: !Ref SnowpipeSNSTopic
+              Condition:
+                ArnEquals:
+                  aws:SourceArn: !Ref SnowflakeSqsArn
+            - !Ref AWS::NoValue
+          # Allow Snowflake IAM User to subscribe (alternative condition)
+          - !If
+            - HasSnowflakeIamUserArn
+            - Sid: AllowSnowflakeIAMUserSubscribe
+              Effect: Allow
+              Principal:
+                AWS: !Ref SnowflakeIamUserArn
+              Action:
+                - sns:Subscribe
+              Resource: !Ref SnowpipeSNSTopic
+            - !Ref AWS::NoValue
+
+  # ============================================================
+  # EventBridge Resources (for non-SNS targets)
+  # ============================================================
+
+  # --- EventBridge Rule Role ---
+  EventBridgeRuleRole:
+    Type: AWS::IAM::Role
+    Condition: IsGlueJob
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-eventbridge-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TargetAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: glue:StartJobRun
+                Resource: !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${GlueJobName}'
+
+  EventBridgeRuleRoleCrawler:
+    Type: AWS::IAM::Role
+    Condition: IsGlueCrawler
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-eventbridge-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TargetAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: glue:StartCrawler
+                Resource: !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/${GlueCrawlerName}'
+
+  EventBridgeRuleRoleStepFunctions:
+    Type: AWS::IAM::Role
+    Condition: IsStepFunctions
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-eventbridge-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TargetAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: states:StartExecution
+                Resource: !Ref StateMachineArn
+
+  # --- Glue Job Target ---
+  GlueJobRule:
+    Type: AWS::Events::Rule
+    Condition: IsGlueJob
+    Properties:
+      Name: !Sub '${AWS::StackName}-glue-job-trigger'
+      EventBusName: !Ref EventBusName
+      State: ENABLED
+      EventPattern:
+        source:
+          - custom.fpolicy
+        detail-type:
+          - FileCreated
+          - FileModified
+      Targets:
+        - Id: glue-job-target
+          Arn: !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${GlueJobName}'
+          RoleArn: !GetAtt EventBridgeRuleRole.Arn
+
+  # --- Glue Crawler Target ---
+  GlueCrawlerRule:
+    Type: AWS::Events::Rule
+    Condition: IsGlueCrawler
+    Properties:
+      Name: !Sub '${AWS::StackName}-glue-crawler-trigger'
+      EventBusName: !Ref EventBusName
+      State: ENABLED
+      EventPattern:
+        source:
+          - custom.fpolicy
+        detail-type:
+          - FileCreated
+          - FileRenamed
+      Targets:
+        - Id: glue-crawler-target
+          Arn: !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/${GlueCrawlerName}'
+          RoleArn: !GetAtt EventBridgeRuleRoleCrawler.Arn
+
+  # --- Databricks Job Target (API Destination) ---
+  DatabricksConnection:
+    Type: AWS::Events::Connection
+    Condition: IsDatabricksJob
+    Properties:
+      Name: !Sub '${AWS::StackName}-databricks-connection'
+      AuthorizationType: API_KEY
+      AuthParameters:
+        ApiKeyAuthParameters:
+          ApiKeyName: Authorization
+          ApiKeyValue: !Sub 'Bearer {{resolve:secretsmanager:${DatabricksTokenSecretArn}:SecretString:token}}'
+
+  DatabricksApiDestination:
+    Type: AWS::Events::ApiDestination
+    Condition: IsDatabricksJob
+    Properties:
+      Name: !Sub '${AWS::StackName}-databricks-api'
+      ConnectionArn: !GetAtt DatabricksConnection.Arn
+      InvocationEndpoint: !Sub '${DatabricksWorkspaceUrl}/api/2.1/jobs/run-now'
+      HttpMethod: POST
+      InvocationRateLimitPerSecond: 10
+
+  DatabricksJobRule:
+    Type: AWS::Events::Rule
+    Condition: IsDatabricksJob
+    Properties:
+      Name: !Sub '${AWS::StackName}-databricks-job-trigger'
+      EventBusName: !Ref EventBusName
+      State: ENABLED
+      EventPattern:
+        source:
+          - custom.fpolicy
+        detail-type:
+          - FileCreated
+          - FileModified
+      Targets:
+        - Id: databricks-job-target
+          Arn: !GetAtt DatabricksApiDestination.Arn
+          RoleArn: !GetAtt EventBridgeRuleRole.Arn
+          InputTransformer:
+            InputPathsMap:
+              filePath: $.detail.file_path
+              eventType: $.detail-type
+              timestamp: $.time
+            InputTemplate: !Sub |
+              {
+                "job_id": ${DatabricksJobId},
+                "notebook_params": {
+                  "source_file": "<filePath>",
+                  "event_type": "<eventType>",
+                  "timestamp": "<timestamp>"
+                }
+              }
+
+  # --- Step Functions Target ---
+  StepFunctionsRule:
+    Type: AWS::Events::Rule
+    Condition: IsStepFunctions
+    Properties:
+      Name: !Sub '${AWS::StackName}-stepfunctions-trigger'
+      EventBusName: !Ref EventBusName
+      State: ENABLED
+      EventPattern:
+        source:
+          - custom.fpolicy
+        detail-type:
+          - FileCreated
+      Targets:
+        - Id: stepfunctions-target
+          Arn: !Ref StateMachineArn
+          RoleArn: !GetAtt EventBridgeRuleRoleStepFunctions.Arn
+
+  # --- Lambda Target ---
+  LambdaRule:
+    Type: AWS::Events::Rule
+    Condition: IsLambda
+    Properties:
+      Name: !Sub '${AWS::StackName}-lambda-trigger'
+      EventBusName: !Ref EventBusName
+      State: ENABLED
+      EventPattern:
+        source:
+          - custom.fpolicy
+        detail-type:
+          - FileCreated
+          - FileModified
+          - FileDeleted
+      Targets:
+        - Id: lambda-target
+          Arn: !Ref LambdaFunctionArn
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Condition: IsLambda
+    Properties:
+      FunctionName: !Ref LambdaFunctionArn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt LambdaRule.Arn
+
+Outputs:
+  # --- SNS Snowpipe Outputs ---
+  SNSTopicArn:
+    Condition: IsSNSSnowpipe
+    Description: |
+      SNS Topic ARN — fpolicy-ingestion スタックの SNSTopicArn パラメータに設定。
+      Snowflake Snowpipe の CREATE PIPE で notification_channel として使用。
+    Value: !Ref SnowpipeSNSTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-SNSTopicArn'
+
+  SNSTopicName:
+    Condition: IsSNSSnowpipe
+    Description: SNS Topic Name
+    Value: !GetAtt SnowpipeSNSTopic.TopicName
+
+  SnowpipeCreatePipeSQL:
+    Condition: IsSNSSnowpipe
+    Description: |
+      Snowpipe CREATE PIPE SQL テンプレート。
+      <STAGE> と <TABLE> を実際の値に置換して実行。
+    Value: !Sub |
+      CREATE OR REPLACE PIPE FSXN_EVENTS_PIPE
+        AUTO_INGEST = TRUE
+        AWS_SNS_TOPIC = '${SnowpipeSNSTopic}'
+      AS
+        COPY INTO <TABLE>
+        FROM @<STAGE>
+        FILE_FORMAT = (TYPE = 'JSON');
+
+  SetupInstructions:
+    Condition: IsSNSSnowpipe
+    Description: Snowpipe セットアップ手順
+    Value: |
+      1. このスタックをデプロイ (SnowflakeSqsArn は空でOK)
+      2. Snowflake で CREATE PIPE を実行 (SNSTopicArn を AWS_SNS_TOPIC に設定)
+      3. SHOW PIPES で notification_channel (SQS ARN) を取得
+      4. このスタックを更新: SnowflakeSqsArn に notification_channel の値を設定
+      5. Snowflake SQS が SNS Topic を自動サブスクライブ
+      6. FPolicy イベント → SQS → Lambda Bridge → SNS → Snowflake SQS → Snowpipe
+
+  # --- EventBridge Outputs ---
+  TargetType:
+    Description: Configured target type
+    Value: !Ref TargetType
+
+  EventBusName:
+    Description: EventBridge Custom Bus Name (non-SNS targets)
+    Value: !Ref EventBusName

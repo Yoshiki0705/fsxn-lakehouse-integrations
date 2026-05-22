@@ -1,0 +1,106 @@
+# =============================================================================
+# FSxN Glue Integration — Data Quality Rules (DQDL)
+# =============================================================================
+# AWS Glue Data Quality Definition Language (DQDL) rules for validating
+# data across the medallion architecture layers.
+#
+# Reference: https://docs.aws.amazon.com/glue/latest/dg/dqdl.html
+# =============================================================================
+
+Rules = [
+
+    # =========================================================================
+    # Completeness Rules
+    # =========================================================================
+    # Ensure critical columns are not null
+
+    # Transactions
+    Completeness "id" >= 1.0,
+    Completeness "transaction_date" >= 0.99,
+    Completeness "customer_id" >= 0.99,
+    Completeness "amount" >= 1.0,
+    Completeness "status" >= 1.0,
+    Completeness "category" >= 0.95,
+
+    # Customers
+    Completeness "customer_id" >= 1.0,
+    Completeness "email" >= 0.95,
+    Completeness "country" >= 0.90,
+
+    # Events
+    Completeness "event_id" >= 1.0,
+    Completeness "event_type" >= 1.0,
+    Completeness "timestamp" >= 1.0,
+
+    # =========================================================================
+    # Uniqueness Rules
+    # =========================================================================
+    # Ensure primary keys are unique
+
+    Uniqueness "id" >= 1.0,
+    Uniqueness "customer_id" >= 0.99,
+    Uniqueness "event_id" >= 1.0,
+
+    # =========================================================================
+    # Value Range Rules
+    # =========================================================================
+    # Ensure values fall within expected ranges
+
+    # Transaction amounts must be positive
+    ColumnValues "amount" > 0,
+    ColumnValues "amount" <= 100000,
+
+    # Status must be one of expected values
+    ColumnValues "status" in ["completed", "pending", "cancelled", "refunded"],
+
+    # Category must be one of expected values
+    ColumnValues "category" in [
+        "electronics", "clothing", "food", "travel", "entertainment",
+        "healthcare", "education", "utilities", "automotive", "home"
+    ],
+
+    # Currency must be valid ISO code
+    ColumnValues "currency" in ["USD", "JPY", "EUR", "GBP"],
+
+    # Customer segment validation
+    ColumnValues "segment" in ["enterprise", "mid-market", "small-business", "consumer"],
+
+    # Country code validation (ISO 3166-1 alpha-2 subset)
+    ColumnValues "country" in ["US", "JP", "UK", "DE", "FR", "CA", "AU", "BR", "IN", "KR"],
+
+    # Event type validation
+    ColumnValues "event_type" in [
+        "page_view", "click", "purchase", "signup", "logout",
+        "search", "add_to_cart", "remove_from_cart", "checkout"
+    ],
+
+    # =========================================================================
+    # Freshness Rules
+    # =========================================================================
+    # Ensure data is recent (within expected time windows)
+
+    # Transactions should have recent data (within 7 days)
+    Freshness "transaction_date" <= 7 days,
+
+    # Events should have recent data (within 3 days)
+    Freshness "timestamp" <= 3 days,
+
+    # ETL timestamp should be from current run
+    Freshness "_etl_timestamp" <= 1 days,
+
+    # =========================================================================
+    # Row Count Rules
+    # =========================================================================
+    # Ensure minimum expected data volumes
+
+    RowCount >= 1000,
+
+    # =========================================================================
+    # Statistical Rules
+    # =========================================================================
+    # Ensure data distributions are within expected bounds
+
+    StandardDeviation "amount" between 50 and 2000,
+    Mean "amount" between 100 and 3000
+
+]

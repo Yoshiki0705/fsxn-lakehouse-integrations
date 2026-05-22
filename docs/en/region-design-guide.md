@@ -18,10 +18,10 @@ design guidelines for users deploying in other regions.
 
 | Component | Region | Details |
 |-----------|--------|---------|
-| FSx for ONTAP | `ap-northeast-1` (Tokyo) | File System ID: `fs-09ffe72a3b2b7dbbd` |
+| FSx for ONTAP | `ap-northeast-1` (Tokyo) | File System ID: `<YOUR_FSX_FILESYSTEM_ID>` |
 | S3 Access Point | `ap-northeast-1` (Tokyo) | Same region as FSx for ONTAP (required) |
 | Databricks Workspace | `ap-northeast-1` (Tokyo) | Same region for VPC-scoped AP |
-| AWS Account | `178625946981` | Verification account |
+| AWS Account | `<YOUR_AWS_ACCOUNT_ID>` | Verification account |
 
 ### Design Decision: Co-located in Same Region
 

@@ -1,0 +1,84 @@
+# =============================================================================
+# Security & Privacy Check CI
+# =============================================================================
+# Ensures no sensitive data is committed to the public repository.
+# Runs on every push and pull request.
+# =============================================================================
+
+name: Security Check
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify .kiro/ not tracked
+        run: |
+          FILES=$(git ls-files .kiro/ 2>/dev/null || true)
+          if [[ -n "$FILES" ]]; then
+            echo "::error::.kiro/ directory is tracked in git"
+            echo "$FILES"
+            exit 1
+          fi
+          echo "✓ .kiro/ not tracked"
+
+      - name: Verify .env not tracked
+        run: |
+          FILES=$(git ls-files '*.env' '.env' '.env.*' '.env.local' 2>/dev/null || true)
+          if [[ -n "$FILES" ]]; then
+            echo "::error::.env files are tracked in git"
+            echo "$FILES"
+            exit 1
+          fi
+          echo "✓ .env not tracked"
+
+      - name: Verify .pem not tracked
+        run: |
+          FILES=$(git ls-files -- '*.pem' 2>/dev/null || true)
+          if [[ -n "$FILES" ]]; then
+            echo "::error::.pem files are tracked in git"
+            echo "$FILES"
+            exit 1
+          fi
+          echo "✓ .pem not tracked"
+
+      - name: Verify .private/ not tracked
+        run: |
+          FILES=$(git ls-files -- '*/.private/*' '.private/*' 2>/dev/null || true)
+          if [[ -n "$FILES" ]]; then
+            echo "::error::.private/ directories are tracked in git"
+            echo "$FILES"
+            exit 1
+          fi
+          echo "✓ .private/ not tracked"
+
+      - name: Scan for personal file paths
+        run: |
+          HITS=$(git ls-files | xargs grep -rln '/Users/.*/Downloads\|/Users/.*/\.ssh\|/home/.*/\.ssh' 2>/dev/null || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::Personal file paths found in tracked files"
+            echo "$HITS"
+            exit 1
+          fi
+          echo "✓ No personal file paths"
+
+      - name: Scan for IAM access keys
+        run: |
+          HITS=$(git ls-files | xargs grep -rln 'AKIA[0-9A-Z]\{16\}' 2>/dev/null || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::IAM access keys found in tracked files"
+            echo "$HITS"
+            exit 1
+          fi
+          echo "✓ No IAM access keys"
+
+      - name: Run full security check script
+        run: bash shared/scripts/pre-push-security-check.sh
