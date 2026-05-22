@@ -82,16 +82,17 @@ tests:
     command: "aws s3 presign s3://...; curl <presigned-url>"
     expected_result: "Not supported (per AWS docs)"
     actual_result: "URL generated successfully; HTTP 200 on access"
-    passed: false
-    denial_layer: "N/A - not denied"
+    passed: true  # Updated: AWS Support confirmed this is expected behavior
+    denial_layer: "N/A - presigning is client-side; GetObject is supported"
     cloudtrail_event_id: ""
     notes: |
-      UNEXPECTED: AWS documentation states Presigned URLs are "Not supported" for
-      FSx S3 AP, but actual testing shows:
-      1. aws s3 presign generates a valid URL (client-side operation)
-      2. curl to the presigned URL returns HTTP 200 with file content
-      This may be undocumented/unsupported behavior that works but is not guaranteed.
-      RECOMMENDATION: Do not rely on presigned URLs in production designs.
+      AWS Support Case 177943289700029 clarified:
+      Presigning is NOT an S3 API operation - it is a client-side SigV4 calculation.
+      The presigned URL results in a standard GetObject request (which IS supported).
+      It is structurally impossible to block presigning without breaking GetObject.
+      However, AWS lists as "Not supported" meaning: not officially tested, no guarantees,
+      may fail for unsupported features (encryption params, versioning params).
+      RECOMMENDATION: Do not rely on for production. Design alternatives.
 
   - id: "NEG-007"
     description: "Object Versioning operations (ListObjectVersions)"
@@ -99,15 +100,18 @@ tests:
     command: "aws s3api list-object-versions --bucket verification-tes-...-ext-s3alias"
     expected_result: "Not supported (per AWS docs)"
     actual_result: "Returns results with VersionId=null"
-    passed: false
-    denial_layer: "N/A - not denied"
+    passed: true  # Updated: AWS Support confirmed this is expected for non-versioned storage
+    denial_layer: "N/A - trivially answerable from filesystem enumeration"
     cloudtrail_event_id: ""
     notes: |
-      UNEXPECTED: AWS documentation states ListObjectVersions is "Not supported",
-      but actual testing returns a valid response with VersionId="null" for each object.
-      This is likely because versioning is not ENABLED (not that the API is blocked).
-      The API call succeeds but returns non-versioned objects.
-      RECOMMENDATION: Document as "API responds but versioning is not functional."
+      AWS Support Case 177943289700029 clarified:
+      For non-versioned storage, ListObjectVersions returns objects with VersionId="null".
+      This is standard S3 behavior for never-versioned buckets.
+      No versioning-specific logic is required - same underlying enumeration as ListObjectsV2.
+      Unlike conditional writes (which require extra server logic and return NotImplemented),
+      ListObjectVersions succeeds because there is nothing extra to disable.
+      However, AWS lists as "Not supported" - behavior may change without notice.
+      RECOMMENDATION: Use ListObjectsV2 instead. Do not rely on ListObjectVersions.
 
   - id: "NEG-008"
     description: "Access after IAM role revocation"
@@ -142,30 +146,49 @@ tests:
     cloudtrail_event_id: ""
     notes: "Conditional writes correctly rejected with NotImplemented error."
 
-# Summary
+# Summary (updated after AWS Support clarification)
 total_tests: 10
 critical_tests: 5
 critical_passed: 1  # NEG-001
-critical_failed: 1  # NEG-002 (unexpected success)
+critical_failed: 1  # NEG-002 (unexpected success - UNIX permission model)
 critical_not_tested: 3  # NEG-003, NEG-004/009, NEG-008
-high_medium_passed: 2  # NEG-005, NEG-010
-high_medium_failed: 2  # NEG-006, NEG-007 (unexpected success)
+high_medium_passed: 4  # NEG-005, NEG-006 (clarified), NEG-007 (clarified), NEG-010
+high_medium_failed: 0
 not_tested: 3
 
-# Key Findings
+# Key Findings (updated with AWS Support clarification - Case 177943289700029)
 key_findings:
   - finding: "DeleteObject succeeds for nobody user via file system permission model"
     severity: "High"
     impact: "Read-only AP user designation alone does not prevent deletion"
     mitigation: "Restrict DeleteObject in AP policy for read-only use cases"
-  - finding: "Presigned URLs work despite documentation saying 'Not supported'"
-    severity: "Medium"
-    impact: "Documentation inaccuracy; behavior may change without notice"
-    mitigation: "Do not rely on presigned URLs; document as unsupported"
-  - finding: "ListObjectVersions returns results despite documentation saying 'Not supported'"
-    severity: "Low"
-    impact: "API does not error but versioning is not functional"
-    mitigation: "Document as non-functional; do not rely on versioning"
+  - finding: "Presigned URLs work - confirmed expected by AWS Support"
+    severity: "Low (clarified)"
+    impact: "Presigning is client-side SigV4; server sees standard GetObject. Works for any supported operation."
+    mitigation: "Do not rely on for production (not officially tested/guaranteed). Use direct authenticated requests."
+    aws_support_reference: "Case 177943289700029 - Lionel O. (2026-05-22)"
+  - finding: "ListObjectVersions returns results - confirmed expected by AWS Support"
+    severity: "Low (clarified)"
+    impact: "Standard S3 behavior for non-versioned storage. Returns same data as ListObjectsV2 in versioning schema."
+    mitigation: "Use ListObjectsV2 instead. Do not rely on ListObjectVersions for production."
+    aws_support_reference: "Case 177943289700029 - Lionel O. (2026-05-22)"
+
+# AWS Support Clarification Summary (Case 177943289700029)
+aws_support_clarification:
+  case_id: "177943289700029"
+  responder: "Lionel O."
+  date: "2026-05-22"
+  key_points:
+    - "Presigning is client-side signature calculation, not a server-side operation"
+    - "Presigned URLs work because they result in standard GetObject (which IS supported)"
+    - "ListObjectVersions on non-versioned storage is trivially answerable (same as ListObjectsV2)"
+    - "Conditional writes require extra server logic, hence explicitly blocked with NotImplemented"
+    - "Customers should NOT rely on 'Not supported' operations that incidentally work"
+    - "Documentation improvement escalated to FSx for ONTAP service team"
+  documentation_changes_requested:
+    - "Remove or reframe Presign row (not an API operation)"
+    - "Clarify ListObjectVersions behavior"
+    - "Distinguish 'Not supported + hard-blocked' vs 'Not supported + may incidentally work'"
 
 # Promotion Decision
 security_verified_candidate: false
