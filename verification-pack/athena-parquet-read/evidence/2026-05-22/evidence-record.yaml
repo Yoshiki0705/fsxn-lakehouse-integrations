@@ -1,0 +1,100 @@
+# Verification Evidence Record
+# Athena + Parquet Read on FSx for ONTAP S3 Access Point
+
+test_id: "ATHENA-PARQUET-READ-001"
+date_tested: "2026-05-22"
+tester: "Yoshiki Fujiwara"
+
+# Infrastructure
+region: "ap-northeast-1"
+fsxn_file_system_id: "fs-09ffe72a3b2b7dbbd"
+fsxn_deployment_type: "SINGLE_AZ_1"
+fsxn_throughput_capacity_mbps: 128
+ontap_version: "9.17.1+"
+svm_id: "svm-0e5ef72d9b4470f19"
+svm_name: "verification-svm"
+svm_security_style: "UNIX"
+volume_id: "fsvol-0e1fe85769794a92e"
+volume_name: "verification_vol"
+volume_junction_path: "/verification"
+
+# Access Point Configuration
+ap_name: "verification-test-ap"
+ap_alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+ap_network_origin: "INTERNET"
+ap_file_system_user_type: "UNIX"
+ap_file_system_user_name: "root"
+block_public_access: true  # Enforced by AWS, cannot be changed
+
+# IAM Configuration
+iam_user: "yoshiki0705"
+ap_policy: "Allow s3:GetObject, s3:PutObject, s3:DeleteObject, s3:ListBucket for account root"
+
+# Test Dataset
+dataset_format: "Parquet"
+dataset_compression: "Snappy"
+file_count: 1
+average_file_size_bytes: 250880
+total_dataset_size_bytes: 250880
+row_count: 10000
+columns: ["id", "timestamp", "sensor_id", "temperature", "humidity", "pressure", "status"]
+
+# Service Configuration
+service: "Amazon Athena"
+service_version: "engine v3"
+catalog: "AWS Glue Data Catalog"
+database: "fsxn_athena_verification"
+table: "sensor_readings"
+workgroup: "primary"
+results_bucket: "fsxn-athena-verification-results-ap-northeast-1"
+
+# Functional Test Results
+functional_tests:
+  - test: "PutObject (upload Parquet to FSx S3 AP)"
+    result: "PASS"
+    details: "250KB file uploaded successfully"
+  - test: "ListObjectsV2"
+    result: "PASS"
+    details: "Returns file with StorageClass=FSX_ONTAP"
+  - test: "HeadObject"
+    result: "PASS"
+    details: "Returns correct ContentLength and ETag"
+  - test: "CREATE EXTERNAL TABLE via Athena"
+    result: "PASS"
+    details: "Table created with LOCATION pointing to AP alias"
+  - test: "SELECT COUNT(*) via Athena"
+    result: "PASS"
+    details: "Returns 10000 rows, correct aggregations"
+  - test: "SELECT with WHERE/GROUP BY/ORDER BY"
+    result: "PASS"
+    details: "Complex query succeeds, 824ms engine time, 31KB scanned"
+
+# Benchmark Results
+benchmark:
+  query: "SELECT sensor_id, COUNT(*), AVG(temperature) FROM ... WHERE status='warning' GROUP BY sensor_id ORDER BY cnt DESC"
+  dataset_size_bytes: 250880
+  engine_execution_ms: 824
+  total_execution_ms: 1028
+  data_scanned_bytes: 31232
+  query_queue_ms: ~100
+  notes: "Small dataset (250KB); latency dominated by query planning, not I/O"
+
+# Verification Level
+current_level: "Functional Verified"
+target_level: "Security Verified"
+promotion_blockers:
+  - "Negative tests partially completed (see negative-test-result.yaml)"
+  - "CloudTrail data event evidence not yet captured"
+
+# Known Limitations Discovered
+known_limitations:
+  - "Presigned URLs: AWS docs say 'Not supported' but actual test shows HTTP 200 response. Behavior may be undocumented/unsupported but not blocked."
+  - "ListObjectVersions: AWS docs say 'Not supported' but returns results with VersionId=null. Does not error."
+  - "DeleteObject by 'nobody' user: Succeeded despite being a non-privileged user. ONTAP delete permission depends on parent directory write permission, not file ownership."
+  - "Athena requires internet-origin AP (cannot use VPC-origin)"
+  - "Query results written to separate S3 bucket, not back to FSx volume"
+
+# Reviewer
+reviewer: ""
+review_date: ""
+review_notes: ""
