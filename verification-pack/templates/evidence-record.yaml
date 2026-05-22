@@ -1,0 +1,51 @@
+# Verification Evidence Record Template
+# Copy this file to: verification-pack/<integration>/evidence/YYYY-MM-DD-evidence.yaml
+
+test_id: ""  # e.g., "ATHENA-PARQUET-READ-001"
+date_tested: ""  # YYYY-MM-DD
+tester: ""
+
+# Infrastructure
+region: ""  # e.g., "ap-northeast-1"
+fsxn_deployment_type: ""  # SINGLE_AZ_1, SINGLE_AZ_2, MULTI_AZ_1, MULTI_AZ_2
+fsxn_throughput_capacity_mbps: 0
+ontap_version: ""  # e.g., "9.17.1"
+svm_security_style: ""  # UNIX, NTFS, MIXED
+volume_junction_path: ""
+
+# Access Point Configuration
+ap_network_origin: ""  # INTERNET or VPC
+ap_file_system_user_type: ""  # UNIX or WINDOWS
+ap_file_system_user_name: ""
+block_public_access: true  # Always true (cannot be changed)
+
+# IAM Configuration
+iam_role_name: ""
+iam_actions_granted: []  # e.g., ["s3:GetObject", "s3:ListBucket"]
+ap_policy_summary: ""  # Brief description of AP policy
+
+# Test Dataset
+dataset_format: ""  # Parquet, CSV, JSON, ORC
+file_count: 0
+average_file_size_mb: 0
+total_dataset_size_gb: 0
+compression: ""  # Snappy, ZSTD, GZIP, none
+
+# Service Configuration
+service: ""  # e.g., "Amazon Athena"
+service_version: ""  # e.g., "engine v3"
+catalog: ""  # e.g., "AWS Glue Data Catalog"
+additional_config: {}
+
+# Results
+result: ""  # PASS or FAIL
+query_latency_p50_ms: 0
+query_latency_p95_ms: 0
+data_scanned_bytes: 0
+errors: []
+known_limitations: []
+
+# Reviewer
+reviewer: ""
+review_date: ""
+review_notes: ""

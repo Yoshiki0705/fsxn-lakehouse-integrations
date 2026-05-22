@@ -561,6 +561,118 @@ Score each candidate partner (1-5 per criterion) to determine engagement priorit
 
 ---
 
+## Joint Discovery Workshop
+
+### Purpose
+
+Validate partner fit, identify target accounts, and define the first joint offer — in a single 120-minute session with a Tier 1 partner candidate.
+
+### Tier 1 Partner Minimum Criteria
+
+A partner must meet ALL of the following to qualify for a Joint Discovery Workshop:
+
+- [ ] Has existing FSx / NetApp / NAS customer base
+- [ ] Has Data/AI or managed service capability (at least one)
+- [ ] Business or technical leader can attend the workshop
+- [ ] Can identify at least 1 customer candidate within 30 days
+
+### Workshop Agenda (120 minutes)
+
+| Time | Topic | Owner | Output |
+|------|-------|-------|--------|
+| 0-10 min | Introductions, objectives | AWS Partner SA | Alignment on goals |
+| 10-30 min | FSxN S3 AP overview + demo | AWS SA | Partner understands the technology |
+| 30-50 min | Partner capability review | Partner | Understand partner strengths |
+| 50-70 min | Target account brainstorm | Joint | 3-5 candidate accounts identified |
+| 70-90 min | Deal hypothesis development | Joint | 1-3 deal hypotheses drafted |
+| 90-110 min | First offer package design | Joint | Agreed first offer (Assessment/PoC) |
+| 110-120 min | Next steps and owners | Joint | Action items with dates |
+
+### Pre-Workshop Preparation
+
+| Participant | Preparation |
+|-------------|-------------|
+| AWS Partner SA | Partner background research, 1-page pitch ready, demo environment |
+| AWS Account Manager | Target account list (NAS 10TB+, analytics need) |
+| Partner Business Lead | Customer list with NAS/ONTAP footprint, revenue goals |
+| Partner Technical Lead | Review compatibility matrix, anti-patterns |
+
+### Workshop Output Template
+
+```yaml
+workshop_date: "YYYY-MM-DD"
+partner_name: "<partner>"
+participants:
+  - name: "<name>"
+    role: "<role>"
+    org: "AWS | Partner"
+
+partner_fit_score: X/40  # from Prioritization Matrix
+tier: "Tier 1 | Tier 2 | Tier 3"
+
+target_accounts:
+  - account: "<customer name>"
+    industry: "<industry>"
+    nas_footprint: "<estimated TB>"
+    analytics_need: "<description>"
+    partner_relationship: "<existing | new>"
+
+deal_hypotheses:
+  - hypothesis: "Manufacturing / NAS inspection data analytics / SIer-led"
+    first_offer: "Assessment + Analytics PoC"
+    estimated_value: "$25K"
+    timeline: "60 days"
+    validated: true/false
+    
+  - hypothesis: "Enterprise IT / Runbook RAG / MSP-led"
+    first_offer: "Managed RAG package"
+    estimated_value: "$15K setup + $5K/month"
+    timeline: "45 days"
+    validated: true/false
+
+first_offer_package:
+  type: "Assessment | PoC | Managed Package"
+  scope: "<description>"
+  duration: "<weeks>"
+  price_range: "$X-Y"
+
+required_enablement:
+  - "<session needed>"
+
+next_steps:
+  - action: "<action>"
+    owner: "<who>"
+    due: "YYYY-MM-DD"
+```
+
+### Partner Readiness Certification
+
+After enablement, a partner is certified to co-sell when they can:
+
+- [ ] Deliver the 15-minute pitch without AWS support
+- [ ] Explain top 3 anti-patterns and why they matter
+- [ ] Create a PoC SOW from the template
+- [ ] Answer Security FAQ questions (Block Public Access, dual-layer auth, VPC-origin)
+- [ ] Conduct a Discovery call using the standard questions
+- [ ] Define a joint next step with an AWS account team
+
+### Co-sell RACI
+
+| Activity | Partner | AWS SA | AWS Account Mgr | NetApp | Customer |
+|----------|:-------:|:------:|:----------------:|:------:|:--------:|
+| Account selection | C | C | **R** | I | — |
+| Discovery call | **R** | C | I | — | **A** |
+| Technical validation | **R** | **R** | I | C | C |
+| PoC delivery | **R** | C | I | C | **A** |
+| Security review | C | **R** | I | — | **A** |
+| Production deployment | **R** | C | I | C | **A** |
+| Managed operations | **R** | I | I | C | **A** |
+| Customer success review | C | C | **R** | I | **A** |
+
+R = Responsible, A = Accountable, C = Consulted, I = Informed
+
+---
+
 ## References
 
 - [Accessing your data via Amazon S3 access points](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)

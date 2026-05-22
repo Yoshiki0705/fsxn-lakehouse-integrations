@@ -1,0 +1,123 @@
+# Negative Test Result Template
+# Copy this file to: verification-pack/<integration>/evidence/YYYY-MM-DD-negative-tests.yaml
+
+test_suite: "Negative Test Matrix"
+date_executed: ""  # YYYY-MM-DD
+executor: ""
+region: ""
+ap_name: ""
+
+tests:
+  - id: "NEG-001"
+    description: "Write attempt by read-only file system user"
+    severity: "Critical"
+    command: "aws s3 cp test.txt s3://<AP-ALIAS>/test-write.txt --profile readonly-user"
+    expected_result: "AccessDenied"
+    actual_result: ""  # Fill after execution
+    passed: false  # true if actual matches expected (i.e., access was denied)
+    cloudtrail_event_id: ""
+    notes: ""
+
+  - id: "NEG-002"
+    description: "Delete attempt by read-only file system user"
+    severity: "Critical"
+    command: "aws s3 rm s3://<AP-ALIAS>/existing-file.txt --profile readonly-user"
+    expected_result: "AccessDenied"
+    actual_result: ""
+    passed: false
+    cloudtrail_event_id: ""
+    notes: ""
+
+  - id: "NEG-003"
+    description: "Cross-account access without explicit grant"
+    severity: "Critical"
+    command: "aws s3 ls s3://<AP-ALIAS>/ --profile cross-account-role"
+    expected_result: "AccessDenied"
+    actual_result: ""
+    passed: false
+    cloudtrail_event_id: ""
+    notes: ""
+
+  - id: "NEG-004"
+    description: "Internet-origin access when VPC-origin AP configured"
+    severity: "Critical"
+    command: "aws s3 ls s3://<VPC-ORIGIN-AP-ALIAS>/ --profile internet-caller"
+    expected_result: "AccessDenied"
+    actual_result: ""
+    passed: false
+    cloudtrail_event_id: ""
+    notes: ""
+
+  - id: "NEG-005"
+    description: "PutObject exceeding 5 GB limit"
+    severity: "High"
+    command: "aws s3 cp 6gb-file.bin s3://<AP-ALIAS>/large-file.bin"
+    expected_result: "EntityTooLarge or upload failure"
+    actual_result: ""
+    passed: false
+    cloudtrail_event_id: ""
+    notes: ""
+
+  - id: "NEG-006"
+    description: "Presigned URL generation"
+    severity: "Medium"
+    command: "aws s3 presign s3://<AP-ALIAS>/test.parquet"
+    expected_result: "Not supported or error"
+    actual_result: ""
+    passed: false
+    cloudtrail_event_id: ""
+    notes: ""
+
+  - id: "NEG-007"
+    description: "Object Versioning operations (ListObjectVersions)"
+    severity: "Medium"
+    command: "aws s3api list-object-versions --bucket <AP-ALIAS>"
+    expected_result: "Not supported"
+    actual_result: ""
+    passed: false
+    cloudtrail_event_id: ""
+    notes: ""
+
+  - id: "NEG-008"
+    description: "Access after IAM role revocation"
+    severity: "Critical"
+    command: "# Revoke role, then: aws s3 ls s3://<AP-ALIAS>/ --profile revoked-role"
+    expected_result: "AccessDenied"
+    actual_result: ""
+    passed: false
+    cloudtrail_event_id: ""
+    notes: ""
+
+  - id: "NEG-009"
+    description: "Access from non-bound VPC (VPC-origin AP)"
+    severity: "Critical"
+    command: "# From different VPC: aws s3 ls s3://<VPC-ORIGIN-AP-ALIAS>/"
+    expected_result: "AccessDenied"
+    actual_result: ""
+    passed: false
+    cloudtrail_event_id: ""
+    notes: ""
+
+  - id: "NEG-010"
+    description: "Conditional write (If-None-Match)"
+    severity: "Medium"
+    command: "aws s3api put-object --bucket <AP-ALIAS> --key test.txt --body test.txt --if-none-match '*'"
+    expected_result: "Not supported or error"
+    actual_result: ""
+    passed: false
+    cloudtrail_event_id: ""
+    notes: ""
+
+# Summary
+total_tests: 10
+critical_tests: 5
+passed: 0
+failed: 0
+blocked: 0
+
+# Promotion Decision
+all_critical_passed: false
+all_tests_passed: false
+security_verified_candidate: false
+reviewer: ""
+review_date: ""
