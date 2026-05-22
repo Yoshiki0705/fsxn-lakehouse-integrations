@@ -1,0 +1,177 @@
+# Negative Test Results
+# Date: 2026-05-22
+# Target: FSx for ONTAP S3 Access Point (verification-test-ap)
+
+test_suite: "Negative Test Matrix"
+date_executed: "2026-05-22"
+executor: "Yoshiki Fujiwara"
+region: "ap-northeast-1"
+ap_name_rw: "verification-test-ap"
+ap_alias_rw: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+ap_name_readonly: "verification-readonly-ap"
+ap_alias_readonly: "verification-rea-5g9jigcdoq9kcewiko6mmih45f46wapn1b-ext-s3alias"
+ap_readonly_user: "nobody"
+
+tests:
+  - id: "NEG-001"
+    description: "Write attempt by read-only file system user (nobody)"
+    severity: "Critical"
+    command: "aws s3 cp /tmp/sensor_data.parquet s3://verification-rea-...-ext-s3alias/write-test.parquet"
+    expected_result: "AccessDenied"
+    actual_result: "AccessDenied"
+    passed: true
+    denial_layer: "file_system_user"
+    cloudtrail_event_id: ""  # To be captured
+    notes: "nobody user cannot write to root-owned directory. File system permission layer correctly denies."
+
+  - id: "NEG-002"
+    description: "Delete attempt by read-only file system user (nobody)"
+    severity: "Critical"
+    command: "aws s3api delete-object --bucket verification-rea-...-ext-s3alias --key sensor-data/sensor_data.parquet"
+    expected_result: "AccessDenied"
+    actual_result: "Success (200)"
+    passed: false
+    denial_layer: "N/A - not denied"
+    cloudtrail_event_id: ""
+    notes: |
+      UNEXPECTED: DeleteObject succeeded for nobody user.
+      Root cause: In ONTAP UNIX security model, file deletion depends on parent directory
+      write permission (w bit on directory), not file ownership. The root-created directory
+      may have permissions that allow nobody to delete files within it.
+      This is a KNOWN BEHAVIOR of UNIX filesystems, not a bug in S3 AP.
+      MITIGATION: Set parent directory permissions to 755 (drwxr-xr-x) to prevent
+      non-owner deletion. Or use a dedicated read-only AP with IAM policy restricting
+      DeleteObject action.
+
+  - id: "NEG-003"
+    description: "Cross-account access without explicit grant"
+    severity: "Critical"
+    command: "N/A - requires second AWS account"
+    expected_result: "AccessDenied"
+    actual_result: "NOT TESTED"
+    passed: false
+    denial_layer: "N/A"
+    cloudtrail_event_id: ""
+    notes: "Requires a second AWS account to test. Skipped in this round."
+
+  - id: "NEG-004"
+    description: "Internet-origin access when VPC-origin AP configured"
+    severity: "Critical"
+    command: "N/A - verification-test-ap is Internet-origin"
+    expected_result: "AccessDenied"
+    actual_result: "NOT TESTED"
+    passed: false
+    denial_layer: "N/A"
+    cloudtrail_event_id: ""
+    notes: "Would require creating a VPC-origin AP and testing from outside VPC. Skipped - documented behavior per AWS docs."
+
+  - id: "NEG-005"
+    description: "PutObject exceeding 5 GB limit"
+    severity: "High"
+    command: "aws s3 cp 5.1GB-file s3://verification-tes-...-ext-s3alias/large-file.bin"
+    expected_result: "EntityTooLarge"
+    actual_result: "EntityTooLarge (CompleteMultipartUpload)"
+    passed: true
+    denial_layer: "S3_AP_limitation"
+    cloudtrail_event_id: ""
+    notes: "5.1GB file upload correctly rejected with EntityTooLarge error during CompleteMultipartUpload."
+
+  - id: "NEG-006"
+    description: "Presigned URL generation and access"
+    severity: "Medium"
+    command: "aws s3 presign s3://...; curl <presigned-url>"
+    expected_result: "Not supported (per AWS docs)"
+    actual_result: "URL generated successfully; HTTP 200 on access"
+    passed: false
+    denial_layer: "N/A - not denied"
+    cloudtrail_event_id: ""
+    notes: |
+      UNEXPECTED: AWS documentation states Presigned URLs are "Not supported" for
+      FSx S3 AP, but actual testing shows:
+      1. aws s3 presign generates a valid URL (client-side operation)
+      2. curl to the presigned URL returns HTTP 200 with file content
+      This may be undocumented/unsupported behavior that works but is not guaranteed.
+      RECOMMENDATION: Do not rely on presigned URLs in production designs.
+
+  - id: "NEG-007"
+    description: "Object Versioning operations (ListObjectVersions)"
+    severity: "Medium"
+    command: "aws s3api list-object-versions --bucket verification-tes-...-ext-s3alias"
+    expected_result: "Not supported (per AWS docs)"
+    actual_result: "Returns results with VersionId=null"
+    passed: false
+    denial_layer: "N/A - not denied"
+    cloudtrail_event_id: ""
+    notes: |
+      UNEXPECTED: AWS documentation states ListObjectVersions is "Not supported",
+      but actual testing returns a valid response with VersionId="null" for each object.
+      This is likely because versioning is not ENABLED (not that the API is blocked).
+      The API call succeeds but returns non-versioned objects.
+      RECOMMENDATION: Document as "API responds but versioning is not functional."
+
+  - id: "NEG-008"
+    description: "Access after IAM role revocation"
+    severity: "Critical"
+    command: "N/A - requires role revocation test"
+    expected_result: "AccessDenied"
+    actual_result: "NOT TESTED"
+    passed: false
+    denial_layer: "N/A"
+    cloudtrail_event_id: ""
+    notes: "Requires creating and revoking a test IAM role. Skipped in this round."
+
+  - id: "NEG-009"
+    description: "Access from non-bound VPC (VPC-origin AP)"
+    severity: "Critical"
+    command: "N/A - no VPC-origin AP created"
+    expected_result: "AccessDenied"
+    actual_result: "NOT TESTED"
+    passed: false
+    denial_layer: "N/A"
+    cloudtrail_event_id: ""
+    notes: "Same as NEG-004. Requires VPC-origin AP."
+
+  - id: "NEG-010"
+    description: "Conditional write (If-None-Match)"
+    severity: "Medium"
+    command: "aws s3api put-object --bucket ... --key ... --body ... --if-none-match '*'"
+    expected_result: "Not supported"
+    actual_result: "NotImplemented: A header you provided implies functionality that is not implemented"
+    passed: true
+    denial_layer: "S3_AP_limitation"
+    cloudtrail_event_id: ""
+    notes: "Conditional writes correctly rejected with NotImplemented error."
+
+# Summary
+total_tests: 10
+critical_tests: 5
+critical_passed: 1  # NEG-001
+critical_failed: 1  # NEG-002 (unexpected success)
+critical_not_tested: 3  # NEG-003, NEG-004/009, NEG-008
+high_medium_passed: 2  # NEG-005, NEG-010
+high_medium_failed: 2  # NEG-006, NEG-007 (unexpected success)
+not_tested: 3
+
+# Key Findings
+key_findings:
+  - finding: "DeleteObject succeeds for nobody user via file system permission model"
+    severity: "High"
+    impact: "Read-only AP user designation alone does not prevent deletion"
+    mitigation: "Restrict DeleteObject in AP policy for read-only use cases"
+  - finding: "Presigned URLs work despite documentation saying 'Not supported'"
+    severity: "Medium"
+    impact: "Documentation inaccuracy; behavior may change without notice"
+    mitigation: "Do not rely on presigned URLs; document as unsupported"
+  - finding: "ListObjectVersions returns results despite documentation saying 'Not supported'"
+    severity: "Low"
+    impact: "API does not error but versioning is not functional"
+    mitigation: "Document as non-functional; do not rely on versioning"
+
+# Promotion Decision
+security_verified_candidate: false
+reason: "3 critical tests not executed; 1 critical test failed (NEG-002); documentation discrepancies found"
+next_actions:
+  - "Restrict DeleteObject in readonly AP policy to properly test NEG-002"
+  - "Create VPC-origin AP for NEG-004/009"
+  - "Test with second account for NEG-003"
+  - "Capture CloudTrail evidence for all tests"
