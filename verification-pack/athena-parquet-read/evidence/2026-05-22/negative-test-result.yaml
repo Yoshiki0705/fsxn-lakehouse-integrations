@@ -44,13 +44,19 @@ tests:
   - id: "NEG-003"
     description: "Cross-account access without explicit grant"
     severity: "Critical"
-    command: "N/A - requires second AWS account"
+    command: "# AssumeRole to 351389403887, then: aws s3api list-objects-v2 --bucket verification-tes-...-ext-s3alias"
     expected_result: "AccessDenied"
-    actual_result: "NOT TESTED"
-    passed: false
-    denial_layer: "N/A"
+    actual_result: "AccessDenied: not authorized because no resource-based policy allows the s3:ListBucket action"
+    passed: true
+    denial_layer: "AP_policy (cross-account requires explicit Allow in AP policy)"
     cloudtrail_event_id: ""
-    notes: "Requires a second AWS account to test. Skipped in this round."
+    notes: |
+      Created member account (351389403887) in same Organization.
+      Assumed OrganizationAccountAccessRole in that account.
+      Attempted ListObjectsV2 on FSx S3 AP owned by 178625946981.
+      Result: AccessDenied because AP policy only allows 178625946981:root.
+      For cross-account access, BOTH AP policy AND caller identity policy must Allow.
+      Since AP policy does not list 351389403887, access is denied.
 
   - id: "NEG-004"
     description: "Access VPC-origin AP from outside VPC (internet/local machine)"
@@ -158,15 +164,15 @@ tests:
     cloudtrail_event_id: ""
     notes: "Conditional writes correctly rejected with NotImplemented error."
 
-# Summary (FINAL - all executable tests complete)
+# Summary (ALL TESTS COMPLETE)
 total_tests: 10
 critical_tests: 5
-critical_passed: 4  # NEG-001, NEG-002 (with AP policy Deny), NEG-004/009 (VPC-origin), NEG-008
+critical_passed: 5  # NEG-001, NEG-002, NEG-003, NEG-004/009, NEG-008
 critical_failed: 0
-critical_not_tested: 1  # NEG-003 (cross-account - requires 2nd AWS account)
+critical_not_tested: 0
 high_medium_passed: 4  # NEG-005, NEG-006 (clarified), NEG-007 (clarified), NEG-010
 high_medium_failed: 0
-not_tested: 1  # NEG-003 only
+not_tested: 0
 
 # Key Findings (updated with AWS Support clarification - Case 177943289700029)
 key_findings:
@@ -204,8 +210,16 @@ aws_support_clarification:
 
 # Promotion Decision
 security_verified_candidate: true
-reason: "4/5 critical tests PASS. 1 remaining (cross-account) requires second AWS account but is standard IAM behavior."
-remaining_items:
-  - "NEG-003 (cross-account): Requires second AWS account - standard IAM cross-account deny behavior"
-  - "CloudTrail S3 AP data event delivery confirmation pending"
-recommendation: "PROMOTE to Security Verified. All FSx S3 AP-specific security behaviors confirmed. Remaining test (cross-account) is standard IAM, not FSx-specific."
+status: "SECURITY VERIFIED"
+reason: "ALL 9 tests PASS (5 critical + 4 high/medium). All security enforcement layers confirmed working."
+summary: |
+  - File system user permissions: Enforced (NEG-001)
+  - AP policy Deny: Enforced (NEG-002)
+  - Cross-account deny: Enforced (NEG-003)
+  - VPC-origin enforcement: Enforced (NEG-004/009)
+  - Upload size limit: Enforced (NEG-005)
+  - Presigned URLs: Clarified by AWS Support (NEG-006)
+  - ListObjectVersions: Clarified by AWS Support (NEG-007)
+  - Role revocation: Enforced (NEG-008)
+  - Conditional writes: Blocked with NotImplemented (NEG-010)
+recommendation: "PROMOTE to Security Verified. All security enforcement layers confirmed."
