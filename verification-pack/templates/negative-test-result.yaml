@@ -15,6 +15,7 @@ tests:
     expected_result: "AccessDenied"
     actual_result: ""  # Fill after execution
     passed: false  # true if actual matches expected (i.e., access was denied)
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
@@ -25,6 +26,7 @@ tests:
     expected_result: "AccessDenied"
     actual_result: ""
     passed: false
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
@@ -35,6 +37,7 @@ tests:
     expected_result: "AccessDenied"
     actual_result: ""
     passed: false
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
@@ -45,6 +48,7 @@ tests:
     expected_result: "AccessDenied"
     actual_result: ""
     passed: false
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
@@ -55,6 +59,7 @@ tests:
     expected_result: "EntityTooLarge or upload failure"
     actual_result: ""
     passed: false
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
@@ -65,6 +70,7 @@ tests:
     expected_result: "Not supported or error"
     actual_result: ""
     passed: false
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
@@ -75,6 +81,7 @@ tests:
     expected_result: "Not supported"
     actual_result: ""
     passed: false
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
@@ -85,6 +92,7 @@ tests:
     expected_result: "AccessDenied"
     actual_result: ""
     passed: false
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
@@ -95,6 +103,7 @@ tests:
     expected_result: "AccessDenied"
     actual_result: ""
     passed: false
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
@@ -105,6 +114,7 @@ tests:
     expected_result: "Not supported or error"
     actual_result: ""
     passed: false
+    denial_layer: ""  # IAM | AP_policy | file_system_user | VPC_condition | SCP | unknown
     cloudtrail_event_id: ""
     notes: ""
 
