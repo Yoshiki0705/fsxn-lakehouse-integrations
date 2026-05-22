@@ -18,10 +18,10 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）と Lakehouse プラットフォ�
 
 | コンポーネント | リージョン | 詳細 |
 |--------------|-----------|------|
-| FSx for ONTAP | `ap-northeast-1` (東京) | ファイルシステム ID: `fs-09ffe72a3b2b7dbbd` |
+| FSx for ONTAP | `ap-northeast-1` (東京) | ファイルシステム ID: `<YOUR_FSX_FILESYSTEM_ID>` |
 | S3 Access Point | `ap-northeast-1` (東京) | FSx for ONTAP と同一リージョン（必須） |
 | Databricks Workspace | `ap-northeast-1` (東京) | 同一リージョンで VPC-scoped AP を使用 |
-| AWS Account | `178625946981` | 検証用アカウント |
+| AWS Account | `<YOUR_AWS_ACCOUNT_ID>` | 検証用アカウント |
 
 ### 設計判断: 同一リージョン配置
 

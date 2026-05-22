@@ -109,7 +109,7 @@ Amazon FSx for ONTAP S3 Access Points enable S3 API access to file data stored o
 |---------------|----------|---------|------|
 | Zero-Copy NAS Analytics for Manufacturing | Manufacturing | Read-Only Analytics | Good |
 | Regulated Data Lakehouse for Healthcare Research | Healthcare | Managed Tables (Read) | Better |
-| Financial Data Mesh with FSxN and S3 Access Points | Financial Services | Data Sharing | Best |
+| Financial Data Mesh with FSx for ONTAP and S3 Access Points | Financial Services | Data Sharing | Best |
 | AI-Powered Document Intelligence on Enterprise Files | Cross-industry | RAG with Bedrock | Best |
 | Hybrid Cloud Analytics Bridge | Cross-industry | ETL Pipeline | Better |
 | Media Asset Analytics without Data Migration | Media & Entertainment | Read-Only Analytics | Good |
@@ -137,7 +137,7 @@ Amazon FSx for ONTAP S3 Access Points enable S3 API access to file data stored o
 | 5 | Validate audit trail and access controls | Week 3 |
 | **Success criteria** | PHI never leaves VPC, audit trail complete, query < 30s | |
 
-### Financial Data Mesh with FSxN and S3 Access Points
+### Financial Data Mesh with FSx for ONTAP and S3 Access Points
 
 | Step | Action | Timeline |
 |------|--------|----------|
@@ -157,10 +157,10 @@ Amazon FSx for ONTAP S3 Access Points enable S3 API access to file data stored o
 | Partner Type | Role | Value Proposition | Typical Deal |
 |-------------|------|-------------------|--------------|
 | **SIer / Consulting** | Design + implement + migrate | NAS modernization / data platform renewal projects | Existing ONTAP customers upgrading to cloud analytics |
-| **MSP (Managed Service Provider)** | Operate + monitor + optimize | FSxN + S3 AP + audit as managed service | Ongoing operations for regulated industries |
+| **MSP (Managed Service Provider)** | Operate + monitor + optimize | FSx for ONTAP + S3 AP + audit as managed service | Ongoing operations for regulated industries |
 | **Data / AI Partner** | Build analytics + AI solutions | Bedrock RAG / Athena / Glue / Databricks integration | AI-powered document intelligence, data mesh |
 | **NetApp Channel Partner** | Extend ONTAP investment to cloud analytics | Existing ONTAP customer base expansion to AWS analytics | Hybrid cloud analytics bridge |
-| **ISV** | Embed FSxN S3 AP in product | S3-compatible product integration without data copy | SaaS analytics on customer file data |
+| **ISV** | Embed FSx for ONTAP S3 AP in product | S3-compatible product integration without data copy | SaaS analytics on customer file data |
 
 ### Partner Engagement Model
 
@@ -188,7 +188,7 @@ Discovery → Assessment → PoC → Production → Managed Operations
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  FSxN Lakehouse Integration: Zero-Copy Analytics on NAS     │
+│  FSx for ONTAP Lakehouse Integration: Zero-Copy Analytics on NAS     │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  1. CUSTOMER PAIN                                            │
@@ -219,7 +219,7 @@ Discovery → Assessment → PoC → Production → Managed Operations
 │                                                              │
 │  6. PoC PACKAGE                                              │
 │     • 2-week PoC with sample data                            │
-│     • Deliverable: Working Athena/Glue query on FSxN data    │
+│     • Deliverable: Working Athena/Glue query on FSx for ONTAP data    │
 │     • Success criteria: Query < 30s, zero data copies        │
 │     • Cost: < $500 AWS charges                               │
 │                                                              │
@@ -302,7 +302,7 @@ Materials and processes for AWS + Partner joint selling.
 
 | Criterion | Indicator |
 |-----------|-----------|
-| Existing NAS/ONTAP footprint | ≥ 10 TB file data on NetApp ONTAP (on-prem or FSxN) |
+| Existing NAS/ONTAP footprint | ≥ 10 TB file data on NetApp ONTAP (on-prem or FSx for ONTAP) |
 | Analytics initiative | Active or planned data lake / lakehouse / BI project |
 | Cloud adoption stage | AWS account active; VPC deployed |
 | Pain signal | Complaints about data copy cost, sync pipeline failures, or analytics access delays |
@@ -581,7 +581,7 @@ A partner must meet ALL of the following to qualify for a Joint Discovery Worksh
 | Time | Topic | Owner | Output |
 |------|-------|-------|--------|
 | 0-10 min | Introductions, objectives | AWS Partner SA | Alignment on goals |
-| 10-30 min | FSxN S3 AP overview + demo | AWS SA | Partner understands the technology |
+| 10-30 min | FSx for ONTAP S3 AP overview + demo | AWS SA | Partner understands the technology |
 | 30-50 min | Partner capability review | Partner | Understand partner strengths |
 | 50-70 min | Target account brainstorm | Joint | 3-5 candidate accounts identified |
 | 70-90 min | Deal hypothesis development | Joint | 1-3 deal hypotheses drafted |

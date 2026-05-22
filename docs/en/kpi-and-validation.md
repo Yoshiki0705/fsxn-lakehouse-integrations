@@ -474,7 +474,7 @@ Production deployment is not the end — it's the beginning of value creation.
 ### Monthly Value Report Template
 
 ```markdown
-# Monthly Value Report: FSxN Lakehouse Integration
+# Monthly Value Report: FSx for ONTAP Lakehouse Integration
 ## Period: [Month Year]
 
 ### Executive Summary

@@ -1,34 +1,18 @@
-[
-  {
-    "ParameterKey": "EnvironmentName",
-    "ParameterValue": "fsxn-lakehouse"
-  },
-  {
-    "ParameterKey": "S3BucketName",
-    "ParameterValue": "<YOUR_FSXN_SVM_S3_BUCKET_NAME>"
-  },
-  {
-    "ParameterKey": "VpcId",
-    "ParameterValue": "<YOUR_VPC_ID>"
-  },
-  {
-    "ParameterKey": "SubnetIds",
-    "ParameterValue": "<SUBNET_1_ID>,<SUBNET_2_ID>"
-  },
-  {
-    "ParameterKey": "S3AccessPointName",
-    "ParameterValue": "fsxn-snowflake-ap"
-  },
-  {
-    "ParameterKey": "SnowflakeAccountId",
-    "ParameterValue": "<FROM_DESCRIBE_INTEGRATION_OUTPUT>"
-  },
-  {
-    "ParameterKey": "SnowflakeExternalId",
-    "ParameterValue": "<FROM_DESCRIBE_INTEGRATION_OUTPUT>"
-  },
-  {
-    "ParameterKey": "EnableSnowpipe",
-    "ParameterValue": "true"
-  }
-]
+{
+  "_comment": "Copy this file to params.json and fill in your values. params.json is gitignored.",
+  "_note": "S3 Access Point is created separately via: aws fsx create-and-attach-s3-access-point",
+  "EnvironmentName": "fsxn-lakehouse",
+  "S3AccessPointArn": "<YOUR_FSXN_S3_ACCESS_POINT_ARN>",
+  "S3AccessPointAlias": "<YOUR_FSXN_S3_ACCESS_POINT_ALIAS>",
+  "SnowflakeAccountId": "",
+  "SnowflakeExternalId": "snowflake-placeholder",
+  "EnableSnowpipe": "false",
+  "SnowflakeSqsArn": "",
+
+  "_outputs_comment": "These are populated by deploy.sh after stack deployment",
+  "IAMRoleArn": "",
+  "StorageAllowedLocations": "",
+  "StackName": "",
+  "Region": "",
+  "TrustPolicyPhase": ""
+}

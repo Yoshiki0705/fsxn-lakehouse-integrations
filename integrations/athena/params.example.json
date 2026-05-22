@@ -1,0 +1,10 @@
+{
+  "FileSystemId": "fs-0XXXXXXXXXXXXXXXXX",
+  "StorageVirtualMachineId": "svm-0XXXXXXXXXXXXXXXXX",
+  "VolumeId": "fsvol-0XXXXXXXXXXXXXXXXX",
+  "S3AccessPointName": "fsxn-athena-ap",
+  "AthenaResultsBucket": "your-athena-results-bucket",
+  "Region": "ap-northeast-1",
+  "NfsMountPoint": "/mnt/fsxn",
+  "SvmNfsEndpoint": "svm-0XXXXXXXXXXXXXXXXX.fs-0XXXXXXXXXXXXXXXXX.fsx.ap-northeast-1.amazonaws.com"
+}

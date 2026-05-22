@@ -1,0 +1,51 @@
+{
+  "title": "FPolicy Event",
+  "description": "ONTAP FPolicy file operation event (SQS message format)",
+  "type": "object",
+  "required": ["event_id", "operation_type", "file_path", "volume_name", "svm_name", "timestamp"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique event identifier (UUID)"
+    },
+    "operation_type": {
+      "type": "string",
+      "enum": ["create", "write", "delete", "rename"],
+      "description": "Normalized file operation type"
+    },
+    "file_path": {
+      "type": "string",
+      "description": "ONTAP file path (e.g., vol1/data/file.parquet)"
+    },
+    "volume_name": {
+      "type": "string",
+      "description": "ONTAP volume name"
+    },
+    "svm_name": {
+      "type": "string",
+      "description": "ONTAP SVM (Storage Virtual Machine) name"
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "Event timestamp (ISO 8601)"
+    },
+    "file_size": {
+      "type": "integer",
+      "description": "File size in bytes (0 if not available)"
+    },
+    "client_ip": {
+      "type": "string",
+      "description": "Client IP address that performed the operation"
+    },
+    "protocol": {
+      "type": "string",
+      "enum": ["nfs", "cifs"],
+      "description": "Protocol used for the file operation"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "User who performed the operation"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,250 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  FPolicy IP Updater — Fargate タスク再起動時に ONTAP external-engine の
+  primary-servers IP を自動更新する Lambda。
+  
+  ECS タスク状態変更イベント (RUNNING) をトリガーに、新しいタスク IP を取得し
+  ONTAP REST API 経由で FPolicy external-engine を更新する。
+  
+  Architecture:
+    ECS Task State Change (RUNNING) → EventBridge Rule → Lambda
+        → ONTAP REST API (PATCH external-engine primary-servers)
+
+Parameters:
+  FPolicyClusterArn:
+    Type: String
+    Description: FPolicy ECS Cluster ARN
+
+  FPolicyServiceName:
+    Type: String
+    Description: FPolicy ECS Service 名
+
+  OntapManagementIp:
+    Type: String
+    Description: FSx for ONTAP 管理エンドポイント IP
+
+  OntapCredentialSecretArn:
+    Type: String
+    Description: ONTAP admin credentials を格納した Secrets Manager ARN (JSON: {"username":"fsxadmin","password":"..."})
+
+  SvmName:
+    Type: String
+    Default: FSxN_OnPre
+    Description: ONTAP SVM 名
+
+  EngineName:
+    Type: String
+    Default: fpolicy_lakehouse_engine
+    Description: FPolicy external-engine 名
+
+  FPolicyPort:
+    Type: Number
+    Default: 9898
+    Description: FPolicy TCP ポート
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Lambda を配置する Private Subnet (ONTAP 管理 IP に到達可能)
+
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Lambda 用 Security Group (ONTAP HTTPS 443 egress 許可)
+
+Resources:
+  # Lambda Execution Role
+  IPUpdaterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-ip-updater-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: ECSDescribe
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:DescribeTasks
+                  - ecs:ListTasks
+                Resource: '*'
+        - PolicyName: SecretsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref OntapCredentialSecretArn
+
+  # Lambda Function
+  IPUpdaterFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-fpolicy-ip-updater'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt IPUpdaterRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      VpcConfig:
+        SubnetIds: !Ref SubnetIds
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+      Environment:
+        Variables:
+          ONTAP_MGMT_IP: !Ref OntapManagementIp
+          ONTAP_SECRET_ARN: !Ref OntapCredentialSecretArn
+          SVM_NAME: !Ref SvmName
+          ENGINE_NAME: !Ref EngineName
+          FPOLICY_PORT: !Sub '${FPolicyPort}'
+          ECS_CLUSTER: !Ref FPolicyClusterArn
+          ECS_SERVICE: !Ref FPolicyServiceName
+      Code:
+        ZipFile: |
+          """FPolicy IP Updater — Fargate タスク IP 変更時に ONTAP を更新."""
+          import json
+          import os
+          import urllib3
+          import boto3
+
+          urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+          ecs = boto3.client('ecs')
+          secrets = boto3.client('secretsmanager')
+
+          ONTAP_MGMT_IP = os.environ['ONTAP_MGMT_IP']
+          ONTAP_SECRET_ARN = os.environ['ONTAP_SECRET_ARN']
+          SVM_NAME = os.environ['SVM_NAME']
+          ENGINE_NAME = os.environ['ENGINE_NAME']
+          FPOLICY_PORT = os.environ['FPOLICY_PORT']
+          ECS_CLUSTER = os.environ['ECS_CLUSTER']
+          ECS_SERVICE = os.environ['ECS_SERVICE']
+
+          def handler(event, context):
+              """ECS タスク状態変更イベントを処理."""
+              print(f"Event: {json.dumps(event)}")
+              
+              # Get new task IP
+              task_ip = get_running_task_ip()
+              if not task_ip:
+                  print("ERROR: No running task found")
+                  return {'statusCode': 404, 'body': 'No running task'}
+              
+              print(f"New task IP: {task_ip}")
+              
+              # Update ONTAP external-engine
+              update_ontap_engine(task_ip)
+              
+              return {'statusCode': 200, 'body': f'Updated to {task_ip}'}
+
+          def get_running_task_ip():
+              """Running 状態の Fargate タスク IP を取得."""
+              tasks = ecs.list_tasks(
+                  cluster=ECS_CLUSTER,
+                  serviceName=ECS_SERVICE,
+                  desiredStatus='RUNNING'
+              )
+              if not tasks['taskArns']:
+                  return None
+              
+              desc = ecs.describe_tasks(
+                  cluster=ECS_CLUSTER,
+                  tasks=[tasks['taskArns'][0]]
+              )
+              
+              for detail in desc['tasks'][0]['attachments'][0]['details']:
+                  if detail['name'] == 'privateIPv4Address':
+                      return detail['value']
+              return None
+
+          def update_ontap_engine(new_ip):
+              """ONTAP REST API で external-engine の primary-servers を更新."""
+              # Get credentials
+              secret = secrets.get_secret_value(SecretId=ONTAP_SECRET_ARN)
+              creds = json.loads(secret['SecretString'])
+              username = creds['username']
+              password = creds['password']
+              
+              http = urllib3.PoolManager(cert_reqs='CERT_NONE')
+              base_url = f"https://{ONTAP_MGMT_IP}/api"
+              headers = urllib3.make_headers(basic_auth=f"{username}:{password}")
+              headers['Content-Type'] = 'application/json'
+              
+              # Get SVM UUID
+              resp = http.request('GET', f"{base_url}/svm/svms?name={SVM_NAME}",
+                                  headers=headers)
+              svms = json.loads(resp.data)
+              svm_uuid = svms['records'][0]['uuid']
+              
+              # Get engine UUID
+              resp = http.request('GET',
+                  f"{base_url}/protocols/fpolicy/{svm_uuid}/engines?name={ENGINE_NAME}",
+                  headers=headers)
+              engines = json.loads(resp.data)
+              
+              if not engines.get('records'):
+                  print(f"Engine {ENGINE_NAME} not found, creating...")
+                  # Create engine
+                  body = json.dumps({
+                      "name": ENGINE_NAME,
+                      "primary_servers": [new_ip],
+                      "port": int(FPOLICY_PORT),
+                      "type": "asynchronous"
+                  })
+                  resp = http.request('POST',
+                      f"{base_url}/protocols/fpolicy/{svm_uuid}/engines",
+                      headers=headers, body=body)
+                  print(f"Create response: {resp.status}")
+              else:
+                  # Update engine
+                  engine_name = engines['records'][0]['name']
+                  body = json.dumps({"primary_servers": [new_ip]})
+                  resp = http.request('PATCH',
+                      f"{base_url}/protocols/fpolicy/{svm_uuid}/engines/{engine_name}",
+                      headers=headers, body=body)
+                  print(f"Update response: {resp.status}")
+
+  # EventBridge Rule (ECS Task State Change → Lambda)
+  TaskStateChangeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${AWS::StackName}-task-state-change'
+      EventPattern:
+        source:
+          - aws.ecs
+        detail-type:
+          - ECS Task State Change
+        detail:
+          clusterArn:
+            - !Ref FPolicyClusterArn
+          lastStatus:
+            - RUNNING
+      Targets:
+        - Id: ip-updater-lambda
+          Arn: !GetAtt IPUpdaterFunction.Arn
+
+  # Lambda Permission for EventBridge
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IPUpdaterFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt TaskStateChangeRule.Arn
+
+Outputs:
+  IPUpdaterFunctionArn:
+    Description: IP Updater Lambda ARN
+    Value: !GetAtt IPUpdaterFunction.Arn
+
+  EventRuleArn:
+    Description: ECS Task State Change EventBridge Rule ARN
+    Value: !GetAtt TaskStateChangeRule.Arn

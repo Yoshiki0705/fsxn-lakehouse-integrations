@@ -1,0 +1,295 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  FSxN Lakehouse Integration — AWS Glue ETL Stack.
+  Creates S3 Access Point (internet origin), IAM Role for Glue,
+  Glue Database, Crawler, ETL Jobs (bronze→silver, silver→gold),
+  and EventBridge scheduled execution rule.
+
+Parameters:
+  FileSystemId:
+    Type: String
+    Description: FSx for ONTAP File System ID (e.g., fs-0123456789abcdef0)
+
+  VolumeId:
+    Type: String
+    Description: FSx for ONTAP Volume ID for the data volume
+
+  S3AccessPointName:
+    Type: String
+    Default: fsxn-glue-ap
+    Description: Name for the S3 Access Point
+
+  GlueDatabaseName:
+    Type: String
+    Default: fsxn_glue_db
+    Description: Glue Data Catalog database name
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment tag
+
+  ETLScriptBucket:
+    Type: String
+    Description: S3 bucket where ETL scripts are stored
+
+  ScheduleExpression:
+    Type: String
+    Default: "cron(0 2 * * ? *)"
+    Description: EventBridge schedule for ETL pipeline (default daily at 02:00 UTC)
+
+Resources:
+  # --- IAM Role for Glue Service ---
+  GlueServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "fsxn-glue-service-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+      Policies:
+        - PolicyName: S3AccessPointReadWritePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3APRead
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}"
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/*"
+              - Sid: S3APWrite
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/silver/*"
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/gold/*"
+              - Sid: ETLScriptBucket
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub "arn:aws:s3:::${ETLScriptBucket}/glue-scripts/*"
+        - PolicyName: GlueCatalogPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:GetDatabase
+                  - glue:GetDatabases
+                  - glue:CreateTable
+                  - glue:UpdateTable
+                  - glue:DeleteTable
+                  - glue:GetTable
+                  - glue:GetTables
+                  - glue:BatchCreatePartition
+                  - glue:CreatePartition
+                  - glue:UpdatePartition
+                  - glue:DeletePartition
+                  - glue:GetPartition
+                  - glue:GetPartitions
+                  - glue:BatchGetPartition
+                Resource: "*"
+        - PolicyName: CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:AssociateKmsKey
+                Resource: "arn:aws:logs:*:*:*"
+
+  # --- Glue Database ---
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Ref GlueDatabaseName
+        Description: "FSxN Glue ETL database — medallion architecture (bronze/silver/gold)"
+
+  # --- Glue Crawler ---
+  GlueCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Name: !Sub "fsxn-glue-crawler-${Environment}"
+      Role: !GetAtt GlueServiceRole.Arn
+      DatabaseName: !Ref GlueDatabaseName
+      Description: "Crawls FSxN bronze data via S3 Access Point (internet origin)"
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${S3AccessPointName}-${AWS::AccountId}.s3-accesspoint.${AWS::Region}.amazonaws.com/bronze/"
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: LOG
+      RecrawlPolicy:
+        RecrawlBehavior: CRAWL_NEW_FOLDERS_ONLY
+      Configuration: >
+        {
+          "Version": 1.0,
+          "Grouping": {
+            "TableGroupingPolicy": "CombineCompatibleSchemas"
+          },
+          "CrawlerOutput": {
+            "Partitions": {
+              "AddOrUpdateBehavior": "InheritFromTable"
+            }
+          }
+        }
+      Tags:
+        Environment: !Ref Environment
+        Project: fsxn-lakehouse-integrations
+        Vendor: glue
+
+  # --- Glue ETL Job: Bronze to Silver ---
+  BronzeToSilverJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: !Sub "fsxn-bronze-to-silver-${Environment}"
+      Description: "ETL: Bronze → Silver (schema normalization, dedup, type casting)"
+      Role: !GetAtt GlueServiceRole.Arn
+      GlueVersion: "4.0"
+      WorkerType: G.1X
+      NumberOfWorkers: 2
+      Timeout: 60
+      MaxRetries: 1
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub "s3://${ETLScriptBucket}/glue-scripts/bronze_to_silver.py"
+        PythonVersion: "3"
+      DefaultArguments:
+        "--job-language": "python"
+        "--job-bookmark-option": "job-bookmark-enable"
+        "--enable-metrics": "true"
+        "--enable-continuous-cloudwatch-log": "true"
+        "--enable-spark-ui": "true"
+        "--spark-event-logs-path": !Sub "s3://${ETLScriptBucket}/spark-logs/"
+        "--TempDir": !Sub "s3://${ETLScriptBucket}/glue-temp/"
+        "--source_database": !Ref GlueDatabaseName
+        "--s3_ap_alias": !Sub "${S3AccessPointName}-${AWS::AccountId}.s3-accesspoint.${AWS::Region}.amazonaws.com"
+        "--target_path": !Sub "s3://${S3AccessPointName}-${AWS::AccountId}.s3-accesspoint.${AWS::Region}.amazonaws.com/silver/"
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      Tags:
+        Environment: !Ref Environment
+        Project: fsxn-lakehouse-integrations
+        Layer: silver
+
+  # --- Glue ETL Job: Silver to Gold ---
+  SilverToGoldJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: !Sub "fsxn-silver-to-gold-${Environment}"
+      Description: "ETL: Silver → Gold (aggregations, daily summaries, customer metrics)"
+      Role: !GetAtt GlueServiceRole.Arn
+      GlueVersion: "4.0"
+      WorkerType: G.1X
+      NumberOfWorkers: 2
+      Timeout: 60
+      MaxRetries: 1
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub "s3://${ETLScriptBucket}/glue-scripts/silver_to_gold.py"
+        PythonVersion: "3"
+      DefaultArguments:
+        "--job-language": "python"
+        "--job-bookmark-option": "job-bookmark-enable"
+        "--enable-metrics": "true"
+        "--enable-continuous-cloudwatch-log": "true"
+        "--enable-spark-ui": "true"
+        "--spark-event-logs-path": !Sub "s3://${ETLScriptBucket}/spark-logs/"
+        "--TempDir": !Sub "s3://${ETLScriptBucket}/glue-temp/"
+        "--source_database": !Ref GlueDatabaseName
+        "--s3_ap_alias": !Sub "${S3AccessPointName}-${AWS::AccountId}.s3-accesspoint.${AWS::Region}.amazonaws.com"
+        "--silver_path": !Sub "s3://${S3AccessPointName}-${AWS::AccountId}.s3-accesspoint.${AWS::Region}.amazonaws.com/silver/"
+        "--gold_path": !Sub "s3://${S3AccessPointName}-${AWS::AccountId}.s3-accesspoint.${AWS::Region}.amazonaws.com/gold/"
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      Tags:
+        Environment: !Ref Environment
+        Project: fsxn-lakehouse-integrations
+        Layer: gold
+
+  # --- EventBridge Rule for Scheduled Execution ---
+  ETLScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "fsxn-glue-etl-schedule-${Environment}"
+      Description: "Scheduled trigger for FSxN Glue ETL pipeline"
+      ScheduleExpression: !Ref ScheduleExpression
+      State: DISABLED
+      Targets:
+        - Id: StartCrawler
+          Arn: !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/${GlueCrawler}"
+          RoleArn: !GetAtt EventBridgeGlueRole.Arn
+
+  # --- IAM Role for EventBridge to invoke Glue ---
+  EventBridgeGlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "fsxn-glue-eventbridge-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeGlue
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:StartCrawler
+                  - glue:StartJobRun
+                Resource:
+                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/fsxn-glue-crawler-${Environment}"
+                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/fsxn-bronze-to-silver-${Environment}"
+                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/fsxn-silver-to-gold-${Environment}"
+
+Outputs:
+  S3AccessPointName:
+    Description: S3 Access Point name (create separately via FSx CLI)
+    Value: !Ref S3AccessPointName
+
+  GlueCrawlerName:
+    Description: Glue Crawler name
+    Value: !Sub "fsxn-glue-crawler-${Environment}"
+
+  GlueDatabaseName:
+    Description: Glue Database name
+    Value: !Ref GlueDatabaseName
+
+  BronzeToSilverJobName:
+    Description: Bronze to Silver ETL job name
+    Value: !Sub "fsxn-bronze-to-silver-${Environment}"
+
+  SilverToGoldJobName:
+    Description: Silver to Gold ETL job name
+    Value: !Sub "fsxn-silver-to-gold-${Environment}"
+
+  GlueServiceRoleArn:
+    Description: Glue Service IAM Role ARN
+    Value: !GetAtt GlueServiceRole.Arn
+
+  EventBridgeRuleName:
+    Description: EventBridge schedule rule name
+    Value: !Sub "fsxn-glue-etl-schedule-${Environment}"

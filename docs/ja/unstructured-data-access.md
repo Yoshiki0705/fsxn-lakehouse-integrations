@@ -154,23 +154,118 @@ FSx for ONTAP Volume (NFS/SMB)
 
 ### Databricks + 非構造化データ
 
-```python
-# Databricks ノートブックで画像ファイルを読み取り
-from pyspark.sql.functions import *
+> ⚠️ **検証結果 (2026-05-17)**: Unity Catalog の session policy が FSx for ONTAP S3 Access Point の
+> ARN 形式 (`arn:aws:s3:<region>:<account>:accesspoint/<name>`) を認識しないため、
+> S3 AP 経由の直接アクセスは現時点でブロックされています。以下に回避策を含む全アプローチを記載します。
 
-# S3 AP 経由で画像バイナリを読み取り
+#### アプローチ 1: S3 AP + Unity Catalog External Location（❌ 現時点で非対応）
+
+```python
+# ❌ Unity Catalog session policy により 403 AccessDenied
+# Databricks サポートに対応を依頼中
 images_df = spark.read.format("binaryFile") \
     .option("pathGlobFilter", "*.jpg") \
     .load(f"s3://{S3_AP_ALIAS}/images/")
-
-# 画像メタデータの抽出
-images_df.select("path", "length", "modificationTime").show()
 ```
 
+**ブロッカー**: Unity Catalog が AssumeRole 時に適用する session policy に
+FSx for ONTAP S3 AP の ARN が含まれていない。IAM Role 自体は `s3:*` on `*` でも、
+session policy が制限する。
+
+**追加の制約**:
+- boto3 直接アクセスも不可（IMDS がブロックされ credentials 取得不可）
+- Databricks managed VPC では VPC Peering 経由の NFS も到達不可
+- AWS PrivateLink は FSx for ONTAP NFS には適用不可（サービスとして公開されていない）
+
+#### アプローチ 2: Customer-managed VPC + NFS マウント（✅ 推奨）
+
+FSx for ONTAP と同一 VPC に Databricks を Customer-managed VPC でデプロイし、NFS 直接マウント:
+
+**前提条件:**
+- Databricks Workspace を Customer-managed VPC で作成（FSx for ONTAP と同一 VPC）
+- クラスタを Dedicated (Single user) モードで作成（sudo 権限が必要）
+- Init Script で NFS マウントを自動化
+
+```bash
+# Init Script (クラスタ起動時に実行)
+#!/bin/bash
+sudo apt-get install -y nfs-common
+sudo mkdir -p /mnt/fsxn
+sudo mount -t nfs -o nfsvers=3 <FSx-DATA-IP>:/vol1 /mnt/fsxn
+```
+
+```python
+# ノートブックでの非構造化データ処理
+import os
+from PIL import Image
+from io import BytesIO
+
+# ファイル一覧取得
+image_files = [f for f in os.listdir("/mnt/fsxn/images/") if f.endswith(".jpg")]
+print(f"Found {len(image_files)} images")
+
+# 画像メタデータ抽出
+for fname in image_files[:5]:
+    img = Image.open(f"/mnt/fsxn/images/{fname}")
+    print(f"  {fname}: {img.width}x{img.height}, {img.format}")
+
+# ドキュメントテキスト抽出
+import pypdf
+reader = pypdf.PdfReader("/mnt/fsxn/documents/report.pdf")
+text = "\n".join(page.extract_text() for page in reader.pages)
+print(f"Extracted {len(text)} characters from PDF")
+```
+
+**前提条件:**
+- VPC Peering: Databricks VPC ↔ FSx for ONTAP VPC
+- セキュリティグループ: NFS (TCP 2049, 111) を許可
+- Init Script: クラスタ起動時に NFS マウント実行
+
+**利点:**
+- Unity Catalog session policy の制約を受けない
+- 通常のファイルシステムとして読み書き可能
+- S3 AP 不要（NFS 直接アクセス）
+- 全ファイル形式に対応
+
 **制約:**
-- `binaryFile` フォーマットで読み取り可能
-- 大きなファイル（>100MB）は Multipart Download で取得
-- Databricks ML Runtime で画像処理ライブラリ利用可能
+- VPC Peering のネットワーク設定が必要
+- Spark の分散処理には不向き（ドライバーノードのローカルファイルとして扱う）
+- Init Script の管理が必要
+
+#### アプローチ 3: Instance Profile + boto3（🔲 検証予定）
+
+クラスタに Instance Profile を設定し、boto3 で S3 AP に直接アクセス:
+
+```python
+import boto3
+from PIL import Image
+from io import BytesIO
+
+# Instance Profile の credentials を使用
+s3 = boto3.client("s3", region_name="ap-northeast-1")
+bucket = "<S3_AP_ALIAS>"
+
+# 画像ファイル読み取り
+obj = s3.get_object(Bucket=bucket, Key="images/photo001.jpg")
+img = Image.open(BytesIO(obj["Body"].read()))
+print(f"Image: {img.width}x{img.height}, {img.format}")
+
+# 処理結果の書き戻し
+thumbnail = img.copy()
+thumbnail.thumbnail((200, 200))
+buf = BytesIO()
+thumbnail.save(buf, format="JPEG")
+s3.put_object(Bucket=bucket, Key="thumbnails/photo001_thumb.jpg", Body=buf.getvalue())
+```
+
+**前提条件:**
+- Instance Profile を Databricks ワークスペースに登録
+- クラスタに Instance Profile を設定
+- Instance Profile の IAM Role に S3 AP アクセス権限
+
+**制約:**
+- Unity Catalog 有効クラスタでは Instance Profile が制限される場合あり
+- Spark DataFrame としての処理には別途設定が必要
 
 ### Snowflake + 非構造化データ
 
@@ -185,13 +280,15 @@ CREATE OR REPLACE STAGE MEDIA_STAGE
 SELECT * FROM DIRECTORY(@MEDIA_STAGE);
 
 -- Pre-signed URL の生成（外部アプリケーション用）
+-- NOTE: AWS ドキュメントでは Presign は「非サポート」と記載されていますが、
+-- テストにより FSx for ONTAP S3 AP で GET_PRESIGNED_URL が動作することを確認しています。
 SELECT GET_PRESIGNED_URL(@MEDIA_STAGE, 'images/photo001.jpg', 3600);
 ```
 
 **制約:**
 - Snowflake は非構造化データを直接クエリできない
 - Directory Table でメタデータ管理
-- Pre-signed URL で外部アプリケーションにアクセスを委譲
+- **Pre-signed URL は FSx for ONTAP S3 AP で動作する**（AWS ドキュメントでは「非サポート」と記載されているが、実際には動作確認済み）
 - Snowpark で Python UDF を使った画像処理は可能
 
 ### Dremio + 非構造化データ

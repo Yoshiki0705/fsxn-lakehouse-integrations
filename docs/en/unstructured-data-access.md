@@ -185,13 +185,15 @@ CREATE OR REPLACE STAGE MEDIA_STAGE
 SELECT * FROM DIRECTORY(@MEDIA_STAGE);
 
 -- Generate pre-signed URL for external applications
+-- NOTE: AWS docs state Presign is "Not supported", but testing confirms
+-- GET_PRESIGNED_URL works with FSx for ONTAP S3 AP in practice.
 SELECT GET_PRESIGNED_URL(@MEDIA_STAGE, 'images/photo001.jpg', 3600);
 ```
 
 **Constraints:**
 - Snowflake cannot directly query unstructured data content
 - Directory Table for metadata management
-- Pre-signed URLs delegate access to external applications
+- **Pre-signed URLs work with FSx for ONTAP S3 AP** (despite AWS docs stating "Not supported")
 - Snowpark Python UDFs can process images
 
 ### Dremio + Unstructured Data
