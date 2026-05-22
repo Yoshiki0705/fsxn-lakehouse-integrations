@@ -70,6 +70,18 @@ To promote from Functional Verified → Security Verified, ALL must be true:
 - This is NOT "Production Validated" — that requires customer-representative data, production monitoring, and operational runbook execution under load.
 - This is NOT a guarantee of compatibility with all Athena features — only the tested workflow is verified.
 
+### Production Validated Promotion Criteria (Future)
+
+To promote from Security Verified → Production Validated, ALL of the following additional conditions must be met:
+
+- [ ] Tested with customer-representative data (size, format, file count)
+- [ ] Production-equivalent monitoring and alerting configured
+- [ ] Operational runbooks rehearsed under production-like conditions
+- [ ] Operational owner formally assigned
+- [ ] Customer or partner acceptance confirmation documented
+- [ ] Known limitations reviewed and accepted by customer
+- [ ] DR/recovery procedure tested (if applicable)
+
 ## How to Run
 
 See individual test directories for execution instructions. Each test produces a YAML evidence record that should be committed to `evidence/`.

@@ -1,0 +1,77 @@
+# Healthcare PoC Governance Intake Record
+# Complete this form BEFORE starting any Healthcare PoC.
+# Store completed record in: verification-pack/<integration>/evidence/
+
+healthcare_poc_intake:
+  # Customer and project identification
+  customer_name: ""
+  project_name: ""
+  date: ""  # YYYY-MM-DD
+  completed_by: ""
+
+  # Data classification
+  data_contains_phi_pii: ""  # yes | no | unknown
+  data_state: ""  # raw | pseudonymized | de-identified
+  data_description: ""  # Brief description of documents/files
+
+  # Use classification (determines risk level and required controls)
+  # See: docs/en/governance-and-compliance.md → RAG Use Risk Classification
+  rag_use_classification: ""  # administrative | research | clinical_documentation | clinical_decision_support | patient_facing
+
+  # Governance roles
+  human_reviewer: ""  # Name and role of person reviewing RAG responses
+  data_owner: ""  # Name and role of person who owns the data
+  risk_acceptance_owner: ""  # Name and role of person who accepts residual risk
+
+  # Compliance
+  audit_log_retention_years: 0  # Minimum 6 (HIPAA) or 7 (SOX)
+  irb_required: ""  # yes | no | to_be_confirmed
+  baa_in_place: ""  # yes | no | to_be_confirmed
+  legal_review_required: ""  # yes | no | to_be_confirmed
+
+  # Scope confirmation
+  initial_scope_approved: false
+  scope_limitations:
+    de_identified_only: true
+    read_only_access: true
+    human_review_mandatory: true
+    patient_facing_excluded: true
+    clinical_decision_support_excluded: true
+
+  # Customer-specific items requiring customization
+  customer_specific_adjustments:
+    - item: "Risk acceptance authority"
+      status: ""  # confirmed | pending | not_applicable
+      notes: ""
+    - item: "Audit log retention period"
+      status: ""
+      notes: ""
+    - item: "IRB / ethics board approval"
+      status: ""
+      notes: ""
+    - item: "Legal review"
+      status: ""
+      notes: ""
+    - item: "Data deletion procedure"
+      status: ""
+      notes: ""
+    - item: "Incident notification recipients"
+      status: ""
+      notes: ""
+    - item: "Human review SLA"
+      status: ""
+      notes: ""
+
+  # Pre-PoC assurance materials confirmed
+  assurance_materials_reviewed:
+    non_technical_overview: false  # 1-page architecture for non-technical stakeholders
+    data_flow_diagram: false
+    access_control_explanation: false
+    ai_reference_explanation: false  # What does the AI see?
+    human_review_explanation: false  # Where does a human check?
+    error_handling_explanation: false  # What happens if AI is wrong?
+
+  # Approval
+  approved_by: ""
+  approval_date: ""
+  notes: ""

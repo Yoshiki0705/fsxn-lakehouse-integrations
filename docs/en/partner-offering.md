@@ -671,6 +671,18 @@ After enablement, a partner is certified to co-sell when they can:
 
 R = Responsible, A = Accountable, C = Consulted, I = Informed
 
+### Opportunity Ownership
+
+For each active deal, assign explicit owners:
+
+| Role | Responsibility |
+|------|---------------|
+| **Opportunity Owner** | Drives deal progression; owns CRM entry; accountable for stage advancement |
+| **Technical Owner** | Owns architecture decisions, PoC execution, security validation |
+| **Partner Sales Owner** | Owns customer relationship, commercial negotiation, SOW |
+| **AWS Account Owner** | Owns AWS relationship, internal alignment, co-sell support |
+| **Next Meeting Owner** | Owns scheduling and agenda for the next customer interaction |
+
 ---
 
 ## References
