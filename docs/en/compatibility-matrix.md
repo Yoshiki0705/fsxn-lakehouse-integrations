@@ -305,6 +305,259 @@ Required FSx Throughput = max(
 
 ---
 
+## Verification Evidence Template
+
+For each verified integration, record the following to enable third-party reproducibility.
+
+```yaml
+# Verification Evidence Record
+test_id: "ATHENA-PARQUET-READ-001"
+date_tested: "YYYY-MM-DD"
+tester: "<name>"
+
+# Infrastructure
+region: "ap-northeast-1"
+fsxn_deployment_type: "MULTI_AZ_2"  # or SINGLE_AZ_1, etc.
+fsxn_throughput_capacity_mbps: 512
+ontap_version: "9.17.1"
+svm_security_style: "UNIX"
+volume_junction_path: "/vol1"
+
+# Access Point Configuration
+ap_network_origin: "INTERNET"  # or VPC
+ap_file_system_user_type: "UNIX"
+ap_file_system_user_name: "analytics_reader"
+ap_file_system_user_uid: 1001
+block_public_access: true  # always true, cannot be changed
+
+# IAM Configuration
+iam_role_arn: "arn:aws:iam::<ACCOUNT>:role/<ROLE_NAME>"
+iam_actions_granted: ["s3:GetObject", "s3:ListBucket"]
+ap_policy: "Allow s3:GetObject, s3:ListBucket for role"
+
+# Test Dataset
+dataset_format: "Parquet"
+file_count: 10
+average_file_size_mb: 128
+total_dataset_size_gb: 1.28
+
+# Service Configuration
+service: "Amazon Athena"
+service_version: "engine v3"
+glue_catalog_database: "fsxn_test_db"
+workgroup: "primary"
+
+# Results
+result: "PASS"
+query_latency_p50_ms: 3200
+query_latency_p95_ms: 5100
+data_scanned_bytes: 1374389248
+errors: []
+known_limitations:
+  - "Athena requires internet-origin AP"
+  - "Query results written to separate S3 bucket, not FSx"
+```
+
+---
+
+## Security Verified Criteria
+
+To claim "Security Verified" status, ALL of the following tests must pass:
+
+| Test | Expected Result | Method |
+|------|----------------|--------|
+| Authorized role can read | GetObject succeeds | `aws s3 cp s3://AP-ALIAS/test.parquet . --profile authorized` |
+| Unauthorized role is denied | AccessDenied error | `aws s3 cp s3://AP-ALIAS/test.parquet . --profile unauthorized` |
+| Explicit Deny overrides Allow | AccessDenied even with identity Allow | Add explicit Deny in AP policy, test with allowed role |
+| Cross-account access denied (unless explicitly allowed) | AccessDenied | Attempt from different account without cross-account grant |
+| VPC-origin AP blocks internet access | AccessDenied | Attempt from outside bound VPC |
+| Read-only user cannot write | AccessDenied on PutObject | `aws s3 cp local.txt s3://AP-ALIAS/ --profile readonly-ap-user` |
+| Read-only user cannot delete | AccessDenied on DeleteObject | `aws s3 rm s3://AP-ALIAS/test.parquet --profile readonly-ap-user` |
+| CloudTrail data event captured | Event in CloudTrail | Query CloudTrail for s3.amazonaws.com GetObject events on AP ARN |
+| Block Public Access enforced | Cannot create public policy | Attempt to add public access grant to AP policy |
+
+### Security Test Execution Record
+
+```yaml
+security_test_id: "SEC-ATHENA-001"
+date: "YYYY-MM-DD"
+ap_arn: "arn:aws:s3:<REGION>:<ACCOUNT>:accesspoint/<NAME>"
+tests_passed: 9
+tests_failed: 0
+tests_total: 9
+evidence_location: "<link to test results>"
+reviewer: "<security reviewer name>"
+```
+
+---
+
+## Operational Runbooks
+
+### Runbook 1: Glue Catalog Repair After Snapshot Restore
+
+| Field | Value |
+|-------|-------|
+| **Trigger** | ONTAP Snapshot restore performed on volume with cataloged data |
+| **Detection** | Athena queries return "file not found" or unexpected results |
+| **Owner** | Data platform team |
+| **Impact** | Analytics queries may fail or return stale results |
+
+**Steps:**
+
+1. **Confirm restore completed**: `aws fsx describe-volumes --volume-ids <vol-id>` → status = AVAILABLE
+2. **Identify affected tables**: List Glue tables with location pointing to the restored volume's AP
+3. **Re-run Glue Crawler**:
+   ```bash
+   aws glue start-crawler --name <crawler-name>
+   aws glue get-crawler --name <crawler-name> --query "Crawler.State"
+   # Wait until State = READY
+   ```
+4. **Validate table metadata**: `aws glue get-table --database-name <db> --name <table>` → verify column schema
+5. **Run validation query**: Execute known-good query in Athena, compare results
+6. **Notify stakeholders**: Inform analytics users that catalog has been refreshed
+
+**Estimated time**: 10-15 minutes
+
+---
+
+### Runbook 2: Orphan File Cleanup After Failed Spark/Glue Job
+
+| Field | Value |
+|-------|-------|
+| **Trigger** | Spark or Glue ETL job fails mid-write |
+| **Detection** | Job status = FAILED; orphan files visible in volume |
+| **Owner** | Data engineering team |
+| **Impact** | Wasted storage; potential confusion if files are partially written |
+
+**Steps:**
+
+1. **Identify failed job**: `aws glue get-job-run --job-name <job> --run-id <run-id>` → check error
+2. **List orphan files**: `aws s3 ls s3://<AP-ALIAS>/<output-prefix>/ --recursive` → identify files written after job start time
+3. **Verify files are not referenced**: Check Glue Catalog — orphan files should NOT be in any table's partition
+4. **Delete orphan files**:
+   ```bash
+   aws s3 rm s3://<AP-ALIAS>/<output-prefix>/part-00000-<partial>.parquet
+   ```
+5. **Re-run job**: Fix root cause, then re-execute
+6. **Validate output**: Confirm new job run produces complete, correct output
+
+**Estimated time**: 15-30 minutes
+
+---
+
+### Runbook 3: Access Point Policy Rollback
+
+| Field | Value |
+|-------|-------|
+| **Trigger** | AP policy accidentally modified; authorized users lose access |
+| **Detection** | AccessDenied errors from previously-working queries; CloudTrail shows PutAccessPointPolicy |
+| **Owner** | Security / platform team |
+| **Impact** | All analytics access through AP is blocked |
+
+**Steps:**
+
+1. **Confirm policy change**: Check CloudTrail for recent `PutAccessPointPolicy` event
+2. **Retrieve last known-good policy**: From IaC repository (CloudFormation/Terraform) or version control
+3. **Apply corrected policy**:
+   ```bash
+   aws s3control put-access-point-policy \
+     --account-id <ACCOUNT> \
+     --name <AP-NAME> \
+     --policy file://correct-policy.json
+   ```
+4. **Validate access restored**: Test with authorized role
+5. **Investigate root cause**: Who changed the policy? Was it intentional?
+6. **Prevent recurrence**: Add SCP to restrict PutAccessPointPolicy to specific admin roles
+
+**Estimated time**: 5-10 minutes (if IaC policy is available)
+
+---
+
+### Runbook 4: SnapMirror Failover and AP Recreation
+
+| Field | Value |
+|-------|-------|
+| **Trigger** | Source region failure; DR activation required |
+| **Detection** | AWS Health Dashboard alert; source region connectivity lost |
+| **Owner** | Infrastructure / DR team |
+| **Impact** | All analytics access via source AP is unavailable |
+
+**Steps:**
+
+1. **Activate SnapMirror failover**: Break SnapMirror relationship, promote DR volume to read-write
+2. **Create new S3 Access Point in DR region**:
+   ```bash
+   aws fsx create-and-attach-s3-access-point \
+     --name <AP-NAME> \
+     --type ONTAP \
+     --ontap-configuration "VolumeId=<DR-VOL-ID>,FileSystemIdentity={Type=UNIX,UnixUser={Name=<USER>}}" \
+     --region <DR-REGION>
+   ```
+3. **Wait for AP to become AVAILABLE**: `aws fsx describe-s3-access-points --region <DR-REGION>`
+4. **Update Glue Catalog**: Update table locations to new AP alias
+5. **Update IAM policies**: Update resource ARNs to new AP ARN in DR region
+6. **Update application configs**: Point analytics tools to new AP
+7. **Validate**: Run test queries against DR AP
+8. **Notify stakeholders**: Confirm DR activation and new access details
+
+**Estimated time**: 30-60 minutes
+
+---
+
+## Benchmark Methodology
+
+### Standard Benchmark Suite
+
+| Benchmark | What it Measures | Procedure |
+|-----------|-----------------|-----------|
+| **Large file sequential read** | Max sustained read throughput | Upload 10 × 1 GB Parquet files; run Athena `SELECT COUNT(*)` on full table; measure data scanned / time |
+| **Small file listing** | Metadata operation performance | Create 10,000 small files (1 KB each); run `aws s3 ls --recursive`; measure time |
+| **Athena query latency** | End-to-end query time | Run 10 identical queries; record P50, P95, P99 latency |
+| **Glue ETL throughput** | Read + transform + write speed | Run Glue job reading 10 GB, transforming, writing back; measure total time |
+| **Concurrent query scaling** | Throughput under load | Run 1, 5, 10, 20 concurrent Athena queries; measure aggregate throughput |
+| **Bedrock KB ingestion** | Document processing speed | Ingest 1,000 documents (avg 10 pages each); measure total ingestion time |
+
+### Benchmark Record Template
+
+```yaml
+benchmark_id: "BENCH-001"
+date: "YYYY-MM-DD"
+region: "<REGION>"
+
+# FSx Configuration
+fsxn_throughput_mbps: 512
+fsxn_deployment_type: "MULTI_AZ_2"
+fsxn_storage_gb: 1024
+
+# Dataset
+file_count: 10
+avg_file_size_mb: 1024
+total_size_gb: 10
+file_format: "Parquet"
+compression: "Snappy"
+
+# Test Parameters
+test_type: "large_file_sequential_read"
+concurrency: 1
+query: "SELECT COUNT(*) FROM test_table"
+repetitions: 10
+
+# Results
+throughput_mbps: 480
+latency_p50_ms: 21000
+latency_p95_ms: 28000
+latency_p99_ms: 32000
+errors: 0
+cost_usd: 0.05
+
+# Analysis
+throughput_vs_provisioned_pct: 94  # 480/512 = 94%
+bottleneck: "FSx network throughput (near max)"
+recommendation: "Sufficient for this workload"
+```
+
+---
+
 ## References
 
 - [Access point compatibility — Supported S3 API operations](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)

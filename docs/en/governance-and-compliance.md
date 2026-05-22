@@ -456,6 +456,170 @@ For regulated environments, snapshot restore should follow an approval process:
 
 ---
 
+## Stakeholder Explanation Guide
+
+Different stakeholders have different concerns. Tailor the explanation to their role.
+
+| Stakeholder | Primary Concern | Key Explanation | Evidence Artifact | Decision Criteria |
+|-------------|----------------|-----------------|-------------------|-------------------|
+| **Hospital CIO** | Business value, cost, timeline | "Analyze existing file data without migration; reduce analytics setup from weeks to hours" | Cost comparison, timeline, architecture overview | ROI, implementation risk, vendor lock-in |
+| **CISO / Security Team** | Data protection, access control, attack surface | "Dual-layer auth, Block Public Access enforced, VPC isolation option, all access audited" | Security architecture diagram, penetration test results, CloudTrail samples | Threat model coverage, compliance alignment |
+| **Data Protection Officer** | Privacy, data residency, deletion rights | "Data stays in-region, single source (no copies), deletion procedure documented, audit trail" | Data flow diagram, retention policy, deletion procedure | GDPR/HIPAA alignment, data subject rights |
+| **Clinical Research Lead** | Data access speed, research enablement | "Query research data with SQL in minutes, not days; AI search on documents" | Demo, query latency benchmarks | Time-to-insight, data freshness |
+| **Legal / Compliance** | Regulatory adherence, liability, contracts | "BAA with AWS, encryption at rest/transit, audit retention 7+ years, responsibility matrix" | RACI, BAA confirmation, compliance mapping | Regulatory gap analysis |
+| **Audit Team** | Evidence, traceability, completeness | "Every data access logged in CloudTrail with principal, timestamp, action, resource" | Audit log samples, report generation procedure | Audit trail completeness, retention |
+| **Public Sector Procurement** | Certification, sovereignty, vendor assessment | "AWS Region data residency, FedRAMP/ISO certifications, no data leaves region" | AWS compliance certifications, data residency guarantee | Procurement checklist compliance |
+| **Patient Communication** | Trust, transparency, control | "Your data is protected by multiple security layers; only authorized researchers can access de-identified data" | Plain-language privacy notice | Patient trust, opt-out mechanism |
+
+---
+
+## Assurance Artifact Pack
+
+Complete set of deliverables for regulated industry deployment approval.
+
+| # | Artifact | Purpose | Audience | Format |
+|---|----------|---------|----------|--------|
+| 1 | Non-technical architecture overview | Explain system in plain language | CxO, board, patients | 1-page PDF with diagram |
+| 2 | Data flow diagram | Show where data resides and moves | DPO, security, audit | Visio/draw.io diagram |
+| 3 | Access control explanation | Explain who can access what and why | CISO, compliance | 2-page document |
+| 4 | RACI matrix (signed) | Assign responsibilities | All stakeholders | Signed document |
+| 5 | Audit log sample report | Demonstrate monitoring capability | Audit, compliance | Redacted CloudTrail report |
+| 6 | Incident response procedure | Define response to security events | Security, operations | Runbook document |
+| 7 | Data lifecycle policy | Define retention, deletion, archival | DPO, legal | Policy document |
+| 8 | RAG governance checklist | AI-specific controls | CISO, research lead | Checklist |
+| 9 | Residual risk register | Document accepted risks | CxO, CISO | Risk register |
+| 10 | Compliance mapping | Map controls to regulations | Compliance, audit | Matrix (HIPAA/PCI/SOX) |
+
+### Artifact Production Timeline
+
+| Week | Artifacts Produced | Input Required From |
+|------|-------------------|-------------------|
+| 1 | #1 Architecture, #2 Data flow | Technical team |
+| 2 | #3 Access control, #4 RACI draft | Security + data owners |
+| 3 | #5 Audit sample, #6 Incident response | Operations + security |
+| 4 | #7 Lifecycle, #8 RAG governance | DPO + research lead |
+| 5 | #9 Risk register, #10 Compliance mapping | CISO + legal |
+| 6 | Review and sign-off | All stakeholders |
+
+---
+
+## Secondary Use of Healthcare Data
+
+When healthcare data is used beyond its primary clinical purpose (e.g., for research, AI training, population health analytics), additional governance applies.
+
+### Primary vs. Secondary Use
+
+| Aspect | Primary Use | Secondary Use |
+|--------|------------|---------------|
+| Purpose | Direct patient care | Research, analytics, AI, quality improvement |
+| Data form | Identified (PHI) | De-identified or anonymized |
+| Consent | Treatment consent | Research consent or waiver (IRB/ethics board) |
+| Access | Clinical staff | Researchers, data scientists, AI systems |
+| Storage | Clinical systems (EHR) | Research data platform (FSx + analytics) |
+| Governance | Clinical data governance | Research data governance + ethics |
+
+### Secondary Use Governance Framework
+
+| Control | Implementation |
+|---------|---------------|
+| **Consent / Approval** | IRB/ethics board approval for research use; document consent basis |
+| **De-identification** | Apply HIPAA Safe Harbor or Expert Determination method before analytics access |
+| **Re-identification risk** | Assess k-anonymity; restrict linkage variables; monitor for re-identification attempts |
+| **Dataset access approval** | Per-project approval by data governance committee; time-limited access |
+| **Research workspace isolation** | Separate VPC/account for research; no data export without approval |
+| **Export control** | Results only (aggregated); no individual-level data export without review |
+| **Publication review** | All publications using the data must be reviewed for re-identification risk |
+| **Audit trail** | All research data access logged; periodic access review |
+
+### De-identification Pipeline for FSx S3 AP
+
+```
+Clinical Volume (PHI)          Research Volume (De-identified)
+      │                                    │
+      ▼                                    ▼
+┌──────────────┐              ┌─────────────────────┐
+│ NFS/SMB      │              │ S3 Access Point     │
+│ (clinical    │              │ (read-only,         │
+│  staff only) │              │  research team)     │
+└──────┬───────┘              └──────────┬──────────┘
+       │                                  │
+       ▼                                  ▼
+┌──────────────────────────────────────────────────┐
+│         FSx for ONTAP (separate volumes)          │
+│  Vol1: /clinical (PHI)  │  Vol2: /research (safe) │
+└─────────────┬────────────┴───────────────────────┘
+              │
+     ┌────────▼────────┐
+     │ Glue ETL        │
+     │ De-identification│
+     │ Pipeline         │
+     │ (scheduled)      │
+     └─────────────────┘
+```
+
+**Key principle**: PHI volume has NO S3 Access Point. Only the de-identified research volume is exposed via S3 AP.
+
+---
+
+## Human Review Workflow for RAG
+
+When RAG is used in regulated industries, AI-generated responses require human review before action.
+
+### Workflow Steps
+
+```
+┌─────────┐    ┌──────────┐    ┌──────────────┐    ┌──────────┐
+│ 1. User │───▶│ 2. RAG   │───▶│ 3. Response  │───▶│ 4. Human │
+│ submits │    │ retrieves│    │ generated    │    │ reviewer │
+│ query   │    │ + answers│    │ with citations│    │ evaluates│
+└─────────┘    └──────────┘    └──────────────┘    └────┬─────┘
+                                                        │
+                                          ┌─────────────┼─────────────┐
+                                          ▼             ▼             ▼
+                                    ┌──────────┐ ┌──────────┐ ┌──────────┐
+                                    │ APPROVE  │ │ EDIT     │ │ REJECT   │
+                                    │ (as-is)  │ │ (modify) │ │ (discard)│
+                                    └────┬─────┘ └────┬─────┘ └────┬─────┘
+                                         │            │             │
+                                         ▼            ▼             ▼
+                                    ┌──────────────────────────────────┐
+                                    │ 5. Decision logged               │
+                                    │    (who, when, action, reason)   │
+                                    └──────────────┬───────────────────┘
+                                                   │
+                                         ┌─────────▼─────────┐
+                                         │ 6. Response        │
+                                         │    delivered to user│
+                                         └─────────┬─────────┘
+                                                   │
+                                         ┌─────────▼─────────┐
+                                         │ 7. Feedback loop   │
+                                         │    (accuracy       │
+                                         │     tracking)      │
+                                         └───────────────────┘
+```
+
+### Review Criteria
+
+| Criterion | Check | Action if Failed |
+|-----------|-------|-----------------|
+| Source accuracy | Do citations match the answer? | REJECT or EDIT |
+| Completeness | Does the answer address the full question? | EDIT to add missing info |
+| Hallucination | Does the answer contain claims not in sources? | REJECT |
+| PHI leakage | Does the answer reveal patient-identifiable information? | REJECT + escalate |
+| Clinical safety | Could the answer cause patient harm if acted upon? | REJECT + escalate |
+| Regulatory compliance | Does the answer comply with applicable regulations? | REJECT + legal review |
+
+### Review SLA
+
+| Priority | Review Time | Escalation |
+|----------|-------------|-----------|
+| Routine research query | < 4 hours | Auto-escalate after 8 hours |
+| Clinical decision support | < 1 hour | Immediate escalation if unreviewed |
+| Compliance/audit query | < 2 hours | Escalate to compliance officer |
+
+---
+
 ## References
 
 - [Managing access point access — Dual-layer authorization](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html)
