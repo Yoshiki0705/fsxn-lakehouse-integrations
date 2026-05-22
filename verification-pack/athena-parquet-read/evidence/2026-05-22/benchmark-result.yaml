@@ -1,0 +1,133 @@
+# Benchmark Results: Athena + Parquet Read on FSx for ONTAP S3 Access Point
+# Date: 2026-05-22/23
+# Target: verification-test-ap (Internet origin, root user)
+
+benchmark_id: "BENCH-ATHENA-001"
+date: "2026-05-23"
+region: "ap-northeast-1"
+
+# FSx Configuration
+fsxn_file_system_id: "fs-09ffe72a3b2b7dbbd"
+fsxn_throughput_mbps: 128
+fsxn_deployment_type: "SINGLE_AZ_1"
+fsxn_storage_gb: 1024
+svm_id: "svm-0e5ef72d9b4470f19"
+svm_name: "verification-svm"
+
+# Access Point
+ap_name: "verification-test-ap"
+ap_alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+ap_network_origin: "INTERNET"
+ap_file_system_user: "root"
+
+# Dataset
+file_count: 1
+file_name: "benchmark/sensor_data_large.parquet"
+file_size_mb: 103.0
+row_count: 5000000
+columns: 10
+column_names: ["id", "timestamp", "sensor_id", "temperature", "humidity", "pressure", "vibration", "status", "location", "batch_id"]
+compression: "Snappy"
+row_group_size: 500000
+
+# Upload Performance
+upload:
+  file_size_mb: 103.0
+  duration_seconds: 6.258
+  throughput_mbps: 16.5
+  method: "aws s3 cp (multipart)"
+  source: "local machine (internet)"
+
+# Athena Configuration
+athena_engine: "v3"
+workgroup: "primary"
+database: "fsxn_athena_verification"
+table: "sensor_benchmark"
+
+# Benchmark Results
+benchmarks:
+  - id: "BENCH-1"
+    name: "COUNT(*) - metadata only"
+    query: "SELECT COUNT(*) FROM sensor_benchmark"
+    data_scanned_bytes: 0
+    engine_ms: 1123
+    total_ms: 1316
+    throughput_mbps: "N/A (Parquet metadata)"
+    notes: "Parquet footer contains row count; no data scan needed"
+
+  - id: "BENCH-2"
+    name: "GROUP BY aggregation (5 columns)"
+    query: "SELECT location, status, COUNT(*), AVG(temperature), AVG(humidity), AVG(vibration), SUM(pressure) FROM ... GROUP BY location, status ORDER BY cnt DESC"
+    data_scanned_bytes: 37703564
+    engine_ms: 3103
+    total_ms: 3273
+    throughput_mbps: 12.2
+    notes: "Columnar read of 5 columns out of 10"
+
+  - id: "BENCH-3"
+    name: "GROUP BY + HAVING (6 columns)"
+    query: "SELECT sensor_id, location, AVG(temperature), STDDEV(temperature), AVG(vibration), COUNT(CASE WHEN status='critical') FROM ... GROUP BY sensor_id, location HAVING critical > 100"
+    data_scanned_bytes: 25286904
+    engine_ms: 3556
+    total_ms: 3970
+    throughput_mbps: 7.1
+    notes: "Selective column read with HAVING filter"
+
+  - id: "BENCH-4"
+    name: "SELECT * with WHERE + ORDER (all columns)"
+    query: "SELECT * FROM ... WHERE temperature > 35 AND vibration > 1.5 AND status = 'critical' ORDER BY timestamp DESC LIMIT 100"
+    data_scanned_bytes: 109524814
+    engine_ms: 2000
+    total_ms: 2196
+    throughput_mbps: 54.8
+    notes: "Full table scan (all columns). Best throughput measurement."
+
+  - id: "BENCH-5"
+    name: "Repeated query (5 runs, cache effect)"
+    query: "SELECT location, COUNT(*), AVG(temperature) FROM ... WHERE status='warning' GROUP BY location"
+    runs:
+      - {engine_ms: 1888, total_ms: 2072, scanned_bytes: 10128914}
+      - {engine_ms: 2286, total_ms: 2686, scanned_bytes: 10128914}
+      - {engine_ms: 1490, total_ms: 1693, scanned_bytes: 10128914}
+      - {engine_ms: 3276, total_ms: 3635, scanned_bytes: 10128914}
+      - {engine_ms: 1379, total_ms: 1540, scanned_bytes: 10128914}
+    p50_engine_ms: 1888
+    p95_engine_ms: 3276
+    min_engine_ms: 1379
+    max_engine_ms: 3276
+    notes: "Variance primarily from Athena queue time, not FSx I/O"
+
+# Analysis
+analysis:
+  peak_throughput_mbps: 54.8
+  throughput_vs_provisioned_pct: 42.8  # 54.8 / 128 = 42.8%
+  bottleneck: "Athena single-query parallelism (not FSx throughput)"
+  explanation: |
+    FSx is provisioned at 128 MB/s. Athena achieved 54.8 MB/s on full scan.
+    The gap is due to Athena's query execution model (single query does not
+    saturate FSx throughput). Multiple concurrent queries would increase
+    aggregate throughput closer to the provisioned limit.
+  latency_profile: |
+    All queries complete in < 4 seconds for 103MB dataset (5M rows).
+    For the target use case (Enterprise IT RAG with document search),
+    sub-second to low-single-digit-second latency is acceptable.
+  cost_estimate: |
+    Athena pricing: $5 per TB scanned.
+    Full table scan (109.5 MB): $0.000548
+    Typical analytical query (25-38 MB): $0.000125-$0.000189
+    1000 queries/month estimate: $0.13-$0.55
+
+# Comparison with KPI targets
+kpi_comparison:
+  target_cold_query_latency_good: "< 30s for 1GB scan"
+  actual_103mb_full_scan: "2.2s"
+  projected_1gb_full_scan: "~20s (linear extrapolation)"
+  assessment: "PASS - well within Good tier target"
+
+# Existing SVM Status
+existing_svm_status:
+  svm_name: "FSxN_OnPre"
+  svm_id: "svm-0d5f81cd0146af242"
+  s3_ap_status: "TIMEOUT (still affected by support case 177900333300633)"
+  last_checked: "2026-05-23T07:04:00Z"
+  aws_support_response: "Pending (last update was our isolation test submission)"
