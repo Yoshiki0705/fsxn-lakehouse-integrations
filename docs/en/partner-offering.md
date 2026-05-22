@@ -294,6 +294,186 @@ Q5: Does the customer need AI/RAG on existing documents?
 
 ---
 
+## Co-sell Ready Package
+
+Materials and processes for AWS + Partner joint selling.
+
+### Target Account Criteria
+
+| Criterion | Indicator |
+|-----------|-----------|
+| Existing NAS/ONTAP footprint | ≥ 10 TB file data on NetApp ONTAP (on-prem or FSxN) |
+| Analytics initiative | Active or planned data lake / lakehouse / BI project |
+| Cloud adoption stage | AWS account active; VPC deployed |
+| Pain signal | Complaints about data copy cost, sync pipeline failures, or analytics access delays |
+| Regulatory driver | Compliance requirement driving data governance improvement |
+| AI/ML interest | Exploring or piloting generative AI / RAG on enterprise documents |
+
+### Discovery Questions
+
+1. "How much file data do you currently copy to S3 for analytics? What does that cost monthly?"
+2. "How long does it take from data creation to analytics availability?"
+3. "Do you have separate access controls for NAS and S3? How do you audit cross-system access?"
+4. "Are there documents on your file shares that you'd like to make searchable with AI?"
+5. "What analytics platforms are you using or evaluating (Databricks, Snowflake, Athena)?"
+6. "What compliance requirements affect your data architecture decisions?"
+
+### Qualification Checklist
+
+- [ ] Customer has ≥ 10 TB on NAS/ONTAP
+- [ ] Customer has active AWS account with VPC
+- [ ] Customer has identified analytics use case
+- [ ] Customer budget owner identified
+- [ ] Technical decision maker engaged
+- [ ] No blocker: customer can run ONTAP 9.17.1+
+- [ ] Same-region deployment feasible
+
+### Customer Objection Handling
+
+| Objection | Response |
+|-----------|----------|
+| "We already copy to S3, it works fine" | "What's the monthly cost of that pipeline? What happens when it fails? FSx S3 AP eliminates that entirely." |
+| "Is it really S3 compatible?" | "It supports the core S3 operations for analytics (Get, Put, List, Delete). Here's the exact compatibility matrix. Read-only analytics is fully verified." |
+| "What about performance?" | "Latency is tens of milliseconds — same as S3. Throughput depends on your FSx provisioning. We size it to your workload in the PoC." |
+| "We need Delta Lake write" | "Delta write requires atomic rename which isn't supported. We recommend FSx S3 AP for source data reads, native S3 for Delta write targets." |
+| "Our security team will block this" | "Block Public Access is enforced by default. Dual-layer auth (IAM + file system). VPC-origin option for network isolation. Here's the governance doc." |
+
+### PoC SOW Template Outline
+
+```
+1. Objective: Validate FSx S3 AP for [use case]
+2. Scope: [Good/Better/Best tier]
+3. Duration: 2 weeks
+4. Deliverables:
+   - Working query on FSx data via [Athena/Glue/Bedrock]
+   - Performance benchmark results
+   - Security validation report
+   - Cost comparison (current vs FSx S3 AP)
+5. Success criteria: [from kpi-and-validation.md]
+6. Resources: Partner SA (X days), Customer admin (Y hours)
+7. AWS charges estimate: < $1,000
+8. Go/No-go decision: End of Week 2
+```
+
+---
+
+## First Deal Playbook (by Partner Type)
+
+### SIer: NAS Modernization Assessment + Analytics PoC
+
+| Phase | Activity | Duration | Deliverable |
+|-------|----------|----------|-------------|
+| 1. Assessment | Inventory NAS data, identify analytics candidates | 1 week | Assessment report |
+| 2. Design | Architecture for Good/Better tier | 1 week | Architecture document |
+| 3. PoC | Deploy FSx + S3 AP + Athena/Glue | 2 weeks | Working demo + benchmark |
+| 4. Proposal | Production deployment proposal | 1 week | SOW + cost estimate |
+| **First deal size** | Assessment + PoC: $15K-30K | | |
+
+### MSP: Read-Only Analytics Managed Package
+
+| Phase | Activity | Duration | Deliverable |
+|-------|----------|----------|-------------|
+| 1. Onboard | Deploy FSx + S3 AP + monitoring | 2 weeks | Production environment |
+| 2. Operate | Monthly monitoring, patching, optimization | Ongoing | Monthly report |
+| 3. Expand | Add Glue ETL, Bedrock RAG | Per request | Updated architecture |
+| **Revenue model** | Setup fee + monthly managed fee | | |
+| **First deal size** | Setup: $10K, Monthly: $3K-5K | | |
+
+### Data/AI Partner: Bedrock RAG PoC Package
+
+| Phase | Activity | Duration | Deliverable |
+|-------|----------|----------|-------------|
+| 1. Data prep | Identify documents, configure S3 AP | 1 week | Data source ready |
+| 2. RAG build | Bedrock Knowledge Base + agent | 2 weeks | Working RAG application |
+| 3. Evaluate | Accuracy testing, user feedback | 1 week | Evaluation report |
+| 4. Production | Hardening, monitoring, guardrails | 2 weeks | Production RAG system |
+| **First deal size** | RAG PoC: $20K-40K | | |
+
+### NetApp Channel Partner: ONTAP Customer Analytics Extension
+
+| Phase | Activity | Duration | Deliverable |
+|-------|----------|----------|-------------|
+| 1. Identify | Existing ONTAP customers with analytics needs | Ongoing | Target list |
+| 2. Workshop | Joint workshop: ONTAP + AWS analytics | 1 day | Customer interest |
+| 3. PoC | FSx migration + S3 AP + analytics | 3 weeks | Working solution |
+| **First deal size** | Workshop + PoC: $10K-20K | | |
+
+### ISV: Governed File Access Integration
+
+| Phase | Activity | Duration | Deliverable |
+|-------|----------|----------|-------------|
+| 1. Integration | S3 AP integration in ISV product | 4-6 weeks | Feature release |
+| 2. Certification | AWS validation, documentation | 2 weeks | Certified integration |
+| 3. GTM | Joint marketing, customer pilots | Ongoing | Pipeline |
+| **Revenue model** | Product feature (included in license) + services | | |
+
+---
+
+## Partner Monetization Model
+
+| Revenue Stream | Description | Typical Range | Recurring? |
+|---------------|-------------|---------------|-----------|
+| Assessment / Discovery | NAS inventory, analytics readiness evaluation | $10K-25K | No |
+| Architecture Design | Solution design, security review | $15K-40K | No |
+| PoC Implementation | 2-4 week proof of concept | $15K-50K | No |
+| Production Deployment | Full implementation + testing | $50K-200K | No |
+| Managed Operations | Monitoring, patching, optimization, support | $3K-10K/month | Yes |
+| Security/Compliance Review | Annual audit, policy review, penetration test | $10K-30K/year | Yes |
+| RAG/AI Integration | Bedrock KB setup, prompt engineering, evaluation | $20K-60K | No |
+| Optimization Service | Quarterly performance review, cost optimization | $5K-15K/quarter | Yes |
+| Training & Enablement | Customer team training on operations | $5K-15K | No |
+
+### Revenue Projection (First Year per Customer)
+
+```
+Conservative (Good tier):
+  Assessment:     $15K
+  PoC:            $20K
+  Deployment:     $50K
+  Operations:     $36K (12 × $3K)
+  Total Year 1:   $121K
+
+Growth (Better tier + RAG):
+  Assessment:     $20K
+  PoC:            $30K
+  Deployment:     $100K
+  RAG integration: $40K
+  Operations:     $72K (12 × $6K)
+  Total Year 1:   $262K
+```
+
+---
+
+## Path to Market
+
+```
+Phase 1: Internal Validation (Month 1-2)
+  └─ Build internal PoC
+  └─ Train partner SA/delivery team
+  └─ Document offering in partner portal
+
+Phase 2: First Customer (Month 2-4)
+  └─ Identify target account (with AWS account team)
+  └─ Joint discovery call
+  └─ PoC delivery
+  └─ Case study (anonymized if needed)
+
+Phase 3: Offering Publication (Month 4-6)
+  └─ Reference architecture on partner website
+  └─ AWS Partner Solutions Finder listing
+  └─ Joint blog post / webinar with AWS
+  └─ Conference presentation (AWS Summit, re:Invent)
+
+Phase 4: Scale (Month 6-12)
+  └─ Repeatable delivery methodology
+  └─ Junior consultant enablement
+  └─ AWS Marketplace private offer (if applicable)
+  └─ Multi-customer pipeline
+  └─ Quarterly business review with AWS partner team
+```
+
+---
+
 ## References
 
 - [Accessing your data via Amazon S3 access points](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)

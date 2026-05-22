@@ -288,6 +288,164 @@ RAG on documents  →    Agents query structured  →  Autonomous agents
 
 FSx S3 AP provides a **governed, auditable, read-only data access layer** that is well-suited for AI agent architectures where data security and auditability are non-negotiable.
 
+### Agentic AI Roadmap (Phased)
+
+| Phase | Capability | Business Use Case | Guardrails | Human Approval | Exit Criteria |
+|-------|-----------|-------------------|-----------|----------------|---------------|
+| **1. Read-only RAG** | Bedrock Knowledge Base on FSx documents | Document search, Q&A on manuals/policies | Read-only AP, human review of answers | Required for all responses | Accuracy > 80%, user adoption > 50% |
+| **2. RAG + Query Assistant** | RAG + Athena SQL generation | "Show me last month's production data" → SQL → results | Read-only AP + Athena, query cost limits | Required for data-modifying queries | Query accuracy > 90%, cost < budget |
+| **3. Agent-Assisted Analysis** | Multi-step: retrieve docs → query data → summarize | Automated report generation, trend analysis | Read-only AP, execution time limits, output review | Required before report distribution | Report quality validated by domain expert |
+| **4. Multi-Tool Governed Agent** | Agent uses multiple tools (S3, Athena, Bedrock, Lambda) | Complex research workflows, cross-source analysis | Per-tool IAM scoping, rate limiting, audit | Required for actions with business impact | Workflow completion rate > 95% |
+| **5. Human-Approved Autonomous** | Agent proposes actions, human approves execution | Automated data pipeline management, anomaly response | Full audit trail, rollback capability, SLA monitoring | Approval for irreversible actions only | Mean time to resolution improved by > 50% |
+
+---
+
+## Production Adoption Plan
+
+### PoC → Production Transition
+
+| Step | Activity | Owner | Duration | Gate |
+|------|----------|-------|----------|------|
+| 1 | **PoC Success Decision** | Business sponsor + technical lead | 1 day | All PoC exit criteria met |
+| 2 | **Production Readiness Review** | Architecture review board | 1 week | Security, performance, cost approved |
+| 3 | **Security Review** | CISO / security team | 1-2 weeks | Security Verified criteria met |
+| 4 | **Data Owner Approval** | Data governance committee | 1 week | Data classification confirmed, access approved |
+| 5 | **Cost Approval** | Finance / budget owner | 1 week | Monthly cost within budget |
+| 6 | **Operations Handover** | Platform team | 1-2 weeks | Runbooks documented, monitoring configured |
+| 7 | **User Onboarding** | Data platform team | 1 week | Users trained, access provisioned |
+| 8 | **KPI Baseline** | Analytics team | 1 week | Baseline metrics recorded |
+| 9 | **30-Day Value Check** | Business sponsor | Day 30 | KPIs trending positive |
+| 10 | **60-Day Optimization** | Platform team | Day 60 | Performance tuned, cost optimized |
+| 11 | **90-Day Value Report** | Business sponsor | Day 90 | Business value quantified, expansion decision |
+
+### Production Readiness Checklist
+
+- [ ] All PoC success criteria documented and met
+- [ ] Security Verified status achieved (see compatibility-matrix.md)
+- [ ] Operational runbooks tested (see compatibility-matrix.md)
+- [ ] Monitoring and alerting configured (CloudWatch, CloudTrail)
+- [ ] Backup and recovery tested (Snapshot restore within RTO)
+- [ ] Cost model validated (actual vs. projected)
+- [ ] User access provisioned (IAM roles, AP policies)
+- [ ] Documentation complete (architecture, operations, governance)
+- [ ] Incident response procedure reviewed
+- [ ] DR procedure tested (if applicable)
+
+---
+
+## Continuous Improvement Loop
+
+Production deployment is not the end — it's the beginning of value creation.
+
+### Monthly Improvement Cycle
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                          │
+│  ┌──────────┐    ┌──────────┐    ┌──────────────┐      │
+│  │ 1.MEASURE│───▶│ 2.ANALYZE│───▶│ 3.IDENTIFY   │      │
+│  │ Usage &  │    │ Trends & │    │ Bottlenecks  │      │
+│  │ Outcomes │    │ Anomalies│    │ & Opportunities│     │
+│  └──────────┘    └──────────┘    └──────┬───────┘      │
+│                                          │               │
+│  ┌──────────┐    ┌──────────┐    ┌──────▼───────┐      │
+│  │ 7.REPORT │◀───│ 6.VERIFY │◀───│ 4.IMPROVE    │      │
+│  │ Monthly  │    │ Results  │    │ Tune config  │      │
+│  │ Value    │    │          │    │ / data / cost│      │
+│  └──────────┘    └──────────┘    └──────────────┘      │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### What to Measure Monthly
+
+| Category | Metric | Target Trend |
+|----------|--------|-------------|
+| **Usage** | Queries/day, users/week, data scanned/month | Increasing |
+| **Performance** | P50/P95 query latency, throughput utilization | Stable or improving |
+| **Cost** | $/TB scanned, $/query, total monthly cost | Decreasing per unit |
+| **Business value** | Decisions enabled, time saved, pipelines eliminated | Increasing |
+| **Quality** | Query errors, failed jobs, data freshness SLA breaches | Decreasing |
+| **Security** | Unauthorized access attempts, policy drift events | Zero or decreasing |
+| **AI (if RAG)** | Answer accuracy, user satisfaction, review rejection rate | Improving |
+
+### Monthly Value Report Template
+
+```markdown
+# Monthly Value Report: FSxN Lakehouse Integration
+## Period: [Month Year]
+
+### Executive Summary
+- Total queries: X (+Y% vs last month)
+- Active users: N
+- Data copies eliminated: Z TB
+- Estimated cost savings: $W
+
+### KPI Dashboard
+| KPI | Target | Actual | Trend |
+|-----|--------|--------|-------|
+| Query latency P50 | < 10s | Xs | ↑↓→ |
+| Cost per TB | < $10 | $X | ↑↓→ |
+| Data freshness | < 5 min | X min | ↑↓→ |
+
+### Issues & Actions
+| Issue | Impact | Action | Owner | Due |
+|-------|--------|--------|-------|-----|
+
+### Next Month Focus
+- [Optimization opportunity]
+- [Expansion opportunity]
+```
+
+---
+
+## Data Readiness Assessment
+
+Before deploying FSx S3 AP for analytics or AI, assess whether the data is ready.
+
+### Assessment Dimensions
+
+| Dimension | Question | Score (1-5) | Action if Low |
+|-----------|----------|-------------|---------------|
+| **File format readiness** | Are files in analytics-friendly formats (Parquet, ORC, JSON, CSV)? | | Convert to Parquet for best performance |
+| **Metadata availability** | Do files have consistent naming, partitioning, or metadata? | | Implement naming conventions; add Glue Crawler |
+| **Access ownership** | Is there a clear data owner who can approve analytics access? | | Identify and document data owner |
+| **Data classification** | Is data classified (Public/Internal/Confidential/Regulated)? | | Classify before exposing via S3 AP |
+| **Freshness** | How current is the data? Is staleness acceptable for analytics? | | Document freshness SLA |
+| **Duplicate data** | Are there redundant copies that could be consolidated? | | Inventory copies; plan consolidation |
+| **Sensitive data ratio** | What percentage contains PHI/PII/secrets? | | De-identification pipeline if > 0% for analytics |
+| **Searchability** | Can documents be meaningfully searched/chunked for RAG? | | Evaluate document structure; test chunking |
+| **Catalog readiness** | Can a Glue Crawler successfully catalog the data? | | Test crawler; fix format issues |
+| **Volume size** | Is the dataset size appropriate for FSx throughput provisioning? | | Size FSx throughput to dataset |
+
+### Readiness Scoring
+
+| Total Score | Readiness Level | Recommendation |
+|-------------|----------------|----------------|
+| 40-50 | Ready | Proceed to PoC immediately |
+| 30-39 | Mostly ready | Address 1-2 gaps, then PoC |
+| 20-29 | Partially ready | Significant preparation needed (2-4 weeks) |
+| 10-19 | Not ready | Major data engineering effort required first |
+
+### Assessment Output
+
+```yaml
+assessment_date: "YYYY-MM-DD"
+assessor: "<name>"
+data_source: "<volume/path>"
+total_score: X/50
+readiness_level: "Ready | Mostly ready | Partially ready | Not ready"
+blockers:
+  - "<blocker 1>"
+  - "<blocker 2>"
+recommended_actions:
+  - action: "<action>"
+    effort: "<days>"
+    owner: "<team>"
+poc_ready: true/false
+estimated_prep_time: "X weeks"
+```
+
 ---
 
 ## References
