@@ -474,6 +474,93 @@ Phase 4: Scale (Month 6-12)
 
 ---
 
+## Partner Prioritization Matrix
+
+Score each candidate partner (1-5 per criterion) to determine engagement priority.
+
+| Criterion | Weight | Description |
+|-----------|--------|-------------|
+| Existing FSx / NetApp practice | 5 | Already delivers ONTAP solutions |
+| Data & analytics capability | 4 | Has Databricks/Snowflake/Athena expertise |
+| Industry footprint (healthcare/finance/manufacturing) | 4 | Active in regulated industries |
+| Managed service capability | 3 | Can operate ongoing environments |
+| AWS sales alignment | 5 | Active co-sell relationship with AWS account teams |
+| Customer base with NAS-heavy workloads | 5 | Existing customers with 10TB+ NAS |
+| Executive sponsor availability | 3 | Partner leadership committed to new offering |
+| First-deal readiness | 4 | Can execute within 60 days |
+
+### Prioritization Tiers
+
+| Tier | Score Range | Action | Timeline |
+|------|-------------|--------|----------|
+| **Tier 1** | 30-40 | Immediate co-sell engagement | Start within 2 weeks |
+| **Tier 2** | 20-29 | Enablement first, then co-sell | Start within 60 days |
+| **Tier 3** | 10-19 | Future candidate; monitor readiness | Revisit quarterly |
+
+---
+
+## First 3 Deals Pipeline Plan
+
+### 30-Day Pipeline Creation Sprint
+
+| Week | Activity | Owner | Output |
+|------|----------|-------|--------|
+| 1 | Identify 5-10 target accounts (NAS 10TB+, analytics need) | AWS account team + Partner | Target account list |
+| 1 | Align with AWS account managers on target accounts | Partner SA + Account Manager | Joint account plan |
+| 2 | Partner account mapping (which partner covers which account) | Partner SA | Account-partner mapping |
+| 2 | Joint discovery workshops (2-3 accounts) | Partner + AWS SA | Discovery notes |
+| 3 | Qualify opportunities (use Qualification Checklist) | Partner sales + AWS | Qualified pipeline |
+| 3 | Develop PoC proposals for top 3 | Partner SA + delivery | PoC SOWs |
+| 4 | Customer decision meetings | Partner + AWS | 3 signed PoC engagements |
+
+### Opportunity Stage Progression
+
+| Stage | Definition | Expected Next Action | Typical Duration |
+|-------|-----------|---------------------|-----------------|
+| 0. Identified | Account meets target criteria | Schedule discovery call | — |
+| 1. Discovery | Pain confirmed, stakeholders engaged | Present solution overview | 1-2 weeks |
+| 2. Qualified | Budget, authority, need, timeline confirmed | Propose PoC | 1 week |
+| 3. PoC Proposed | SOW presented, pricing agreed | Customer signs SOW | 1-2 weeks |
+| 4. PoC Active | PoC in execution | Deliver results | 2-4 weeks |
+| 5. Production Proposed | PoC success, production SOW presented | Customer approves | 2-4 weeks |
+| 6. Won | Production deployment contracted | Begin delivery | — |
+
+---
+
+## Partner Enablement Kit
+
+| Audience | Materials | Purpose |
+|----------|-----------|---------|
+| **Sales / Account Manager** | 1-page pitch, objection handling, pricing guide, target account criteria | Identify and qualify opportunities |
+| **Pre-sales / SA** | Technical deep dive deck, demo script, architecture diagrams, compatibility matrix | Technical validation and customer workshops |
+| **Delivery / Consultant** | PoC SOW template, deployment checklist, runbooks, benchmark methodology | Execute PoC and production deployments |
+| **Managed Services** | Operations runbook, monitoring setup guide, monthly report template, escalation matrix | Ongoing operations |
+| **Executive / Practice Lead** | Revenue model, Path to Market, case study template, QBR template | Business planning and partner management |
+
+### Enablement Session Plan
+
+| Session | Duration | Audience | Content |
+|---------|----------|----------|---------|
+| 1. Overview & positioning | 1 hour | All | Business value, competitive positioning, anti-patterns |
+| 2. Technical deep dive | 2 hours | SA / delivery | Architecture, compatibility matrix, security model |
+| 3. Hands-on lab | 4 hours | SA / delivery | Deploy FSx + S3 AP + Athena/Glue end-to-end |
+| 4. Sales play workshop | 1 hour | Sales | Discovery questions, objection handling, pricing |
+| 5. First deal planning | 1 hour | Sales + SA | Target accounts, pipeline sprint kickoff |
+
+---
+
+## Industry-Specific GTM Messages
+
+| Industry | Headline | Pain Point | Value Proposition | Call to Action |
+|----------|----------|-----------|-------------------|---------------|
+| **Manufacturing** | "AI-enable your engineering files without migration" | Design files, inspection records, maintenance manuals trapped on NAS | Query and search existing files with Athena/Bedrock — zero data copy | "2-week PoC: AI search on your maintenance manuals" |
+| **Healthcare** | "Safely unlock research data for AI — without moving PHI" | Research documents on file shares, inaccessible to analytics/AI | De-identified data accessible via governed S3 AP + Bedrock RAG | "Secure RAG PoC on de-identified research documents" |
+| **Financial Services** | "Governed search across compliance documents" | Regulations, audit trails, contracts scattered across file shares | Controlled access via dual-layer auth + full audit trail | "Compliance document search with complete audit trail" |
+| **Media & Entertainment** | "Find and analyze your media assets with AI" | Past productions, scripts, metadata buried in file storage | AI-powered asset discovery without migrating TB of media files | "Asset analytics PoC: search your production archive" |
+| **Enterprise IT** | "Turn your runbooks into an AI knowledge base" | Incident reports, runbooks, architecture docs on shared drives | RAG-powered knowledge search for faster incident resolution | "IT knowledge base PoC: reduce MTTR with AI search" |
+
+---
+
 ## References
 
 - [Accessing your data via Amazon S3 access points](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)

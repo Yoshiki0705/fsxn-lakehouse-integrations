@@ -620,6 +620,92 @@ When RAG is used in regulated industries, AI-generated responses require human r
 
 ---
 
+## Governance Approval Workflow
+
+Sequential approval process for regulated industry deployments.
+
+| Step | Approver | Required Artifact | Decision Criteria | Possible Outcomes |
+|------|----------|-------------------|-------------------|-------------------|
+| 1. Technical review | Platform architect | Architecture diagram, compatibility matrix | Technically sound, no unsupported patterns | Approve / Request changes |
+| 2. Security review | CISO / security team | Security architecture, negative test results, AP policy | All Security Verified criteria met | Approve / Conditional (with mitigations) / Reject |
+| 3. Data owner review | Data governance committee | Data classification, access scope, retention policy | Data used appropriately, access minimized | Approve / Restrict scope / Reject |
+| 4. Legal / compliance | Legal counsel | Compliance mapping, BAA, data residency | Regulatory requirements met | Approve / Require additional controls / Reject |
+| 5. Clinical / business owner | Department head | Business case, KPI targets, user impact | Business value justified, risk acceptable | Approve / Defer / Reject |
+| 6. Executive approval | CIO / CISO | Residual risk register, cost approval, RACI | Organizational risk acceptable | Approve / Reject |
+| 7. Go-live approval | Operations lead | Runbooks tested, monitoring configured, DR validated | Operationally ready | Approve / Delay |
+
+### Approval Evidence Retention
+
+All approval decisions must be documented and retained:
+- Approver name and role
+- Date of decision
+- Decision (Approve / Conditional / Reject)
+- Conditions (if conditional)
+- Evidence reviewed
+- Retention: Same as audit log retention (7+ years for regulated)
+
+---
+
+## Residual Risk Register Template
+
+| Risk ID | Description | Impact (1-5) | Likelihood (1-5) | Risk Score | Existing Controls | Residual Level | Owner | Treatment | Acceptance Authority | Review Frequency |
+|---------|-------------|:---:|:---:|:---:|-------------------|:---:|-------|-----------|---------------------|-----------------|
+| R-001 | FSx S3 AP does not support atomic rename; Delta write may corrupt | 5 | 1 | 5 | Anti-pattern documented; read-only AP enforced | Low | Platform team | Avoid (do not use Delta write) | CISO | Quarterly |
+| R-002 | Tens of ms latency may not meet real-time analytics SLA | 3 | 3 | 9 | Benchmark before production; document SLA | Medium | Platform team | Mitigate (provision higher throughput) | Business owner | Quarterly |
+| R-003 | AP policy misconfiguration could block all access | 4 | 2 | 8 | IaC-managed policy; SCP restricts changes; runbook | Low | Security team | Mitigate (SCP + IaC + runbook) | CISO | Monthly |
+| R-004 | Snapshot restore may cause Glue Catalog inconsistency | 3 | 2 | 6 | Runbook for catalog repair; crawler re-run | Low | Data platform | Mitigate (runbook + automation) | Platform lead | Quarterly |
+| R-005 | RAG hallucination in clinical context | 5 | 3 | 15 | Human review required; Bedrock guardrails; citation check | Medium | AI team | Mitigate (human-in-loop mandatory) | Clinical lead | Monthly |
+
+### Risk Scoring Guide
+
+- **Impact**: 1=Negligible, 2=Minor, 3=Moderate, 4=Major, 5=Critical
+- **Likelihood**: 1=Rare, 2=Unlikely, 3=Possible, 4=Likely, 5=Almost certain
+- **Risk Score**: Impact × Likelihood
+- **Residual Level**: Low (1-6), Medium (7-12), High (13-19), Critical (20-25)
+
+---
+
+## Plain-Language Explanation Examples
+
+For non-technical stakeholders (patients, citizens, board members).
+
+| Question | Plain-Language Answer |
+|----------|---------------------|
+| **Where is my data stored?** | "Your data stays on a secure file system in an AWS data center in [region]. It is never moved or copied to another location for analytics." |
+| **Who can access my data?** | "Only authorized staff with specific job roles can access data. Every access requires two separate permission checks — one from AWS security, and one from the file system itself." |
+| **Can anyone on the internet see my data?** | "No. Public access is blocked by default and cannot be turned on. Even authorized users must prove their identity before every access." |
+| **What does the AI see?** | "The AI only sees documents that have been de-identified — all personal information is removed before the AI can access them." |
+| **Does a human check the AI's answers?** | "Yes. Every AI-generated answer is reviewed by a qualified person before it is used for any decision." |
+| **What if the AI gives a wrong answer?** | "Wrong answers are flagged, logged, and discarded. The system learns from these errors to improve over time." |
+| **Can I ask for my data to be deleted?** | "Yes. We have a documented deletion process. When data is deleted, it is removed from the file system, the search index, and the AI's knowledge base." |
+| **How do you know no one accessed my data improperly?** | "Every single data access is automatically logged with who, when, and what. These logs are kept for [7+] years and reviewed regularly." |
+
+---
+
+## RAG Use Risk Classification
+
+Different RAG use cases carry different risk levels in healthcare/regulated contexts.
+
+| Classification | Risk Level | Examples | Allowed Data | Required Review | Prohibited Use | Approval Level |
+|---------------|:---:|---------|-------------|----------------|---------------|----------------|
+| **Administrative** | Low | Meeting scheduling, facility info, HR policy lookup | Public + Internal | Optional (spot-check) | No clinical data | Team lead |
+| **Research support** | Medium | Literature search, protocol lookup, methodology guidance | De-identified research data | Required (researcher) | No identified patient data | Research lead + IRB |
+| **Clinical documentation** | Medium-High | Discharge summary drafting, coding assistance | De-identified clinical notes | Required (clinician) | No autonomous documentation | Clinical director |
+| **Clinical decision support** | High | Differential diagnosis assistance, treatment option lookup | De-identified + evidence-based sources only | Mandatory (physician) | No autonomous decisions | Medical director + CISO |
+| **Patient-facing** | Highest | Patient portal Q&A, appointment guidance | Public health info only | Mandatory (clinical + legal) | No clinical advice, no PHI | Executive + legal + clinical |
+
+### Risk-Based Controls
+
+| Risk Level | Logging | Human Review | Guardrails | Audit Frequency |
+|:---:|---------|:---:|-----------|:---:|
+| Low | Standard | Optional | Basic (topic filtering) | Quarterly |
+| Medium | Enhanced | Required | Moderate (citation required) | Monthly |
+| Medium-High | Full (prompt + response) | Mandatory | Strict (hallucination detection) | Bi-weekly |
+| High | Full + clinical context | Mandatory (physician) | Maximum (Bedrock guardrails + custom) | Weekly |
+| Highest | Full + legal hold | Mandatory (multi-party) | Maximum + legal review | Continuous |
+
+---
+
 ## References
 
 - [Managing access point access — Dual-layer authorization](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html)
