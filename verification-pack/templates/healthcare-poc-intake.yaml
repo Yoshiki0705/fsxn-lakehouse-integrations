@@ -72,6 +72,10 @@ healthcare_poc_intake:
     error_handling_explanation: false  # What happens if AI is wrong?
 
   # Approval
-  approved_by: ""
-  approval_date: ""
+  poc_entry_decision:
+    decision: ""  # approved | approved_with_conditions | rejected
+    conditions: []
+    approver_name: ""
+    approver_role: ""
+    decision_date: ""
   notes: ""
