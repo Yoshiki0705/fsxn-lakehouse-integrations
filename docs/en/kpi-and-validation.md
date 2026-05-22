@@ -448,6 +448,147 @@ estimated_prep_time: "X weeks"
 
 ---
 
+## Use Case KPI Tree
+
+For each use case, define the full chain from business issue to measurable target.
+
+### Enterprise IT: Runbook RAG
+
+| Level | Metric | Measurement | Target |
+|-------|--------|-------------|--------|
+| **Business issue** | Incident resolution takes too long | MTTR from ticket system | Baseline: X hours |
+| **Process KPI** | Runbook/procedure search time | Time from search start to relevant document found | Reduce by 50% in 90 days |
+| **Outcome KPI** | Mean Time to Resolution (MTTR) | Ticket close time - ticket open time | Reduce by 15% in 90 days |
+| **Experience KPI** | Operator satisfaction | Survey (1-5 scale) | ≥ 4.0 |
+| **Quality KPI** | RAG answer accuracy | Human review pass rate | ≥ 85% |
+| **Risk KPI** | Hallucination / citation miss rate | Review rejection rate | < 10% |
+
+### Manufacturing: Maintenance Manual Search
+
+| Level | Metric | Measurement | Target |
+|-------|--------|-------------|--------|
+| **Business issue** | Equipment downtime due to slow manual lookup | Downtime hours / month | Baseline: X hours |
+| **Process KPI** | Manual/procedure retrieval time | Time to find relevant maintenance instruction | Reduce by 60% in 90 days |
+| **Outcome KPI** | Equipment availability | Uptime % | Improve by 5% |
+| **Experience KPI** | Technician satisfaction | Survey | ≥ 4.0 |
+| **Risk KPI** | Incorrect procedure followed | Incident reports citing wrong procedure | Zero |
+
+### Healthcare: Research Document Search
+
+| Level | Metric | Measurement | Target |
+|-------|--------|-------------|--------|
+| **Business issue** | Researchers spend too much time finding relevant studies | Hours/week on literature search | Baseline: X hours/week |
+| **Process KPI** | Document discovery time | Time from query to relevant document set | Reduce by 70% |
+| **Outcome KPI** | Research output | Papers submitted / quarter | Increase by 20% |
+| **Experience KPI** | Researcher satisfaction | Survey | ≥ 4.0 |
+| **Risk KPI** | PHI exposure in research context | Audit findings | Zero |
+
+---
+
+## 30/60/90 Day Value Realization Plan
+
+### Day 30: Adoption & Baseline
+
+| Check | Question | Evidence | Decision |
+|-------|----------|----------|----------|
+| Usage adoption | Are target users actively querying? | Query count, unique users | If < 50% adoption: investigate barriers |
+| KPI baseline | Do we have reliable baseline measurements? | Before/after comparison data | If no baseline: extend measurement period |
+| Major issues | Any blocking technical or security issues? | Issue tracker, incident log | If critical issues: pause and remediate |
+| User feedback | What do users say about the experience? | Survey, interviews | Incorporate feedback into optimization |
+
+**30-Day Decision**: Continue as planned / Adjust scope / Escalate issues
+
+### Day 60: Optimization & Evidence
+
+| Check | Question | Evidence | Decision |
+|-------|----------|----------|----------|
+| Performance trend | Is query performance stable or improving? | P50/P95 latency trend | If degrading: investigate and tune |
+| Cost tracking | Is actual cost within projected budget? | Cost Explorer data | If over budget: optimize or resize |
+| Process improvement | Is there measurable time/effort savings? | Before/after process metrics | If no improvement: reassess use case fit |
+| User feedback incorporation | Were Day 30 feedback items addressed? | Change log | If not: prioritize |
+
+**60-Day Decision**: Optimize and continue / Scale to more users / Pivot approach
+
+### Day 90: Value Report & Scale Decision
+
+| Check | Question | Evidence | Decision |
+|-------|----------|----------|----------|
+| Business value | Can we quantify $ or time saved? | KPI dashboard, cost comparison | If positive: present to executive sponsor |
+| Scale readiness | Can we expand to more data/users/use cases? | Capacity assessment, user demand | If ready: plan expansion |
+| Operational maturity | Are runbooks tested, monitoring stable? | Ops metrics, incident history | If mature: hand to BAU operations |
+| Executive report | Is there a compelling story for leadership? | Monthly value report | Present and get expansion approval |
+
+**90-Day Decision**: Scale / Maintain / Sunset
+
+---
+
+## Organization Adoption Model
+
+Successful deployment requires organizational alignment, not just technology.
+
+### Roles and Responsibilities
+
+| Role | Responsibility | Engagement Level |
+|------|---------------|-----------------|
+| **Executive Sponsor** | Budget approval, organizational priority, blocker removal | Monthly review |
+| **Business Owner** | Define use case, success criteria, user acceptance | Weekly check-in |
+| **Data Owner** | Approve data access, classification, retention | Per-project approval |
+| **Platform Team** | Deploy, operate, monitor FSx + S3 AP + analytics | Daily operations |
+| **Security / Governance** | Review policies, approve access, audit | Per-change review |
+| **AI Product Owner** | Define RAG use cases, evaluate accuracy, manage guardrails | Weekly iteration |
+| **User Champion** | Drive adoption within business unit, collect feedback | Continuous |
+| **Feedback Community** | Provide usage feedback, report issues, suggest improvements | Ongoing |
+
+### Adoption Stages
+
+```
+Stage 1: Pilot (1 team, 1 use case)
+  → Prove value with minimal risk
+  → 1-2 months
+
+Stage 2: Expand (multiple teams, same use case)
+  → Scale proven pattern
+  → 2-3 months
+
+Stage 3: Diversify (multiple use cases)
+  → Add RAG, new data sources, new analytics
+  → 3-6 months
+
+Stage 4: Standardize (organization-wide platform)
+  → Self-service, governance automated, value tracked
+  → 6-12 months
+```
+
+---
+
+## Agentic AI Do-Not-Automate Rules
+
+As AI agents gain capabilities, explicitly define what must NEVER be automated without human approval.
+
+| Rule | Rationale | Enforcement |
+|------|-----------|-------------|
+| **Never** delete or modify production data autonomously | Irreversible; data loss risk | Read-only AP for agents; no DeleteObject/PutObject in agent IAM |
+| **Never** change access policies without human approval | Security posture change | SCP restricts PutAccessPointPolicy to admin roles only |
+| **Never** execute clinical or financial decisions autonomously | Regulatory and safety risk | Human-in-the-loop mandatory for all decision outputs |
+| **Never** export regulated data outside approved boundary | Compliance violation | VPC-origin AP; no cross-region/cross-account without approval |
+| **Never** trigger irreversible workflows without approval | Cannot undo | Agent proposes action; human approves execution |
+| **Never** bypass audit logging | Compliance requirement | CloudTrail cannot be disabled by agent IAM role |
+| **Never** access data above agent's classification level | Data governance | Per-agent IAM scoped to specific AP and prefix |
+| **Never** exceed defined cost/throughput limits | Budget control | Service quotas and CloudWatch alarms on agent activity |
+
+### Enforcement Mechanisms
+
+| Mechanism | What it Prevents |
+|-----------|-----------------|
+| Read-only file system user on AP | Agent cannot write/delete data |
+| Scoped IAM role (GetObject + ListBucket only) | Agent cannot modify policies or infrastructure |
+| SCP on agent account/OU | Agent cannot escalate privileges |
+| CloudWatch alarm on throughput | Runaway agent detected and throttled |
+| Bedrock guardrails | Inappropriate content filtered |
+| Human approval gate | Irreversible actions require explicit approval |
+
+---
+
 ## References
 
 - [Amazon FSx for NetApp ONTAP performance](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/performance.html)

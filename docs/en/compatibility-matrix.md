@@ -558,6 +558,116 @@ recommendation: "Sufficient for this workload"
 
 ---
 
+## Negative Test Matrix
+
+Explicit tests that MUST fail for security posture to be valid.
+
+| Test ID | Test Description | Expected Result | Severity if Passes |
+|---------|-----------------|-----------------|-------------------|
+| NEG-001 | Write attempt by read-only file system user | AccessDenied | Critical |
+| NEG-002 | Delete attempt by read-only file system user | AccessDenied | Critical |
+| NEG-003 | Cross-account access without explicit grant | AccessDenied | Critical |
+| NEG-004 | Internet-origin access when VPC-origin AP configured | AccessDenied | Critical |
+| NEG-005 | PutObject exceeding 5 GB limit | EntityTooLarge error | High |
+| NEG-006 | Presigned URL generation | Not supported error | Medium |
+| NEG-007 | Object Versioning operations (ListObjectVersions) | Not supported | Medium |
+| NEG-008 | Access after IAM role revocation | AccessDenied | Critical |
+| NEG-009 | Access from non-bound VPC (VPC-origin AP) | AccessDenied | Critical |
+| NEG-010 | Conditional write (If-None-Match) | Not supported | Medium |
+
+### Negative Test Execution
+
+```bash
+# NEG-001: Write attempt by read-only user
+aws s3 cp test.txt s3://<AP-ALIAS>/test-write.txt --profile readonly-user
+# Expected: upload failed: ... AccessDenied
+
+# NEG-002: Delete attempt by read-only user
+aws s3 rm s3://<AP-ALIAS>/existing-file.txt --profile readonly-user
+# Expected: delete failed: ... AccessDenied
+
+# NEG-003: Cross-account access
+aws s3 ls s3://<AP-ALIAS>/ --profile cross-account-role
+# Expected: An error occurred (AccessDenied)
+```
+
+---
+
+## Runbook Validation and Rollback Conditions
+
+Each operational runbook includes validation commands and rollback criteria.
+
+### Runbook 1 Additions: Glue Catalog Repair
+
+| Field | Value |
+|-------|-------|
+| **Validation command** | `aws athena start-query-execution --query-string "SELECT COUNT(*) FROM <db>.<table>" --work-group primary` |
+| **Expected output** | Query succeeds; row count matches expected value |
+| **Rollback condition** | If crawler fails or produces incorrect schema, restore previous table version from Glue versioning |
+| **Escalation threshold** | If not resolved within 30 minutes, escalate to data platform lead |
+| **Customer impact** | Analytics queries return errors or stale data until resolved |
+
+### Runbook 2 Additions: Orphan File Cleanup
+
+| Field | Value |
+|-------|-------|
+| **Validation command** | `aws s3 ls s3://<AP-ALIAS>/<prefix>/ --recursive \| wc -l` (count matches expected) |
+| **Expected output** | Only files from successful job runs remain |
+| **Rollback condition** | If wrong files deleted, restore from ONTAP Snapshot |
+| **Escalation threshold** | If unsure which files are orphans, escalate before deleting |
+| **Customer impact** | No impact if orphans only; data loss if wrong files deleted |
+
+### Runbook 3 Additions: AP Policy Rollback
+
+| Field | Value |
+|-------|-------|
+| **Validation command** | `aws s3 ls s3://<AP-ALIAS>/ --profile authorized-role` (succeeds) |
+| **Expected output** | ListObjectsV2 returns file listing without error |
+| **Rollback condition** | If corrected policy still fails, check IAM identity policy and VPC endpoint policy |
+| **Escalation threshold** | If not resolved within 10 minutes, escalate to security team |
+| **Customer impact** | All analytics access blocked until resolved |
+
+### Runbook 4 Additions: SnapMirror Failover
+
+| Field | Value |
+|-------|-------|
+| **Validation command** | `aws s3 ls s3://<DR-AP-ALIAS>/ --region <DR-REGION>` (succeeds) |
+| **Expected output** | File listing matches expected data from source volume |
+| **Rollback condition** | If DR volume data is stale beyond RPO, assess data loss before proceeding |
+| **Escalation threshold** | If AP not AVAILABLE within 15 minutes, escalate to AWS Support |
+| **Customer impact** | Analytics unavailable during failover window (target: < 60 min) |
+
+---
+
+## Benchmark Interpretation Guide
+
+When benchmark results deviate from expectations, use this guide to diagnose.
+
+| Symptom | Likely Cause | Investigation | Resolution |
+|---------|-------------|---------------|-----------|
+| Large scan slower than expected | FSx throughput saturated | Check CloudWatch `ThroughputUtilization` metric | Increase FSx provisioned throughput |
+| Large scan slower than expected | Small files (< 32 MB) | Check average file size | Consolidate files to ≥ 128 MB |
+| Small file listing very slow | High file count per prefix | Count objects in prefix | Restructure with partitioning / fewer files per prefix |
+| Athena latency high (> 30s for 1 GB) | Unpartitioned data | Check table partitioning | Add partition columns; use Parquet/ORC |
+| Athena latency high | CSV/JSON format | Check file format | Convert to Parquet (columnar, compressed) |
+| Concurrent queries degrade | Aggregate throughput exceeds provisioned | Check concurrent throughput sum | Increase FSx throughput or reduce concurrency |
+| Glue ETL write slow | Write amplification (2x for Multi-AZ) | Check write throughput vs provisioned | Account for 2x write bandwidth; increase throughput |
+| Bedrock KB ingestion slow | Large documents or complex chunking | Check document sizes and chunking config | Optimize chunk size; pre-process large documents |
+| Intermittent errors | AP in MISCONFIGURED state | Check AP status via `describe-s3-access-points` | Resolve file system user identity issue |
+| Throughput < 50% of provisioned | Client-side bottleneck | Check client network, SDK config | Use parallel requests; check SDK retry config |
+
+### Performance Optimization Checklist
+
+- [ ] File format: Parquet or ORC (not CSV/JSON for large scans)
+- [ ] File size: ≥ 128 MB per file for sequential scans
+- [ ] Partitioning: Date/category partitions to reduce scan scope
+- [ ] FSx throughput: Provisioned to match peak workload
+- [ ] Compression: Snappy (fast) or ZSTD (smaller) for Parquet
+- [ ] Concurrency: Total concurrent throughput within provisioned limit
+- [ ] Write budget: Account for 2x bandwidth on Multi-AZ writes
+
+---
+
 ## References
 
 - [Access point compatibility — Supported S3 API operations](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)
