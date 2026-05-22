@@ -6,9 +6,30 @@
 
 ## Overview / 概要
 
+**Turn existing enterprise file assets into analytics- and AI-ready data without disrupting NFS/SMB workloads.**
+
 Data Lake and Lakehouse platform integrations with **Amazon FSx for NetApp ONTAP (FSx for ONTAP)** via **S3 Access Points**.
 
+既存のエンタープライズファイル資産を、NFS/SMB ワークロードを中断することなく、分析・AI 対応データに変換します。
+
 Amazon FSx for NetApp ONTAP（FSx for ONTAP）のエンタープライズストレージを S3 Access Points 経由で各 Data Lake / Lakehouse プラットフォームと統合するパターン集です。
+
+---
+
+## Business Outcomes / ビジネス成果
+
+| Outcome / 成果 | Description / 説明 |
+|----------------|-------------------|
+| **Eliminate data copies** / データコピーの排除 | N redundant copies → 1 authoritative source on FSx for ONTAP |
+| **Remove NAS→S3 sync pipelines** / 同期パイプラインの廃止 | No ETL jobs needed to copy file data to S3 for analytics |
+| **Accelerate time-to-insight** / インサイトまでの時間短縮 | Days of pipeline setup → hours of direct query via S3 Access Point |
+| **Preserve existing NFS/SMB workloads** / 既存ワークロードの維持 | Applications continue writing via NFS/SMB unchanged |
+| **Unified governance** / ガバナンスの統一 | Single data location with dual-layer access control (IAM + file system permissions) |
+| **Enable AI/ML on file data** / ファイルデータでの AI/ML 活用 | Amazon Bedrock, SageMaker, EMR access existing files via S3 AP without data movement |
+
+FSx for ONTAP S3 Access Points enable S3 API access to file data without data movement, allowing S3-compatible applications and AWS services to directly read and write file data. ([AWS Documentation](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html))
+
+FSx for ONTAP S3 Access Points により、データ移動なしでファイルデータへの S3 API アクセスが可能になり、S3 互換アプリケーションや AWS サービスがファイルデータを直接読み書きできます。
 
 ---
 
@@ -17,7 +38,7 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）のエンタープライズスト�
 | ONTAP Capability | Lakehouse Benefit |
 |-----------------|-------------------|
 | Deduplication & Compression | Storage cost reduction for similar datasets |
-| Snapshot | Point-in-time recovery complementing Delta/Iceberg time travel |
+| Snapshot | Point-in-time recovery complementing Delta/Iceberg time travel (see [Recovery Semantics](docs/en/recovery-semantics.md)) |
 | FlexClone | Instant dev/test dataset provisioning |
 | SnapMirror | Cross-region DR for lakehouse data |
 | FabricPool Tiering | Automatic cold data offload to S3 |
@@ -85,12 +106,12 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 
 ## Use Cases / ユースケース
 
-| Industry | Use Case | Key Pattern |
-|----------|----------|-------------|
-| [Financial Services](use-cases/financial-data-mesh/) | Data Mesh | Pattern D (Data Sharing) |
-| [Manufacturing](use-cases/manufacturing-iot-lake/) | IoT Data Lake | Pattern C (ETL Pipeline) |
-| [Healthcare](use-cases/healthcare-research/) | Research Data | Pattern B (Managed Tables) |
-| [Media](use-cases/media-asset-analytics/) | Asset Analytics | Pattern A (Read-Only) |
+| Industry | Use Case | Key Pattern | Deployment Considerations |
+|----------|----------|-------------|--------------------------|
+| [Financial Services](use-cases/financial-data-mesh/) | Data Mesh | Pattern D (Data Sharing) | Segregation of duties, per-domain access points, audit retention (7+ years), DR/BCP |
+| [Manufacturing](use-cases/manufacturing-iot-lake/) | IoT Data Lake | Pattern C (ETL Pipeline) | OT/IT boundary separation, edge ingestion via NFS, long-term retention (FabricPool) |
+| [Healthcare](use-cases/healthcare-research/) | Research Data | Pattern B (Managed Tables) | De-identification pipeline, VPC-origin AP, read-only access, synthetic test data only, BAA |
+| [Media](use-cases/media-asset-analytics/) | Asset Analytics | Pattern A (Read-Only) | Large file handling (5 GB upload limit), CloudFront integration for streaming |
 
 ---
 
@@ -183,6 +204,11 @@ fsxn-lakehouse-integrations/
 | Supported Regions | [対応リージョン](docs/ja/supported-regions.md) | [Supported Regions](docs/en/supported-regions.md) |
 | Vendor Comparison | [ベンダー比較](docs/ja/vendor-comparison.md) | [Vendor Comparison](docs/en/vendor-comparison.md) |
 | Unstructured Data | [非構造化データ](docs/ja/unstructured-data-access.md) | [Unstructured Data](docs/en/unstructured-data-access.md) |
+| Partner Offering | [パートナーオファリング](docs/ja/partner-offering.md) | [Partner Offering](docs/en/partner-offering.md) |
+| Compatibility Matrix | [互換性マトリクス](docs/ja/compatibility-matrix.md) | [Compatibility Matrix](docs/en/compatibility-matrix.md) |
+| Recovery Semantics | [リカバリセマンティクス](docs/ja/recovery-semantics.md) | [Recovery Semantics](docs/en/recovery-semantics.md) |
+| Governance & Compliance | [ガバナンスとコンプライアンス](docs/ja/governance-and-compliance.md) | [Governance & Compliance](docs/en/governance-and-compliance.md) |
+| KPI & Validation | [KPI と PoC 検証](docs/ja/kpi-and-validation.md) | [KPI & Validation](docs/en/kpi-and-validation.md) |
 
 ---
 
