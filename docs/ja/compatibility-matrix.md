@@ -133,12 +133,17 @@ FSx S3 Access Points 上の分析ワークロードを計画する際：
 
 | プラットフォーム + モード | 検証レベル | 備考 |
 |------------------------|-----------|------|
-| Athena + Parquet 読み取り | セキュリティ検証済み | AWS 公式チュートリアルが IAM を含む完全なワークフローを検証 |
-| Glue ETL + Parquet 読み取り/書き込み | 機能検証済み | AWS 公式チュートリアルが読み取りと書き戻しを検証 |
-| EMR Serverless + Parquet 読み取り/書き込み | 機能検証済み | AWS 公式チュートリアルが Spark ワークフローを検証 |
-| Bedrock Knowledge Base + ドキュメント読み取り | 機能検証済み | AWS 公式チュートリアルが RAG インジェストを検証 |
-| Databricks + Parquet 読み取り | API 検証済み | External Location の登録と読み取りを確認 |
-| Snowflake + Parquet 読み取り | API 検証済み | External Stage の作成とクエリを確認 |
+| Athena + Parquet 読み取り | **セキュリティ検証済み** | 完全なワークフロー + 9/9 ネガティブテスト PASS + CloudTrail 確認。ベンチマーク: 54.8 MB/s ピーク（128 MB/s プロビジョンド）。 |
+| Glue ETL + Parquet 読み取り/書き込み | **機能検証済み** | 10K 行読み取り → 変換 → 書き戻し 64 秒。2026-05-23 検証。 |
+| Glue Crawler | **機能検証済み** | FSx S3 AP データの自動スキーマ検出。2026-05-23 検証。 |
+| Delta Lake OSS (delta-rs) 読み取り | **機能検証済み** | DeltaTable.open + to_pyarrow_table + metadata/history。2026-05-23 検証。 |
+| Delta Lake OSS 書き込み | **非サポート** | 501 Not Implemented を返す（delta-rs コミットプロトコルに条件付き書き込みが必要）。 |
+| EMR Serverless + Parquet 読み取り/書き込み | 機能検証済み | AWS 公式チュートリアルで検証。 |
+| Bedrock Knowledge Base + ドキュメント読み取り | 機能検証済み | AWS 公式チュートリアルで検証。 |
+| Snowflake + External Stage (LIST) | **API 検証済み** | LIST @stage 成功（ファイル表示）。 |
+| Snowflake + External Stage (GetObject) | **ブロック** | セッションポリシーが S3 AP ARN 形式を認識しない。サポートケース 01357726 提出済み。 |
+| Databricks + Unity Catalog | **ブロック** | セッションポリシーが全 S3 AP 操作をブロック。Databricks にサポートケース提出済み。 |
+| Snowflake + Parquet 読み取り | API 検証済み | External Stage 作成とクエリ確認 |
 | Delta Lake 書き込み（全プラットフォーム） | 非サポート | 基本的な制約（アトミック rename なし） |
 
 ---
@@ -303,6 +308,67 @@ Required FSx Throughput = max(
 - **影響**: AP 経由のすべての S3 リクエストが失敗します。
 - **復旧**: ファイルシステム上でユーザーを再作成するか、AP を別の有効なユーザーを使用するように更新します。
 - **FSx の動作**: FSx は定期的にチェックし、ユーザー ID が再び解決可能になると AP を自動的に `AVAILABLE` に戻します。（[ソース](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html)）
+
+---
+
+## 既知の制限事項 — プラットフォームセッションポリシー問題
+
+> **ステータス**: ベンダーサポートチームと調査中（2026-05-23 時点）
+
+Databricks と Snowflake の両方が `AssumeRole` 時に**セッションポリシー**を適用し、IAM アクションの `Resource` ARN パターンを制限しています。FSx for ONTAP S3 Access Points は標準 S3 バケットとは異なる ARN 形式を使用するため、オブジェクトレベルの操作が失敗します。
+
+### 根本原因
+
+| コンポーネント | 標準 S3 ARN | FSx S3 AP ARN |
+|-------------|------------|---------------|
+| バケットレベル | `arn:aws:s3:::bucket-name` | `arn:aws:s3:region:account:accesspoint/name` |
+| オブジェクトレベル | `arn:aws:s3:::bucket-name/key` | `arn:aws:s3:region:account:accesspoint/name/object/key` |
+
+プラットフォームのセッションポリシーは通常以下を許可：
+- `s3:ListBucket` on `arn:aws:s3:::*` → **両方の形式にマッチ**（LIST 成功）
+- `s3:GetObject` on `arn:aws:s3:::*/*` → **AP オブジェクト ARN にマッチしない**（GetObject 失敗）
+
+これにより、LIST 操作は成功するが GetObject/PutObject は `AccessDenied` で失敗するという観察された動作が説明されます。
+
+### Databricks — Unity Catalog セッションポリシー
+
+| 症状 | 詳細 |
+|------|------|
+| **影響を受ける操作** | Unity Catalog 経由の全オブジェクトレベル S3 操作（External Location、External Table） |
+| **エラー** | GetObject、PutObject、DeleteObject で `AccessDenied` |
+| **LIST の動作** | 成功（バケットレベル操作は異なる ARN パターンを使用） |
+| **回避策** | Dedicated モードでの Instance Profile + boto3（Unity Catalog ガバナンスをバイパス） |
+| **サポートケース** | Databricks に提出済み（セッションポリシー + NFS seccomp） |
+| **追加ブロッカー** | Databricks ランタイムの seccomp フィルターにより NFS カーネルマウントがブロック |
+
+### Snowflake — Storage Integration セッションポリシー
+
+| 症状 | 詳細 |
+|------|------|
+| **影響を受ける操作** | External Stage 経由の GetObject（SELECT from @stage） |
+| **エラー** | "Failed to access remote file: access denied" |
+| **LIST の動作** | 成功（`LIST @stage` がファイルを正しく返す） |
+| **回避策** | 未特定 — Snowflake はセッションポリシーのカスタマイズを公開していない |
+| **サポートケース** | Snowflake ケース 01357726 提出済み |
+| **エビデンス** | Snowflake のセッションポリシーなしで同じ IAM ロールを引き受けると → 全操作成功 |
+
+### 影響評価
+
+| プラットフォーム | 読み取り（LIST） | 読み取り（GetObject） | 書き込み | ガバナンスパス |
+|---------------|:--------------:|:-------------------:|:-------:|:------------:|
+| Databricks（Unity Catalog） | ✅ | ❌ ブロック | ❌ ブロック | ブロック |
+| Databricks（Instance Profile + boto3） | ✅ | ✅ | ✅ | UC バイパス |
+| Snowflake（External Stage） | ✅ | ❌ ブロック | N/A（読み取り専用） | ブロック |
+
+### 解決パス
+
+1. **ベンダーセッションポリシー更新**: 両ベンダーが S3 Access Point ARN 形式（`arn:aws:s3:region:account:accesspoint/name/object/*`）をサポートするようセッションポリシーを更新する必要がある
+2. **タイムライン**: 不明 — ベンダーのロードマップ優先度に依存
+3. **暫定推奨**: Databricks は PoC/デモ目的で Instance Profile + boto3 を使用（本番非推奨）。Snowflake は回避策なし。
+
+### AWS サポート確認
+
+AWS サポートケース 177949831900431 により、拒否は IAM ロールポリシー、AP ポリシー、ファイルシステム権限からではなく、**分析プラットフォームが AssumeRole 時に適用するセッションポリシー**に起因することが確認されました。
 
 ---
 
