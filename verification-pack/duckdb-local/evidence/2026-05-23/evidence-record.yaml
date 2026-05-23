@@ -1,0 +1,79 @@
+# Verification Evidence Record — DuckDB Local
+test_id: "DUCKDB-LOCAL-001"
+date_tested: "2026-05-23"
+tester: "Yoshiki Fujiwara"
+
+# Infrastructure
+region: "ap-northeast-1"
+fsxn_deployment_type: "SINGLE_AZ_1"
+fsxn_throughput_capacity_mbps: 128
+ontap_version: "9.17.1"
+svm_security_style: "UNIX"
+volume_junction_path: "/vol1"
+
+# Access Point Configuration
+ap_name: "verification-test-ap"
+ap_network_origin: "INTERNET"
+ap_file_system_user_type: "UNIX"
+ap_file_system_user_name: "root"
+block_public_access: true
+
+# DuckDB Configuration
+duckdb_version: "1.4.4"
+extension: "httpfs"
+execution_mode: "local (macOS, in-process)"
+s3_url_style: "path"
+
+# Test Dataset
+dataset_format: "Parquet"
+files:
+  - path: "bronze/transactions/sensor_data.parquet"
+    rows: 10000
+    columns: 7
+  - path: "bronze/transactions/sensor_data_large.parquet"
+    rows: 5000000
+    columns: 7
+
+# Results
+result: "PASS"
+tests:
+  - name: "Schema discovery"
+    result: "PASS"
+    latency_ms: 1169
+  - name: "COUNT(*) 10K rows"
+    result: "PASS"
+    latency_ms: 628
+  - name: "GROUP BY aggregation"
+    result: "PASS"
+    latency_ms: 1233
+  - name: "Window function"
+    result: "PASS"
+    latency_ms: 1007
+  - name: "COUNT(*) 5M rows"
+    result: "PASS"
+    latency_ms: 779
+  - name: "Write-back (COPY TO Parquet)"
+    result: "PASS"
+    latency_ms: 304
+
+# Performance Summary
+performance:
+  small_file_read_10k_rows_ms: 628
+  large_file_read_5m_rows_ms: 779
+  aggregation_group_by_ms: 1233
+  window_function_ms: 1007
+  write_back_parquet_ms: 304
+
+# Known Limitations
+known_limitations:
+  - "httpfs extension required (not bundled by default)"
+  - "S3 AP alias used as bucket name (path-style access)"
+  - "Session credentials must be explicitly configured (no automatic credential chain in httpfs)"
+  - "Lambda deployment requires arm64 layer build via Docker"
+
+# Notes
+notes: |
+  DuckDB 1.4.4 with httpfs successfully reads and writes to FSx for ONTAP S3 AP.
+  5M row Parquet file scanned in under 1 second from local machine over internet.
+  Write-back via COPY TO creates valid Parquet on FSx volume.
+  No session policy issues (direct IAM credentials, no third-party platform intermediary).
