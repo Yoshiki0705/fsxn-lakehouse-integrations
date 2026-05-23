@@ -1,0 +1,70 @@
+# Glue ETL Verification on FSx for ONTAP S3 Access Point
+# Date: 2026-05-23
+
+test_id: "GLUE-ETL-001"
+date_tested: "2026-05-23"
+tester: "Yoshiki Fujiwara"
+
+# Infrastructure
+region: "ap-northeast-1"
+fsxn_file_system_id: "fs-09ffe72a3b2b7dbbd"
+fsxn_throughput_capacity_mbps: 128
+svm_id: "svm-0e5ef72d9b4470f19"
+ap_alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+ap_network_origin: "INTERNET"
+
+# Glue Configuration
+glue_version: "4.0"
+worker_type: "G.1X"
+number_of_workers: 2
+iam_role: "fsxn-athena-glue-role"
+script_location: "s3://fsxn-athena-verification-results-ap-northeast-1/glue-scripts/etl_job.py"
+
+# Test Dataset
+input_path: "s3://verification-tes-.../glue-test/input/sensor_data.parquet"
+input_rows: 10000
+input_columns: ["id", "event_date", "sensor_id", "temperature", "humidity", "status", "location"]
+input_size_bytes: 189900
+
+# ETL Operations Tested
+operations:
+  - name: "Read Parquet from FSx S3 AP"
+    s3_operation: "GetObject"
+    result: "PASS"
+  - name: "Spark DataFrame transformations (GROUP BY, AVG, COUNT)"
+    result: "PASS"
+  - name: "Write Parquet back to FSx S3 AP"
+    s3_operation: "PutObject (multipart)"
+    result: "PASS"
+  - name: "Read-back verification"
+    s3_operation: "GetObject"
+    result: "PASS"
+
+# Results
+job_run_id: "jr_de3dd9eb6617a32d82c52a267949e592a36f29f02b3c445f8078727957214d41"
+job_state: "SUCCEEDED"
+execution_time_seconds: 64
+output_path: "s3://verification-tes-.../glue-test/output/"
+output_file: "part-00000-0e57fb83-a33c-4dc3-9ed2-48c32f5cac2f-c000.snappy.parquet"
+output_size_bytes: 2590
+
+# Notes
+notes:
+  - "Initial run failed due to nanosecond timestamp in Parquet (Glue 4.0 incompatibility)"
+  - "Fixed by generating Parquet with string timestamps (event_date as STRING)"
+  - "Glue ETL can both READ and WRITE to FSx S3 AP successfully"
+  - "Write uses standard PutObject (no conditional writes or rename needed for Parquet append)"
+  - "This confirms Pattern C (ETL Pipeline) from the architecture documentation"
+
+# Verification Level
+current_level: "Functional Verified"
+verified_patterns:
+  - "Read Parquet from FSx S3 AP via Glue ETL"
+  - "Write Parquet to FSx S3 AP via Glue ETL (append/overwrite mode)"
+  - "End-to-end ETL pipeline: Read → Transform → Write-back"
+
+# Known Limitations
+known_limitations:
+  - "Parquet with nanosecond timestamps requires conversion (Glue 4.0 Spark limitation)"
+  - "Delta Lake write NOT supported (conditional writes return 501)"
+  - "No Object Lifecycle for automatic cleanup of old output files"
