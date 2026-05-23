@@ -141,7 +141,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 |---------|---------|-------------|----------|
 | **Firebolt** | S3 External Table | 高速 OLAP | 📋 調査中 |
 | **ClickHouse** | S3 Table Function | リアルタイム分析 | 📋 調査中 |
-| **DuckDB** | S3 httpfs Extension | エッジ/Lambda 内分析 | 🚧 計画中 |
+| **DuckDB** | S3 httpfs Extension | エッジ/Lambda 内分析 | ✅ 機能検証済み |
 | **Apache Spark (Self-managed)** | S3A FileSystem | カスタム Spark クラスタ | 📋 調査中 |
 | **Presto / PrestoDB** | Hive Connector + S3 | 分散クエリ | 📋 調査中 |
 

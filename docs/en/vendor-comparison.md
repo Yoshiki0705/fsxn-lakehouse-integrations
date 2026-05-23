@@ -142,7 +142,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 |--------|-------------------|----------|--------|
 | **Firebolt** | S3 External Table | High-speed OLAP | 📋 Research |
 | **ClickHouse** | S3 Table Function | Real-time analytics | 📋 Research |
-| **DuckDB** | S3 httpfs Extension | Edge/Lambda analytics | 🚧 Planned |
+| **DuckDB** | S3 httpfs Extension | Edge/Lambda analytics | ✅ Functional Verified |
 | **Apache Spark (Self-managed)** | S3A FileSystem | Custom Spark cluster | 📋 Research |
 | **Presto / PrestoDB** | Hive Connector + S3 | Distributed query | 📋 Research |
 

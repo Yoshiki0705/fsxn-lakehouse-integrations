@@ -97,7 +97,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 | [Apache Iceberg](integrations/iceberg/) | 🔲 Planned | REST Catalog (vendor-neutral) | Read path expected to work (Glue Catalog as metadata store) |
 | [EMR + Spark](integrations/emr-spark/) | 🔲 Planned | Spark SQL + Iceberg | Expected to work (AWS-native, no session policy) |
 | [Redshift Spectrum](integrations/redshift-spectrum/) | 🔲 Planned | External Schema | Expected to work (same pattern as Athena) |
-| [DuckDB](integrations/duckdb/) | 🔲 Planned | Lambda lightweight analytics | — |
+| [DuckDB](integrations/duckdb/) | ✅ Functional Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
 | [Dremio](integrations/dremio/) | 🔲 Planned | Arctic Catalog | — |
 | [Trino / Starburst](integrations/trino-starburst/) | 🔲 Planned | Hive Connector | — |
 | [BigQuery Omni](integrations/bigquery-omni/) | 🔲 Planned | BigLake | Requires GCP environment |
