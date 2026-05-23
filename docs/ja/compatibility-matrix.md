@@ -64,6 +64,7 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **Amazon EMR Serverless** | Parquet | 読み取り | ✅ 検証済み | S3A コネクタ付き Spark、AP エイリアス | — |
 | **Amazon EMR Serverless** | Parquet | 書き込み（Append） | ✅ 検証済み | 読み書きファイルシステムユーザー | ファイルあたり最大 5 GB |
 | **Amazon EMR Serverless** | Iceberg | 読み取り | ⚠️ 実験的 | Iceberg Spark ランタイム、Glue Catalog | メタデータ読み取りは動作。書き込みコミットは未テスト |
+| **Amazon EMR Serverless** | Iceberg | 書き込み | ❌ 非サポート | — | S3FileIO が S3 AP alias でのメタデータ書き込み/検証を処理できない。コミット時に NullPointerException。 |
 | **Amazon EMR Serverless** | Delta Lake | 読み取り | ⚠️ 実験的 | Delta Lake Spark ライブラリ | ログ読み取りは動作 |
 | **Amazon EMR Serverless** | Delta Lake | Write/MERGE | ❌ 非サポート | — | コミットプロトコルにアトミック rename が必要 |
 | **Databricks** | Parquet/CSV | 読み取り（External Location） | ✅ 検証済み | Unity Catalog External Location、AP 権限付きインスタンスプロファイル/ストレージクレデンシャル | — |
@@ -74,6 +75,33 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **Snowflake** | 全て | 書き込み | ❌ 非サポート | — | Snowflake External Stage は設計上読み取り専用 |
 | **Redshift Spectrum** | Parquet/CSV | 読み取り専用 | ✅ 検証済み | Glue Catalog 経由の External Schema、AP 権限付き IAM ロール | Athena と同パターン。クエリ結果は Redshift 内に保持。 |
 | **Amazon Bedrock** | ドキュメント（PDF、TXT 等） | 読み取り（Knowledge Base） | ✅ 検証済み | AP を指す S3 データソース付き Bedrock Knowledge Base | RAG アプリケーション用。ドキュメントが検索用にインデックス化 |
+
+## Parquet タイムスタンプ互換性
+
+> **注**: これはサイジング/実装リファレンスであり、サービス制限ではありません。制約は Apache Spark の Parquet リーダーに起因し、FSx S3 AP の制約ではありません。
+
+Spark ベースのエンジン（Glue ETL、EMR、Databricks）で使用する Parquet ファイルを生成する際、タイムスタンプ解像度が重要です：
+
+| タイムスタンプ解像度 | pandas デフォルト | Spark 3.3+（Glue 4.0） | Spark 3.5（EMR 7.1） | DuckDB | Athena |
+|---------------------|:-:|:-:|:-:|:-:|:-:|
+| **ナノ秒** (`TIMESTAMP(NANOS,false)`) | ✅ デフォルト | ❌ 失敗 | ❌ 失敗 | ✅ | ✅ |
+| **マイクロ秒** (`TIMESTAMP(MICROS,false)`) | 手動設定 | ✅ | ✅ | ✅ | ✅ |
+| **INT96**（レガシー） | 手動設定 | ✅ | ✅ | ✅ | ✅ |
+
+**影響**: pandas（デフォルト）または DuckDB（COPY TO）で生成した Parquet ファイルはナノ秒タイムスタンプを使用。これらのファイルは変換なしでは **Spark/Glue/EMR で読み取り不可**。
+
+**回避策**: クロスエンジン互換性のために Parquet を生成する場合：
+```python
+# pandas + pyarrow: マイクロ秒解像度を強制
+import pyarrow as pa
+ts_array = pa.array(df['timestamp'].values.astype('datetime64[us]'), type=pa.timestamp('us'))
+
+# または Athena CTAS を使用（ナノ秒を正しく処理）して Spark 互換 Parquet を書き出し
+```
+
+**推奨**: 複数エンジンで消費されるデータは常にマイクロ秒タイムスタンプで Parquet を生成。Athena と DuckDB は両方のフォーマットを読み取り可能。
+
+---
 
 ## パフォーマンス特性
 
