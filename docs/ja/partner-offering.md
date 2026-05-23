@@ -238,6 +238,8 @@ Discovery → Assessment → PoC → Production → Managed Operations
 | アンチパターン | 失敗する理由 | 代わりに提案すべきもの |
 |-------------|------------|-------------------|
 | FSx S3 AP 上での Delta Lake write / MERGE / compaction | Delta コミットプロトコルは atomic rename を必要とするが、FSx S3 AP ではサポートされていない（[API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)） | Delta テーブルの読み取り専用分析、または Delta 書き込みパスにはネイティブ S3 を使用 |
+| FSx S3 AP 上での Iceberg write（CREATE TABLE / INSERT） | Iceberg S3FileIO が S3 AP alias でのメタデータ書き込み/検証を処理できない。コミット時に NullPointerException（2026-05-24 検証済み）。 | 既存 Iceberg テーブルの読み取り専用分析、または Iceberg warehouse にはネイティブ S3 を使用 |
+| **FSx S3 AP 上での全トランザクショナルテーブルフォーマット書き込み** | **全 Lakehouse フォーマット（Delta、Iceberg、Hudi）は S3 AP で失敗するメタデータ操作を必要とする** — アトミック rename（Delta/Hudi）またはメタデータファイル書き込み/検証（Iceberg）。 | **FSx S3 AP は読み取り専用分析とフラットファイル書き込み（Parquet append）に使用。トランザクショナルテーブル書き込みにはネイティブ S3 を使用。** |
 | 規制業界でのデフォルトとしての Internet-origin AP | 規制データにはネットワークレベルの分離が必要。VPC-origin は非 VPC トラフィックに対する明示的 Deny を組み込み提供 | 機密/規制データには VPC-origin AP（注: Athena は internet-origin が必要） |
 | 「S3 完全互換」と主張すること | FSx S3 AP は S3 操作のサブセットをサポート。Object Versioning なし、条件付き書き込みなし、署名付き URL なし、5GB アップロード制限 | 正確な表現を使用: 「サポートされる操作での S3 API アクセス」+ 互換性マトリクスへのリンク |
 | 未検証の Iceberg 書き込みパスを本番対応として販売 | 外部カタログでの Iceberg 書き込みは Experimental であり、Verified ではない | 「読み取り専用は検証済み、書き込みパスは検証中」と位置付け |
