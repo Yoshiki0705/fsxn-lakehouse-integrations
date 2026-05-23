@@ -1,0 +1,78 @@
+# Verification Evidence Record — DuckDB Lambda Benchmark
+test_id: "DUCKDB-LAMBDA-001"
+date_tested: "2026-05-23"
+tester: "Yoshiki Fujiwara"
+
+# Lambda Configuration
+function_name: "fsxn-duckdb-query"
+runtime: "python3.12"
+architecture: "arm64"
+memory_mb: 1024
+timeout_s: 300
+layer: "duckdb-httpfs-arm64:1 (DuckDB 1.1.3)"
+vpc_attached: false
+s3_ap_network_origin: "INTERNET"
+
+# S3 Access Point
+ap_alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+ap_name: "verification-test-ap"
+
+# Benchmark Results
+results:
+  - test: "Simple query (cold start)"
+    query: "SELECT 42 AS answer, version() AS v"
+    cold_start: true
+    total_time_ms: 1854
+    notes: "Includes httpfs INSTALL + LOAD + credential setup"
+
+  - test: "Simple query (warm)"
+    query: "SELECT 42 AS answer, version() AS v"
+    cold_start: false
+    total_time_ms: 0.96
+    notes: "Sub-millisecond — DuckDB connection reused"
+
+  - test: "S3 AP GROUP BY (10K rows)"
+    query: "SELECT status, COUNT(*) FROM read_parquet('s3://{S3_AP}/sensor-data/sensor_data.parquet') GROUP BY status"
+    cold_start: false
+    total_time_ms: 1411
+    rows_returned: 3
+    notes: "Includes S3 GetObject + Parquet decode + aggregation"
+
+  - test: "S3 AP COUNT(*) (10K rows, warm repeat)"
+    query: "SELECT COUNT(*) FROM read_parquet('s3://{S3_AP}/sensor-data/sensor_data.parquet')"
+    cold_start: false
+    total_time_ms: 452
+    rows_returned: 1
+    result: 10000
+    notes: "Warm Lambda, S3 AP metadata may be cached"
+
+# Performance Summary
+performance_summary:
+  cold_start_ms: 1854
+  warm_simple_ms: 0.96
+  warm_s3ap_count_10k_ms: 452
+  warm_s3ap_groupby_10k_ms: 1411
+
+# Comparison with Local Execution
+comparison_with_local:
+  local_count_10k_ms: 628
+  lambda_count_10k_ms: 452
+  note: "Lambda warm is faster than local (Lambda runs in same region as FSxN, lower network latency)"
+
+# Key Findings
+key_findings:
+  - "Cold start ~1.9s (httpfs install dominates — consider pre-warming)"
+  - "Warm queries sub-second for simple operations"
+  - "S3 AP queries from Lambda: 452ms (COUNT) to 1.4s (GROUP BY) for 10K rows"
+  - "Lambda in same region as FSxN has lower latency than local over internet"
+  - "No VPC attachment needed for internet-origin AP (avoids ENI cold start penalty)"
+  - "DuckDB connection reuse across invocations works correctly"
+  - "s3_url_style='path' and explicit s3_endpoint required for S3 AP alias"
+
+# Configuration Notes
+configuration_notes:
+  - "SET home_directory = '/tmp' required in Lambda (no home dir)"
+  - "SET s3_url_style = 'path' required for S3 AP alias"
+  - "SET s3_endpoint = 's3.ap-northeast-1.amazonaws.com' required"
+  - "pytz module not available — avoid current_timestamp in queries"
+  - "{S3_AP} placeholder in queries auto-replaced with AP alias from env var"
