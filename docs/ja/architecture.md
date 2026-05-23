@@ -190,16 +190,18 @@ FSx for ONTAP と Lakehouse プラットフォーム間の接続レイヤーで�
 
 ## データフォーマット対応
 
-| フォーマット | 読み取り | 書き込み | 主な用途 |
-|-------------|---------|---------|---------|
-| Parquet | ✅ | ✅ | 分析クエリ（列指向） |
-| Apache Iceberg | ✅ | ✅ | ACID テーブル（ベンダー中立） |
-| Delta Lake | ✅ | ✅ | ACID テーブル（Databricks） |
-| Apache Hudi | ✅ | ✅ | CDC + Upsert |
-| CSV | ✅ | ✅ | レガシーデータ取り込み |
-| JSON / NDJSON | ✅ | ✅ | セミ構造化データ |
-| ORC | ✅ | ✅ | Hive 互換 |
-| Avro | ✅ | ✅ | スキーマ進化 |
+> **重要**: 以下のテーブルは S3 API レベルでのフォーマット対応を示しています。FSx for ONTAP S3 Access Points では、トランザクショナルフォーマット（Delta Lake、Apache Hudi）の書き込み操作はアトミック rename と条件付き書き込みの欠如により**非サポート**です。検証済みのプラットフォーム × フォーマット × モードの組み合わせは[互換性マトリクス](compatibility-matrix.md)を参照してください。
+
+| フォーマット | 読み取り | 書き込み | 主な用途 | FSx S3 AP 書き込み |
+|-------------|---------|---------|---------|:------------------:|
+| Parquet | ✅ | ✅ | 分析クエリ（列指向） | ✅ Append |
+| Apache Iceberg | ✅ | ⚠️ | ACID テーブル（ベンダー中立） | 実験的（外部カタログ） |
+| Delta Lake | ✅ | ❌ | ACID テーブル（Databricks） | 非サポート（アトミック rename なし） |
+| Apache Hudi | ✅ | ❌ | CDC + Upsert | 非サポート（アトミック rename なし） |
+| CSV | ✅ | ✅ | レガシーデータ取り込み | ✅ Append |
+| JSON / NDJSON | ✅ | ✅ | セミ構造化データ | ✅ Append |
+| ORC | ✅ | ✅ | Hive 互換 | ✅ Append |
+| Avro | ✅ | ✅ | スキーマ進化 | ✅ Append |
 
 ---
 

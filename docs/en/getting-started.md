@@ -64,10 +64,11 @@ python shared/scripts/validate-access.py --access-point-alias $AP_ALIAS --region
 
 | Vendor | Directory | Status |
 |--------|-----------|--------|
-| Databricks | `integrations/databricks/` | ✅ Implemented |
-| Snowflake | `integrations/snowflake/` | ✅ Implemented |
-| Athena | `integrations/athena/` | 🚧 Planned |
-| Glue | `integrations/glue/` | 🚧 Planned |
+| Athena | `integrations/athena/` | ✅ Security Verified |
+| Glue | `integrations/glue/` | ✅ Functional Verified |
+| Delta Lake OSS | `integrations/delta-lake-oss/` | ✅ Read Verified / ❌ Write |
+| Databricks | `integrations/databricks/` | ⚠️ Blocked (session policy) |
+| Snowflake | `integrations/snowflake/` | ⚠️ Blocked (session policy) |
 
 See each vendor's `README.md` and `docs/en/setup-guide.md` for details.
 

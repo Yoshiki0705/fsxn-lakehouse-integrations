@@ -72,7 +72,7 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **Snowflake** | Parquet/CSV | Read (External Stage) | ✅ Verified | External Stage with AP alias, storage integration IAM role | — |
 | **Snowflake** | Iceberg | Read (External Catalog) | ⚠️ Experimental | Snowflake Iceberg Tables with external catalog | Metadata pointer reading works |
 | **Snowflake** | Any | Write | ❌ Not Supported | — | Snowflake External Stages are read-only by design |
-| **Redshift Spectrum** | Parquet/CSV | Read-only | 🔲 Planned | External schema via Glue Catalog, IAM role with AP permissions | Expected to work (same pattern as Athena) |
+| **Redshift Spectrum** | Parquet/CSV | Read-only | ✅ Verified | External schema via Glue Catalog, IAM role with AP permissions | Same pattern as Athena. Query results stay in Redshift. |
 | **Amazon Bedrock** | Documents (PDF, TXT, etc.) | Read (Knowledge Base) | ✅ Verified | Bedrock Knowledge Base with S3 data source pointing to AP | For RAG applications; documents indexed for retrieval |
 
 ## Performance Characteristics
@@ -308,6 +308,67 @@ Required FSx Throughput = max(
 - **Effect**: All S3 requests through the AP fail.
 - **Recovery**: Recreate the user on the file system, or update the AP to use a different valid user.
 - **FSx behavior**: FSx periodically checks and automatically returns the AP to `AVAILABLE` when the user identity is resolvable again. ([source](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html))
+
+---
+
+## Known Limitations — Platform Session Policy Issues
+
+> **Status**: Under investigation with vendor support teams (as of 2026-05-23)
+
+Both Databricks and Snowflake apply **session policies** during `AssumeRole` that restrict the `Resource` ARN pattern in IAM actions. FSx for ONTAP S3 Access Points use a different ARN format than standard S3 buckets, which causes object-level operations to fail.
+
+### Root Cause
+
+| Component | Standard S3 ARN | FSx S3 AP ARN |
+|-----------|----------------|---------------|
+| Bucket-level | `arn:aws:s3:::bucket-name` | `arn:aws:s3:region:account:accesspoint/name` |
+| Object-level | `arn:aws:s3:::bucket-name/key` | `arn:aws:s3:region:account:accesspoint/name/object/key` |
+
+Platform session policies typically allow:
+- `s3:ListBucket` on `arn:aws:s3:::*` → **matches both formats** (LIST succeeds)
+- `s3:GetObject` on `arn:aws:s3:::*/*` → **does NOT match AP object ARN** (GetObject fails)
+
+This explains the observed behavior where LIST operations succeed but GetObject/PutObject fail with `AccessDenied`.
+
+### Databricks — Unity Catalog Session Policy
+
+| Symptom | Detail |
+|---------|--------|
+| **Affected operation** | All object-level S3 operations via Unity Catalog (External Location, External Table) |
+| **Error** | `AccessDenied` on GetObject, PutObject, DeleteObject |
+| **LIST behavior** | Succeeds (bucket-level operation uses different ARN pattern) |
+| **Workaround** | Instance Profile + boto3 in Dedicated mode (bypasses Unity Catalog governance) |
+| **Support case** | Filed with Databricks (session policy + NFS seccomp) |
+| **Additional blocker** | NFS kernel mount blocked by seccomp filter in Databricks runtime |
+
+### Snowflake — Storage Integration Session Policy
+
+| Symptom | Detail |
+|---------|--------|
+| **Affected operation** | GetObject via External Stage (SELECT from @stage) |
+| **Error** | "Failed to access remote file: access denied" |
+| **LIST behavior** | Succeeds (`LIST @stage` returns files correctly) |
+| **Workaround** | None identified — Snowflake does not expose session policy customization |
+| **Support case** | Case 01357726 filed with Snowflake |
+| **Evidence** | Same IAM role assumed without Snowflake's session policy → all operations succeed |
+
+### Impact Assessment
+
+| Platform | Read (LIST) | Read (GetObject) | Write | Governance Path |
+|----------|:-----------:|:-----------------:|:-----:|:---------------:|
+| Databricks (Unity Catalog) | ✅ | ❌ Blocked | ❌ Blocked | Blocked |
+| Databricks (Instance Profile + boto3) | ✅ | ✅ | ✅ | Bypasses UC |
+| Snowflake (External Stage) | ✅ | ❌ Blocked | N/A (read-only) | Blocked |
+
+### Resolution Path
+
+1. **Vendor session policy update**: Both vendors need to update their session policies to support S3 Access Point ARN format (`arn:aws:s3:region:account:accesspoint/name/object/*`)
+2. **Timeline**: Unknown — depends on vendor roadmap prioritization
+3. **Interim recommendation**: For Databricks, use Instance Profile + boto3 for PoC/demo purposes (not production). For Snowflake, no workaround available.
+
+### AWS Support Confirmation
+
+AWS Support Case 177949831900431 confirmed that the denial originates from the **session policy applied by the analytics platform during AssumeRole**, not from the IAM role policy, AP policy, or file system permissions.
 
 ---
 
