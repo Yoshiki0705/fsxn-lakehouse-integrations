@@ -87,20 +87,23 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 
 ## Supported Integrations / 対応プラットフォーム
 
-| Platform | Status | Pattern |
-|----------|--------|---------|
-| [Databricks](integrations/databricks/) | ✅ Implemented | Unity Catalog + Delta Lake |
-| [Snowflake](integrations/snowflake/) | ✅ Implemented | External Stage + Iceberg |
-| [Apache Iceberg](integrations/iceberg/) | 🚧 Planned | REST Catalog (vendor-neutral) |
-| [AWS Athena](integrations/athena/) | 🚧 Planned | Glue Data Catalog + Serverless |
-| [AWS Glue](integrations/glue/) | 🚧 Planned | Crawler + ETL + Medallion |
-| [Redshift Spectrum](integrations/redshift-spectrum/) | 🚧 Planned | External Schema |
-| [EMR + Spark](integrations/emr-spark/) | 🚧 Planned | Spark SQL + Iceberg |
-| [Dremio](integrations/dremio/) | 🚧 Planned | Arctic Catalog |
-| [Trino / Starburst](integrations/trino-starburst/) | 🚧 Planned | Hive Connector |
-| [BigQuery Omni](integrations/bigquery-omni/) | 🚧 Planned | BigLake |
-| [Microsoft Fabric](integrations/microsoft-fabric/) | 🚧 Planned | OneLake Shortcut |
-| [DuckDB](integrations/duckdb/) | 🚧 Planned | Lambda lightweight analytics |
+| Platform | Verification Status | Pattern | Notes |
+|----------|:---:|---------|-------|
+| [AWS Athena](integrations/athena/) | ✅ Security Verified | Glue Data Catalog + Serverless | Read-only. [Benchmark: 54.8 MB/s peak, 5M rows in 2s](verification-pack/athena-parquet-read/) |
+| [AWS Glue ETL](integrations/glue/) | ✅ Functional Verified | Crawler + ETL + Medallion | Read + Write-back (Parquet). [64s for 10K row ETL](verification-pack/glue-etl/) |
+| [Delta Lake OSS](integrations/delta-lake-oss/) | ✅ Read Verified / ❌ Write | delta-rs + Spark | Read works. Write returns 501 (conditional writes not supported). |
+| [Databricks](integrations/databricks/) | ⚠️ Blocked | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
+| [Snowflake](integrations/snowflake/) | ⚠️ Blocked (GetObject) | External Stage + Iceberg | LIST succeeds, GetObject denied. Session policy issue. Support case filed. |
+| [Apache Iceberg](integrations/iceberg/) | 🔲 Planned | REST Catalog (vendor-neutral) | Read path expected to work (Glue Catalog as metadata store) |
+| [EMR + Spark](integrations/emr-spark/) | 🔲 Planned | Spark SQL + Iceberg | Expected to work (AWS-native, no session policy) |
+| [Redshift Spectrum](integrations/redshift-spectrum/) | 🔲 Planned | External Schema | Expected to work (same pattern as Athena) |
+| [DuckDB](integrations/duckdb/) | 🔲 Planned | Lambda lightweight analytics | — |
+| [Dremio](integrations/dremio/) | 🔲 Planned | Arctic Catalog | — |
+| [Trino / Starburst](integrations/trino-starburst/) | 🔲 Planned | Hive Connector | — |
+| [BigQuery Omni](integrations/bigquery-omni/) | 🔲 Planned | BigLake | Requires GCP environment |
+| [Microsoft Fabric](integrations/microsoft-fabric/) | 🔲 Planned | OneLake Shortcut | Requires Azure environment |
+
+> **Key finding**: AWS-native services (Athena, Glue, EMR, Bedrock) work correctly. Third-party platforms (Snowflake, Databricks) are blocked by session policies that do not recognize S3 Access Point ARN format. See [Compatibility Matrix](docs/en/compatibility-matrix.md) for details.
 
 ---
 
