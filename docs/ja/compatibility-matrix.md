@@ -72,7 +72,7 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **Snowflake** | Parquet/CSV | 読み取り（External Stage） | ✅ 検証済み | AP エイリアス付き External Stage、ストレージ統合 IAM ロール | — |
 | **Snowflake** | Iceberg | 読み取り（External Catalog） | ⚠️ 実験的 | 外部カタログ付き Snowflake Iceberg Tables | メタデータポインタの読み取りは動作 |
 | **Snowflake** | 全て | 書き込み | ❌ 非サポート | — | Snowflake External Stage は設計上読み取り専用 |
-| **Redshift Spectrum** | Parquet/CSV | 読み取り専用 | 🔲 計画中 | Glue Catalog 経由の External Schema、AP 権限付き IAM ロール | 動作見込み（Athena と同じパターン） |
+| **Redshift Spectrum** | Parquet/CSV | 読み取り専用 | ✅ 検証済み | Glue Catalog 経由の External Schema、AP 権限付き IAM ロール | Athena と同パターン。クエリ結果は Redshift 内に保持。 |
 | **Amazon Bedrock** | ドキュメント（PDF、TXT 等） | 読み取り（Knowledge Base） | ✅ 検証済み | AP を指す S3 データソース付き Bedrock Knowledge Base | RAG アプリケーション用。ドキュメントが検索用にインデックス化 |
 
 ## パフォーマンス特性
