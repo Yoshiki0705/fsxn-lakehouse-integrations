@@ -94,7 +94,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 | [Delta Lake OSS](integrations/delta-lake-oss/) | ✅ Read Verified / ❌ Write | delta-rs + Spark | Read works. Write returns 501 (conditional writes not supported). |
 | [Databricks](integrations/databricks/) | ⚠️ Blocked | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
 | [Snowflake](integrations/snowflake/) | ⚠️ Blocked (GetObject) | External Stage + Iceberg | LIST succeeds, GetObject denied. Session policy issue. Support case filed. |
-| [Apache Iceberg](integrations/iceberg/) | 🔲 Planned | REST Catalog (vendor-neutral) | Read path expected to work (Glue Catalog as metadata store) |
+| [Apache Iceberg](integrations/iceberg/) | ⚠️ Read Experimental / ❌ Write Failed | REST Catalog (vendor-neutral) | Write fails: S3FileIO cannot handle AP alias for metadata. Read of pre-existing tables expected to work. |
 | [EMR + Spark](integrations/emr-spark/) | ✅ Functional Verified | Spark SQL + Iceberg | Read + Write-back verified. [10K rows in 16s total (EMR Serverless)](verification-pack/emr-spark/) |
 | [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Functional Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
 | [DuckDB](integrations/duckdb/) | ✅ Functional Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
