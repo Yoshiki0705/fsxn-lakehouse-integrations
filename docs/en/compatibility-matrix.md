@@ -133,11 +133,16 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 
 | Platform + Mode | Verification Level | Notes |
 |----------------|-------------------|-------|
-| Athena + Parquet Read | Security Verified | AWS official tutorial validates full workflow including IAM |
-| Glue ETL + Parquet Read/Write | Functional Verified | AWS official tutorial validates read and write-back |
-| EMR Serverless + Parquet Read/Write | Functional Verified | AWS official tutorial validates Spark workflow |
-| Bedrock Knowledge Base + Document Read | Functional Verified | AWS official tutorial validates RAG ingestion |
-| Databricks + Parquet Read | API Verified | External Location registration and read confirmed |
+| Athena + Parquet Read | **Security Verified** | Full workflow + 9/9 negative tests PASS + CloudTrail confirmed. Benchmark: 54.8 MB/s peak (128 MB/s provisioned). |
+| Glue ETL + Parquet Read/Write | **Functional Verified** | Read 10K rows → Transform → Write-back in 64s. Verified 2026-05-23. |
+| Glue Crawler | **Functional Verified** | Auto-schema detection on FSx S3 AP data. Verified 2026-05-23. |
+| Delta Lake OSS (delta-rs) Read | **Functional Verified** | DeltaTable.open + to_pyarrow_table + metadata/history. Verified 2026-05-23. |
+| Delta Lake OSS Write | **Not Supported** | Returns 501 Not Implemented (conditional writes required by delta-rs commit protocol). |
+| EMR Serverless + Parquet Read/Write | Functional Verified | Per AWS official tutorial. |
+| Bedrock Knowledge Base + Document Read | Functional Verified | Per AWS official tutorial. |
+| Snowflake + External Stage (LIST) | **API Verified** | LIST @stage succeeds (files visible). |
+| Snowflake + External Stage (GetObject) | **Blocked** | Session policy does not recognize S3 AP ARN format. Support case 01357726 filed. |
+| Databricks + Unity Catalog | **Blocked** | Session policy blocks all S3 AP operations. Support case filed with Databricks. |
 | Snowflake + Parquet Read | API Verified | External Stage creation and query confirmed |
 | Delta Lake Write (any platform) | Not Supported | Fundamental constraint (no atomic rename) |
 
