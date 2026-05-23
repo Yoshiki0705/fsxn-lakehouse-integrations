@@ -1,0 +1,68 @@
+# Verification Evidence Record — Apache Iceberg on FSxN S3 AP
+test_id: "ICEBERG-WRITE-001"
+date_tested: "2026-05-24"
+tester: "Yoshiki Fujiwara"
+
+# Infrastructure
+region: "ap-northeast-1"
+emr_serverless_app_id: "00g5tb5c6rpbsg2l"
+emr_release: "emr-7.1.0"
+iceberg_version: "bundled with EMR 7.1.0"
+catalog: "Glue Catalog (org.apache.iceberg.aws.glue.GlueCatalog)"
+io_impl: "org.apache.iceberg.aws.s3.S3FileIO"
+
+# S3 Access Point
+ap_name: "verification-test-ap"
+ap_alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+ap_network_origin: "INTERNET"
+warehouse_path: "s3://AP_ALIAS/iceberg-warehouse/"
+
+# Result
+result: "FAILED"
+failure_point: "CREATE TABLE (metadata write)"
+error: |
+  java.lang.NullPointerException: Cannot invoke
+  "org.apache.iceberg.TableMetadata.metadataFileLocation()"
+  because "metadata" is null
+
+# Root Cause Analysis
+root_cause: |
+  Iceberg's S3FileIO attempts to write metadata files to the warehouse path
+  on FSxN S3 AP. The NullPointerException occurs during the commit phase
+  when Iceberg tries to verify the metadata file was written successfully.
+  
+  Possible causes:
+  1. S3FileIO may not correctly handle S3 AP alias as bucket name
+  2. The metadata write (PutObject) may succeed but the subsequent
+     HeadObject/GetObject to verify fails due to AP alias resolution
+  3. Iceberg's commit protocol may require operations not fully supported
+     by FSxN S3 AP (e.g., conditional writes for conflict detection)
+
+# Comparison with Compatibility Matrix
+compatibility_matrix_status: "Experimental (Read)"
+actual_result: |
+  - Iceberg READ (pre-existing tables): Expected to work (not tested in this run)
+  - Iceberg WRITE (CREATE TABLE + INSERT): FAILED
+  - Root cause: S3FileIO metadata write/verify on S3 AP alias
+
+# Key Findings
+key_findings:
+  - "Iceberg CREATE TABLE on FSxN S3 AP fails with NullPointerException"
+  - "S3FileIO may not correctly handle S3 AP alias format"
+  - "Glue Catalog database creation succeeds (glue:CreateDatabase works)"
+  - "The failure is in Iceberg's metadata file write/commit, not in data file write"
+  - "This confirms compatibility-matrix status: Iceberg write is Experimental/Not Verified"
+  - "Iceberg READ of pre-existing tables (metadata in Glue, data on S3 AP) may still work"
+
+# Recommendations
+recommendations:
+  - "For Iceberg on FSxN: Use native S3 for metadata, FSxN S3 AP for data files only"
+  - "Or: Write Iceberg tables via NFS (Spark with local filesystem), read via S3 AP"
+  - "Or: Investigate if S3FileIO can be configured with AP ARN instead of alias"
+  - "Update compatibility-matrix: Iceberg Write → Not Supported (same root cause as Delta)"
+
+# Next Steps
+next_steps:
+  - "Test Iceberg READ path: Create table on native S3, point data to FSxN S3 AP"
+  - "Test with S3A FileSystem instead of S3FileIO"
+  - "File issue with Iceberg project if S3 AP alias is not supported by S3FileIO"
