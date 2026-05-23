@@ -27,48 +27,50 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task A: Vendor Account Preparation
 
-- [ ] Create/confirm Databricks workspace (Unity Catalog enabled)
-- [ ] Obtain Databricks Account ID and Workspace ID
-- [ ] Verify Unity Catalog Metastore is configured
-- [ ] Confirm Databricks AWS Account ID for cross-account trust (`414351767826`)
-- [ ] Document workspace URL and admin credentials
-- [ ] Verify Databricks CLI is installed and configured
+- [x] Create/confirm Databricks workspace (Unity Catalog enabled)
+- [x] Obtain Databricks Account ID and Workspace ID
+- [x] Verify Unity Catalog Metastore is configured
+- [x] Confirm Databricks AWS Account ID for cross-account trust (`414351767826`)
+- [x] Document workspace URL and admin credentials
+- [x] Verify Databricks CLI is installed and configured
 
 #### Task B: AWS Infrastructure Deploy & Validation
 
-- [ ] Deploy `shared/cloudformation/vpc-networking.yaml` stack
-- [ ] Deploy `shared/cloudformation/fsxn-s3ap-base.yaml` stack
-- [ ] Deploy `integrations/databricks/template.yaml` stack
-- [ ] Verify S3 Access Point creation (alias, ARN)
-- [ ] Verify IAM Role trust policy (External ID)
-- [ ] Test S3 AP connectivity: `python shared/scripts/validate-access.py --access-point-alias <alias>`
-- [ ] Verify VPC Endpoint routing (Interface endpoint for S3)
-- [ ] Run CloudWatch Logs check for any errors
-- [ ] Validate cross-account AssumeRole from Databricks account
+- [x] Deploy `shared/cloudformation/vpc-networking.yaml` stack
+- [x] Deploy `shared/cloudformation/fsxn-s3ap-base.yaml` stack
+- [x] Deploy `integrations/databricks/template.yaml` stack
+- [x] Verify S3 Access Point creation (alias, ARN)
+- [x] Verify IAM Role trust policy (External ID)
+- [x] Test S3 AP connectivity: `python shared/scripts/validate-access.py --access-point-alias <alias>`
+- [x] Verify VPC Endpoint routing (Interface endpoint for S3)
+- [x] Run CloudWatch Logs check for any errors
+- [x] Validate cross-account AssumeRole from Databricks account
 
 #### Task C: Databricks UI Configuration & Screenshots
 
-- [ ] Create Storage Credential in Databricks UI
+- [x] Create Storage Credential in Databricks UI
   - Screenshot: Storage Credential creation dialog
   - Screenshot: Credential validation success
-- [ ] Create External Location
+- [x] Create External Location
   - Screenshot: External Location creation with S3 AP URL
-  - Screenshot: Connection test success
-- [ ] Create Catalog and Schemas (bronze/silver/gold)
+  - Screenshot: Connection test success (LIST only — GetObject blocked by session policy)
+- [x] Create Catalog and Schemas (bronze/silver/gold)
   - Screenshot: Catalog Explorer showing hierarchy
 - [ ] Configure Cluster Policy
   - Screenshot: Cluster policy with S3 AP settings
 
 #### Task D: Demo Scenario Execution
 
+> ⚠️ **BLOCKED**: Unity Catalog session policy does not recognize S3 AP ARN format. All object-level operations fail with AccessDenied. Support case filed. See [Known Limitations](../../docs/en/compatibility-matrix.md#known-limitations--platform-session-policy-issues).
+
 **Scenario 1: External Table Query (Pattern A)**
 - [ ] Upload sample Parquet data to FSx for ONTAP via NFS
-- [ ] Create External Table pointing to S3 AP
+- [ ] Create External Table pointing to S3 AP — ❌ Blocked (session policy)
 - [ ] Execute SELECT query and verify results
 - [ ] Measure query latency
 
 **Scenario 2: Delta Lake CRUD (Pattern B)**
-- [ ] Create Delta table on FSx for ONTAP via S3 AP
+- [ ] Create Delta table on FSx for ONTAP via S3 AP — ❌ Not Supported (no atomic rename)
 - [ ] Execute INSERT, UPDATE, DELETE operations
 - [ ] Verify Delta Time Travel (VERSION AS OF)
 - [ ] Run OPTIMIZE and verify file compaction
@@ -100,40 +102,42 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task A: Vendor Account Preparation
 
-- [ ] Create/confirm Snowflake account (Enterprise Edition+)
-- [ ] Verify ACCOUNTADMIN role access
-- [ ] Confirm Snowflake region matches FSx for ONTAP region
-- [ ] Document Snowflake account locator and URL
-- [ ] Install SnowSQL CLI
-- [ ] Verify Snowflake AWS Account ID (from DESCRIBE INTEGRATION)
+- [x] Create/confirm Snowflake account (Enterprise Edition+)
+- [x] Verify ACCOUNTADMIN role access
+- [x] Confirm Snowflake region matches FSx for ONTAP region
+- [x] Document Snowflake account locator and URL
+- [x] Install SnowSQL CLI
+- [x] Verify Snowflake AWS Account ID (from DESCRIBE INTEGRATION)
 
 #### Task B: AWS Infrastructure Deploy & Validation
 
-- [ ] Deploy `integrations/snowflake/template.yaml` stack
-- [ ] Verify S3 Access Point creation
-- [ ] Verify IAM Role (initial trust to own account)
-- [ ] Test S3 AP connectivity
-- [ ] (If Snowpipe) Deploy SNS Topic and verify
+- [x] Deploy `integrations/snowflake/template.yaml` stack
+- [x] Verify S3 Access Point creation
+- [x] Verify IAM Role (initial trust to own account)
+- [x] Test S3 AP connectivity
+- [x] (If Snowpipe) Deploy SNS Topic and verify
 - [ ] Validate VPC Endpoint configuration
 
 #### Task C: Snowflake UI Configuration & Screenshots
 
-- [ ] Create Storage Integration (SQL)
+- [x] Create Storage Integration (SQL)
   - Screenshot: DESCRIBE INTEGRATION output
-- [ ] Update CloudFormation with Snowflake trust info
+- [x] Update CloudFormation with Snowflake trust info
   - Screenshot: Updated stack parameters
-- [ ] Create External Stage
+- [x] Create External Stage
   - Screenshot: LIST @stage output showing files
-- [ ] Create File Formats
+- [x] Create File Formats
   - Screenshot: SHOW FILE FORMATS output
-- [ ] Create External Tables
-  - Screenshot: Query results from External Table
+- [x] Create External Tables
+  - Screenshot: Query results from External Table — ❌ Blocked (session policy blocks GetObject)
 
 #### Task D: Demo Scenario Execution
 
+> ⚠️ **BLOCKED**: Snowflake session policy does not recognize S3 AP ARN format for GetObject. LIST succeeds but SELECT fails. Support case 01357726 filed. See [Known Limitations](../../docs/en/compatibility-matrix.md#known-limitations--platform-session-policy-issues).
+
 **Scenario 1: External Table Query (Pattern A)**
-- [ ] Create External Table on Parquet data
-- [ ] Execute analytical query
+- [x] Create External Table on Parquet data
+- [ ] Execute analytical query — ❌ Blocked (GetObject denied)
 - [ ] Verify partition pruning works
 - [ ] Measure query performance
 
@@ -169,35 +173,35 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task A: Vendor Account Preparation
 
-- [ ] Verify AWS account has Athena access
-- [ ] Configure Athena workgroup and result location
-- [ ] Verify Glue Data Catalog permissions
-- [ ] Confirm FSx for ONTAP S3 AP has internet network origin (required for Athena)
+- [x] Verify AWS account has Athena access
+- [x] Configure Athena workgroup and result location
+- [x] Verify Glue Data Catalog permissions
+- [x] Confirm FSx for ONTAP S3 AP has internet network origin (required for Athena)
 
 #### Task B: AWS Infrastructure Deploy & Validation
 
-- [ ] Deploy Athena integration CloudFormation stack
-- [ ] Create S3 Access Point with internet network origin
-- [ ] Configure Glue Crawler for S3 AP
-- [ ] Verify IAM permissions for Athena → S3 AP
-- [ ] Run Glue Crawler and verify table creation in Data Catalog
+- [x] Deploy Athena integration CloudFormation stack
+- [x] Create S3 Access Point with internet network origin
+- [x] Configure Glue Crawler for S3 AP
+- [x] Verify IAM permissions for Athena → S3 AP
+- [x] Run Glue Crawler and verify table creation in Data Catalog
 
 #### Task C: Athena UI Configuration & Screenshots
 
-- [ ] Verify Glue Data Catalog tables
+- [x] Verify Glue Data Catalog tables
   - Screenshot: Glue console showing discovered tables
-- [ ] Configure Athena workgroup
+- [x] Configure Athena workgroup
   - Screenshot: Athena workgroup settings
-- [ ] Run first query
+- [x] Run first query
   - Screenshot: Athena query editor with results
 
 #### Task D: Demo Scenario Execution
 
 **Scenario 1: Direct Query on FSx for ONTAP Data**
-- [ ] Query Parquet files via Athena
-- [ ] Query CSV files with SerDe
+- [x] Query Parquet files via Athena
+- [x] Query CSV files with SerDe
 - [ ] Verify partition projection
-- [ ] Measure query cost and latency
+- [x] Measure query cost and latency
 
 **Scenario 2: CTAS (Create Table As Select)**
 - [ ] Create curated table from raw FSx for ONTAP data
@@ -206,9 +210,9 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task E: Verification & Final Check
 
-- [ ] Record query results and performance
-- [ ] Document cost analysis
-- [ ] Generate verification report (JA/EN)
+- [x] Record query results and performance
+- [x] Document cost analysis
+- [x] Generate verification report (JA/EN)
 
 ---
 
@@ -216,32 +220,32 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task A: Vendor Account Preparation
 
-- [ ] Verify AWS Glue service access
-- [ ] Configure Glue service role
+- [x] Verify AWS Glue service access
+- [x] Configure Glue service role
 - [ ] Verify Lake Formation permissions (if applicable)
 
 #### Task B: AWS Infrastructure Deploy & Validation
 
-- [ ] Deploy Glue integration CloudFormation stack
-- [ ] Create Glue Connection for S3 AP
-- [ ] Configure Glue Crawler
-- [ ] Deploy Glue ETL Job (PySpark)
+- [x] Deploy Glue integration CloudFormation stack
+- [x] Create Glue Connection for S3 AP
+- [x] Configure Glue Crawler
+- [x] Deploy Glue ETL Job (PySpark)
 - [ ] Verify CloudWatch Events/EventBridge triggers
 
 #### Task C: Glue UI Configuration & Screenshots
 
-- [ ] Glue Crawler configuration
+- [x] Glue Crawler configuration
   - Screenshot: Crawler pointing to S3 AP
-- [ ] Glue ETL Job
+- [x] Glue ETL Job
   - Screenshot: Job graph (visual ETL)
-- [ ] Data Catalog tables
+- [x] Data Catalog tables
   - Screenshot: Discovered schema
 
 #### Task D: Demo Scenario Execution
 
 **Scenario 1: Medallion Architecture ETL**
-- [ ] Run Crawler on bronze data (FSx for ONTAP)
-- [ ] Execute ETL Job: Bronze → Silver transformation
+- [x] Run Crawler on bronze data (FSx for ONTAP)
+- [x] Execute ETL Job: Bronze → Silver transformation
 - [ ] Execute ETL Job: Silver → Gold aggregation
 - [ ] Verify output on FSx for ONTAP gold volume
 
@@ -252,7 +256,7 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task E: Verification & Final Check
 
-- [ ] Record ETL job metrics (duration, DPU usage)
+- [x] Record ETL job metrics (duration, DPU usage)
 - [ ] Document data lineage
 - [ ] Generate verification report (JA/EN)
 
