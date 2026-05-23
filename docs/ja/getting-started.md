@@ -64,10 +64,11 @@ python shared/scripts/validate-access.py --access-point-alias $AP_ALIAS --region
 
 | ベンダー | ディレクトリ | ステータス |
 |---------|------------|----------|
-| Databricks | `integrations/databricks/` | ✅ 実装済み |
-| Snowflake | `integrations/snowflake/` | ✅ 実装済み |
-| Athena | `integrations/athena/` | 🚧 計画中 |
-| Glue | `integrations/glue/` | 🚧 計画中 |
+| Athena | `integrations/athena/` | ✅ セキュリティ検証済み |
+| Glue | `integrations/glue/` | ✅ 機能検証済み |
+| Delta Lake OSS | `integrations/delta-lake-oss/` | ✅ 読み取り検証済み / ❌ 書き込み非サポート |
+| Databricks | `integrations/databricks/` | ⚠️ ブロック（セッションポリシー） |
+| Snowflake | `integrations/snowflake/` | ⚠️ ブロック（セッションポリシー） |
 
 各ベンダーの `README.md` と `docs/ja/setup-guide.md` を参照してください。
 

@@ -21,8 +21,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 | ベンダー | 統合方式 | ユースケース | ステータス |
 |---------|---------|-------------|----------|
-| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSx for ONTAP, ML Feature Store | ✅ 実装済み |
-| **Snowflake** | External Stage / External Table / Iceberg Table | データ共有、ELT パイプライン | ✅ 実装済み |
+| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSx for ONTAP, ML Feature Store | ⚠️ ブロック（セッションポリシー） |
+| **Snowflake** | External Stage / External Table / Iceberg Table | データ共有、ELT パイプライン | ⚠️ ブロック（セッションポリシー） |
 
 ### Databricks
 
@@ -80,8 +80,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 | サービス | 統合方式 | ユースケース | ステータス |
 |---------|---------|-------------|----------|
-| **AWS Athena** | S3 AP 直接クエリ | サーバーレス SQL | 🚧 計画中 |
-| **AWS Glue** | S3 AP Crawler / ETL Job | データカタログ + ETL | 🚧 計画中 |
+| **AWS Athena** | S3 AP 直接クエリ | サーバーレス SQL | ✅ セキュリティ検証済み |
+| **AWS Glue** | S3 AP Crawler / ETL Job | データカタログ + ETL | ✅ 機能検証済み |
 | **AWS Lake Formation** | S3 AP 登録 | ガバナンス・権限管理 | 🚧 計画中 |
 | **Amazon Redshift Spectrum** | External Schema on S3 AP | DWH + Data Lake 統合 | 🚧 計画中 |
 | **Amazon EMR (Spark)** | S3A Connector → S3 AP | 大規模バッチ処理 | 🚧 計画中 |

@@ -36,7 +36,10 @@ VPC-only access points will NOT work with Athena.
 
 Reference: [AWS Tutorial - Query files with Athena](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-query-data-with-athena.html)
 
-### Status: 🚧 Implementation In Progress
+### Status: ✅ Security Verified (2026-05-23)
+
+Benchmark: 54.8 MB/s peak throughput, 5M rows queried in 2.2s (103 MB Parquet, 128 MB/s provisioned).
+9/9 negative security tests PASS. CloudTrail audit confirmed.
 
 ### Quick Start
 
@@ -131,7 +134,10 @@ VPC 限定のアクセスポイントは Athena では動作しません。
 
 参考: [AWS チュートリアル - Athena でファイルをクエリ](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-query-data-with-athena.html)
 
-### ステータス: 🚧 実装中
+### ステータス: ✅ セキュリティ検証済み (2026-05-23)
+
+ベンチマーク: ピークスループット 54.8 MB/s、500 万行を 2.2 秒でクエリ（103 MB Parquet、128 MB/s プロビジョンド）。
+9/9 ネガティブセキュリティテスト PASS。CloudTrail 監査確認済み。
 
 ### クイックスタート
 
