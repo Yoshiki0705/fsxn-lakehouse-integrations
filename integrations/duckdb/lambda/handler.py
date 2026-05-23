@@ -47,6 +47,9 @@ def _get_connection() -> duckdb.DuckDBPyConnection:
 
     conn = duckdb.connect(database=":memory:")
 
+    # Set home directory for Lambda environment
+    conn.execute("SET home_directory = '/tmp';")
+
     # Install and load httpfs extension
     conn.execute("INSTALL httpfs;")
     conn.execute("LOAD httpfs;")
@@ -69,6 +72,10 @@ def _get_connection() -> duckdb.DuckDBPyConnection:
     # Performance settings
     conn.execute("SET threads TO 4;")
     conn.execute("SET memory_limit = '512MB';")
+    # S3 AP aliases require path-style access
+    conn.execute("SET s3_url_style = 'path';")
+    conn.execute("SET s3_endpoint = 's3.ap-northeast-1.amazonaws.com';")
+    conn.execute("SET s3_use_ssl = true;")
 
     _db_connection = conn
     logger.info("DuckDB connection initialized successfully")
