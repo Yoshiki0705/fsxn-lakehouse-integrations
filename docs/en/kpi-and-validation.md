@@ -171,6 +171,37 @@ For CxO reporting, distill to 4-5 headline metrics:
 
 > **Environment**: FSx for ONTAP Single-AZ, 128 MB/s provisioned throughput, ap-northeast-1. These are sample measurements from a specific test environment, not production estimates. Scale throughput provisioning for production workloads.
 
+### Cross-Platform Benchmark Comparison
+
+> **Kobayashi-san review note**: These measurements enable partners to set realistic PoC expectations. They are sizing references from a specific test environment, not service limits or production guarantees.
+
+| Platform | Operation | Data Size | Latency | Throughput | Cost/Query |
+|----------|-----------|-----------|---------|-----------|-----------|
+| **Athena** | Full scan (SELECT *) | 103 MB / 5M rows | 2.2s | 54.8 MB/s | ~$0.0005 |
+| **Athena** | GROUP BY (5 cols) | 37.7 MB scanned | 3.3s | 12.2 MB/s | ~$0.0002 |
+| **Athena** | CTAS write-back | 10K rows → 3 rows | 3.7s | — | ~$0.0001 |
+| **DuckDB (local)** | COUNT(*) | 5M rows | 779ms | — | $0 |
+| **DuckDB (local)** | GROUP BY | 10K rows | 1.2s | — | $0 |
+| **DuckDB (local)** | COPY TO Parquet | aggregated | 304ms | — | $0 |
+| **DuckDB (Lambda, cold)** | Simple query | — | 1,854ms | — | ~$0.00003 |
+| **DuckDB (Lambda, warm)** | COUNT(*) 10K rows | 10K rows | 452ms | — | ~$0.00001 |
+| **DuckDB (Lambda, warm)** | GROUP BY 10K rows | 10K rows | 1,411ms | — | ~$0.00002 |
+| **Redshift Spectrum** | COUNT(*) | 10K rows | 3.2s | — | ~$0.005 |
+| **Redshift Spectrum** | COUNT(*) | 5M rows | 4.3s | — | ~$0.005 |
+| **Redshift Spectrum** | GROUP BY + AVG | 10K rows | 2.6s | — | ~$0.005 |
+| **EMR Serverless Spark** | Read Parquet | 10K rows | 6.8s | — | ~$0.001 |
+| **EMR Serverless Spark** | GROUP BY | 10K rows | 2.5s | — | ~$0.001 |
+| **EMR Serverless Spark** | Write-back | 3 rows | 3.6s | — | ~$0.001 |
+| **Glue ETL** | Read + Transform + Write | 10K rows | 64s | — | ~$0.02 |
+| **delta-rs** | DeltaTable.open | 10K rows | 0.91s | — | $0 |
+| **delta-rs** | to_pyarrow_table | 10K rows | 1.38s | — | $0 |
+
+**Key takeaways for PoC planning** (Kawahara-san review):
+- **Lowest cost**: DuckDB Lambda ($0 idle, ~$0.00001/query) — best for ad-hoc lightweight analytics
+- **Fastest large scan**: Athena (54.8 MB/s) — best for serverless SQL on large datasets
+- **Most flexible**: EMR Spark (read + write + Iceberg read) — best for ETL pipelines
+- **DWH integration**: Redshift Spectrum — best when joining with existing Redshift tables
+
 ### Athena + Parquet Read (103 MB dataset, 5M rows, 10 columns)
 
 | Query Type | Data Scanned | Engine Time | Total Time | Throughput |
