@@ -1,0 +1,82 @@
+# Verification Evidence Record — Redshift Spectrum
+test_id: "REDSHIFT-SPECTRUM-001"
+date_tested: "2026-05-23"
+tester: "Yoshiki Fujiwara"
+
+# Infrastructure
+region: "ap-northeast-1"
+fsxn_deployment_type: "SINGLE_AZ_1"
+fsxn_throughput_capacity_mbps: 128
+ontap_version: "9.17.1"
+
+# Access Point Configuration
+ap_name: "verification-test-ap"
+ap_network_origin: "INTERNET"
+ap_file_system_user_type: "UNIX"
+ap_file_system_user_name: "root"
+
+# Redshift Configuration
+redshift_type: "Serverless"
+redshift_rpu: 8
+redshift_vpc: "vpc-0ae01826f906191af"
+iam_role: "arn:aws:iam::178625946981:role/fsxn-redshift-spectrum-role"
+external_schema: "fsxn_spectrum"
+glue_database: "fsxn_athena_verification"
+
+# Test Dataset
+datasets:
+  - table: "sensor_readings"
+    format: "Parquet"
+    rows: 10000
+    columns: 7
+    location: "s3://verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias/sensor-data"
+  - table: "sensor_benchmark"
+    format: "Parquet"
+    rows: 5000000
+    columns: 7
+    location: "s3://verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias/benchmark"
+
+# Results
+result: "PASS"
+tests:
+  - name: "CREATE EXTERNAL SCHEMA"
+    result: "PASS"
+    duration_ms: 240
+  - name: "COUNT(*) 10K rows"
+    result: "PASS"
+    duration_ms: 3231
+    rows_returned: 10000
+  - name: "GROUP BY + AVG aggregation"
+    result: "PASS"
+    duration_ms: 2580
+    groups_returned: 3
+  - name: "COUNT(*) 5M rows"
+    result: "PASS"
+    duration_ms: 4277
+    rows_returned: 5000000
+
+# Performance Summary
+performance:
+  count_10k_rows_ms: 3231
+  group_by_aggregation_ms: 2580
+  count_5m_rows_ms: 4277
+
+# Comparison with Athena (same data, same AP)
+comparison_with_athena:
+  athena_count_5m_rows_ms: 2196
+  redshift_count_5m_rows_ms: 4277
+  note: "Redshift Spectrum ~2x slower than Athena for simple scans (cold start overhead from Serverless). Expected to improve with warm queries."
+
+# Known Limitations
+known_limitations:
+  - "Requires internet-origin S3 AP (same as Athena)"
+  - "Redshift Serverless has cold start overhead (~2-3s for first query)"
+  - "Query results stay in Redshift (not written back to FSxN)"
+  - "Federated JOIN with local tables not tested in this run"
+
+# Notes
+notes: |
+  Redshift Spectrum successfully queries FSxN data via S3 AP using the same
+  Glue Catalog tables as Athena. No session policy issues (AWS-native service).
+  Pattern is identical to Athena: internet-origin AP + Glue Catalog + IAM role.
+  Cleanup: Redshift Serverless deleted after verification to avoid costs.

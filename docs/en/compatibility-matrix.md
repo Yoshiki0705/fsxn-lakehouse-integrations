@@ -72,7 +72,7 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **Snowflake** | Parquet/CSV | Read (External Stage) | ✅ Verified | External Stage with AP alias, storage integration IAM role | — |
 | **Snowflake** | Iceberg | Read (External Catalog) | ⚠️ Experimental | Snowflake Iceberg Tables with external catalog | Metadata pointer reading works |
 | **Snowflake** | Any | Write | ❌ Not Supported | — | Snowflake External Stages are read-only by design |
-| **Redshift Spectrum** | Parquet/CSV | Read-only | 🔲 Planned | External schema via Glue Catalog, IAM role with AP permissions | Expected to work (same pattern as Athena) |
+| **Redshift Spectrum** | Parquet/CSV | Read-only | ✅ Verified | External schema via Glue Catalog, IAM role with AP permissions | Same pattern as Athena. Query results stay in Redshift. |
 | **Amazon Bedrock** | Documents (PDF, TXT, etc.) | Read (Knowledge Base) | ✅ Verified | Bedrock Knowledge Base with S3 data source pointing to AP | For RAG applications; documents indexed for retrieval |
 
 ## Performance Characteristics
