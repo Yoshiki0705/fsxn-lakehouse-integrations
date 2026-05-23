@@ -190,16 +190,18 @@ Each platform accesses FSx for ONTAP via S3 API.
 
 ## Data Format Support
 
-| Format | Read | Write | Primary Use |
-|--------|------|-------|-------------|
-| Parquet | ✅ | ✅ | Analytics queries (columnar) |
-| Apache Iceberg | ✅ | ✅ | ACID tables (vendor-neutral) |
-| Delta Lake | ✅ | ✅ | ACID tables (Databricks) |
-| Apache Hudi | ✅ | ✅ | CDC + Upsert |
-| CSV | ✅ | ✅ | Legacy data ingestion |
-| JSON / NDJSON | ✅ | ✅ | Semi-structured data |
-| ORC | ✅ | ✅ | Hive compatible |
-| Avro | ✅ | ✅ | Schema evolution |
+> **Important**: The table below shows S3 API-level format support. For FSx for ONTAP S3 Access Points, write operations for transactional formats (Delta Lake, Apache Hudi) are **Not Supported** due to the lack of atomic rename and conditional writes. See [Compatibility Matrix](compatibility-matrix.md) for verified platform × format × mode combinations.
+
+| Format | Read | Write | Primary Use | FSx S3 AP Write |
+|--------|------|-------|-------------|:---------------:|
+| Parquet | ✅ | ✅ | Analytics queries (columnar) | ✅ Append |
+| Apache Iceberg | ✅ | ⚠️ | ACID tables (vendor-neutral) | Experimental (external catalog) |
+| Delta Lake | ✅ | ❌ | ACID tables (Databricks) | Not Supported (no atomic rename) |
+| Apache Hudi | ✅ | ❌ | CDC + Upsert | Not Supported (no atomic rename) |
+| CSV | ✅ | ✅ | Legacy data ingestion | ✅ Append |
+| JSON / NDJSON | ✅ | ✅ | Semi-structured data | ✅ Append |
+| ORC | ✅ | ✅ | Hive compatible | ✅ Append |
+| Avro | ✅ | ✅ | Schema evolution | ✅ Append |
 
 ---
 
