@@ -167,6 +167,47 @@ For CxO reporting, distill to 4-5 headline metrics:
 
 ---
 
+## Actual Benchmark Results (2026-05-23)
+
+> **Environment**: FSx for ONTAP Single-AZ, 128 MB/s provisioned throughput, ap-northeast-1. These are sample measurements from a specific test environment, not production estimates. Scale throughput provisioning for production workloads.
+
+### Athena + Parquet Read (103 MB dataset, 5M rows, 10 columns)
+
+| Query Type | Data Scanned | Engine Time | Total Time | Throughput |
+|-----------|:---:|:---:|:---:|:---:|
+| COUNT(*) (metadata only) | 0 B | 1,123 ms | 1,316 ms | N/A |
+| GROUP BY (5 columns) | 37.7 MB | 3,103 ms | 3,273 ms | 12.2 MB/s |
+| SELECT * WHERE + ORDER (all columns) | 109.5 MB | 2,000 ms | 2,196 ms | **54.8 MB/s** |
+| Repeated query P50 | 10.1 MB | 1,888 ms | 2,072 ms | 5.3 MB/s |
+
+**KPI Assessment**: 103 MB full scan in 2.2s → projected 1 GB in ~20s → **Good tier target (< 30s) PASS**
+
+### Glue ETL (10K rows, read + transform + write-back)
+
+| Metric | Value |
+|--------|-------|
+| Total execution time | 64 seconds |
+| Input rows | 10,000 |
+| Output rows | ~15 (aggregated) |
+| Worker type | G.1X × 2 |
+
+### Upload Performance (local → FSx S3 AP via internet)
+
+| File Size | Duration | Throughput |
+|-----------|----------|-----------|
+| 250 KB | 1.4s | 179 KB/s |
+| 103 MB | 6.3s | 16.5 MB/s |
+
+### Delta Lake OSS Read (delta-rs, 10K rows)
+
+| Operation | Latency |
+|-----------|---------|
+| DeltaTable.open (metadata) | 0.91s |
+| to_pyarrow_table (full read) | 1.38s |
+| to_pandas + aggregation | 0.15s |
+
+---
+
 ## Initial Use Case Selection
 
 For the first Investment Case, select ONE use case that minimizes risk while maximizing measurability.
