@@ -22,8 +22,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 | Vendor | Integration Method | Use Case | Status |
 |--------|-------------------|----------|--------|
-| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSx for ONTAP, ML Feature Store | ✅ Implemented |
-| **Snowflake** | External Stage / External Table / Iceberg Table | Data sharing, ELT pipelines | ✅ Implemented |
+| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSx for ONTAP, ML Feature Store | ⚠️ Blocked (session policy) |
+| **Snowflake** | External Stage / External Table / Iceberg Table | Data sharing, ELT pipelines | ⚠️ Blocked (session policy) |
 
 ### Databricks
 
@@ -81,8 +81,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 | Service | Integration Method | Use Case | Status |
 |---------|-------------------|----------|--------|
-| **AWS Athena** | Direct S3 AP query | Serverless SQL | 🚧 Planned |
-| **AWS Glue** | S3 AP Crawler / ETL Job | Data catalog + ETL | 🚧 Planned |
+| **AWS Athena** | Direct S3 AP query | Serverless SQL | ✅ Security Verified |
+| **AWS Glue** | S3 AP Crawler / ETL Job | Data catalog + ETL | ✅ Functional Verified |
 | **AWS Lake Formation** | S3 AP registration | Governance, permissions | 🚧 Planned |
 | **Amazon Redshift Spectrum** | External Schema on S3 AP | DWH + Data Lake | 🚧 Planned |
 | **Amazon EMR (Spark)** | S3A Connector → S3 AP | Large-scale batch | 🚧 Planned |
@@ -142,7 +142,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 |--------|-------------------|----------|--------|
 | **Firebolt** | S3 External Table | High-speed OLAP | 📋 Research |
 | **ClickHouse** | S3 Table Function | Real-time analytics | 📋 Research |
-| **DuckDB** | S3 httpfs Extension | Edge/Lambda analytics | 🚧 Planned |
+| **DuckDB** | S3 httpfs Extension | Edge/Lambda analytics | ✅ Functional Verified |
 | **Apache Spark (Self-managed)** | S3A FileSystem | Custom Spark cluster | 📋 Research |
 | **Presto / PrestoDB** | Hive Connector + S3 | Distributed query | 📋 Research |
 
