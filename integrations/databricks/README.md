@@ -1,6 +1,6 @@
 # Databricks Integration
 
-🌐 **English** | [日本語](docs/ja/setup-guide.md)
+🌐 **English** | [日本語](docs/ja/README.md)
 
 > **Validation Status: Experimental**
 > - Unity Catalog External Location with FSx for ONTAP S3 Access Point did not succeed in the tested environment due to a session policy boundary.
