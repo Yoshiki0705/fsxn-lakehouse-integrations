@@ -1,0 +1,84 @@
+# Snowflake + FSx for ONTAP S3 AP Validation Evidence
+test_id: "SNOWFLAKE-S3AP-002"
+date_tested: "2026-05-24"
+tester: "Yoshiki Fujiwara"
+
+environment:
+  snowflake_edition: "Standard"
+  snowflake_region: "AWS_AP_NORTHEAST_1"
+  snowflake_warehouse: "COMPUTE_WH (X-Small)"
+  snowflake_role: "ACCOUNTADMIN"
+  aws_region: "ap-northeast-1"
+  fsx_file_system: "<FILE_SYSTEM_ID>"
+  fsx_ontap_version: "9.17.1"
+  svm: "<SVM_NAME>"
+  s3_access_point_network_origin: "Internet"
+  s3_ap_file_system_user: "UNIX (root)"
+
+dataset:
+  file_count: 33
+  total_bytes: 217839059
+  formats: ["parquet", "csv"]
+  largest_file: "sensor_data_large.parquet (108 MB)"
+
+validated_paths:
+  - operation: "LIST @stage"
+    status: "PASS"
+    duration_ms: 741
+  - operation: "SELECT @stage (Parquet)"
+    status: "PASS"
+    duration_ms: 3900
+    note: "3 rows returned from sensor_data.parquet (250 KB)"
+  - operation: "SELECT @stage (CSV)"
+    status: "PASS"
+    duration_ms: 1200
+    note: "3 rows from customers.csv"
+  - operation: "External Table CREATE + SELECT"
+    status: "PASS"
+    duration_ms: 3600
+    note: "3 rows from External Table"
+  - operation: "COPY INTO (Parquet → table)"
+    status: "PASS"
+    duration_ms: 4900
+    note: "sensor_data.parquet loaded to VARIANT column"
+  - operation: "Directory Table ENABLE + REFRESH"
+    status: "PASS"
+    duration_ms: 873
+    note: "33 files cataloged"
+  - operation: "DIRECTORY() query"
+    status: "PASS"
+    duration_ms: 260
+  - operation: "GET_PRESIGNED_URL"
+    status: "PASS (observed)"
+    duration_ms: 515
+    note: "URL generated; presign not officially supported in FSx S3 AP docs"
+  - operation: "BUILD_SCOPED_FILE_URL"
+    status: "PASS"
+    duration_ms: 43
+  - operation: "Governance Tags (CREATE + ALTER + GET)"
+    status: "PASS"
+    duration_ms: 178
+    note: "data_classification tag applied to External Table"
+  - operation: "Same role isolation test (AWS CLI)"
+    status: "PASS"
+    note: "ListObjectsV2, HeadObject, GetObject all succeed without session policy"
+
+not_validated:
+  - "COPY INTO unload (write-back to FSx S3 AP)"
+  - "Snowpipe auto-ingest (S3 Event Notifications not supported)"
+  - "AUTO_REFRESH (S3 Event Notifications not supported)"
+  - "Iceberg Table write-back (conditional writes not supported)"
+  - "Snowpark File Access (SnowflakeFile.open)"
+  - "Performance at scale (large file counts, concurrent queries)"
+  - "Private connectivity (PrivateLink)"
+
+key_finding: |
+  AWS_ACCESS_POINT_ARN stage parameter resolves the session policy ARN mismatch.
+  Without it: LIST works, SELECT fails (AccessDenied).
+  With it: LIST, SELECT, External Table, COPY INTO, Directory Table, Tags all work.
+
+configuration_required:
+  parameter: "AWS_ACCESS_POINT_ARN"
+  location: "CREATE STAGE statement"
+  documentation: "https://docs.snowflake.com/en/sql-reference/sql/create-stage"
+  value_format: "arn:aws:s3:<region>:<account>:accesspoint/<ap-name>"
