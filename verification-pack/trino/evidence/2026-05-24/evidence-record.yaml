@@ -1,0 +1,54 @@
+# Verification Evidence Record — Trino/Starburst
+test_id: "TRINO-001"
+date_tested: "2026-05-24"
+tester: "Yoshiki Fujiwara"
+
+# Result
+result: "EXPECTED TO WORK (with path-style S3A configuration)"
+verification_method: "Logical deduction from EMR Spark + DuckDB verification"
+
+# Reasoning
+reasoning: |
+  Trino uses the S3A FileSystem connector (same as Spark) for S3 access.
+  From EMR Spark verification:
+  - EMRFS (s3://) natively supports S3 AP aliases → works
+  - S3A (s3a://) does NOT work with AP aliases by default (Invalid base 16 character error)
+  
+  However, DuckDB httpfs with path-style access (s3_url_style='path') works correctly.
+  
+  Trino's Hive connector supports path-style access configuration:
+  - hive.s3.path-style-access=true
+  - hive.s3.endpoint=s3.ap-northeast-1.amazonaws.com
+  
+  With these settings, Trino SHOULD work for read operations on FSxN S3 AP.
+  Full verification requires Trino cluster deployment (Docker or EC2).
+
+# Configuration Required (for future full verification)
+trino_config:
+  catalog_properties: |
+    connector.name=hive
+    hive.metastore=glue
+    hive.metastore.glue.region=ap-northeast-1
+    hive.s3.path-style-access=true
+    hive.s3.endpoint=https://s3.ap-northeast-1.amazonaws.com
+    hive.s3.aws-access-key=${ENV:AWS_ACCESS_KEY_ID}
+    hive.s3.aws-secret-key=${ENV:AWS_SECRET_ACCESS_KEY}
+
+# Expected Behavior
+expected_behavior:
+  read_parquet: "EXPECTED TO WORK (with path-style S3A)"
+  read_csv: "EXPECTED TO WORK"
+  write_parquet: "EXPECTED TO WORK (flat file append)"
+  delta_write: "NOT SUPPORTED (same as all platforms)"
+  iceberg_write: "LIKELY FAILS (same S3FileIO issue as EMR)"
+
+# Prerequisite for Full Verification
+prerequisites:
+  - "Trino cluster (Docker or EC2)"
+  - "Glue Catalog access (IAM credentials)"
+  - "S3A path-style configuration"
+  - "Estimated effort: 2-3 hours"
+  - "Estimated cost: $0 (Docker local) or ~$5 (EC2)"
+
+# Priority
+priority: "Tier 2 — execute when customer demand for vendor-neutral SQL arises"
