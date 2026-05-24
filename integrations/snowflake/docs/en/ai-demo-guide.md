@@ -23,11 +23,11 @@ SELECT SNOWFLAKE.CORTEX.PARSE_DOCUMENT(
 ) AS ocr_result;
 ```
 
-**Result**: Structured text extracted from the image (6.0s).
+**Result**: Structured text extracted from the image (~8s).
 
 ![PARSE_DOCUMENT OCR extracts text from image on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-08-parse-document-ocr.png)
 
-*PARSE_DOCUMENT successfully extracts text from an invoice image stored on FSx for ONTAP via S3 Access Point (6.0s).*
+*PARSE_DOCUMENT successfully extracts text from an invoice image stored on FSx for ONTAP via S3 Access Point. The result includes structured fields such as invoice number, customer name, and amount.*
 
 **Manufacturing use case**: Digitize paper-based inspection reports stored on NFS, making them searchable and analyzable without manual data entry.
 
@@ -96,7 +96,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 
 | Capability | Status | Duration | Use Case |
 |---|:---:|---|---|
-| PARSE_DOCUMENT (OCR) | ✅ Verified | 6.0s | Invoice/report text extraction |
+| PARSE_DOCUMENT (OCR) | ✅ Verified | ~8s | Invoice/report text extraction |
 | CORTEX.SUMMARIZE | ✅ Verified | 3.3s | Sensor data / document summarization |
 | Directory Table + URLs | ✅ Verified | 1.3s | Unstructured data catalog |
 | AI_COMPLETE (Vision) | ⚠️ TBD | — | Image defect detection, yield analysis |

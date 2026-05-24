@@ -23,11 +23,11 @@ SELECT SNOWFLAKE.CORTEX.PARSE_DOCUMENT(
 ) AS ocr_result;
 ```
 
-**結果**: 画像から構造化テキストを抽出（6.0秒）。
+**結果**: 画像から構造化テキストを抽出（約8秒）。
 
 ![PARSE_DOCUMENT OCR が FSx S3 AP 上の画像からテキストを抽出](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-08-parse-document-ocr.png)
 
-*PARSE_DOCUMENT が FSx for ONTAP S3 Access Point 経由で保存された請求書画像からテキストを抽出（6.0秒）。*
+*PARSE_DOCUMENT が FSx for ONTAP S3 Access Point 経由で保存された請求書画像からテキストを抽出。請求書番号、顧客名、金額などの構造化フィールドを含む結果を返却。*
 
 **製造業ユースケース**: NFS に保存された紙ベースの検査報告書をデジタル化し、手動データ入力なしで検索・分析可能に。
 
@@ -96,7 +96,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 
 | 機能 | ステータス | 所要時間 | ユースケース |
 |---|:---:|---|---|
-| PARSE_DOCUMENT (OCR) | ✅ 検証済み | 6.0秒 | 請求書/報告書テキスト抽出 |
+| PARSE_DOCUMENT (OCR) | ✅ 検証済み | 約8秒 | 請求書/報告書テキスト抽出 |
 | CORTEX.SUMMARIZE | ✅ 検証済み | 3.3秒 | センサーデータ/ドキュメント要約 |
 | Directory Table + URLs | ✅ 検証済み | 1.3秒 | 非構造化データカタログ |
 | AI_COMPLETE (Vision) | ⚠️ 検証中 | — | 画像欠陥検出、歩留まり分析 |
