@@ -1,3 +1,8 @@
+# Experimental validation notebook
+# This notebook documents observed behavior for FSx for ONTAP S3 Access Point access from Databricks.
+# It is not a production reference architecture.
+# Do not use Instance Profile + boto3 as a Unity Catalog governance replacement.
+
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # 09 - ML Embeddings on FSxN (Feature Engineering)
