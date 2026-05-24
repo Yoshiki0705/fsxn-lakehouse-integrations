@@ -1,6 +1,6 @@
-# Databricks Integration / Databricks 統合
+# Databricks Integration
 
-🌐 [日本語ドキュメント](docs/ja/setup-guide.md) | [English Documentation](docs/en/setup-guide.md)
+🌐 **English** | [日本語](docs/ja/setup-guide.md)
 
 > **Validation Status: Experimental**
 > - Unity Catalog External Location with FSx for ONTAP S3 Access Point did not succeed in the tested environment due to a session policy boundary.
@@ -86,68 +86,68 @@ s3://<s3ap-alias>/gold/      # Business-ready aggregates
 
 | File | Description |
 |------|-------------|
-| `template.yaml` | CloudFormation: S3 AP + IAM Role for Databricks (UC 統合) |
-| `customer-vpc-network.yaml` | CloudFormation: Customer-managed VPC ネットワーク (NFS 検証用) |
-| `vpc-peering.yaml` | CloudFormation: VPC Peering (Managed VPC ↔ FSx VPC, 参考用) |
-| `deploy.sh` | S3 AP + UC 統合のデプロイスクリプト |
-| `deploy-customer-vpc.sh` | Customer-managed VPC のデプロイ/削除スクリプト |
-| `params.example.json` | CloudFormation パラメータ例 |
-| `terraform/` | Databricks Unity Catalog リソース (Storage Credential, External Location) |
-| `notebooks/01-09` | Databricks ノートブック (セットアップ〜ML) |
-| `docs/ja/` | 日本語ドキュメント |
-| `docs/en/` | 英語ドキュメント |
-| `tests/` | 統合テスト |
+| `template.yaml` | CloudFormation: S3 AP + IAM Role for Databricks (UC integration) |
+| `customer-vpc-network.yaml` | CloudFormation: Customer-managed VPC network (for NFS verification) |
+| `vpc-peering.yaml` | CloudFormation: VPC Peering (Managed VPC ↔ FSx VPC, reference) |
+| `deploy.sh` | S3 AP + UC integration deployment script |
+| `deploy-customer-vpc.sh` | Customer-managed VPC deploy/delete script |
+| `params.example.json` | CloudFormation parameter example |
+| `terraform/` | Databricks Unity Catalog resources (Storage Credential, External Location) |
+| `notebooks/01-09` | Databricks notebooks (setup through ML) |
+| `docs/ja/` | Japanese documentation |
+| `docs/en/` | English documentation |
+| `tests/` | Integration tests |
 
-## Infrastructure as Code (IaC) 構成
+## Infrastructure as Code (IaC) Structure
 
-### 1. S3 Access Point 統合 (`template.yaml` + `terraform/`)
+### 1. S3 Access Point Integration (`template.yaml` + `terraform/`)
 
 ```bash
-# Phase 1: AWS リソース (S3 AP, IAM Role)
-cp params.example.json params.json  # パラメータ編集
+# Phase 1: AWS Resources (S3 AP, IAM Role)
+cp params.example.json params.json  # Edit parameters
 ./deploy.sh
 
-# Phase 2: Databricks リソース (Storage Credential, External Location)
+# Phase 2: Databricks Resources (Storage Credential, External Location)
 cd terraform/
-cp terraform.tfvars.example terraform.tfvars  # パラメータ編集
+cp terraform.tfvars.example terraform.tfvars  # Edit parameters
 terraform init && terraform apply
 ```
 
 ### 2. Customer-managed VPC (`customer-vpc-network.yaml`)
 
-FSx for ONTAP と同一 VPC に Databricks ネットワークを構築:
+Build Databricks networking in the same VPC as FSx for ONTAP:
 
 ```bash
-# デプロイ (NAT Gateway 作成 → ~$45/month)
+# Deploy (creates NAT Gateway → ~$45/month)
 ./deploy-customer-vpc.sh deploy
 
-# 状態確認
+# Check status
 ./deploy-customer-vpc.sh status
 
-# 削除 (コスト削減)
+# Delete (cost reduction)
 ./deploy-customer-vpc.sh delete
 ```
 
-デプロイ後の手動ステップ:
-1. Databricks Account Console → Cloud Resources → Networks で登録
-2. 新しい Workspace を作成 (Network Configuration 指定)
-3. Dedicated (Single user) クラスタを作成
+Post-deployment manual steps:
+1. Register in Databricks Account Console → Cloud Resources → Networks
+2. Create a new Workspace (specify Network Configuration)
+3. Create a Dedicated (Single user) cluster
 
-### 3. VPC Peering (`vpc-peering.yaml`, 参考用)
+### 3. VPC Peering (`vpc-peering.yaml`, reference)
 
-Managed VPC から FSx VPC への接続。NFS mount は seccomp でブロックされるため、
-ONTAP REST API アクセスや将来の再検証用に保持。
+Connection from Managed VPC to FSx VPC. NFS mount is blocked by seccomp,
+so retained for ONTAP REST API access and future re-verification.
 
 ## Verification Status (2026-05-17)
 
 > **Note**: Instance Profile is classified as a [legacy data access pattern](https://docs.databricks.com/en/admin/sql/data-access-configuration.html) by Databricks. Unity Catalog external locations are the recommended governance model. The Instance Profile path documented below bypasses Unity Catalog governance and should be treated as a controlled PoC only.
 
-| アプローチ | 結果 | 備考 |
-|-----------|------|------|
-| S3 AP + Unity Catalog | ❌ | Session policy が S3 AP ARN 非対応 |
-| S3 AP + boto3 (Managed VPC) | ❌ | IMDS ブロック |
-| NFS mount (Managed VPC) | ❌ | Egress 制限 + seccomp |
-| NFS mount (Customer VPC) | ❌ | seccomp フィルターが NFS mount をブロック |
-| NFS RPC 直接 (Customer VPC) | ✅ | Python RPC で全操作成功 |
-| ONTAP REST API (Customer VPC) | ✅ | 認証・設定変更可能 |
-| Instance Profile + boto3 (Customer VPC, Dedicated) | ✅ | Driver-node で S3 AP 読み取り成功。UC ガバナンスをバイパスするため PoC 限定 |
+| Approach | Result | Notes |
+|----------|--------|-------|
+| S3 AP + Unity Catalog | ❌ | Session policy does not support S3 AP ARN |
+| S3 AP + boto3 (Managed VPC) | ❌ | IMDS blocked |
+| NFS mount (Managed VPC) | ❌ | Egress restriction + seccomp |
+| NFS mount (Customer VPC) | ❌ | seccomp filter blocks NFS mount |
+| NFS RPC direct (Customer VPC) | ✅ | All operations succeed via Python RPC |
+| ONTAP REST API (Customer VPC) | ✅ | Authentication and config changes possible |
+| Instance Profile + boto3 (Customer VPC, Dedicated) | ✅ | S3 AP read from driver-node succeeded. Bypasses UC governance — PoC only |

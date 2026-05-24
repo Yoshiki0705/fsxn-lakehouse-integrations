@@ -1,19 +1,13 @@
-# Apache Iceberg Integration / Apache Iceberg 統合
+# Apache Iceberg Integration
 
-🌐 [日本語](#日本語) | [English](#english)
+🌐 **English** | [日本語](docs/ja/README.md)
 
----
-
-<a id="english"></a>
-
-## English
-
-### Overview
+## Overview
 
 Vendor-neutral Apache Iceberg table management on Amazon FSx for NetApp ONTAP (FSx for ONTAP).
 Uses REST Catalog for metadata management, accessible from any Iceberg-compatible engine.
 
-### Architecture
+## Architecture
 
 ```
 Any Engine (Spark/Trino/Flink/Databricks/Snowflake)
@@ -23,9 +17,9 @@ Any Engine (Spark/Trino/Flink/Databricks/Snowflake)
             └── S3 Access Point ──→ FSx for ONTAP Volume (Parquet data + Iceberg metadata)
 ```
 
-### Status: 🚧 Planned
+## Status: 🚧 Planned
 
-### Planned Content
+## Planned Content
 
 - [ ] CloudFormation template (REST Catalog on Lambda/ECS)
 - [ ] Iceberg REST Catalog configuration
@@ -34,7 +28,7 @@ Any Engine (Spark/Trino/Flink/Databricks/Snowflake)
 - [ ] Documentation (JA/EN)
 - [ ] E2E verification tasks
 
-### ONTAP Value for Iceberg
+## ONTAP Value for Iceberg
 
 | Feature | Benefit |
 |---------|---------|
@@ -42,35 +36,3 @@ Any Engine (Spark/Trino/Flink/Databricks/Snowflake)
 | FlexClone | Test schema/partition evolution on clone before production |
 | Deduplication | Iceberg compaction creates duplicate blocks → dedup saves space |
 | FabricPool | Old snapshots/partitions auto-tier to S3 |
-
----
-
-<a id="日本語"></a>
-
-## 日本語
-
-### 概要
-
-FSx for ONTAP 上でのベンダー中立な Apache Iceberg テーブル管理です。
-REST Catalog でメタデータを管理し、Iceberg 互換の任意のエンジンからアクセスできます。
-
-### アーキテクチャ
-
-```
-任意のエンジン (Spark/Trino/Flink/Databricks/Snowflake)
-    │
-    └── REST Catalog (Lambda/ECS)
-            │
-            └── S3 Access Point ──→ FSx for ONTAP Volume (Parquet データ + Iceberg メタデータ)
-```
-
-### ステータス: 🚧 計画中
-
-### 計画コンテンツ
-
-- [ ] CloudFormation テンプレート（Lambda/ECS 上の REST Catalog）
-- [ ] Iceberg REST Catalog 設定
-- [ ] テーブル作成サンプルスクリプト
-- [ ] マルチエンジンアクセス例（Spark, Trino, Databricks, Snowflake）
-- [ ] ドキュメント（日英）
-- [ ] E2E 検証タスク

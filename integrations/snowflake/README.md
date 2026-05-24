@@ -1,6 +1,6 @@
-# Snowflake Integration / Snowflake 統合
+# Snowflake Integration
 
-🌐 [日本語ドキュメント](docs/ja/setup-guide.md) | [English Documentation](docs/en/setup-guide.md)
+🌐 **English** | [日本語](docs/ja/setup-guide.md)
 
 > **Validation Status: ✅ Verified (with `AWS_ACCESS_POINT_ARN`)**
 >
@@ -26,8 +26,8 @@
 
 ## Overview
 
-Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Point を Snowflake の
-External Stage として統合し、External Table / Iceberg Table のストレージレイヤーとして使用するパターンです。
+Integrate Amazon FSx for NetApp ONTAP (FSx for ONTAP) S3 Access Points with Snowflake
+External Stages, using them as the storage layer for External Tables and Iceberg Tables.
 
 ## Architecture
 
@@ -54,24 +54,24 @@ External Stage として統合し、External Table / Iceberg Table のストレ�
 ```
 
 **Key Architecture Points:**
-- FSx for ONTAP S3 Access Point は `aws fsx create-and-attach-s3-access-point` で作成（CloudFormation `AWS::S3::AccessPoint` ではない）
-- Network Origin は **Internet**（Snowflake は SaaS のため VPC-scoped は使用不可）
-- IAM Role の信頼ポリシーは二段階セットアップ（Snowflake の AWS Account ID + External ID）
+- FSx for ONTAP S3 Access Point is created via `aws fsx create-and-attach-s3-access-point` (not CloudFormation `AWS::S3::AccessPoint`)
+- Network Origin is **Internet** (Snowflake is SaaS, so VPC-scoped is not usable)
+- IAM Role trust policy requires two-phase setup (Snowflake AWS Account ID + External ID)
 
 ## FSx for ONTAP S3 Access Point — Supported S3 Operations
 
 | Operation | Supported | Notes |
 |-----------|-----------|-------|
-| ListObjectsV2 | ✅ | 高レイテンシ（数十秒〜数分） |
+| ListObjectsV2 | ✅ | High latency (tens of seconds to minutes) |
 | GetObject | ✅ | |
-| PutObject | ✅ | 最大 5GB |
+| PutObject | ✅ | Max 5GB |
 | DeleteObject | ✅ | |
 | HeadObject | ✅ | |
 | **Pre-signed URL** | ✅ | AWS docs say unsupported, but works in practice |
-| S3 Event Notifications | ❌ | FPolicy で代替 |
+| S3 Event Notifications | ❌ | Use FPolicy as alternative |
 | Object Versioning | ❌ | |
 
-> ℹ️ **注記**: AWS ドキュメントでは Pre-signed URL は「非サポート」と記載されていますが、テストにより `GET_PRESIGNED_URL()` は FSx for ONTAP S3 AP で正常に動作することを確認しています。
+> ℹ️ **Note**: AWS documentation states Pre-signed URLs are "Not supported," but testing confirms `GET_PRESIGNED_URL()` works correctly with FSx for ONTAP S3 AP.
 
 ## Data Format Support
 
@@ -127,7 +127,7 @@ cp params.example.json params.json  # Edit: set S3AccessPointArn
 
 ## Known Limitations
 
-1. **FSx for ONTAP S3 AP レイテンシ**: ListObjects は数十秒〜数分かかる場合がある
+1. **FSx for ONTAP S3 AP latency**: ListObjects can take tens of seconds to minutes
 2. **Pre-signed URL**: AWS docs say "Not supported" but works in practice with `GET_PRESIGNED_URL()`
-3. **S3 Event Notifications 非サポート**: Snowpipe の直接トリガー不可（FPolicy で代替）
-4. **最大アップロードサイズ**: 5GB（Multipart Upload 対応）
+3. **S3 Event Notifications not supported**: Direct Snowpipe trigger not possible (use FPolicy as alternative)
+4. **Max upload size**: 5GB (Multipart Upload supported)
