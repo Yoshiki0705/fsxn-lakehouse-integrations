@@ -2,20 +2,6 @@
 
 🌐 [日本語](docs/ja/architecture.md) | [English](docs/en/architecture.md)
 
-> **Validation Status: Experimental**
->
-> This repository documents observed validation behavior for FSx for ONTAP S3 Access Points across analytics, AI/ML, and lakehouse access patterns.
-> It is not a production integration pattern, Marketplace listing, or certified partner solution.
-
-## Current Validation Summary
-
-| Category | Paths |
-|---|---|
-| Verified in this series | Athena, Glue, EMR Spark, Redshift Spectrum, DuckDB Lambda, Trino |
-| Candidate / AWS-documented | Bedrock KB, Lake Formation, QuickSight via Athena |
-| Blocked in validation | Databricks Unity Catalog, Snowflake External Stage |
-| Not suitable for this path | Delta / Iceberg / Hudi transactional write paths |
-
 > **`fsxn-lakehouse-integrations` is a validation framework for testing how different analytics and lakehouse engines interact with FSx for ONTAP S3 Access Points.** Each integration directory contains reproducible evidence, test templates, and observed boundary documentation — not production-ready connectors.
 
 ---
@@ -73,19 +59,14 @@ Lakehouse Platform → (S3 API) → S3 Access Point → FSx for ONTAP Volume
 - Register as External Table / External Stage
 - Query Parquet, CSV, JSON, ORC files directly
 
-### Pattern B: Transactional Table Writes
-
-> **Status**: Not suitable in this validation for direct FSx S3 AP table-log storage.
-> Use native S3 for Delta / Iceberg / Hudi table write paths.
-> Use FSx S3 AP as read-only source or flat-file write-back path where validated.
+### Pattern B: Read-Write Managed Tables
 
 ```
-Lakehouse Platform ←→ Native S3 (table log + data files)
-                  ←── FSx for ONTAP S3 AP (read-only source data)
+Lakehouse Platform ←→ S3 Access Point ←→ FSx for ONTAP Volume
 ```
 
-- Transactional table formats require atomic rename / conditional writes not available on S3 AP
-- FSx S3 AP is suitable as a **source** for ETL, not as table-log storage
+- Use as storage layer for Iceberg / Delta / Hudi tables
+- ONTAP Snapshot for point-in-time table recovery
 
 ### Pattern C: ETL Pipeline (Medallion Architecture)
 
@@ -110,19 +91,21 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 
 | Platform | Verification Status | Pattern | Notes |
 |----------|:---:|---------|-------|
-| [AWS Athena](integrations/athena/) | ✅ Verified | Glue Data Catalog + Serverless | Read-only. [Benchmark: 54.8 MB/s peak, 5M rows in 2s](verification-pack/athena-parquet-read/) |
-| [AWS Glue ETL](integrations/glue/) | ✅ Verified | Crawler + ETL + Medallion | Read + Write-back (Parquet). [64s for 10K row ETL](verification-pack/glue-etl/) |
-| [EMR + Spark](integrations/emr-spark/) | ✅ Verified | Spark SQL | Read + Write-back verified. [10K rows in 16s total (EMR Serverless)](verification-pack/emr-spark/) |
-| [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
-| [DuckDB](integrations/duckdb/) | ✅ Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
-| [Trino / Starburst](integrations/trino-starburst/) | ✅ Read Verified | Hive Connector | Read verified. [5M rows in 1.5s (Docker single-node)](integrations/trino-starburst/) |
-| [Databricks](integrations/databricks/) | ⚠️ Blocked in validation | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
-| [Snowflake](integrations/snowflake/) | ⚠️ Blocked in validation | External Stage | LIST succeeds, GetObject denied. Session policy issue. Support case filed. |
-| [Delta Lake OSS](integrations/delta-lake-oss/) | ❌ Write not suitable | delta-rs + Spark | Read works. Write fails (conditional writes not supported). |
-| [Apache Iceberg](integrations/iceberg/) | ❌ Write not suitable | REST Catalog | Write fails: S3FileIO cannot handle AP alias for metadata. |
+| [AWS Athena](integrations/athena/) | ✅ Security Verified | Glue Data Catalog + Serverless | Read-only. [Benchmark: 54.8 MB/s peak, 5M rows in 2s](verification-pack/athena-parquet-read/) |
+| [AWS Glue ETL](integrations/glue/) | ✅ Functional Verified | Crawler + ETL + Medallion | Read + Write-back (Parquet). [64s for 10K row ETL](verification-pack/glue-etl/) |
+| [Delta Lake OSS](integrations/delta-lake-oss/) | ✅ Read Verified / ❌ Write | delta-rs + Spark | Read works. Write returns 501 (conditional writes not supported). |
+| [Databricks](integrations/databricks/) | ⚠️ Blocked | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
+| [Snowflake](integrations/snowflake/) | ⚠️ Blocked (GetObject) | External Stage + Iceberg | LIST succeeds, GetObject denied. Session policy issue. Support case filed. |
+| [Apache Iceberg](integrations/iceberg/) | ⚠️ Read Experimental / ❌ Write Failed | REST Catalog (vendor-neutral) | Write fails: S3FileIO cannot handle AP alias for metadata. Read of pre-existing tables expected to work. |
+| [EMR + Spark](integrations/emr-spark/) | ✅ Functional Verified | Spark SQL + Iceberg | Read + Write-back verified. [10K rows in 16s total (EMR Serverless)](verification-pack/emr-spark/) |
+| [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Functional Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
+| [DuckDB](integrations/duckdb/) | ✅ Functional Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
 | [Dremio](integrations/dremio/) | 🔲 Planned | Arctic Catalog | — |
+| [Trino / Starburst](integrations/trino-starburst/) | 🔲 Planned | Hive Connector | — |
+| [BigQuery Omni](integrations/bigquery-omni/) | 🔲 Planned | BigLake | Requires GCP environment |
+| [Microsoft Fabric](integrations/microsoft-fabric/) | 🔲 Planned | OneLake Shortcut | Requires Azure environment |
 
-> **Key finding**: AWS-native services and open-source engines with path-style S3 access work correctly. Third-party platforms (Snowflake, Databricks) are blocked by session policies that do not recognize S3 Access Point ARN format. Transactional table format writes (Delta, Iceberg, Hudi) are not suitable for this path. See [Compatibility Matrix](docs/en/compatibility-matrix.md) for details.
+> **Key finding**: AWS-native services (Athena, Glue, EMR, Bedrock) work correctly. Third-party platforms (Snowflake, Databricks) are blocked by session policies that do not recognize S3 Access Point ARN format. See [Compatibility Matrix](docs/en/compatibility-matrix.md) for details.
 
 ---
 
@@ -132,7 +115,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 |----------|----------|-------------|--------------------------|
 | [Financial Services](use-cases/financial-data-mesh/) | Data Mesh | Pattern D (Data Sharing) | Segregation of duties, per-domain access points, audit retention (7+ years), DR/BCP |
 | [Manufacturing](use-cases/manufacturing-iot-lake/) | IoT Data Lake | Pattern C (ETL Pipeline) | OT/IT boundary separation, edge ingestion via NFS, long-term retention (FabricPool) |
-| [Healthcare](use-cases/healthcare-research/) | Research Data | Pattern A (Read-Only) + Staging | De-identification pipeline, VPC-origin AP, read-only access, synthetic test data only, BAA |
+| [Healthcare](use-cases/healthcare-research/) | Research Data | Pattern B (Managed Tables) | De-identification pipeline, VPC-origin AP, read-only access, synthetic test data only, BAA |
 | [Media](use-cases/media-asset-analytics/) | Asset Analytics | Pattern A (Read-Only) | Large file handling (5 GB upload limit), CloudFront integration for streaming |
 
 ---
@@ -231,26 +214,6 @@ fsxn-lakehouse-integrations/
 | Recovery Semantics | [リカバリセマンティクス](docs/ja/recovery-semantics.md) | [Recovery Semantics](docs/en/recovery-semantics.md) |
 | Governance & Compliance | [ガバナンスとコンプライアンス](docs/ja/governance-and-compliance.md) | [Governance & Compliance](docs/en/governance-and-compliance.md) |
 | KPI & Validation | [KPI と PoC 検証](docs/ja/kpi-and-validation.md) | [KPI & Validation](docs/en/kpi-and-validation.md) |
-| S3 AP Networking | [ネットワーキング考慮事項](docs/ja/fsxn-s3ap-networking.md) | [Networking Considerations](docs/en/fsxn-s3ap-networking.md) |
-
----
-
-## Troubleshooting / トラブルシューティング
-
-### S3 AP ReadTimeout on AD-Joined SVM
-
-If S3 Access Points return ReadTimeout (not AccessDenied), check the SVM's DNS configuration:
-
-```bash
-# ONTAP CLI
-vserver services dns check -vserver <SVM_NAME>
-```
-
-If DNS servers show "down" or "Operation timed out," the SVM has unreachable DNS servers configured (typically for an AD domain that no longer exists). This blocks S3 AP request processing because ONTAP's name-service stack attempts DNS resolution for user-mapping on AD-joined SVMs.
-
-**Fix**: Remove orphaned CIFS/DNS configuration or point DNS to a reachable server. See [Networking Considerations — Section 7](docs/en/fsxn-s3ap-networking.md) for full details.
-
-**Key insight**: This only affects SVMs with CIFS/AD domain membership. NFS-only SVMs and CIFS Workgroup-mode SVMs are not affected.
 
 ---
 

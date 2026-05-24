@@ -685,6 +685,36 @@ R = Responsible、A = Accountable、C = Consulted、I = Informed
 
 ---
 
+## 初回オファー: FSx S3 AP アナリティクス準備アセスメント
+
+**期間**: 2〜3 週間  
+**対象**: 既存の NAS/ONTAP データを持ち、データ移行なしでアナリティクスや AI を検討したい顧客
+
+**成果物:**
+- データセットディスカバリー（ファイルタイプ、サイズ、アクセスパターン）
+- エンジン適合性評価（Athena、Databricks、EMR、DuckDB Lambda、Snowflake）
+- ガバナンス影響サマリー（IAM、ファイルシステム権限、監査要件）
+- 読み取り専用バリデーション（顧客データでの動作確認クエリ）
+- ネガティブテスト証跡（未認可アクセスの拒否確認）
+- アーキテクチャ推奨（Good / Better / Best ティア）
+
+**価格**: $15K〜25K（アセスメント + PoC）
+
+---
+
+## Marketplace オファー境界
+
+このバリデーションパッケージ（[fsxn-lakehouse-integrations](https://github.com/Yoshiki0705/fsxn-lakehouse-integrations)）はパートナー提供アセスメントの参考資料として使用できますが、**それ自体は Marketplace オファーではありません**。
+
+AWS Marketplace または CPPO 向けのパッケージ化候補:
+- FSx for ONTAP S3 AP アナリティクスアセスメント（パートナー提供サービス）
+- Lakehouse エンジン適合性ワークショップ（1 日エンゲージメント）
+- ガバナンスおよび証跡パッケージ（規制業界向け）
+
+Marketplace リスティングを作成するには、パートナーが別途スコープ、価格、デリバリー方法論を定義してパッケージ化する必要があります。
+
+---
+
 ## 参考資料
 
 - [S3 アクセスポイント経由でのデータアクセス](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)
