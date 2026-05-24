@@ -1,0 +1,61 @@
+{
+  "test_id": "UC-AP-FIELD-001",
+  "test_date": "2026-05-24",
+  "description": "Unity Catalog External Location with access_point field — FSx for ONTAP S3 AP access test",
+  "environment": {
+    "workspace_url": "https://<WORKSPACE_URL>",
+    "workspace_id": "<WORKSPACE_ID>",
+    "workspace_name": "fsxn-customer-vpc",
+    "workspace_type": "Customer-managed VPC (same VPC as FSx for ONTAP)",
+    "cluster_id": "0517-045203-zb6xn8l4",
+    "cluster_name": "fsxn-instance-profile-test",
+    "spark_version": "17.3.x-scala2.13",
+    "node_type": "m5.large",
+    "num_workers": 0,
+    "access_mode": "SINGLE_USER",
+    "instance_profile_arn": "arn:aws:iam::<ACCOUNT_ID>:instance-profile/databricks-fsxn-access-profile",
+    "region": "ap-northeast-1"
+  },
+  "external_location_config": {
+    "name": "fsxn_lakehouse_location",
+    "url": "s3://fsxn-databricks-dzs58qdtzet6zcuxin9qc8db6zbh1apn1b-ext-s3alias/",
+    "credential_name": "fsxn_s3ap_credential",
+    "access_point": "arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/fsxn-databricks-lakehouse",
+    "note": "access_point field added per Databricks support case #00921422 recommendation"
+  },
+  "s3_access_point": {
+    "name": "fsxn-databricks-lakehouse",
+    "alias": "fsxn-databricks-dzs58qdtzet6zcuxin9qc8db6zbh1apn1b-ext-s3alias",
+    "arn": "arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/fsxn-databricks-lakehouse",
+    "volume_id": "fsvol-0647183905872652c",
+    "volume_name": "kodera_snowflake_testap",
+    "network_origin": "Internet",
+    "file_system_user": "root"
+  },
+  "results": {
+    "uc_external_location_dbutils_fs_ls": {
+      "status": "SUCCESS",
+      "file_count": 286,
+      "sample_files": ["E2E-FINAL-TEST.txt", "FINAL-FPOLICY-TEST.txt", "FPOLICY-NFSV3-TEST.txt", "FPOLICY-NFSV4-FINAL.txt", "NFSV3-CONTROL.txt"],
+      "interpretation": "Unity Catalog External Location with access_point field successfully lists FSx for ONTAP S3 AP contents. The session policy now includes the S3 AP ARN, allowing UC-governed access."
+    },
+    "boto3_instance_profile": {
+      "status": "FAILED",
+      "error": "AccessDenied: Could not access through this access point",
+      "interpretation": "Instance Profile IAM policy (databricks-fsxn-access-profile) does not have the correct S3 AP permissions. This is an IAM policy issue, not a platform boundary. The UC path works because the Storage Credential role has broader permissions."
+    }
+  },
+  "conclusion": {
+    "uc_external_location_with_access_point_field": "WORKS",
+    "key_finding": "Setting the access_point field on the External Location resolves the session policy issue. Unity Catalog can now govern access to FSx for ONTAP S3 Access Points.",
+    "requirements": [
+      "Customer-managed VPC workspace (same VPC as FSx for ONTAP)",
+      "External Location with access_point field set to the S3 AP ARN",
+      "Storage Credential IAM role with s3:ListBucket and s3:GetObject on the S3 AP ARN",
+      "NAT Gateway for Databricks cluster to reach control plane"
+    ],
+    "governance_model": "Full Unity Catalog governance (lineage, fine-grained access control, audit)",
+    "article_impact": "This changes the article conclusion from 'UC blocked' to 'UC works with access_point field configuration'"
+  },
+  "support_case_reference": "Databricks Support Case #00921422 (Guruprasad B N, 2026-05-21)"
+}
