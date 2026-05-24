@@ -34,3 +34,22 @@
 - External location configuration (URL, credential reference)
 - S3 AP ARN and alias
 - Control test success evidence
+
+
+## Support Checklist
+
+- [ ] Workspace ID
+- [ ] Workspace deployment type (managed / customer-managed VPC)
+- [ ] Cloud region
+- [ ] DBR version
+- [ ] Cluster access mode (Dedicated / Standard / No Isolation)
+- [ ] Instance profile ARN
+- [ ] Unity Catalog credential name
+- [ ] External location URL
+- [ ] Full AccessDenied error message
+- [ ] S3 AP ARN and alias
+- [ ] Network test output (TCP 2049, 111, 635)
+- [ ] strace output (mount syscall)
+- [ ] seccomp output (/proc/self/status)
+- [ ] Expected behavior
+- [ ] Actual behavior
