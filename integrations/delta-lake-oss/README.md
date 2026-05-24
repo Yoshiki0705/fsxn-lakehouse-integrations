@@ -1,20 +1,14 @@
-# Delta Lake OSS Integration / Delta Lake OSS 統合
+# Delta Lake OSS Integration
 
-🌐 [日本語](#日本語) | [English](#english)
+🌐 **English** | [日本語](docs/ja/README.md)
 
----
-
-<a id="english"></a>
-
-## English
-
-### Overview
+## Overview
 
 Open-source Delta Lake (delta-spark + delta-rs) on FSx for ONTAP via S3 Access Points.
 ACID transactions, time travel, OPTIMIZE/VACUUM on enterprise NAS storage
 without Databricks Runtime.
 
-### Architecture
+## Architecture
 
 ```
 Apache Spark (EMR / Self-managed)
@@ -29,7 +23,7 @@ Python (Local / Lambda)
             └── S3 Access Point ──→ FSx for ONTAP Volume
 ```
 
-### Key Features
+## Key Features
 
 - **delta-spark**: Full CRUD (INSERT, UPDATE, DELETE, MERGE), OPTIMIZE, VACUUM
 - **delta-rs**: Spark-free Python access (read/write Delta tables)
@@ -37,9 +31,9 @@ Python (Local / Lambda)
 - **Cross-compatibility**: Tables created by Spark readable by delta-rs and vice versa
 - **VPC-scoped**: Network isolation for EMR/EC2 workloads
 
-### Status: 🚧 Implementation In Progress
+## Status: 🚧 Implementation In Progress
 
-### Quick Start
+## Quick Start
 
 ```bash
 # delta-rs (no Spark needed)
@@ -52,7 +46,7 @@ spark-submit --packages io.delta:delta-spark_2.12:3.1.0 \
     notebooks/01_delta_crud.py --s3-ap-alias <alias>
 ```
 
-### Directory Structure
+## Directory Structure
 
 ```
 integrations/delta-lake-oss/
@@ -67,25 +61,3 @@ integrations/delta-lake-oss/
 │   └── 05_delta_rs.py                 ← Python-native delta-rs access
 └── tests/results/                     ← Execution metrics
 ```
-
----
-
-<a id="日本語"></a>
-
-## 日本語
-
-### 概要
-
-オープンソース Delta Lake (delta-spark + delta-rs) を FSx for ONTAP S3 AP 経由で使用。
-Databricks Runtime なしで ACID トランザクション、タイムトラベル、
-OPTIMIZE/VACUUM をエンタープライズ NAS ストレージ上で実現。
-
-### 主な特徴
-
-- **delta-spark**: 完全な CRUD + OPTIMIZE + VACUUM
-- **delta-rs**: Spark 不要の Python ネイティブアクセス
-- **タイムトラベル**: 過去バージョンクエリ、RESTORE TABLE
-- **相互互換性**: Spark 作成テーブルを delta-rs で読み取り可能（逆も可）
-- **VPC スコープ**: EMR/EC2 ワークロードのネットワーク分離
-
-### ステータス: 🚧 実装中

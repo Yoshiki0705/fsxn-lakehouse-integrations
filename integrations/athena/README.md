@@ -1,19 +1,13 @@
-# AWS Athena Integration / AWS Athena 統合
+# AWS Athena Integration
 
-🌐 [日本語](#日本語) | [English](#english)
+🌐 **English** | [日本語](docs/ja/README.md)
 
----
-
-<a id="english"></a>
-
-## English
-
-### Overview
+## Overview
 
 Query data on Amazon FSx for NetApp ONTAP (FSx for ONTAP) directly from Amazon Athena using
 Glue Data Catalog and S3 Access Points. Serverless, pay-per-query analytics.
 
-### Architecture
+## Architecture
 
 ```
 Athena (Serverless SQL)
@@ -29,19 +23,19 @@ Athena (Serverless SQL)
                                                         └── gold/ (CTAS output)
 ```
 
-### Important: Network Origin
+## Important: Network Origin
 
 Athena requires S3 Access Points with **internet network origin**.
 VPC-only access points will NOT work with Athena.
 
 Reference: [AWS Tutorial - Query files with Athena](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-query-data-with-athena.html)
 
-### Status: ✅ Security Verified (2026-05-23)
+## Status: ✅ Security Verified (2026-05-23)
 
 Benchmark: 54.8 MB/s peak throughput, 5M rows queried in 2.2s (103 MB Parquet, 128 MB/s provisioned).
 9/9 negative security tests PASS. CloudTrail audit confirmed.
 
-### Quick Start
+## Quick Start
 
 ```bash
 # 1. Copy params and fill values
@@ -65,7 +59,7 @@ python scripts/validate_connectivity.py
 python scripts/execute_queries.py
 ```
 
-### Directory Structure
+## Directory Structure
 
 ```
 integrations/athena/
@@ -91,7 +85,7 @@ integrations/athena/
     └── verification-report-ja.md      ← (planned)
 ```
 
-### Reference Implementation
+## Reference Implementation
 
 This integration leverages patterns from:
 - [FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns)
@@ -99,74 +93,3 @@ This integration leverages patterns from:
   - UC3 (manufacturing-analytics): Athena query patterns
   - `shared/cfn/fpolicy-routing.yaml`: Event-driven Crawler trigger
   - `docs/event-driven/`: FPolicy configuration reference
-
----
-
-<a id="日本語"></a>
-
-## 日本語
-
-### 概要
-
-Amazon Athena から Amazon FSx for NetApp ONTAP（FSx for ONTAP）のデータを直接クエリします。
-Glue Data Catalog と S3 Access Points を使用したサーバーレス分析です。
-
-### アーキテクチャ
-
-```
-Athena (サーバーレス SQL)
-    │
-    └── Glue Data Catalog
-            │
-            ├── Glue Crawler (スキーマ自動検出)
-            │
-            └── S3 Access Point (インターネットオリジン) ──→ FSx for ONTAP Volume
-                                                              ├── transactions/ (Parquet, パーティション)
-                                                              ├── customers/ (CSV)
-                                                              ├── events/ (JSON)
-                                                              └── gold/ (CTAS 出力先)
-```
-
-### 重要: ネットワークオリジン
-
-Athena は **インターネットネットワークオリジン** の S3 Access Point が必要です。
-VPC 限定のアクセスポイントは Athena では動作しません。
-
-参考: [AWS チュートリアル - Athena でファイルをクエリ](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-query-data-with-athena.html)
-
-### ステータス: ✅ セキュリティ検証済み (2026-05-23)
-
-ベンチマーク: ピークスループット 54.8 MB/s、500 万行を 2.2 秒でクエリ（103 MB Parquet、128 MB/s プロビジョンド）。
-9/9 ネガティブセキュリティテスト PASS。CloudTrail 監査確認済み。
-
-### クイックスタート
-
-```bash
-# 1. パラメータファイルをコピーして値を入力
-cp params.example.json params.json
-
-# 2. サンプルデータ生成
-pip install pandas pyarrow
-python scripts/generate_sample_data.py
-
-# 3. FSx for ONTAP に NFS 経由でアップロード
-./scripts/upload_sample_data.sh
-
-# 4. インフラデプロイ
-./deploy.sh
-
-# 5. 接続検証
-python scripts/validate_connectivity.py
-
-# 6. クエリ実行とメトリクス収集
-python scripts/execute_queries.py
-```
-
-### リファレンス実装
-
-以下のリポジトリのパターンを活用:
-- [FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns)
-  - UC1 (法務コンプライアンス): Athena × S3 AP E2E 検証済み
-  - UC3 (製造業分析): Athena クエリパターン
-  - `shared/cfn/fpolicy-routing.yaml`: イベント駆動 Crawler トリガー
-  - `docs/event-driven/`: FPolicy 設定リファレンス

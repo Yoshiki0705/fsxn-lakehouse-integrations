@@ -1,26 +1,20 @@
-# Lake Formation Integration / Lake Formation 統合
+# Lake Formation Integration
 
-🌐 [日本語](#日本語) | [English](#english)
+🌐 **English** | [日本語](docs/ja/README.md)
 
----
-
-<a id="english"></a>
-
-## English
-
-### Overview
+## Overview
 
 Add fine-grained governance (table/column-level access control) on top of FSx for ONTAP
 S3 Access Point data using AWS Lake Formation. Enables regulated industry deployments.
 
-### Status: ✅ Functional Verified (2026-05-24)
+## Status: ✅ Functional Verified (2026-05-24)
 
 - Lake Formation admin configured
 - Table-level SELECT-only permission verified
 - Athena query under LF governance: PASS
 - 4-layer authorization confirmed
 
-### Architecture
+## Architecture
 
 ```
 User/Role
@@ -44,7 +38,7 @@ FSx for ONTAP (file system user permissions)
 3. S3 AP Policy: Which principals can access this access point
 4. File System: UNIX permissions on underlying files
 
-### Governance Value
+## Governance Value
 
 | Capability | Benefit |
 |-----------|---------|
@@ -54,7 +48,7 @@ FSx for ONTAP (file system user permissions)
 | Centralized audit | Who accessed what table, when |
 | Cross-account sharing | Share tables without sharing S3 AP |
 
-### Quick Start
+## Quick Start
 
 ```bash
 # 1. Set Lake Formation admin
@@ -72,31 +66,10 @@ aws athena start-query-execution \
   --query-string "SELECT * FROM <DB>.<TABLE> LIMIT 10"
 ```
 
-### Use Cases (Regulated Industries)
+## Use Cases (Regulated Industries)
 
 | Industry | Pattern |
 |----------|---------|
 | Healthcare | Column-level masking of PHI fields |
 | Finance | Table-level segregation per business domain |
 | Public sector | Tag-based classification enforcement |
-
----
-
-<a id="日本語"></a>
-
-## 日本語
-
-### 概要
-
-AWS Lake Formation を使用して、FSx for ONTAP S3 Access Point データに
-きめ細かいガバナンス（テーブル/カラムレベルのアクセス制御）を追加。
-規制産業向けデプロイメントを実現。
-
-### ステータス: ✅ 機能検証済み (2026-05-24)
-
-### 4 層認可
-
-1. Lake Formation: テーブル/カラムレベルの権限
-2. IAM: API コールの権限
-3. S3 AP ポリシー: アクセスポイントへのアクセス制御
-4. ファイルシステム: UNIX 権限
