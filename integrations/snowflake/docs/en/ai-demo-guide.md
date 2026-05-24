@@ -158,6 +158,26 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 
 ---
 
+## ONTAP Value for AI/ML Workloads
+
+| ONTAP Feature | AI/ML Benefit | Reference |
+|---|---|---|
+| **FlexCache** | Cache hot training data across regions/sites for low-latency access; reduce WAN bandwidth for distributed ML workloads | [FlexCache overview](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/using-flexcache.html) |
+| **SnapLock / Tamperproof Snapshot** | Immutable data protection — even administrators cannot delete locked snapshots during retention period; meets SEC 17a-4(f), HIPAA, FINRA compliance | [SnapLock on FSx for ONTAP](https://netapp.com/blog/snaplock-on-amazon-fsx-ontap/) |
+| **ARP/AI (Autonomous Ransomware Protection)** | AI-powered real-time detection of ransomware encryption patterns; automatic snapshot creation before damage spreads | [ARP on FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/ARP.html) |
+| **FlexClone** | Zero-copy instant clones for ML experimentation — test different preprocessing without duplicating data | [FlexClone docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
+| **Snapshot** | Point-in-time recovery of training datasets; version control for feature engineering pipelines | [Snapshot docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
+| **FabricPool** | Auto-tier cold training data and old model artifacts to S3 — transparent to Snowflake queries | [FabricPool docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **Multi-protocol** | Same data accessible via NFS (data scientists), SMB (Windows users), S3 AP (Snowflake/analytics) simultaneously | [Multi-protocol access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+
+### AI/ML-Specific Scenarios
+
+- **FlexCache for distributed training**: Cache training datasets from on-premises NAS to cloud FSx for ONTAP — ML clusters read locally cached data with sub-millisecond latency instead of crossing WAN
+- **SnapLock for model governance**: Lock training data snapshots to ensure reproducibility — auditors can verify that the exact dataset used for model training has not been modified
+- **ARP/AI for data pipeline protection**: Detect and block ransomware that targets training data or model artifacts — automatic snapshot preserves clean state for recovery
+
+---
+
 ## Getting Started
 
 1. **Set up FSx S3 AP stage** — Follow the [Configuration Guide](../../README.md)

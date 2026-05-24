@@ -158,6 +158,26 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 
 ---
 
+## AI/ML ワークロードにおける ONTAP の価値
+
+| ONTAP 機能 | AI/ML メリット | リファレンス |
+|---|---|---|
+| **FlexCache** | リージョン/拠点間で学習データをキャッシュし低遅延アクセスを実現。分散 ML ワークロードの WAN 帯域を削減 | [FlexCache 概要](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/using-flexcache.html) |
+| **SnapLock / Tamperproof Snapshot** | 不変のデータ保護 — 管理者権限でも保持期間中はロックされたスナップショットを削除不可。SEC 17a-4(f)、HIPAA、FINRA コンプライアンスに対応 | [SnapLock on FSx for ONTAP](https://netapp.com/blog/snaplock-on-amazon-fsx-ontap/) |
+| **ARP/AI（自律型ランサムウェア防御）** | AI によるランサムウェア暗号化パターンのリアルタイム検知。被害拡大前に自動スナップショットを作成 | [ARP on FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/ARP.html) |
+| **FlexClone** | ML 実験用のゼロコピー即時クローン — データを複製せずに異なる前処理をテスト | [FlexClone ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
+| **Snapshot** | 学習データセットのポイントインタイムリカバリ。特徴量エンジニアリングパイプラインのバージョン管理 | [Snapshot ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
+| **FabricPool** | コールドな学習データや古いモデルアーティファクトを S3 に自動階層化 — Snowflake クエリに対して透過的 | [FabricPool ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **マルチプロトコル** | 同一データに NFS（データサイエンティスト）、SMB（Windows ユーザー）、S3 AP（Snowflake/分析）から同時アクセス可能 | [マルチプロトコルアクセス](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+
+### AI/ML 固有のシナリオ
+
+- **FlexCache による分散学習**: オンプレミス NAS からクラウド FSx for ONTAP に学習データセットをキャッシュ — ML クラスターが WAN を経由せずローカルキャッシュからサブミリ秒のレイテンシでデータを読み取り
+- **SnapLock によるモデルガバナンス**: 学習データのスナップショットをロックし再現性を保証 — 監査人がモデル学習に使用された正確なデータセットが変更されていないことを検証可能
+- **ARP/AI によるデータパイプライン保護**: 学習データやモデルアーティファクトを標的とするランサムウェアを検知・ブロック — 自動スナップショットがリカバリ用のクリーンな状態を保持
+
+---
+
 ## はじめに
 
 1. **FSx S3 AP ステージの設定** — [設定ガイド](../../README.md) に従う
