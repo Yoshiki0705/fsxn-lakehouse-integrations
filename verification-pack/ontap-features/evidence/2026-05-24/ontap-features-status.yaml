@@ -1,0 +1,83 @@
+# ONTAP Feature Verification Status
+test_id: "ONTAP-FEATURES-001"
+date_tested: "2026-05-24"
+tester: "Yoshiki Fujiwara"
+
+# Environment
+region: "ap-northeast-1"
+file_system_id: "fs-09ffe72a3b2b7dbbd"
+file_system_status: "AVAILABLE"
+throughput_mbps: 128
+storage_gb: 1024
+svm: "verification-svm (svm-0e5ef72d9b4470f19)"
+volume: "verification_vol (fsvol-0e1fe85769794a92e)"
+
+# Storage Efficiency
+storage_efficiency:
+  enabled: true
+  dedup_status: "Enabled (inline + background)"
+  compression_status: "Enabled (inline)"
+  measured_dedup_ratio: "Not measurable — volume has only unique test data (no duplicates to dedup)"
+  note: |
+    Dedup ratio is meaningful only with duplicate data (e.g., multiple copies of same dataset,
+    Delta Lake version files with overlapping content). Our test data is unique synthetic data,
+    so dedup ratio would be ~1.0x. Real-world benefit requires production-representative data.
+
+# Snapshot
+snapshot:
+  policy: "default"
+  create_test_result: "FAILED"
+  error: "Unable to create a snapshot because the volume was not found"
+  root_cause: |
+    Likely related to ongoing AWS infrastructure issue (Support Case 177900333300633):
+    Internal security group missing DNS rules for FPolicy, causing SVM-level instability.
+    The volume exists (CREATED state) but snapshot operations fail.
+  rto_measured: false
+  rto_expected: "< 1 minute for volumes < 10 GB (ONTAP specification)"
+  note: "Will re-test after AWS resolves internal SG issue"
+
+# FabricPool Tiering
+tiering:
+  policy: "AUTO"
+  cooling_period_days: 31
+  verified: false
+  note: |
+    AUTO tiering is configured. Cold data should tier to S3 after 31 days.
+    Cannot verify tiering behavior with fresh test data (< 31 days old).
+    S3 AP reads should transparently access tiered data (ONTAP handles recall).
+
+# FlexClone
+flexclone:
+  tested: false
+  note: |
+    FlexClone requires ONTAP CLI/REST API access (not available via AWS FSx API).
+    Would need SSH to FSx management endpoint or NetApp BlueXP.
+    Expected behavior: instant clone creation (copy-on-write, near-zero space).
+
+# Multi-Protocol Access
+multi_protocol:
+  nfs_verified: true
+  s3_ap_verified: true
+  smb_verified: false
+  note: "NFS write → S3 AP read verified (data immediately visible). SMB not tested."
+
+# Summary
+summary: |
+  ONTAP features are configured correctly (dedup, compression, tiering, snapshots).
+  However, active verification of Snapshot RTO and FlexClone is blocked by:
+  1. Internal SG issue preventing snapshot creation (AWS Support Case open)
+  2. FlexClone requires ONTAP CLI access (not exposed via FSx API)
+  
+  Key verified behavior:
+  - Storage efficiency enabled (dedup + compression)
+  - FabricPool AUTO tiering configured (31-day cooling)
+  - Multi-protocol: NFS write → S3 AP read works (zero-delay visibility)
+  - Snapshot policy: default (hourly/daily/weekly schedule)
+
+# Recommendations for Future Verification
+future_verification:
+  - "Re-test snapshot creation after AWS resolves SG issue"
+  - "Upload duplicate data (copy same Parquet 10x) to measure dedup ratio"
+  - "Wait 31+ days to verify FabricPool tiering + S3 AP transparent read"
+  - "Use ONTAP REST API (via management endpoint) for FlexClone test"
+  - "Measure snapshot restore time with Glue Catalog repair workflow"
