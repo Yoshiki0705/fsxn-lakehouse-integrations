@@ -33,6 +33,38 @@ Python (Local / Lambda)
 
 ## Status: 🚧 Implementation In Progress
 
+## Unstructured Data Support
+
+| Format | Support | Access Method | Use Case |
+|--------|:---:|--------------|----------|
+| Images (JPEG, PNG, TIFF) | ❌ | N/A (structured table format) | — |
+| Video (MP4, MOV) | ❌ | N/A | — |
+| Documents (PDF, DOCX) | ❌ | N/A | — |
+| Audio (WAV, MP3) | ❌ | N/A | — |
+| Binary / Archives | ❌ | N/A | — |
+
+Delta Lake is a table format for structured data (Parquet-based). It cannot store or query unstructured data directly. However, Delta tables can manage file metadata with ACID transactions, Change Data Feed, and time travel.
+
+**Metadata management pattern:**
+```python
+# Manage file metadata with delta-rs (no Spark needed)
+import deltalake as dl
+import pandas as pd
+
+# Write file catalog as Delta table
+df = pd.DataFrame({
+    'file_path': ['s3://ap-alias/images/001.jpg', 's3://ap-alias/docs/report.pdf'],
+    'file_type': ['image/jpeg', 'application/pdf'],
+    'file_size': [2048000, 512000],
+    'processed': [False, False]
+})
+dl.write_deltalake('s3://<ap-alias>/file_catalog/', df, mode='append')
+
+# Time travel to view past catalog state
+dt = dl.DeltaTable('s3://<ap-alias>/file_catalog/', version=3)
+print(dt.to_pandas())
+```
+
 ## Quick Start
 
 ```bash

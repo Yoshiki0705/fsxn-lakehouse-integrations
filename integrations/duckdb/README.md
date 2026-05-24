@@ -92,3 +92,36 @@ integrations/duckdb/
 │   └── cleanup.sh                 ← Resource cleanup
 └── tests/results/                 ← Query metrics output
 ```
+
+## Unstructured Data Support
+
+| Format | Support | Access Method | Use Case |
+|--------|:---:|--------------|----------|
+| Images (JPEG, PNG, TIFF) | ⚠️ | httpfs binary read (Lambda) | Metadata extraction, file listing |
+| Video (MP4, MOV) | ⚠️ | httpfs binary read (Lambda) | File catalog, size tracking |
+| Documents (PDF, DOCX) | ⚠️ | httpfs binary read (Lambda) | File listing, pipeline trigger |
+| Audio (WAV, MP3) | ⚠️ | httpfs binary read (Lambda) | File catalog, metadata query |
+| Binary / Archives | ⚠️ | httpfs binary read (Lambda) | Download, custom processing |
+
+DuckDB is a SQL query engine for structured data (Parquet, CSV, JSON) but can read binary files via httpfs. It has no built-in file catalog or unstructured data processing capabilities.
+
+**Patterns for unstructured data workflows:**
+1. **File catalog query** — Query file listings on S3 AP as metadata tables
+2. **Metadata extraction** — Read Parquet metadata (row counts, schema) at high speed
+3. **Pipeline integration** — Extract file paths with DuckDB, process with Lambda/Bedrock
+
+```sql
+-- Query file listings on S3 AP (glob pattern)
+SELECT filename, size
+FROM glob('s3://<ap-alias>/documents/*.pdf');
+
+-- Extract processing targets from metadata table
+SELECT file_path, file_size, last_modified
+FROM file_catalog
+WHERE file_type = 'image/jpeg' AND processed = false;
+```
+
+**Recommended alternative for unstructured data on FSx for ONTAP:**
+- Use **AWS Lambda** for serverless file processing ([AWS tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html))
+- Use **Amazon Bedrock** for RAG over documents ([AWS tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html))
+- Use **Snowflake** (Directory Table + GET_PRESIGNED_URL) for file catalog and secure URL generation

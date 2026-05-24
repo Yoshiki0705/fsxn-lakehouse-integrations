@@ -59,6 +59,36 @@ Based on DuckDB and EMR Spark verification results (both use path-style S3 acces
 - **Delta/Iceberg write**: Expected to FAIL (same atomic rename constraint)
 - **No session policy issues**: Direct IAM credentials, no intermediary governance layer
 
+## Unstructured Data Support
+
+| Format | Support | Access Method | Use Case |
+|--------|:---:|--------------|----------|
+| Images (JPEG, PNG, TIFF) | ❌ | N/A (SQL engine for structured data) | — |
+| Video (MP4, MOV) | ❌ | N/A | — |
+| Documents (PDF, DOCX) | ❌ | N/A | — |
+| Audio (WAV, MP3) | ❌ | N/A | — |
+| Binary / Archives | ❌ | N/A | — |
+
+Trino is a distributed SQL query engine for structured data. It cannot directly query unstructured data. However, you can create metadata tables and use federated queries across multiple data sources.
+
+**Patterns:**
+1. **Metadata table** — Register file paths, sizes, and types as Hive tables for querying
+2. **Multi-source federation** — JOIN FSx S3 AP file catalogs with other data sources (RDS, PostgreSQL)
+3. **Hive Connector** — Read Parquet metadata directly from S3 AP with path-style access
+
+```sql
+-- Query file catalog
+SELECT file_path, file_type, file_size, last_modified
+FROM fsxn.default.file_catalog
+WHERE file_type = 'image/jpeg'
+  AND file_size > 1000000;
+
+-- Federated JOIN with other data sources
+SELECT f.file_path, m.model_name, m.accuracy
+FROM fsxn.default.file_catalog f
+JOIN ml_catalog.default.model_results m ON f.file_path = m.input_path;
+```
+
 ## Quick Start
 
 ```bash

@@ -36,9 +36,17 @@ Lambda (arm64, Python 3.12)          ローカル / EC2
 
 ## 非構造化データ対応
 
-DuckDB は構造化データ（Parquet, CSV, JSON）のクエリエンジンですが、非構造化データのメタデータ管理に活用できます。
+| フォーマット | 対応 | アクセス方法 | ユースケース |
+|------------|:---:|------------|------------|
+| 画像 (JPEG, PNG, TIFF) | ⚠️ | httpfs バイナリ読み取り（Lambda） | メタデータ抽出、ファイル一覧 |
+| 動画 (MP4, MOV) | ⚠️ | httpfs バイナリ読み取り（Lambda） | ファイルカタログ、サイズ追跡 |
+| ドキュメント (PDF, DOCX) | ⚠️ | httpfs バイナリ読み取り（Lambda） | ファイル一覧、パイプライントリガー |
+| 音声 (WAV, MP3) | ⚠️ | httpfs バイナリ読み取り（Lambda） | ファイルカタログ、メタデータクエリ |
+| バイナリ / アーカイブ | ⚠️ | httpfs バイナリ読み取り（Lambda） | ダウンロード、カスタム処理 |
 
-**パターン:**
+DuckDB は構造化データ（Parquet, CSV, JSON）のクエリエンジンですが、httpfs 経由でバイナリファイルの読み取りが可能です。ビルトインのファイルカタログや非構造化データ処理機能はありません。
+
+**非構造化データワークフローのパターン:**
 1. **ファイルカタログクエリ** — S3 AP 上のファイル一覧をメタデータテーブルとしてクエリ
 2. **メタデータ抽出** — Parquet メタデータ（行数、スキーマ）を DuckDB で高速に取得
 3. **パイプライン連携** — DuckDB でファイルパスを抽出し、Lambda/Bedrock で非構造化処理
@@ -53,6 +61,11 @@ SELECT file_path, file_size, last_modified
 FROM file_catalog
 WHERE file_type = 'image/jpeg' AND processed = false;
 ```
+
+**FSx for ONTAP 上の非構造化データの推奨代替手段:**
+- **AWS Lambda** でサーバーレスファイル処理（[AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html)）
+- **Amazon Bedrock** でドキュメント RAG（[AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)）
+- **Snowflake**（Directory Table + GET_PRESIGNED_URL）でファイルカタログとセキュア URL 生成
 
 ## クイックスタート
 
