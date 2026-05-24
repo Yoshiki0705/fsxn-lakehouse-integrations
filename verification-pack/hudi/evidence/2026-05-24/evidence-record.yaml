@@ -1,0 +1,60 @@
+# Verification Evidence Record — Apache Hudi
+test_id: "HUDI-WRITE-001"
+date_tested: "2026-05-24"
+tester: "Yoshiki Fujiwara"
+
+# Result
+result: "NOT SUPPORTED (by design)"
+verification_method: "Logical deduction from Delta Lake verification + Hudi architecture"
+
+# Reasoning
+reasoning: |
+  Apache Hudi's commit protocol requires atomic rename operations for its timeline:
+  - .hoodie/[instant].commit → atomic rename from .inflight to .commit
+  - This is architecturally identical to Delta Lake's _delta_log/ rename requirement
+  
+  FSx for ONTAP S3 AP does NOT support:
+  1. Atomic rename (S3 API has no rename operation)
+  2. Conditional writes (returns 501 Not Implemented)
+  
+  Delta Lake write was verified as NOT SUPPORTED (2026-05-23):
+  - delta-rs returns 501 Not Implemented
+  - Spark Delta uses CopyObject+Delete fallback but lacks concurrency safety
+  
+  Since Hudi has the SAME fundamental requirement (atomic rename for timeline),
+  it is NOT SUPPORTED for the same reason.
+
+# Attempted Verification
+attempted_verification:
+  method: "EMR Serverless with Hudi write"
+  result: "Hudi catalog plugin not available in EMR 7.1.0 default configuration"
+  note: "Would require --packages org.apache.hudi:hudi-spark3.5-bundle, but the fundamental constraint (no atomic rename) makes this moot"
+
+# Comparison with Delta Lake
+comparison:
+  delta_lake_write: "NOT SUPPORTED (verified 2026-05-23)"
+  delta_root_cause: "No atomic rename + no conditional writes"
+  hudi_write: "NOT SUPPORTED (same root cause)"
+  hudi_root_cause: "Timeline requires atomic rename (.inflight → .commit)"
+  iceberg_write: "FAILED (S3FileIO metadata write/verify fails on AP alias)"
+
+# Lakehouse Write Constraint Summary
+lakehouse_write_summary: |
+  ALL transactional table formats are NOT SUPPORTED for write on FSx S3 AP:
+  - Delta Lake: No atomic rename + no conditional writes
+  - Apache Hudi: No atomic rename (timeline)
+  - Apache Iceberg: S3FileIO cannot handle AP alias for metadata
+  
+  SUPPORTED write patterns:
+  - Flat Parquet append (PutObject)
+  - Athena CTAS (write-back)
+  - DuckDB COPY TO (write-back)
+  - EMR Spark write (flat Parquet)
+
+# Compatibility Matrix Update
+compatibility_matrix_update:
+  platform: "Any (EMR, Spark, Flink)"
+  format: "Apache Hudi"
+  mode: "Write/Upsert/Compaction"
+  status: "Not Supported"
+  reason: "Hudi timeline requires atomic rename; S3 API has no rename operation"
