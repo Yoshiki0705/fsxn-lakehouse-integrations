@@ -1,0 +1,43 @@
+# Databricks Instance Profile + boto3 Evidence Record Template
+# Fill this template for each validation run
+
+validation_evidence:
+  scenario: "instance-profile-boto3-to-fsx-s3-ap"
+  workspace_type: "customer-managed-vpc"  # or "databricks-managed-vpc"
+  cluster_mode: "dedicated-with-instance-profile"
+  dbr_version: ""  # e.g., "17.3 LTS"
+  spark_version: ""  # e.g., "4.0.0"
+  access_path: "boto3 direct S3 API"
+  governance_path: "outside Unity Catalog"
+
+  allowed_prefixes:
+    - "s3://<fsx-s3-ap-alias>/demo/"
+
+  operations_tested:
+    - "ListObjectsV2"
+    - "GetObject"
+    - "HeadObject"
+
+  negative_tests_required:
+    - "PutObject should fail (if read-only policy)"
+    - "DeleteObject should fail"
+    - "Unauthorized prefix access should fail"
+    - "Cross-account access should fail"
+
+  audit_evidence:
+    cloudtrail_data_events: ""  # "enabled" | "not_enabled" | "not_applicable"
+    log_location: ""
+
+  approval:
+    data_owner: ""
+    security_owner: ""
+    platform_owner: ""
+    expiration_date: ""
+    approval_record_location: ""
+    incident_escalation_contact: ""
+
+  result:
+    driver_node: ""  # "pass" | "fail"
+    executor_scale: ""  # "pass" | "fail" | "not_tested"
+    error_signature: ""
+    notes: ""
