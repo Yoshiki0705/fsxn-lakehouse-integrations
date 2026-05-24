@@ -1,0 +1,207 @@
+# Databricks + FSx S3 AP Validation Test Cases
+# Use this matrix for reproducible validation runs
+
+test_cases:
+  # --- Unity Catalog Path ---
+  - id: DBX-FSX-UC-001
+    name: "Unity Catalog External Location to FSx S3 AP"
+    category: "unity-catalog"
+    preconditions:
+      - "Storage credential exists with IAM role that has s3:* on S3 AP ARN"
+      - "External location points to FSx S3 AP alias"
+      - "Cluster uses standard or dedicated access mode"
+    steps:
+      - "CREATE EXTERNAL LOCATION with S3 AP alias URL"
+      - "Run dbutils.fs.ls('s3://<alias>/')"
+    expected_result: "List operation succeeds OR returns documented session policy failure"
+    pass_criteria: "Operation succeeds with file listing"
+    fail_criteria: "AccessDenied with 'no session policy allows' message"
+    observed_result: ""
+    evidence_required:
+      - "Full error message including ARN"
+      - "Storage credential configuration"
+      - "External location URL"
+      - "IAM role policy document"
+      - "DBR version and access mode"
+
+  - id: DBX-FSX-UC-002
+    name: "Unity Catalog Spark read from FSx S3 AP"
+    category: "unity-catalog"
+    preconditions:
+      - "External location configured for S3 AP"
+      - "Parquet files exist at S3 AP path"
+    steps:
+      - "spark.read.parquet('s3://<alias>/path/')"
+    expected_result: "DataFrame read succeeds OR session policy failure"
+    pass_criteria: "DataFrame with expected schema and row count"
+    fail_criteria: "AccessDenied with session policy message"
+    observed_result: ""
+    evidence_required:
+      - "Full error message"
+      - "Spark read configuration"
+      - "File format and path"
+
+  # --- NFS Mount Path ---
+  - id: DBX-FSX-NFS-001
+    name: "Kernel NFS mount from Dedicated cluster (Customer VPC)"
+    category: "nfs-mount"
+    preconditions:
+      - "Customer-managed VPC workspace"
+      - "Dedicated access mode cluster with sudo"
+      - "FSx NFS ports reachable (TCP 2049, 111, 635)"
+      - "ONTAP export policy allows client"
+    steps:
+      - "sudo apt-get install -y nfs-common"
+      - "showmount -e <fsxn-ip>"
+      - "sudo mount -t nfs -o nfsvers=3,nolock <ip>:/vol /mnt/fsxn"
+    expected_result: "Mount succeeds OR failure evidence collected"
+    pass_criteria: "Mount succeeds and ls /mnt/fsxn shows files"
+    fail_criteria: "mount.nfs: access denied by server (EACCES from mount syscall)"
+    observed_result: ""
+    evidence_required:
+      - "Network connectivity test results"
+      - "showmount -e output"
+      - "strace output of mount command"
+      - "/proc/self/status seccomp output"
+      - "tmpfs mount test result"
+
+  - id: DBX-FSX-NFS-002
+    name: "NFS mount from Managed VPC (VPC Peering)"
+    category: "nfs-mount"
+    preconditions:
+      - "Databricks-managed VPC workspace"
+      - "VPC Peering configured to FSx VPC"
+      - "Route tables and security groups updated"
+    steps:
+      - "timeout 3 bash -c 'echo > /dev/tcp/<ip>/2049'"
+    expected_result: "Port reachable OR egress blocked"
+    pass_criteria: "TCP 2049 reachable"
+    fail_criteria: "Connection timeout (egress blocked by managed VPC)"
+    observed_result: ""
+    evidence_required:
+      - "TCP connectivity test output"
+      - "VPC Peering configuration"
+      - "Route table entries"
+
+  # --- Instance Profile + boto3 Path ---
+  - id: DBX-FSX-IP-001
+    name: "Instance Profile boto3 ListObjectsV2 on FSx S3 AP"
+    category: "instance-profile"
+    preconditions:
+      - "Customer-managed VPC workspace"
+      - "Dedicated cluster with Instance Profile registered"
+      - "IMDS accessible"
+    steps:
+      - "Verify IMDS token retrieval"
+      - "boto3.client('s3').list_objects_v2(Bucket='<alias>', MaxKeys=10)"
+    expected_result: "Object listing succeeds"
+    pass_criteria: "KeyCount > 0 and Contents array populated"
+    fail_criteria: "NoCredentialsError or AccessDenied"
+    observed_result: ""
+    evidence_required:
+      - "IMDS token retrieval success"
+      - "ListObjectsV2 response (KeyCount, first few keys)"
+      - "Instance Profile ARN"
+      - "Cluster configuration"
+
+  - id: DBX-FSX-IP-002
+    name: "Instance Profile boto3 GetObject on FSx S3 AP"
+    category: "instance-profile"
+    preconditions:
+      - "DBX-FSX-IP-001 passes"
+      - "Known object key exists"
+    steps:
+      - "boto3.client('s3').get_object(Bucket='<alias>', Key='<key>')"
+    expected_result: "Object content retrieved"
+    pass_criteria: "ContentLength > 0 and Body readable"
+    fail_criteria: "AccessDenied or NoSuchKey"
+    observed_result: ""
+    evidence_required:
+      - "GetObject response metadata"
+      - "Content-Type and ContentLength"
+
+  # --- Negative Tests ---
+  - id: DBX-FSX-NEG-001
+    name: "PutObject should fail (read-only policy)"
+    category: "negative-test"
+    preconditions:
+      - "Instance Profile IAM policy is read-only for S3 AP"
+    steps:
+      - "boto3.client('s3').put_object(Bucket='<alias>', Key='test.txt', Body=b'test')"
+    expected_result: "AccessDenied"
+    pass_criteria: "ClientError with AccessDenied code"
+    fail_criteria: "PutObject succeeds (policy too permissive)"
+    observed_result: ""
+    evidence_required:
+      - "Full error message"
+      - "IAM policy document"
+
+  - id: DBX-FSX-NEG-002
+    name: "DeleteObject should fail"
+    category: "negative-test"
+    preconditions:
+      - "Instance Profile IAM policy does not allow delete"
+    steps:
+      - "boto3.client('s3').delete_object(Bucket='<alias>', Key='<existing-key>')"
+    expected_result: "AccessDenied"
+    pass_criteria: "ClientError with AccessDenied code"
+    fail_criteria: "DeleteObject succeeds"
+    observed_result: ""
+    evidence_required:
+      - "Full error message"
+      - "IAM policy document"
+
+  - id: DBX-FSX-NEG-003
+    name: "Unauthorized prefix access should fail"
+    category: "negative-test"
+    preconditions:
+      - "IAM policy restricts to specific prefix"
+    steps:
+      - "boto3.client('s3').list_objects_v2(Bucket='<alias>', Prefix='unauthorized/')"
+    expected_result: "AccessDenied"
+    pass_criteria: "ClientError with AccessDenied code"
+    fail_criteria: "ListObjects succeeds on unauthorized prefix"
+    observed_result: ""
+    evidence_required:
+      - "Full error message"
+      - "IAM policy condition"
+      - "Attempted prefix"
+
+  # --- Executor-scale Tests ---
+  - id: DBX-FSX-EXEC-001
+    name: "Executor-scale boto3 via mapPartitions"
+    category: "executor-scale"
+    preconditions:
+      - "DBX-FSX-IP-001 passes on driver"
+      - "Multi-node cluster (2+ workers)"
+    steps:
+      - "Run mapPartitions with boto3 ListObjectsV2 from each executor"
+      - "Capture per-executor JSONL evidence"
+    expected_result: "All executors succeed OR credential/network failure documented"
+    pass_criteria: "All executors report success in JSONL output"
+    fail_criteria: "One or more executors fail with credential or network error"
+    observed_result: ""
+    evidence_required:
+      - "Per-executor JSONL output"
+      - "Cluster node count and instance types"
+      - "Total execution time"
+      - "Error codes per executor (if any)"
+
+  # --- User-space NFS RPC ---
+  - id: DBX-FSX-RPC-001
+    name: "User-space NFS RPC operations"
+    category: "nfs-rpc"
+    preconditions:
+      - "Customer-managed VPC workspace"
+      - "NFS ports reachable"
+    steps:
+      - "Python socket-based MOUNT RPC"
+      - "NFS3 FSINFO, GETATTR, READDIRPLUS"
+    expected_result: "All RPC operations succeed"
+    pass_criteria: "MOUNT returns file handle, NFS3 ops return valid data"
+    fail_criteria: "RPC timeout or error response"
+    observed_result: ""
+    evidence_required:
+      - "MOUNT RPC response (status, file handle length)"
+      - "NFS3 operation responses"
+      - "Network connectivity confirmation"

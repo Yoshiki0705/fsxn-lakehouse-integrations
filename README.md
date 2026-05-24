@@ -2,6 +2,8 @@
 
 🌐 [日本語](docs/ja/architecture.md) | [English](docs/en/architecture.md)
 
+> **`fsxn-lakehouse-integrations` is a validation framework for testing how different analytics and lakehouse engines interact with FSx for ONTAP S3 Access Points.** Each integration directory contains reproducible evidence, test templates, and observed boundary documentation — not production-ready connectors.
+
 ---
 
 ## Overview / 概要

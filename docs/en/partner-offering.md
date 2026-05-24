@@ -687,6 +687,36 @@ For each active deal, assign explicit owners:
 
 ---
 
+## First Offer: FSx S3 AP Analytics Readiness Assessment
+
+**Duration**: 2–3 weeks  
+**Target**: Customers with existing NAS/ONTAP data who want to explore analytics or AI without data migration
+
+**Deliverables:**
+- Dataset discovery (file types, sizes, access patterns)
+- Engine fit assessment (Athena, Databricks, EMR, DuckDB Lambda, Snowflake)
+- Governance impact summary (IAM, file system permissions, audit requirements)
+- Read-only validation (working query on customer data)
+- Negative test evidence (unauthorized access denied)
+- Architecture recommendation (Good / Better / Best tier)
+
+**Pricing**: $15K–25K (assessment + PoC)
+
+---
+
+## Marketplace Offer Boundary
+
+This validation package ([fsxn-lakehouse-integrations](https://github.com/Yoshiki0705/fsxn-lakehouse-integrations)) can inform a partner-delivered assessment, but it is **not itself a Marketplace offer**.
+
+Potential packaged offers for AWS Marketplace or CPPO:
+- FSx for ONTAP S3 AP Analytics Assessment (partner-delivered service)
+- Lakehouse Engine Fit Workshop (1-day engagement)
+- Governance and Evidence Package (for regulated industries)
+
+To create a Marketplace listing, partners must separately package the service with defined scope, pricing, and delivery methodology.
+
+---
+
 ## References
 
 - [Accessing your data via Amazon S3 access points](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)
