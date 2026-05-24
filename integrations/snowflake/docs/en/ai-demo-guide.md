@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](../ja/ai-demo-guide.md)
+
 # Snowflake Cortex AI Demo Guide — FSx for ONTAP S3 AP
 
 This guide demonstrates AI/ML capabilities on FSx for ONTAP data accessed via Snowflake External Stage with `AWS_ACCESS_POINT_ARN`.
@@ -92,3 +94,73 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 - OCR + Query History: `docs/images/snowflake-08-parse-document-ocr.png`
 - Cortex SUMMARIZE: `docs/images/snowflake-07-cortex-llm-summary.png`
 - Directory Table: `docs/images/snowflake-06-directory-table-presigned-url.png`
+
+---
+
+## Industry Use Cases with Snowflake Cortex AI + FSx for ONTAP
+
+### Manufacturing / Quality Inspection
+
+| Use Case | Cortex Function | Data on FSx | Reference |
+|---|---|---|---|
+| Inspection report OCR | PARSE_DOCUMENT (OCR mode) | Scanned reports (PNG/PDF) | [Snowflake PARSE_DOCUMENT docs](https://docs.snowflake.com/en/user-guide/snowflake-cortex/parse-document) |
+| Sensor anomaly summarization | CORTEX.SUMMARIZE | IoT sensor Parquet/CSV | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
+| Visual defect detection | AI_COMPLETE (vision) | Product images | [AI_COMPLETE multimodal](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-snowflake-cortex) |
+| Yield analysis from dashboards | AI_COMPLETE (vision) | Dashboard screenshots | [Image Analysis Quickstart](https://www.snowflake.com/en/developers/guides/build-image-analysis-app-with-streamlit-and-snowflake-cortex/) |
+
+### Financial Services / Insurance
+
+| Use Case | Cortex Function | Data on FSx | Reference |
+|---|---|---|---|
+| Invoice data extraction | PARSE_DOCUMENT (LAYOUT mode) | Invoice PDFs/images | [Document AI](https://docs.snowflake.com/en/user-guide/snowflake-cortex/parse-document) |
+| Contract clause summarization | CORTEX.SUMMARIZE | Contract documents | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
+| Claims document processing | PARSE_DOCUMENT + SUMMARIZE | Claims forms | [OCR + RAG Quickstart](https://quickstarts.snowflake.com/guide/getting_started_with_ocr_and_rag_with_snowflake_notebooks/) |
+| Regulatory document search | Cortex Search (via COPY INTO) | Compliance docs | [Cortex Search](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview) |
+
+### Healthcare / Life Sciences
+
+| Use Case | Cortex Function | Data on FSx | Reference |
+|---|---|---|---|
+| Medical record digitization | PARSE_DOCUMENT (OCR) | Scanned records | [PARSE_DOCUMENT](https://docs.snowflake.com/en/user-guide/snowflake-cortex/parse-document) |
+| Research paper summarization | CORTEX.SUMMARIZE | PDF papers | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
+| Lab report text extraction | PARSE_DOCUMENT | Lab images/PDFs | [Document AI](https://docs.snowflake.com/en/user-guide/snowflake-cortex/parse-document) |
+| Clinical trial data catalog | Directory Table | Trial documents | [Directory Tables](https://docs.snowflake.com/en/user-guide/data-load-dirtables) |
+
+### Media / Content Management
+
+| Use Case | Cortex Function | Data on FSx | Reference |
+|---|---|---|---|
+| Image metadata extraction | AI_COMPLETE (vision) | Media assets | [AI_COMPLETE](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-snowflake-cortex) |
+| Video frame description | AI_COMPLETE (vision) | Extracted frames | [Image Analysis](https://www.snowflake.com/en/developers/guides/build-image-analysis-app-with-streamlit-and-snowflake-cortex/) |
+| Asset catalog management | Directory Table + Tags | All media files | [Directory Tables](https://docs.snowflake.com/en/user-guide/data-load-dirtables) |
+| Content translation | CORTEX.TRANSLATE | Text documents | [Cortex TRANSLATE](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-translate) |
+
+### Cross-Industry: Data Engineering
+
+| Use Case | Cortex Function | Data on FSx | Reference |
+|---|---|---|---|
+| Schema inference from files | PARSE_DOCUMENT + LLM | Mixed format files | [Cortex LLM](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
+| Data quality assessment | CORTEX.SUMMARIZE | Data samples | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
+| File classification/tagging | AI_COMPLETE + Tags | Unstructured files | [Governance Tags](https://docs.snowflake.com/en/user-guide/governance-tag) |
+| Automated documentation | CORTEX.SUMMARIZE | Code/config files | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
+
+---
+
+## Getting Started
+
+1. **Set up FSx S3 AP stage** — Follow the [Configuration Guide](../../README.md)
+2. **Upload sample data** — Place images/documents on FSx for ONTAP via NFS
+3. **Refresh Directory Table** — `ALTER STAGE REFRESH` to detect new files
+4. **Run Cortex functions** — Use the SQL examples above
+5. **Build Streamlit app** — For interactive dashboards with image thumbnails
+
+## Snowflake Cortex AI Documentation
+
+- [Cortex AI Overview](https://docs.snowflake.com/en/user-guide/snowflake-cortex)
+- [LLM Functions (SUMMARIZE, COMPLETE, TRANSLATE)](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions)
+- [PARSE_DOCUMENT (OCR / Document AI)](https://docs.snowflake.com/en/user-guide/snowflake-cortex/parse-document)
+- [AI_COMPLETE (Multimodal/Vision)](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-snowflake-cortex)
+- [Cortex Search (RAG)](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview)
+- [Directory Tables](https://docs.snowflake.com/en/user-guide/data-load-dirtables)
+- [OCR + RAG Quickstart](https://quickstarts.snowflake.com/guide/getting_started_with_ocr_and_rag_with_snowflake_notebooks/)
+- [Image Analysis with Streamlit](https://www.snowflake.com/en/developers/guides/build-image-analysis-app-with-streamlit-and-snowflake-cortex/)
