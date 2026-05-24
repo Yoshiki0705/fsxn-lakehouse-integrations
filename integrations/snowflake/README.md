@@ -1,6 +1,6 @@
 # Snowflake Integration
 
-🌐 **English** | [日本語](docs/ja/setup-guide.md)
+🌐 **English** | [日本語](docs/ja/README.md)
 
 > **Validation Status: ✅ Verified (with `AWS_ACCESS_POINT_ARN`)**
 >
@@ -83,6 +83,36 @@ External Stages, using them as the storage layer for External Tables and Iceberg
 | ORC | ✅ | ❌ | External Table |
 | Avro | ✅ | ❌ | External Table |
 | Iceberg | ✅ | ✅ | Iceberg Table |
+
+## Unstructured Data Support
+
+| Format | Access Method | Use Case |
+|--------|--------------|----------|
+| Images (JPEG, PNG, TIFF) | GET_PRESIGNED_URL / BUILD_SCOPED_FILE_URL | Thumbnail generation, ML inference, quality inspection |
+| Video (MP4, MOV) | GET_PRESIGNED_URL | Streaming, frame extraction |
+| Documents (PDF, DOCX) | GET_PRESIGNED_URL / Snowpark File Access | Text extraction, RAG, document processing |
+| Audio (WAV, MP3) | GET_PRESIGNED_URL | Transcription, speech analytics |
+| Binary / Archives | GET_PRESIGNED_URL | Download, transfer |
+
+**How to access unstructured data:**
+1. **Directory Table** — Catalog all files with metadata (path, size, last_modified)
+2. **GET_PRESIGNED_URL()** — Generate time-limited download URLs for applications
+3. **BUILD_SCOPED_FILE_URL()** — Generate Snowflake-proxied secure URLs
+4. **Snowpark File Access** — Process files directly in UDFs/UDTFs (requires validation)
+
+```sql
+-- Enable Directory Table for file catalog
+ALTER STAGE fsxn_stage SET DIRECTORY = (ENABLE = TRUE);
+ALTER STAGE fsxn_stage REFRESH;
+
+-- Query file catalog
+SELECT RELATIVE_PATH, SIZE, LAST_MODIFIED FROM DIRECTORY(@fsxn_stage);
+
+-- Generate download URL (valid for 1 hour)
+SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
+```
+
+> **Note**: AUTO_REFRESH is not available because FSx S3 AP does not support S3 Event Notifications. Use `ALTER STAGE REFRESH` manually or on a schedule (via Snowflake Task).
 
 ## ONTAP Value for Snowflake
 
