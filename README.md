@@ -96,21 +96,19 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 
 | Platform | Verification Status | Pattern | Notes |
 |----------|:---:|---------|-------|
-| [AWS Athena](integrations/athena/) | ✅ Security Verified | Glue Data Catalog + Serverless | Read-only. [Benchmark: 54.8 MB/s peak, 5M rows in 2s](verification-pack/athena-parquet-read/) |
-| [AWS Glue ETL](integrations/glue/) | ✅ Functional Verified | Crawler + ETL + Medallion | Read + Write-back (Parquet). [64s for 10K row ETL](verification-pack/glue-etl/) |
-| [Delta Lake OSS](integrations/delta-lake-oss/) | ✅ Read Verified / ❌ Write | delta-rs + Spark | Read works. Write returns 501 (conditional writes not supported). |
-| [Databricks](integrations/databricks/) | ⚠️ Blocked | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
-| [Snowflake](integrations/snowflake/) | ⚠️ Blocked (GetObject) | External Stage + Iceberg | LIST succeeds, GetObject denied. Session policy issue. Support case filed. |
-| [Apache Iceberg](integrations/iceberg/) | ⚠️ Read Experimental / ❌ Write Failed | REST Catalog (vendor-neutral) | Write fails: S3FileIO cannot handle AP alias for metadata. Read of pre-existing tables expected to work. |
-| [EMR + Spark](integrations/emr-spark/) | ✅ Functional Verified | Spark SQL + Iceberg | Read + Write-back verified. [10K rows in 16s total (EMR Serverless)](verification-pack/emr-spark/) |
-| [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Functional Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
-| [DuckDB](integrations/duckdb/) | ✅ Functional Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
-| [Dremio](integrations/dremio/) | 🔲 Planned | Arctic Catalog | — |
+| [AWS Athena](integrations/athena/) | ✅ Verified | Glue Data Catalog + Serverless | Read-only. [Benchmark: 54.8 MB/s peak, 5M rows in 2s](verification-pack/athena-parquet-read/) |
+| [AWS Glue ETL](integrations/glue/) | ✅ Verified | Crawler + ETL + Medallion | Read + Write-back (Parquet). [64s for 10K row ETL](verification-pack/glue-etl/) |
+| [EMR + Spark](integrations/emr-spark/) | ✅ Verified | Spark SQL | Read + Write-back verified. [10K rows in 16s total (EMR Serverless)](verification-pack/emr-spark/) |
+| [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
+| [DuckDB](integrations/duckdb/) | ✅ Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
 | [Trino / Starburst](integrations/trino-starburst/) | ✅ Read Verified | Hive Connector | Read verified. [5M rows in 1.5s (Docker single-node)](integrations/trino-starburst/) |
-| [BigQuery Omni](integrations/bigquery-omni/) | 🔲 Planned | BigLake | Requires GCP environment |
-| [Microsoft Fabric](integrations/microsoft-fabric/) | 🔲 Planned | OneLake Shortcut | Requires Azure environment |
+| [Databricks](integrations/databricks/) | ⚠️ Blocked in validation | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
+| [Snowflake](integrations/snowflake/) | ⚠️ Blocked in validation | External Stage | LIST succeeds, GetObject denied. Session policy issue. Support case filed. |
+| [Delta Lake OSS](integrations/delta-lake-oss/) | ❌ Write not suitable | delta-rs + Spark | Read works. Write fails (conditional writes not supported). |
+| [Apache Iceberg](integrations/iceberg/) | ❌ Write not suitable | REST Catalog | Write fails: S3FileIO cannot handle AP alias for metadata. |
+| [Dremio](integrations/dremio/) | 🔲 Planned | Arctic Catalog | — |
 
-> **Key finding**: AWS-native services (Athena, Glue, EMR, Bedrock) work correctly. Third-party platforms (Snowflake, Databricks) are blocked by session policies that do not recognize S3 Access Point ARN format. See [Compatibility Matrix](docs/en/compatibility-matrix.md) for details.
+> **Key finding**: AWS-native services and open-source engines with path-style S3 access work correctly. Third-party platforms (Snowflake, Databricks) are blocked by session policies that do not recognize S3 Access Point ARN format. Transactional table format writes (Delta, Iceberg, Hudi) are not suitable for this path. See [Compatibility Matrix](docs/en/compatibility-matrix.md) for details.
 
 ---
 
