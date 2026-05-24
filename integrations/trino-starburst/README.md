@@ -12,20 +12,20 @@
 
 Query FSx for ONTAP data via S3 Access Points using Trino — an open-source distributed SQL query engine. Trino uses its own S3 filesystem implementation that supports path-style access, making it compatible with FSx S3 AP aliases.
 
-### Status: ⚠️ Blocked by FSx S3 AP Service Responsiveness
+### Status: ✅ Read Verified (2026-05-24)
 
-- Infrastructure prepared (Docker Compose + config)
-- **Finding**: All FSx S3 AP aliases in the test environment return ReadTimeoutError
-  - DNS resolves correctly (`s3-r-w.ap-northeast-1.amazonaws.com`)
-  - TCP connection establishes (curl returns 400 for unsigned requests)
-  - Signed requests hang indefinitely (ReadTimeoutError after 10s)
-  - Regular S3 bucket access works fine from the same EC2
-  - FSx file system status: AVAILABLE, AP lifecycle: AVAILABLE
-- **Root cause investigation**:
-  - ~~S3 Gateway endpoint routing~~ → Ruled out (same behavior with/without Gateway endpoint)
-  - Possible: SVM S3 protocol configuration, FSx service-side issue, or AP backend health
-- **Trino configuration is ready** — blocked only by FSx S3 AP service responsiveness
-- **Previous successful access**: Athena, DuckDB, EMR all accessed this FSx S3 AP successfully (May 2026). The current timeout may be a transient service issue.
+- **Read**: All queries succeed on FSx S3 AP (10K and 5M row Parquet)
+- **Write-back (CTAS)**: Failed due to file-based metastore limitation (not FSx S3 AP issue). Requires Glue Catalog or Hive Metastore for write operations.
+- **No session policy issues**: Direct IAM credentials, no intermediary governance layer
+- Tested on separate SVM (svm-0e5ef72d9b4470f19) while original SVM has a service issue
+
+**Benchmark (Trino 438, single-node Docker arm64, ap-northeast-1):**
+
+| Query | 10K rows | 5M rows (103 MB) |
+|-------|----------|-------------------|
+| COUNT(*) | 1,136 ms | 1,075 ms |
+| GROUP BY + AVG | 860 ms | 1,462 ms |
+| WHERE filter | — | 1,227 ms |
 
 ### Architecture
 
@@ -123,20 +123,20 @@ integrations/trino-starburst/
 
 Trino（オープンソース分散 SQL クエリエンジン）を使用して、FSx for ONTAP のデータを S3 Access Points 経由でクエリします。Trino は path-style アクセスをサポートする独自の S3 ファイルシステム実装を持ち、FSx S3 AP alias と互換性があります。
 
-### ステータス: ⚠️ FSx S3 AP サービス応答性でブロック
+### ステータス: ✅ 読み取り検証済み (2026-05-24)
 
-- インフラ準備済み（Docker Compose + 設定）
-- **発見**: テスト環境の全 FSx S3 AP alias が ReadTimeoutError を返す
-  - DNS は正常に解決（`s3-r-w.ap-northeast-1.amazonaws.com`）
-  - TCP 接続は確立（未署名リクエストで curl が 400 を返す）
-  - 署名付きリクエストが無期限にハング（10秒後に ReadTimeoutError）
-  - 同じ EC2 から通常の S3 バケットアクセスは正常動作
-  - FSx ファイルシステムステータス: AVAILABLE、AP ライフサイクル: AVAILABLE
-- **根本原因調査**:
-  - ~~S3 Gateway エンドポイントルーティング~~ → 除外（Gateway エンドポイント有無で同じ動作）
-  - 可能性: SVM S3 プロトコル設定、FSx サービス側の問題、または AP バックエンドの健全性
-- **Trino 設定は準備完了** — FSx S3 AP サービス応答性のみがブロッカー
-- **過去の成功アクセス**: Athena、DuckDB、EMR は全て同じ FSx S3 AP に正常アクセス済み（2026年5月）。現在のタイムアウトは一時的なサービス問題の可能性あり。
+- **読み取り**: FSx S3 AP 上の全クエリが成功（10K 行および 5M 行 Parquet）
+- **書き戻し (CTAS)**: ファイルベースメタストアの制限により失敗（FSx S3 AP の問題ではない）。書き込みには Glue Catalog または Hive Metastore が必要。
+- **セッションポリシー問題なし**: 直接 IAM 認証情報、中間ガバナンスレイヤーなし
+- 別 SVM (svm-0e5ef72d9b4470f19) でテスト（元 SVM にサービス問題あり）
+
+**ベンチマーク (Trino 438, single-node Docker arm64, ap-northeast-1):**
+
+| クエリ | 10K 行 | 5M 行 (103 MB) |
+|-------|----------|-------------------|
+| COUNT(*) | 1,136 ms | 1,075 ms |
+| GROUP BY + AVG | 860 ms | 1,462 ms |
+| WHERE フィルタ | — | 1,227 ms |
 
 ### 主な設定
 
