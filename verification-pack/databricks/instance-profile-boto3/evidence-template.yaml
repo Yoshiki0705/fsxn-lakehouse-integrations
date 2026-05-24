@@ -41,3 +41,30 @@ validation_evidence:
     executor_scale: ""  # "pass" | "fail" | "not_tested"
     error_signature: ""
     notes: ""
+
+  ontap_authorization:
+    svm: ""
+    volume: ""
+    junction_path: ""
+    associated_file_system_user: ""  # UNIX UID or Windows domain\user
+    file_system_user_type: ""  # "unix" | "windows"
+    nas_user_mapping: ""  # how S3 AP user maps to NAS permissions
+    export_policy_name: ""
+    export_policy_rules: ""  # summary of client CIDR, rw/ro, superuser
+    file_permissions_checked: false
+    volume_security_style: ""  # "unix" | "ntfs" | "mixed"
+    audit_record_location: ""
+
+  security_evidence:
+    aws_side:
+      cloudtrail_data_events: ""  # "enabled" | "disabled" | "not_applicable"
+      s3_access_point_policy_snapshot: ""
+      iam_role_policy_snapshot: ""
+      vpc_endpoint_policy: ""  # "configured" | "not_applicable"
+      scp_restrictions: ""  # "none" | description
+    databricks_side:
+      cluster_policy: ""
+      instance_profile_assignment: ""
+      notebook_owner: ""
+      workspace_audit_log_location: ""
+      access_mode: ""  # "dedicated" | "standard"

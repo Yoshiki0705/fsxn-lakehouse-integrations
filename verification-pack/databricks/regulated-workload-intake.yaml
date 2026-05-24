@@ -1,0 +1,56 @@
+# Regulated Workload Intake Form
+# Use this template when the validation involves regulated data (PHI, PII, financial)
+# or when the access path bypasses Unity Catalog governance.
+
+regulated_workload_intake:
+  # Data classification
+  data_classification: ""  # "PHI" | "PII" | "financial" | "internal" | "public"
+  data_residency_requirement: ""  # region or jurisdiction constraint
+  retention_requirement: ""  # e.g., "7 years", "indefinite"
+
+  # Workload characteristics
+  patient_facing: false
+  decision_automation: false  # clinical decision support, financial automation
+  human_review_required: false
+  write_back_to_source: false
+
+  # Governance requirements
+  unity_catalog_lineage_required: true
+  exception_approval_required: true
+  compensating_controls_defined: false
+
+  # Approval chain
+  approval:
+    data_owner: ""
+    security_owner: ""
+    platform_owner: ""
+    compliance_reviewer: ""
+    approval_record_location: ""
+    review_expiration_date: ""
+    incident_escalation_contact: ""
+
+  # Access path
+  access_path:
+    engine: ""  # "databricks" | "athena" | "emr" | "lambda"
+    method: ""  # "unity-catalog" | "instance-profile-boto3" | "direct-iam"
+    governance_bypass: false
+    bypass_justification: ""
+
+  # Evidence requirements
+  evidence:
+    cloudtrail_data_events: ""  # "enabled" | "disabled"
+    databricks_audit_logs: ""  # "enabled" | "disabled"
+    access_review_frequency: ""  # "weekly" | "monthly" | "quarterly"
+    evidence_retention_period: ""
+
+  # Risk assessment
+  risk:
+    residual_risk_level: ""  # "low" | "medium" | "high"
+    risk_acceptance_owner: ""
+    mitigating_controls: []
+    # Example mitigating controls:
+    # - "Read-only access only"
+    # - "Dedicated cluster with auto-termination"
+    # - "CloudTrail data events enabled"
+    # - "No PII in analytics output"
+    # - "Results written to isolated volume"
