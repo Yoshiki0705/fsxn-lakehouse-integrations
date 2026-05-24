@@ -231,6 +231,26 @@ fsxn-lakehouse-integrations/
 | Recovery Semantics | [リカバリセマンティクス](docs/ja/recovery-semantics.md) | [Recovery Semantics](docs/en/recovery-semantics.md) |
 | Governance & Compliance | [ガバナンスとコンプライアンス](docs/ja/governance-and-compliance.md) | [Governance & Compliance](docs/en/governance-and-compliance.md) |
 | KPI & Validation | [KPI と PoC 検証](docs/ja/kpi-and-validation.md) | [KPI & Validation](docs/en/kpi-and-validation.md) |
+| S3 AP Networking | [ネットワーキング考慮事項](docs/ja/fsxn-s3ap-networking.md) | [Networking Considerations](docs/en/fsxn-s3ap-networking.md) |
+
+---
+
+## Troubleshooting / トラブルシューティング
+
+### S3 AP ReadTimeout on AD-Joined SVM
+
+If S3 Access Points return ReadTimeout (not AccessDenied), check the SVM's DNS configuration:
+
+```bash
+# ONTAP CLI
+vserver services dns check -vserver <SVM_NAME>
+```
+
+If DNS servers show "down" or "Operation timed out," the SVM has unreachable DNS servers configured (typically for an AD domain that no longer exists). This blocks S3 AP request processing because ONTAP's name-service stack attempts DNS resolution for user-mapping on AD-joined SVMs.
+
+**Fix**: Remove orphaned CIFS/DNS configuration or point DNS to a reachable server. See [Networking Considerations — Section 7](docs/en/fsxn-s3ap-networking.md) for full details.
+
+**Key insight**: This only affects SVMs with CIFS/AD domain membership. NFS-only SVMs and CIFS Workgroup-mode SVMs are not affected.
 
 ---
 
