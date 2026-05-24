@@ -1,0 +1,11 @@
+{
+  "VpcId": "vpc-0XXXXXXXXXXXXXXXXX",
+  "SubnetIds": ["subnet-0XXXXXXXXXXXXXXXXX", "subnet-0YYYYYYYYYYYYYYYYY"],
+  "SecurityGroupId": "sg-0XXXXXXXXXXXXXXXXX",
+  "S3AccessPointName": "verification-test-ap",
+  "GlueDatabase": "fsxn_athena_verification",
+  "RedshiftNamespace": "fsxn-spectrum-ns",
+  "RedshiftWorkgroup": "fsxn-spectrum-wg",
+  "BaseCapacityRPU": 8,
+  "Region": "ap-northeast-1"
+}

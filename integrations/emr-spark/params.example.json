@@ -1,0 +1,9 @@
+{
+  "ApplicationName": "fsxn-spark-verification",
+  "EMRRelease": "emr-7.1.0",
+  "ExecutionRoleArn": "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/fsxn-emr-serverless-role",
+  "S3AccessPointAlias": "<your-ap-alias>-ext-s3alias",
+  "ScriptBucket": "<your-bucket-for-scripts>",
+  "LogBucket": "<your-bucket-for-logs>",
+  "Region": "ap-northeast-1"
+}
