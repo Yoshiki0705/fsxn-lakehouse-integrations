@@ -64,7 +64,6 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **Amazon EMR Serverless** | Parquet | 読み取り | ✅ 検証済み | S3A コネクタ付き Spark、AP エイリアス | — |
 | **Amazon EMR Serverless** | Parquet | 書き込み（Append） | ✅ 検証済み | 読み書きファイルシステムユーザー | ファイルあたり最大 5 GB |
 | **Amazon EMR Serverless** | Iceberg | 読み取り | ⚠️ 実験的 | Iceberg Spark ランタイム、Glue Catalog | メタデータ読み取りは動作。書き込みコミットは未テスト |
-| **Amazon EMR Serverless** | Iceberg | 書き込み | ❌ 非サポート | — | S3FileIO が S3 AP alias でのメタデータ書き込み/検証を処理できない。コミット時に NullPointerException。 |
 | **Amazon EMR Serverless** | Delta Lake | 読み取り | ⚠️ 実験的 | Delta Lake Spark ライブラリ | ログ読み取りは動作 |
 | **Amazon EMR Serverless** | Delta Lake | Write/MERGE | ❌ 非サポート | — | コミットプロトコルにアトミック rename が必要 |
 | **Databricks** | Parquet/CSV | 読み取り（External Location） | ✅ 検証済み | Unity Catalog External Location、AP 権限付きインスタンスプロファイル/ストレージクレデンシャル | — |
@@ -73,35 +72,8 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **Snowflake** | Parquet/CSV | 読み取り（External Stage） | ✅ 検証済み | AP エイリアス付き External Stage、ストレージ統合 IAM ロール | — |
 | **Snowflake** | Iceberg | 読み取り（External Catalog） | ⚠️ 実験的 | 外部カタログ付き Snowflake Iceberg Tables | メタデータポインタの読み取りは動作 |
 | **Snowflake** | 全て | 書き込み | ❌ 非サポート | — | Snowflake External Stage は設計上読み取り専用 |
-| **Redshift Spectrum** | Parquet/CSV | 読み取り専用 | ✅ 検証済み | Glue Catalog 経由の External Schema、AP 権限付き IAM ロール | Athena と同パターン。クエリ結果は Redshift 内に保持。 |
+| **Redshift Spectrum** | Parquet/CSV | 読み取り専用 | 🔲 計画中 | Glue Catalog 経由の External Schema、AP 権限付き IAM ロール | 動作見込み（Athena と同じパターン） |
 | **Amazon Bedrock** | ドキュメント（PDF、TXT 等） | 読み取り（Knowledge Base） | ✅ 検証済み | AP を指す S3 データソース付き Bedrock Knowledge Base | RAG アプリケーション用。ドキュメントが検索用にインデックス化 |
-
-## Parquet タイムスタンプ互換性
-
-> **注**: これはサイジング/実装リファレンスであり、サービス制限ではありません。制約は Apache Spark の Parquet リーダーに起因し、FSx S3 AP の制約ではありません。
-
-Spark ベースのエンジン（Glue ETL、EMR、Databricks）で使用する Parquet ファイルを生成する際、タイムスタンプ解像度が重要です：
-
-| タイムスタンプ解像度 | pandas デフォルト | Spark 3.3+（Glue 4.0） | Spark 3.5（EMR 7.1） | DuckDB | Athena |
-|---------------------|:-:|:-:|:-:|:-:|:-:|
-| **ナノ秒** (`TIMESTAMP(NANOS,false)`) | ✅ デフォルト | ❌ 失敗 | ❌ 失敗 | ✅ | ✅ |
-| **マイクロ秒** (`TIMESTAMP(MICROS,false)`) | 手動設定 | ✅ | ✅ | ✅ | ✅ |
-| **INT96**（レガシー） | 手動設定 | ✅ | ✅ | ✅ | ✅ |
-
-**影響**: pandas（デフォルト）または DuckDB（COPY TO）で生成した Parquet ファイルはナノ秒タイムスタンプを使用。これらのファイルは変換なしでは **Spark/Glue/EMR で読み取り不可**。
-
-**回避策**: クロスエンジン互換性のために Parquet を生成する場合：
-```python
-# pandas + pyarrow: マイクロ秒解像度を強制
-import pyarrow as pa
-ts_array = pa.array(df['timestamp'].values.astype('datetime64[us]'), type=pa.timestamp('us'))
-
-# または Athena CTAS を使用（ナノ秒を正しく処理）して Spark 互換 Parquet を書き出し
-```
-
-**推奨**: 複数エンジンで消費されるデータは常にマイクロ秒タイムスタンプで Parquet を生成。Athena と DuckDB は両方のフォーマットを読み取り可能。
-
----
 
 ## パフォーマンス特性
 
@@ -161,17 +133,12 @@ FSx S3 Access Points 上の分析ワークロードを計画する際：
 
 | プラットフォーム + モード | 検証レベル | 備考 |
 |------------------------|-----------|------|
-| Athena + Parquet 読み取り | **セキュリティ検証済み** | 完全なワークフロー + 9/9 ネガティブテスト PASS + CloudTrail 確認。ベンチマーク: 54.8 MB/s ピーク（128 MB/s プロビジョンド）。 |
-| Glue ETL + Parquet 読み取り/書き込み | **機能検証済み** | 10K 行読み取り → 変換 → 書き戻し 64 秒。2026-05-23 検証。 |
-| Glue Crawler | **機能検証済み** | FSx S3 AP データの自動スキーマ検出。2026-05-23 検証。 |
-| Delta Lake OSS (delta-rs) 読み取り | **機能検証済み** | DeltaTable.open + to_pyarrow_table + metadata/history。2026-05-23 検証。 |
-| Delta Lake OSS 書き込み | **非サポート** | 501 Not Implemented を返す（delta-rs コミットプロトコルに条件付き書き込みが必要）。 |
-| EMR Serverless + Parquet 読み取り/書き込み | 機能検証済み | AWS 公式チュートリアルで検証。 |
-| Bedrock Knowledge Base + ドキュメント読み取り | 機能検証済み | AWS 公式チュートリアルで検証。 |
-| Snowflake + External Stage (LIST) | **API 検証済み** | LIST @stage 成功（ファイル表示）。 |
-| Snowflake + External Stage (GetObject) | **ブロック** | セッションポリシーが S3 AP ARN 形式を認識しない。サポートケース 01357726 提出済み。 |
-| Databricks + Unity Catalog | **ブロック** | セッションポリシーが全 S3 AP 操作をブロック。Databricks にサポートケース提出済み。 |
-| Snowflake + Parquet 読み取り | API 検証済み | External Stage 作成とクエリ確認 |
+| Athena + Parquet 読み取り | セキュリティ検証済み | AWS 公式チュートリアルが IAM を含む完全なワークフローを検証 |
+| Glue ETL + Parquet 読み取り/書き込み | 機能検証済み | AWS 公式チュートリアルが読み取りと書き戻しを検証 |
+| EMR Serverless + Parquet 読み取り/書き込み | 機能検証済み | AWS 公式チュートリアルが Spark ワークフローを検証 |
+| Bedrock Knowledge Base + ドキュメント読み取り | 機能検証済み | AWS 公式チュートリアルが RAG インジェストを検証 |
+| Databricks + Parquet 読み取り | API 検証済み | External Location の登録と読み取りを確認 |
+| Snowflake + Parquet 読み取り | API 検証済み | External Stage の作成とクエリを確認 |
 | Delta Lake 書き込み（全プラットフォーム） | 非サポート | 基本的な制約（アトミック rename なし） |
 
 ---
@@ -336,67 +303,6 @@ Required FSx Throughput = max(
 - **影響**: AP 経由のすべての S3 リクエストが失敗します。
 - **復旧**: ファイルシステム上でユーザーを再作成するか、AP を別の有効なユーザーを使用するように更新します。
 - **FSx の動作**: FSx は定期的にチェックし、ユーザー ID が再び解決可能になると AP を自動的に `AVAILABLE` に戻します。（[ソース](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html)）
-
----
-
-## 既知の制限事項 — プラットフォームセッションポリシー問題
-
-> **ステータス**: ベンダーサポートチームと調査中（2026-05-23 時点）
-
-Databricks と Snowflake の両方が `AssumeRole` 時に**セッションポリシー**を適用し、IAM アクションの `Resource` ARN パターンを制限しています。FSx for ONTAP S3 Access Points は標準 S3 バケットとは異なる ARN 形式を使用するため、オブジェクトレベルの操作が失敗します。
-
-### 根本原因
-
-| コンポーネント | 標準 S3 ARN | FSx S3 AP ARN |
-|-------------|------------|---------------|
-| バケットレベル | `arn:aws:s3:::bucket-name` | `arn:aws:s3:region:account:accesspoint/name` |
-| オブジェクトレベル | `arn:aws:s3:::bucket-name/key` | `arn:aws:s3:region:account:accesspoint/name/object/key` |
-
-プラットフォームのセッションポリシーは通常以下を許可：
-- `s3:ListBucket` on `arn:aws:s3:::*` → **両方の形式にマッチ**（LIST 成功）
-- `s3:GetObject` on `arn:aws:s3:::*/*` → **AP オブジェクト ARN にマッチしない**（GetObject 失敗）
-
-これにより、LIST 操作は成功するが GetObject/PutObject は `AccessDenied` で失敗するという観察された動作が説明されます。
-
-### Databricks — Unity Catalog セッションポリシー
-
-| 症状 | 詳細 |
-|------|------|
-| **影響を受ける操作** | Unity Catalog 経由の全オブジェクトレベル S3 操作（External Location、External Table） |
-| **エラー** | GetObject、PutObject、DeleteObject で `AccessDenied` |
-| **LIST の動作** | 成功（バケットレベル操作は異なる ARN パターンを使用） |
-| **回避策** | Dedicated モードでの Instance Profile + boto3（Unity Catalog ガバナンスをバイパス） |
-| **サポートケース** | Databricks に提出済み（セッションポリシー + NFS seccomp） |
-| **追加ブロッカー** | Databricks ランタイムの seccomp フィルターにより NFS カーネルマウントがブロック |
-
-### Snowflake — Storage Integration セッションポリシー
-
-| 症状 | 詳細 |
-|------|------|
-| **影響を受ける操作** | External Stage 経由の GetObject（SELECT from @stage） |
-| **エラー** | "Failed to access remote file: access denied" |
-| **LIST の動作** | 成功（`LIST @stage` がファイルを正しく返す） |
-| **回避策** | 未特定 — Snowflake はセッションポリシーのカスタマイズを公開していない |
-| **サポートケース** | Snowflake ケース 01357726 提出済み |
-| **エビデンス** | Snowflake のセッションポリシーなしで同じ IAM ロールを引き受けると → 全操作成功 |
-
-### 影響評価
-
-| プラットフォーム | 読み取り（LIST） | 読み取り（GetObject） | 書き込み | ガバナンスパス |
-|---------------|:--------------:|:-------------------:|:-------:|:------------:|
-| Databricks（Unity Catalog） | ✅ | ❌ ブロック | ❌ ブロック | ブロック |
-| Databricks（Instance Profile + boto3） | ✅ | ✅ | ✅ | UC バイパス |
-| Snowflake（External Stage） | ✅ | ❌ ブロック | N/A（読み取り専用） | ブロック |
-
-### 解決パス
-
-1. **ベンダーセッションポリシー更新**: 両ベンダーが S3 Access Point ARN 形式（`arn:aws:s3:region:account:accesspoint/name/object/*`）をサポートするようセッションポリシーを更新する必要がある
-2. **タイムライン**: 不明 — ベンダーのロードマップ優先度に依存
-3. **暫定推奨**: Databricks は PoC/デモ目的で Instance Profile + boto3 を使用（本番非推奨）。Snowflake は回避策なし。
-
-### AWS サポート確認
-
-AWS サポートケース 177949831900431 により、拒否は IAM ロールポリシー、AP ポリシー、ファイルシステム権限からではなく、**分析プラットフォームが AssumeRole 時に適用するセッションポリシー**に起因することが確認されました。
 
 ---
 
