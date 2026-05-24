@@ -12,17 +12,20 @@
 
 Query FSx for ONTAP data via S3 Access Points using Trino — an open-source distributed SQL query engine. Trino uses its own S3 filesystem implementation that supports path-style access, making it compatible with FSx S3 AP aliases.
 
-### Status: ⚠️ Blocked by S3 Gateway Endpoint Routing
+### Status: ⚠️ Blocked by FSx S3 AP Service Responsiveness
 
 - Infrastructure prepared (Docker Compose + config)
-- **Finding**: FSx S3 AP alias traffic is NOT routed correctly through S3 Gateway VPC Endpoint
-- Regular S3 bucket access works fine through the same Gateway endpoint
-- FSx S3 AP alias resolves to `s3-r-w.ap-northeast-1.amazonaws.com` — this IP range may not be in the S3 prefix list
-- **Workaround options**:
-  1. Use a subnet without S3 Gateway endpoint (route via IGW/NAT)
-  2. Add S3 Interface endpoint (PrivateLink)
-  3. Use internet-routed EC2 (public subnet without Gateway endpoint route)
-- Trino configuration is ready — blocked only by network routing
+- **Finding**: All FSx S3 AP aliases in the test environment return ReadTimeoutError
+  - DNS resolves correctly (`s3-r-w.ap-northeast-1.amazonaws.com`)
+  - TCP connection establishes (curl returns 400 for unsigned requests)
+  - Signed requests hang indefinitely (ReadTimeoutError after 10s)
+  - Regular S3 bucket access works fine from the same EC2
+  - FSx file system status: AVAILABLE, AP lifecycle: AVAILABLE
+- **Root cause investigation**:
+  - ~~S3 Gateway endpoint routing~~ → Ruled out (same behavior with/without Gateway endpoint)
+  - Possible: SVM S3 protocol configuration, FSx service-side issue, or AP backend health
+- **Trino configuration is ready** — blocked only by FSx S3 AP service responsiveness
+- **Previous successful access**: Athena, DuckDB, EMR all accessed this FSx S3 AP successfully (May 2026). The current timeout may be a transient service issue.
 
 ### Architecture
 
@@ -120,17 +123,20 @@ integrations/trino-starburst/
 
 Trino（オープンソース分散 SQL クエリエンジン）を使用して、FSx for ONTAP のデータを S3 Access Points 経由でクエリします。Trino は path-style アクセスをサポートする独自の S3 ファイルシステム実装を持ち、FSx S3 AP alias と互換性があります。
 
-### ステータス: ⚠️ S3 Gateway エンドポイントルーティングでブロック
+### ステータス: ⚠️ FSx S3 AP サービス応答性でブロック
 
 - インフラ準備済み（Docker Compose + 設定）
-- **発見**: FSx S3 AP alias トラフィックが S3 Gateway VPC エンドポイント経由で正しくルーティングされない
-- 通常の S3 バケットアクセスは同じ Gateway エンドポイント経由で正常動作
-- FSx S3 AP alias は `s3-r-w.ap-northeast-1.amazonaws.com` に解決 — この IP 範囲が S3 プレフィックスリストに含まれていない可能性
-- **回避策**:
-  1. S3 Gateway エンドポイントのないサブネットを使用（IGW/NAT 経由）
-  2. S3 Interface エンドポイント（PrivateLink）を追加
-  3. インターネットルーティングの EC2 を使用
-- Trino 設定は準備完了 — ネットワークルーティングのみがブロッカー
+- **発見**: テスト環境の全 FSx S3 AP alias が ReadTimeoutError を返す
+  - DNS は正常に解決（`s3-r-w.ap-northeast-1.amazonaws.com`）
+  - TCP 接続は確立（未署名リクエストで curl が 400 を返す）
+  - 署名付きリクエストが無期限にハング（10秒後に ReadTimeoutError）
+  - 同じ EC2 から通常の S3 バケットアクセスは正常動作
+  - FSx ファイルシステムステータス: AVAILABLE、AP ライフサイクル: AVAILABLE
+- **根本原因調査**:
+  - ~~S3 Gateway エンドポイントルーティング~~ → 除外（Gateway エンドポイント有無で同じ動作）
+  - 可能性: SVM S3 プロトコル設定、FSx サービス側の問題、または AP バックエンドの健全性
+- **Trino 設定は準備完了** — FSx S3 AP サービス応答性のみがブロッカー
+- **過去の成功アクセス**: Athena、DuckDB、EMR は全て同じ FSx S3 AP に正常アクセス済み（2026年5月）。現在のタイムアウトは一時的なサービス問題の可能性あり。
 
 ### 主な設定
 
