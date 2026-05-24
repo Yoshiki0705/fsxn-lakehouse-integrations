@@ -1,0 +1,46 @@
+# Value Hypothesis Template
+# Use this template at PoC start to define "why this validation matters"
+# and what business outcome is expected.
+#
+# Reference: This template supports the "define success before starting"
+# principle — PoC value should be measurable against a business issue,
+# not just technical pass/fail.
+
+value_hypothesis:
+  use_case: ""  # e.g., "Enterprise IT RAG over NAS documents"
+  business_issue: ""  # e.g., "Users spend too much time searching operational documents"
+
+  expected_value:
+    primary_metric: ""  # e.g., "search_time_reduction"
+    primary_target: ""  # e.g., "30%"
+    secondary_metric: ""  # e.g., "time_to_first_answer_reduction"
+    secondary_target: ""  # e.g., "20%"
+
+  validation_period: ""  # e.g., "30 days"
+
+  decision_criteria:
+    scale: ""  # condition to proceed to production
+    adjust: ""  # condition to modify approach
+    stop: ""  # condition to terminate PoC
+
+  # Baseline (capture before PoC starts)
+  baseline:
+    avg_search_time_minutes: ""
+    monthly_document_access_count: ""
+    current_copy_pipeline_runtime: ""
+    current_data_freshness_lag_hours: ""
+    current_support_ticket_count: ""
+
+  # Stakeholders
+  stakeholders:
+    business_owner: ""
+    technical_owner: ""
+    data_owner: ""
+    security_owner: ""
+
+  # Constraints
+  constraints:
+    budget_limit: ""  # e.g., "$5,000 AWS charges"
+    timeline: ""  # e.g., "4 weeks"
+    data_scope: ""  # e.g., "Internal IT documents only, no PII"
+    governance_requirement: ""  # e.g., "Unity Catalog lineage not required for PoC"

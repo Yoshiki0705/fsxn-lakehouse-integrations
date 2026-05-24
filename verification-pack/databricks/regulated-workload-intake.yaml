@@ -54,3 +54,27 @@ regulated_workload_intake:
     # - "CloudTrail data events enabled"
     # - "No PII in analytics output"
     # - "Results written to isolated volume"
+
+  # PoC entry decision
+  # Record whether the PoC should proceed based on intake answers
+  poc_entry_decision:
+    decision: ""  # "approved" | "approved_with_conditions" | "rejected"
+    conditions:
+      - ""  # e.g., "Read-only access only", "No PHI in scope"
+    approver:
+      name: ""
+      role: ""  # "data owner" | "security owner" | "compliance reviewer" | "platform owner"
+    decision_date: ""  # YYYY-MM-DD
+    expiration_date: ""  # YYYY-MM-DD (when the approval must be re-evaluated)
+    rejection_reason: ""  # if rejected, explain why
+
+  # Assurance artifacts for non-technical stakeholders
+  # Required for regulated workloads where technical safety must be
+  # communicated as understandable "安心" (assurance) to decision makers
+  assurance_artifacts:
+    non_technical_overview: ""  # "required" | "not_required" | "completed"
+    data_flow_diagram: ""  # "required" | "not_required" | "completed"
+    access_control_summary: ""  # "required" | "not_required" | "completed"
+    audit_evidence_summary: ""  # "required" | "not_required" | "completed"
+    rollback_summary: ""  # "required" | "not_required" | "completed"
+    residual_risk_register: ""  # "required" | "not_required" | "completed"
