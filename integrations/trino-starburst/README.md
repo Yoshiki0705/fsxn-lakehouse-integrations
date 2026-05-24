@@ -12,12 +12,17 @@
 
 Query FSx for ONTAP data via S3 Access Points using Trino — an open-source distributed SQL query engine. Trino uses its own S3 filesystem implementation that supports path-style access, making it compatible with FSx S3 AP aliases.
 
-### Status: 🔲 Verification Pending (Infrastructure Blocker)
+### Status: ⚠️ Blocked by S3 Gateway Endpoint Routing
 
 - Infrastructure prepared (Docker Compose + config)
-- S3 AP connectivity from EC2 in same VPC is timing out (under investigation)
-- Possible cause: S3 Gateway endpoint may not route FSx S3 AP traffic correctly
-- Next step: Verify with S3 Interface endpoint or internet-routed access
+- **Finding**: FSx S3 AP alias traffic is NOT routed correctly through S3 Gateway VPC Endpoint
+- Regular S3 bucket access works fine through the same Gateway endpoint
+- FSx S3 AP alias resolves to `s3-r-w.ap-northeast-1.amazonaws.com` — this IP range may not be in the S3 prefix list
+- **Workaround options**:
+  1. Use a subnet without S3 Gateway endpoint (route via IGW/NAT)
+  2. Add S3 Interface endpoint (PrivateLink)
+  3. Use internet-routed EC2 (public subnet without Gateway endpoint route)
+- Trino configuration is ready — blocked only by network routing
 
 ### Architecture
 
@@ -115,12 +120,17 @@ integrations/trino-starburst/
 
 Trino（オープンソース分散 SQL クエリエンジン）を使用して、FSx for ONTAP のデータを S3 Access Points 経由でクエリします。Trino は path-style アクセスをサポートする独自の S3 ファイルシステム実装を持ち、FSx S3 AP alias と互換性があります。
 
-### ステータス: 🔲 検証待ち（インフラブロッカー）
+### ステータス: ⚠️ S3 Gateway エンドポイントルーティングでブロック
 
 - インフラ準備済み（Docker Compose + 設定）
-- 同一 VPC 内 EC2 からの S3 AP 接続がタイムアウト（調査中）
-- 原因候補: S3 Gateway エンドポイントが FSx S3 AP トラフィックを正しくルーティングしていない可能性
-- 次のステップ: S3 Interface エンドポイントまたはインターネット経由アクセスで検証
+- **発見**: FSx S3 AP alias トラフィックが S3 Gateway VPC エンドポイント経由で正しくルーティングされない
+- 通常の S3 バケットアクセスは同じ Gateway エンドポイント経由で正常動作
+- FSx S3 AP alias は `s3-r-w.ap-northeast-1.amazonaws.com` に解決 — この IP 範囲が S3 プレフィックスリストに含まれていない可能性
+- **回避策**:
+  1. S3 Gateway エンドポイントのないサブネットを使用（IGW/NAT 経由）
+  2. S3 Interface エンドポイント（PrivateLink）を追加
+  3. インターネットルーティングの EC2 を使用
+- Trino 設定は準備完了 — ネットワークルーティングのみがブロッカー
 
 ### 主な設定
 

@@ -38,6 +38,28 @@ value_hypothesis:
     data_owner: ""
     security_owner: ""
 
+  # Target users and impact
+  target_users:
+    - role: ""  # e.g., "IT operations engineer"
+      current_pain: ""  # e.g., "Spends 30 min/day searching runbooks"
+      expected_improvement: ""  # e.g., "AI search reduces to 5 min/day"
+
+  user_impact_metrics:
+    avg_time_saved_per_user_per_week: ""  # e.g., "2 hours"
+    number_of_users_impacted: ""  # e.g., "50"
+    expected_monthly_productivity_gain_hours: ""  # e.g., "400 hours"
+
+  # Decision review (post-PoC)
+  # Separate business, technical, and governance decisions
+  decision_review:
+    business_decision: ""  # "scale" | "adjust" | "stop"
+    business_rationale: ""
+    technical_decision: ""  # "scale" | "adjust" | "stop"
+    technical_rationale: ""
+    governance_decision: ""  # "approve" | "approve_with_conditions" | "reject"
+    governance_conditions: []
+    final_decision_date: ""  # YYYY-MM-DD
+
   # Constraints
   constraints:
     budget_limit: ""  # e.g., "$5,000 AWS charges"
