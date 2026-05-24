@@ -25,6 +25,10 @@ SELECT SNOWFLAKE.CORTEX.PARSE_DOCUMENT(
 
 **Result**: Structured text extracted from the image (6.0s).
 
+![PARSE_DOCUMENT OCR extracts text from image on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-08-parse-document-ocr.png)
+
+*PARSE_DOCUMENT successfully extracts text from an invoice image stored on FSx for ONTAP via S3 Access Point (6.0s).*
+
 **Manufacturing use case**: Digitize paper-based inspection reports stored on NFS, making them searchable and analyzable without manual data entry.
 
 ## Demo 2: AI Text Summarization (CORTEX.SUMMARIZE)
@@ -39,6 +43,10 @@ LIMIT 1;
 ```
 
 **Result**: "The text is a JSON object containing data on humidity, pressure, temperature, sensor ID, status, and timestamp." (3.3s)
+
+![Cortex SUMMARIZE generates AI summary from External Table on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-07-cortex-llm-summary.png)
+
+*Cortex SUMMARIZE generates an AI summary of sensor data stored on FSx for ONTAP, accessed via External Table (3.3s).*
 
 **Manufacturing use case**: Auto-generate shift summaries from IoT sensor data stored on FSx for ONTAP.
 
@@ -60,6 +68,10 @@ ORDER BY LAST_MODIFIED DESC;
 ```
 
 **Result**: File catalog with downloadable URLs for each image.
+
+![Directory Table with presigned URLs for unstructured data on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-06-directory-table-presigned-url.png)
+
+*Directory Table catalogs image files on FSx for ONTAP with metadata and generates download URLs for each file.*
 
 **Manufacturing use case**: Quality engineers search for inspection photos by date/location, download for review.
 
