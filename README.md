@@ -106,7 +106,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 | [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Functional Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
 | [DuckDB](integrations/duckdb/) | ✅ Functional Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
 | [Dremio](integrations/dremio/) | 🔲 Planned | Arctic Catalog | — |
-| [Trino / Starburst](integrations/trino-starburst/) | 🔲 Planned | Hive Connector | — |
+| [Trino / Starburst](integrations/trino-starburst/) | ✅ Read Verified | Hive Connector | Read verified. [5M rows in 1.5s (Docker single-node)](integrations/trino-starburst/) |
 | [BigQuery Omni](integrations/bigquery-omni/) | 🔲 Planned | BigLake | Requires GCP environment |
 | [Microsoft Fabric](integrations/microsoft-fabric/) | 🔲 Planned | OneLake Shortcut | Requires Azure environment |
 
