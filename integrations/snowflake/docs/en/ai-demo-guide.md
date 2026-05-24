@@ -105,7 +105,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 |---|---|---|---|
 | Inspection report OCR | PARSE_DOCUMENT (OCR mode) | Scanned reports (PNG/PDF) | [Snowflake PARSE_DOCUMENT docs](https://docs.snowflake.com/en/user-guide/snowflake-cortex/parse-document) |
 | Sensor anomaly summarization | CORTEX.SUMMARIZE | IoT sensor Parquet/CSV | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
-| Visual defect detection | AI_COMPLETE (vision) | Product images | [AI_COMPLETE multimodal](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-snowflake-cortex) |
+| Visual defect detection | AI_COMPLETE (vision) | Product images | [AI_COMPLETE multimodal](https://docs.snowflake.com/en/sql-reference/functions/complete-snowflake-cortex-multimodal) |
 | Yield analysis from dashboards | AI_COMPLETE (vision) | Dashboard screenshots | [Image Analysis Quickstart](https://www.snowflake.com/en/developers/guides/build-image-analysis-app-with-streamlit-and-snowflake-cortex/) |
 
 ### Financial Services / Insurance
@@ -130,7 +130,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 
 | Use Case | Cortex Function | Data on FSx | Reference |
 |---|---|---|---|
-| Image metadata extraction | AI_COMPLETE (vision) | Media assets | [AI_COMPLETE](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-snowflake-cortex) |
+| Image metadata extraction | AI_COMPLETE (vision) | Media assets | [AI_COMPLETE](https://docs.snowflake.com/en/sql-reference/functions/complete-snowflake-cortex-multimodal) |
 | Video frame description | AI_COMPLETE (vision) | Extracted frames | [Image Analysis](https://www.snowflake.com/en/developers/guides/build-image-analysis-app-with-streamlit-and-snowflake-cortex/) |
 | Asset catalog management | Directory Table + Tags | All media files | [Directory Tables](https://docs.snowflake.com/en/user-guide/data-load-dirtables) |
 | Content translation | CORTEX.TRANSLATE | Text documents | [Cortex TRANSLATE](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-translate) |
@@ -141,7 +141,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 |---|---|---|---|
 | Schema inference from files | PARSE_DOCUMENT + LLM | Mixed format files | [Cortex LLM](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
 | Data quality assessment | CORTEX.SUMMARIZE | Data samples | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
-| File classification/tagging | AI_COMPLETE + Tags | Unstructured files | [Governance Tags](https://docs.snowflake.com/en/user-guide/governance-tag) |
+| File classification/tagging | AI_COMPLETE + Tags | Unstructured files | [Governance Tags](https://docs.snowflake.com/en/user-guide/object-tagging/introduction) |
 | Automated documentation | CORTEX.SUMMARIZE | Code/config files | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
 
 ---
@@ -159,7 +159,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 - [Cortex AI Overview](https://docs.snowflake.com/en/user-guide/snowflake-cortex)
 - [LLM Functions (SUMMARIZE, COMPLETE, TRANSLATE)](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions)
 - [PARSE_DOCUMENT (OCR / Document AI)](https://docs.snowflake.com/en/user-guide/snowflake-cortex/parse-document)
-- [AI_COMPLETE (Multimodal/Vision)](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-snowflake-cortex)
+- [AI_COMPLETE (Multimodal/Vision)](https://docs.snowflake.com/en/sql-reference/functions/complete-snowflake-cortex-multimodal)
 - [Cortex Search (RAG)](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview)
 - [Directory Tables](https://docs.snowflake.com/en/user-guide/data-load-dirtables)
 - [OCR + RAG Quickstart](https://quickstarts.snowflake.com/guide/getting_started_with_ocr_and_rag_with_snowflake_notebooks/)
