@@ -15,8 +15,13 @@
 | Storage Integration | ✅ | ✅ |
 | Stage creation | ✅ | ✅ |
 | LIST @stage | ✅ | ✅ |
-| SELECT @stage | ❌ Access Denied | ✅ |
+| SELECT @stage (Parquet) | ❌ Access Denied | ✅ |
+| SELECT @stage (CSV) | ❌ | ✅ |
 | External Table | ❌ | ✅ |
+| COPY INTO (load) | ❌ | ✅ |
+| Governance Tags | N/A | ✅ |
+| Snowpipe (auto-ingest) | ❌ | ❌ (S3 Event Notifications not supported) |
+| Iceberg Table write | ❌ | ❌ (conditional writes not supported) |
 | GET_PRESIGNED_URL | ✅ (observed) | ✅ |
 
 ## Overview
