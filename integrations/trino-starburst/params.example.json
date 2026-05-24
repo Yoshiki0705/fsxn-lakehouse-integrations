@@ -1,0 +1,7 @@
+{
+  "S3AccessPointAlias": "<your-fsx-s3-ap-alias>-ext-s3alias",
+  "Region": "ap-northeast-1",
+  "S3Endpoint": "https://s3.ap-northeast-1.amazonaws.com",
+  "DataPrefix": "sensor-data/",
+  "OutputPrefix": "trino-output/"
+}
