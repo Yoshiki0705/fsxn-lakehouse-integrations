@@ -704,39 +704,6 @@ For each active deal, assign explicit owners:
 
 ---
 
-## Offer Exit Paths
-
-After the FSx S3 AP Analytics Readiness Assessment, recommend one of:
-
-### 1. Athena Read-only Analytics Pilot
-
-- For structured NAS files (Parquet, CSV, JSON)
-- Deliverable: validated SQL query path and workload isolation evidence
-- Timeline: 1–2 weeks
-- Success criteria: query latency < 10s, zero data copies, audit trail complete
-
-### 2. Databricks Lakehouse Staging Design
-
-- For Delta / ML / governed lakehouse workloads
-- Deliverable: staged S3 bucket architecture and UC governance model
-- Note: FSx S3 AP data is staged to S3 for Delta write path; direct UC integration pending vendor confirmation
-- Timeline: 3–4 weeks
-
-### 3. Executor-scale Validation Sprint
-
-- For Spark-based unstructured processing (EMR Serverless or Databricks with Instance Profile)
-- Deliverable: per-executor JSONL evidence and FSx impact report
-- Timeline: 2 weeks
-- Success criteria: executor-scale success rate > 99%, FSx throughput utilization < 80%
-
-### 4. Stop / Revisit
-
-- If governance or runtime boundaries make the use case unsuitable
-- Deliverable: boundary documentation and alternative recommendation
-- Value: prevents wasted PoC investment and incorrect production architecture
-
----
-
 ## Marketplace Offer Boundary
 
 This validation package ([fsxn-lakehouse-integrations](https://github.com/Yoshiki0705/fsxn-lakehouse-integrations)) can inform a partner-delivered assessment, but it is **not itself a Marketplace offer**.
@@ -747,46 +714,6 @@ Potential packaged offers for AWS Marketplace or CPPO:
 - Governance and Evidence Package (for regulated industries)
 
 To create a Marketplace listing, partners must separately package the service with defined scope, pricing, and delivery methodology.
-
----
-
-## One-slide Partner Summary (Databricks Validation)
-
-Use this summary when explaining the Databricks + FSx S3 AP validation result in a customer or partner conversation.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  FSx for ONTAP S3 AP × Databricks: Validation Summary            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  VALUE:                                                           │
-│  - Reduce unnecessary NAS-to-S3 copies                            │
-│  - Validate S3 API access to FSx for ONTAP data                  │
-│  - Identify platform boundaries before production design          │
-│                                                                   │
-│  CURRENT VALIDATED PATH:                                          │
-│  - Athena for read-only SQL analytics (verified, governed)        │
-│  - EMR Serverless for Spark ETL (verified, read + write-back)     │
-│  - DuckDB Lambda for lightweight analytics (verified)             │
-│                                                                   │
-│  OBSERVED DATABRICKS BOUNDARIES:                                  │
-│  - UC session policy did not allow S3 AP ARN in this validation   │
-│  - NFS mount failed with evidence pointing to local runtime       │
-│    boundary                                                       │
-│  - Instance Profile + boto3 works as controlled PoC only          │
-│                                                                   │
-│  NEXT STEP:                                                       │
-│  - Read-only analytics readiness assessment                       │
-│  - Engine fit recommendation (Athena / EMR / Databricks staging)  │
-│  - Vendor confirmation for UC session policy (support case open)  │
-│                                                                   │
-│  KEY MESSAGE:                                                     │
-│  This is not a Databricks limitation — it is a specific           │
-│  integration boundary with FSx S3 AP ARN format.                  │
-│  Databricks remains strong for lakehouse, Delta, and ML.          │
-│                                                                   │
-└─────────────────────────────────────────────────────────────────┘
-```
 
 ---
 
