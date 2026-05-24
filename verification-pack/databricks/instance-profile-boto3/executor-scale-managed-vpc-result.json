@@ -1,0 +1,72 @@
+{
+  "test_id": "EXEC-SCALE-MANAGED-VPC-001",
+  "test_date": "2026-05-24",
+  "description": "Executor-scale S3 AP access test from Databricks-managed VPC with VPC Peering and Instance Profile",
+  "environment": {
+    "workspace_url": "https://<WORKSPACE_URL>",
+    "workspace_id": "<WORKSPACE_ID>",
+    "workspace_type": "Databricks-managed VPC",
+    "cluster_id": "<CLUSTER_ID>",
+    "cluster_name": "executor-scale-s3ap-validation",
+    "spark_version": "17.3.x-scala2.13",
+    "node_type": "m5.large",
+    "num_workers": 2,
+    "access_mode": "SINGLE_USER",
+    "instance_profile_arn": "arn:aws:iam::<ACCOUNT_ID>:instance-profile/fsxn-databricks-executor-validation",
+    "databricks_vpc": "<DATABRICKS_VPC_ID>",
+    "databricks_vpc_cidr": "10.53.0.0/16",
+    "fsx_vpc": "<FSX_VPC_ID>",
+    "fsx_vpc_cidr": "10.0.0.0/16",
+    "vpc_peering": "<PEERING_ID>",
+    "s3_gateway_endpoint": "<ENDPOINT_ID>",
+    "region": "ap-northeast-1"
+  },
+  "s3_access_point": {
+    "name": "fsxn-databricks-executor-test",
+    "alias": "fsxn-databricks-qtd8gqcc617e5jfxnn5c89kfrg1agapn1b-ext-s3alias",
+    "arn": "arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/fsxn-databricks-executor-test",
+    "volume_id": "<VOLUME_ID>",
+    "volume_name": "athena_verification",
+    "network_origin": "Internet",
+    "file_system_user": "root"
+  },
+  "results": {
+    "dns_resolution": {
+      "status": "success",
+      "resolved_ip": "<RESOLVED_IP>",
+      "interpretation": "S3 AP alias DNS resolves correctly to S3 endpoint IP"
+    },
+    "vpc_peering_tcp_443": {
+      "status": "failed",
+      "result_code": 11,
+      "target": "<FSX_DATA_LIF_IP>:443",
+      "interpretation": "FSx management IP unreachable via VPC Peering — egress restricted by Databricks-managed VPC"
+    },
+    "vpc_peering_nfs_2049": {
+      "status": "failed",
+      "result_code": 11,
+      "target": "<FSX_DATA_LIF_IP>:2049",
+      "interpretation": "NFS port unreachable via VPC Peering — consistent with Part 2 article findings"
+    },
+    "s3_ap_access": {
+      "status": "failed",
+      "error": "Read timeout on endpoint URL",
+      "interpretation": "S3 AP request reaches S3 endpoint but FSx backend connection times out. S3 Gateway Endpoint routes to S3 service but FSx for ONTAP S3 AP requires backend connectivity that is blocked."
+    },
+    "s3_regular_listbuckets": {
+      "status": "failed_expected",
+      "error": "AccessDenied (ListBuckets not in policy)",
+      "interpretation": "Instance Profile works (IMDS accessible, credentials valid) but policy only allows S3 AP operations, not ListBuckets. This confirms Instance Profile is functional."
+    },
+    "imds_access": {
+      "status": "success",
+      "interpretation": "Instance Profile credentials available on cluster node via IMDSv2"
+    }
+  },
+  "conclusion": {
+    "executor_scale_s3ap_from_managed_vpc": "BLOCKED",
+    "root_cause": "Databricks-managed VPC egress restrictions prevent FSx for ONTAP S3 AP backend connectivity. VPC Peering is established and routes are configured, but cluster-side egress is governed by Databricks-managed security controls.",
+    "consistency_with_article": "Fully consistent with Part 2 findings: Databricks-managed VPC blocks both direct IP (NFS/HTTPS) and S3 AP backend connectivity to FSx for ONTAP.",
+    "next_step": "Requires Customer-managed VPC workspace (same VPC as FSx for ONTAP) for executor-scale validation. This workspace creation is pending Databricks support ticket resolution."
+  }
+}
