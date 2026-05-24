@@ -64,3 +64,40 @@ ts_array = pa.array(df['timestamp'].values.astype('datetime64[us]'), type=pa.tim
 
 EMR Serverless charges per vCPU-hour and GB-hour. A 37-second job costs approximately $0.05.
 Application has zero cost when stopped.
+
+## Unstructured Data Support
+
+| Format | Support | Access Method | Use Case |
+|--------|:---:|--------------|----------|
+| Images (JPEG, PNG, TIFF) | ✅ | spark.read.binaryFile | Image classification, quality inspection, ML pipeline |
+| Video (MP4, MOV) | ✅ | spark.read.binaryFile | Frame extraction, video analytics |
+| Documents (PDF, DOCX) | ✅ | spark.read.binaryFile + UDF | Text extraction, RAG pipeline, document processing |
+| Audio (WAV, MP3) | ✅ | spark.read.binaryFile + UDF | Transcription, speech analytics |
+| Binary / Archives | ✅ | spark.read.binaryFile | Custom processing, format conversion |
+
+EMR Spark provides full support for unstructured data processing via `spark.read.format("binaryFile")`. Files are read as binary content and can be processed at executor scale using Spark ML pipelines or custom UDFs.
+
+**Patterns:**
+1. **Binary file read** — `spark.read.format("binaryFile")` loads images/documents as binary
+2. **UDF processing** — Execute image processing, text extraction within Spark UDFs
+3. **ML pipeline** — Full Spark ML pipeline for image/audio classification at scale
+4. **Metadata ETL** — Manage file metadata as structured tables for processing pipelines
+
+```python
+# Read binary files (images, PDFs, etc.)
+df = spark.read.format("binaryFile") \
+    .option("pathGlobFilter", "*.pdf") \
+    .load("s3://<ap-alias>/documents/")
+
+# File metadata
+df.select("path", "length", "modificationTime").show()
+
+# Process with UDF
+from pyspark.sql.functions import udf
+@udf("string")
+def extract_text(content):
+    # Custom text extraction logic
+    return extracted_text
+
+df.withColumn("text", extract_text(df.content))
+```

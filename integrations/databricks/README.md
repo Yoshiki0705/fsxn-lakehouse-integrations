@@ -65,6 +65,28 @@ s3://<s3ap-alias>/gold/      # Business-ready aggregates
 | JSON | Driver-only boto3 PoC possible | Bypasses UC governance; not a production path |
 | ORC | Not validated | — |
 
+## Unstructured Data Support
+
+| Format | Support | Access Method | Use Case |
+|--------|:---:|--------------|----------|
+| Images (JPEG, PNG, TIFF) | ⚠️ | Instance Profile + boto3 (driver only) | Image classification, quality inspection |
+| Video (MP4, MOV) | ⚠️ | Instance Profile + boto3 (driver only) | Frame extraction, video analytics |
+| Documents (PDF, DOCX) | ⚠️ | Instance Profile + boto3 (driver only) | Text extraction, RAG pipeline |
+| Audio (WAV, MP3) | ⚠️ | Instance Profile + boto3 (driver only) | Transcription, speech analytics |
+| Binary / Archives | ⚠️ | Instance Profile + boto3 (driver only) | Download, custom processing |
+
+**Current limitations:**
+- Unity Catalog External Table creation is blocked → no governed unstructured data catalog
+- `spark.read.binaryFile` works for explicit file paths (with `access_point` field set)
+- Instance Profile + boto3 bypasses UC governance (PoC only, not production-recommended)
+- No equivalent to Snowflake's Directory Table or GET_PRESIGNED_URL
+- Executor-scale processing not yet validated
+
+**Recommended alternative for unstructured data on FSx for ONTAP:**
+- Use **Snowflake** (Directory Table + GET_PRESIGNED_URL) for file catalog and secure URL generation
+- Use **AWS Lambda** for serverless file processing ([AWS tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html))
+- Use **Amazon Bedrock** for RAG over documents ([AWS tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html))
+
 ## ONTAP Value for Databricks
 
 | ONTAP Feature | Databricks Benefit |

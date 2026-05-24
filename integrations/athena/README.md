@@ -85,6 +85,36 @@ integrations/athena/
     └── verification-report-ja.md      ← (planned)
 ```
 
+## Unstructured Data Support
+
+| Format | Support | Access Method | Use Case |
+|--------|:---:|--------------|----------|
+| Images (JPEG, PNG, TIFF) | ❌ | N/A (SQL engine for structured data) | — |
+| Video (MP4, MOV) | ❌ | N/A | — |
+| Documents (PDF, DOCX) | ❌ | N/A | — |
+| Audio (WAV, MP3) | ❌ | N/A | — |
+| Binary / Archives | ❌ | N/A | — |
+
+Athena is a SQL query engine optimized for structured data formats (Parquet, CSV, JSON, ORC). It cannot directly query unstructured data (images, video, audio). However, you can create metadata tables to manage file paths and integrate with other services for processing.
+
+**Patterns for unstructured data workflows:**
+1. **Metadata table** — Use Glue Crawler to catalog file paths, sizes, and timestamps on S3 AP
+2. **Athena + Lambda UDF** — Pass file paths from query results to Lambda for processing
+3. **Pipeline integration** — Use Athena to identify files, then process with Lambda/Bedrock
+
+```sql
+-- Query file metadata (registered via Glue Crawler)
+SELECT key, size, last_modified
+FROM fsxn_file_catalog
+WHERE key LIKE '%.pdf'
+ORDER BY last_modified DESC;
+```
+
+**Recommended alternative for unstructured data on FSx for ONTAP:**
+- Use **AWS Lambda** for serverless file processing ([AWS tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html))
+- Use **Amazon Bedrock** for RAG over documents ([AWS tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html))
+- Use **Snowflake** (Directory Table + GET_PRESIGNED_URL) for file catalog and secure URL generation
+
 ## Reference Implementation
 
 This integration leverages patterns from:

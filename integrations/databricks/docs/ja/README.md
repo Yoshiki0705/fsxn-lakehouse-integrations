@@ -27,12 +27,25 @@ Unity Catalog External Location は現在セッションポリシーの制約に
 
 ## 非構造化データ対応
 
-Databricks は Unity Catalog のボリューム機能を通じて非構造化データを管理できますが、FSx S3 AP との統合ではセッションポリシーの制約により現在動作しません。
+| フォーマット | 対応 | アクセス方法 | ユースケース |
+|------------|:---:|------------|------------|
+| 画像 (JPEG, PNG, TIFF) | ⚠️ | Instance Profile + boto3（ドライバーのみ） | 画像分類、品質検査 |
+| 動画 (MP4, MOV) | ⚠️ | Instance Profile + boto3（ドライバーのみ） | フレーム抽出、動画分析 |
+| ドキュメント (PDF, DOCX) | ⚠️ | Instance Profile + boto3（ドライバーのみ） | テキスト抽出、RAG パイプライン |
+| 音声 (WAV, MP3) | ⚠️ | Instance Profile + boto3（ドライバーのみ） | 文字起こし、音声分析 |
+| バイナリ / アーカイブ | ⚠️ | Instance Profile + boto3（ドライバーのみ） | ダウンロード、カスタム処理 |
 
-**代替アプローチ:**
-- Instance Profile + boto3 で S3 AP 経由のファイルアクセスは PoC レベルで可能
-- NFS RPC 直接アクセスで非構造化ファイルの読み書きが可能（Customer VPC 環境）
-- 本番環境では Databricks がサポートする S3 バケット直接パスを推奨
+**現在の制約:**
+- Unity Catalog External Table 作成がブロック → ガバナンス付き非構造化データカタログ不可
+- `spark.read.binaryFile` は明示的ファイルパスで動作（`access_point` フィールド設定時）
+- Instance Profile + boto3 は UC ガバナンスをバイパス（PoC のみ、本番非推奨）
+- Snowflake の Directory Table や GET_PRESIGNED_URL に相当する機能なし
+- Executor スケール処理は未検証
+
+**FSx for ONTAP 上の非構造化データの推奨代替手段:**
+- **Snowflake**（Directory Table + GET_PRESIGNED_URL）でファイルカタログとセキュア URL 生成
+- **AWS Lambda** でサーバーレスファイル処理（[AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html)）
+- **Amazon Bedrock** でドキュメント RAG（[AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)）
 
 ## ONTAP の価値
 

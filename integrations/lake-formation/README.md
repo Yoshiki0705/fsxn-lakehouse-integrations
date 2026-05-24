@@ -48,6 +48,32 @@ FSx for ONTAP (file system user permissions)
 | Centralized audit | Who accessed what table, when |
 | Cross-account sharing | Share tables without sharing S3 AP |
 
+## Unstructured Data Support
+
+| Format | Support | Access Method | Use Case |
+|--------|:---:|--------------|----------|
+| Images (JPEG, PNG, TIFF) | ❌ | N/A (governance layer for structured tables) | — |
+| Video (MP4, MOV) | ❌ | N/A | — |
+| Documents (PDF, DOCX) | ❌ | N/A | — |
+| Audio (WAV, MP3) | ❌ | N/A | — |
+| Binary / Archives | ❌ | N/A | — |
+
+Lake Formation provides governance over Glue Data Catalog tables. It cannot directly govern unstructured data files, but can apply access control to metadata tables that reference unstructured files.
+
+**Governance pattern for unstructured file metadata:**
+1. **Metadata table governance** — Apply column-level security to tables containing file paths
+2. **Tag-based access control** — Auto-grant access based on file type or sensitivity tags
+3. **Audit** — Centralized logging of who accessed which file metadata
+4. **Cross-account sharing** — Share file catalog tables without modifying S3 AP policy
+
+```sql
+-- Query file catalog protected by Lake Formation
+-- (column-level security masks sensitive file paths by role)
+SELECT file_path, file_type, file_size
+FROM fsxn_db.file_catalog
+WHERE classification = 'public';
+```
+
 ## Quick Start
 
 ```bash

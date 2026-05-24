@@ -127,6 +127,45 @@ DQDL rules validate:
 - **Value Ranges**: Amounts > 0, valid enum values
 - **Freshness**: Data within expected time windows
 
+## Unstructured Data Support
+
+| Format | Support | Access Method | Use Case |
+|--------|:---:|--------------|----------|
+| Images (JPEG, PNG, TIFF) | ⚠️ | PySpark binaryFile in ETL job | Metadata extraction, Bedrock/Rekognition pipeline |
+| Video (MP4, MOV) | ⚠️ | PySpark binaryFile in ETL job | Metadata cataloging, frame extraction |
+| Documents (PDF, DOCX) | ⚠️ | PySpark binaryFile + Comprehend/Bedrock | Text extraction, document classification |
+| Audio (WAV, MP3) | ⚠️ | PySpark binaryFile in ETL job | Metadata cataloging, Transcribe pipeline |
+| Binary / Archives | ⚠️ | PySpark binaryFile in ETL job | Custom processing, format conversion |
+
+Glue is primarily used for structured data ETL, but can process binary files in ETL jobs and integrate with AI services for document processing. No interactive file browsing is available.
+
+**Patterns:**
+1. **Glue Crawler** — Catalog file structure on S3 AP (paths, sizes, timestamps)
+2. **PySpark binary read** — Process images/PDFs using `binaryFile` format in ETL jobs
+3. **Metadata ETL** — Manage file metadata through Bronze → Silver → Gold pipeline
+4. **Event-driven** — FPolicy + EventBridge triggers Crawler on new file detection
+
+```python
+# Process file metadata in Glue ETL
+from awsglue.context import GlueContext
+glueContext = GlueContext(SparkContext.getOrCreate())
+
+# Read file catalog metadata
+df = glueContext.create_dynamic_frame.from_catalog(
+    database="fsxn_catalog",
+    table_name="file_metadata"
+).toDF()
+
+# Aggregate unstructured file metadata
+df.filter(df.file_type.isin(['image/jpeg', 'application/pdf'])) \
+  .groupBy("file_type").count().show()
+```
+
+**Recommended alternative for unstructured data on FSx for ONTAP:**
+- Use **AWS Lambda** for serverless file processing ([AWS tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html))
+- Use **Amazon Bedrock** for RAG over documents ([AWS tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html))
+- Use **Snowflake** (Directory Table + GET_PRESIGNED_URL) for file catalog and secure URL generation
+
 ## Reference Implementation
 
 This integration leverages patterns from:

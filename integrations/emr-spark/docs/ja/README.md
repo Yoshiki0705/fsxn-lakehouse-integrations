@@ -32,12 +32,21 @@ EMR Serverless (Spark 3.5)
 
 ## 非構造化データ対応
 
-EMR Spark は構造化データの大規模 ETL に最適化されていますが、非構造化データの処理パイプラインも構築可能です。
+| フォーマット | 対応 | アクセス方法 | ユースケース |
+|------------|:---:|------------|------------|
+| 画像 (JPEG, PNG, TIFF) | ✅ | spark.read.binaryFile | 画像分類、品質検査、ML パイプライン |
+| 動画 (MP4, MOV) | ✅ | spark.read.binaryFile | フレーム抽出、動画分析 |
+| ドキュメント (PDF, DOCX) | ✅ | spark.read.binaryFile + UDF | テキスト抽出、RAG パイプライン、ドキュメント処理 |
+| 音声 (WAV, MP3) | ✅ | spark.read.binaryFile + UDF | 文字起こし、音声分析 |
+| バイナリ / アーカイブ | ✅ | spark.read.binaryFile | カスタム処理、フォーマット変換 |
+
+EMR Spark は `spark.read.format("binaryFile")` による非構造化データの完全な処理をサポートします。ファイルはバイナリコンテンツとして読み込まれ、Spark ML パイプラインやカスタム UDF を使用して Executor スケールで処理可能です。
 
 **パターン:**
 1. **Spark バイナリファイル読み取り** — `spark.read.format("binaryFile")` で画像・PDF をバイナリとして読み込み
 2. **UDF による処理** — Spark UDF 内で画像処理・テキスト抽出を実行
-3. **メタデータ ETL** — ファイルメタデータを構造化テーブルとして管理し、処理パイプラインを構築
+3. **ML パイプライン** — Spark ML パイプラインで画像・音声分類を大規模に実行
+4. **メタデータ ETL** — ファイルメタデータを構造化テーブルとして管理し、処理パイプラインを構築
 
 ```python
 # バイナリファイルの読み込み（画像、PDF など）
@@ -47,6 +56,15 @@ df = spark.read.format("binaryFile") \
 
 # ファイルメタデータの取得
 df.select("path", "length", "modificationTime").show()
+
+# UDF で処理
+from pyspark.sql.functions import udf
+@udf("string")
+def extract_text(content):
+    # カスタムテキスト抽出ロジック
+    return extracted_text
+
+df.withColumn("text", extract_text(df.content))
 ```
 
 ## クイックスタート

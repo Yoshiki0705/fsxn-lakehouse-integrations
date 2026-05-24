@@ -42,7 +42,15 @@ VPC 限定のアクセスポイントは Glue ETL ジョブでは動作しませ
 
 ## 非構造化データ対応
 
-Glue は主に構造化データの ETL に使用されますが、非構造化データのメタデータ管理パイプラインも構築可能です。
+| フォーマット | 対応 | アクセス方法 | ユースケース |
+|------------|:---:|------------|------------|
+| 画像 (JPEG, PNG, TIFF) | ⚠️ | PySpark binaryFile（ETL ジョブ内） | メタデータ抽出、Bedrock/Rekognition パイプライン |
+| 動画 (MP4, MOV) | ⚠️ | PySpark binaryFile（ETL ジョブ内） | メタデータカタログ化、フレーム抽出 |
+| ドキュメント (PDF, DOCX) | ⚠️ | PySpark binaryFile + Comprehend/Bedrock | テキスト抽出、ドキュメント分類 |
+| 音声 (WAV, MP3) | ⚠️ | PySpark binaryFile（ETL ジョブ内） | メタデータカタログ化、Transcribe パイプライン |
+| バイナリ / アーカイブ | ⚠️ | PySpark binaryFile（ETL ジョブ内） | カスタム処理、フォーマット変換 |
+
+Glue は主に構造化データの ETL に使用されますが、ETL ジョブ内でバイナリファイルを処理し、AI サービスと連携したドキュメント処理が可能です。インタラクティブなファイルブラウジングはサポートされていません。
 
 **パターン:**
 1. **Glue Crawler** — S3 AP 上のファイル構造をカタログ化（パス、サイズ、更新日時）
@@ -65,6 +73,11 @@ df = glueContext.create_dynamic_frame.from_catalog(
 df.filter(df.file_type.isin(['image/jpeg', 'application/pdf'])) \
   .groupBy("file_type").count().show()
 ```
+
+**FSx for ONTAP 上の非構造化データの推奨代替手段:**
+- **AWS Lambda** でサーバーレスファイル処理（[AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html)）
+- **Amazon Bedrock** でドキュメント RAG（[AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)）
+- **Snowflake**（Directory Table + GET_PRESIGNED_URL）でファイルカタログとセキュア URL 生成
 
 ## クイックスタート
 

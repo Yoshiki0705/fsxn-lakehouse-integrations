@@ -37,6 +37,36 @@ Verified with Redshift Serverless (8 RPU) + Spectrum on FSx for ONTAP S3 AP (int
 - COUNT(*) 5M rows: 4.3s
 - Same pattern as Athena (Glue Catalog + internet-origin AP + IAM role)
 
+## Unstructured Data Support
+
+| Format | Support | Access Method | Use Case |
+|--------|:---:|--------------|----------|
+| Images (JPEG, PNG, TIFF) | ❌ | N/A (SQL engine for structured data) | — |
+| Video (MP4, MOV) | ❌ | N/A | — |
+| Documents (PDF, DOCX) | ❌ | N/A | — |
+| Audio (WAV, MP3) | ❌ | N/A | — |
+| Binary / Archives | ❌ | N/A | — |
+
+Redshift Spectrum is a SQL engine for structured data (Parquet, CSV, JSON, ORC). It cannot directly query unstructured data. However, you can create external metadata tables and use federated queries to combine file catalogs with DWH data.
+
+**Patterns:**
+1. **Metadata table** — Register file paths, sizes, and types as External Tables
+2. **Federated JOIN** — JOIN local DWH tables (customer info) with external file catalogs
+3. **UNLOAD** — Write query results back to FSx for ONTAP for processing by other services
+
+```sql
+-- Query file catalog as External Table
+SELECT file_path, file_type, file_size
+FROM spectrum_schema.file_catalog
+WHERE file_type = 'application/pdf'
+  AND last_modified > CURRENT_DATE - INTERVAL '7 days';
+
+-- JOIN local tables with file catalog
+SELECT c.customer_name, f.file_path
+FROM local_schema.customers c
+JOIN spectrum_schema.file_catalog f ON c.customer_id = f.owner_id;
+```
+
 ## Quick Start
 
 ```bash

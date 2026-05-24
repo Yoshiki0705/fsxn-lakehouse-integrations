@@ -45,12 +45,20 @@ VPC 限定のアクセスポイントは Athena では動作しません。
 
 ## 非構造化データ対応
 
-Athena は構造化データ（Parquet, CSV, JSON）のクエリに最適化されています。非構造化データ（画像、動画）の直接クエリはサポートされていませんが、メタデータテーブルを作成してファイルパスを管理し、他のサービス（Lambda, Bedrock）と連携することで処理できます。
+| フォーマット | 対応 | アクセス方法 | ユースケース |
+|------------|:---:|------------|------------|
+| 画像 (JPEG, PNG, TIFF) | ❌ | N/A（構造化データ用 SQL エンジン） | — |
+| 動画 (MP4, MOV) | ❌ | N/A | — |
+| ドキュメント (PDF, DOCX) | ❌ | N/A | — |
+| 音声 (WAV, MP3) | ❌ | N/A | — |
+| バイナリ / アーカイブ | ❌ | N/A | — |
 
-**パターン:**
+Athena は構造化データ（Parquet, CSV, JSON）のクエリに最適化された SQL エンジンです。非構造化データ（画像、動画、音声）の直接クエリはサポートされていません。メタデータテーブルを作成してファイルパスを管理し、他のサービス（Lambda, Bedrock）と連携することで処理パイプラインを構築できます。
+
+**非構造化データワークフローのパターン:**
 1. **メタデータテーブル** — Glue Crawler でファイルパス・サイズ・更新日時をカタログ化
 2. **Athena + Lambda UDF** — クエリ結果のファイルパスを Lambda に渡して処理
-3. **S3 AP Pre-signed URL** — Athena クエリ結果からファイルパスを取得し、アプリケーションでダウンロード
+3. **パイプライン連携** — Athena でファイルを特定し、Lambda/Bedrock で処理
 
 ```sql
 -- ファイルメタデータをクエリ（Glue Crawler で登録済みの場合）
@@ -59,6 +67,11 @@ FROM fsxn_file_catalog
 WHERE key LIKE '%.pdf'
 ORDER BY last_modified DESC;
 ```
+
+**FSx for ONTAP 上の非構造化データの推奨代替手段:**
+- **AWS Lambda** でサーバーレスファイル処理（[AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html)）
+- **Amazon Bedrock** でドキュメント RAG（[AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)）
+- **Snowflake**（Directory Table + GET_PRESIGNED_URL）でファイルカタログとセキュア URL 生成
 
 ## クイックスタート
 
