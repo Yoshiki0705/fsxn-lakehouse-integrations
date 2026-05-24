@@ -26,6 +26,18 @@
 | Iceberg Table write | ❌ | ❌ (conditional writes not supported) |
 | GET_PRESIGNED_URL | ✅ (observed) | ✅ |
 
+## Partner Decision Card (Quick Reference)
+
+| Requirement | Status | Action |
+|---|:---:|---|
+| Query NAS files from Snowflake | ✅ | Set `AWS_ACCESS_POINT_ARN` on stage |
+| Governed external tables | ✅ | Create External Table + apply tags |
+| Unstructured data catalog | ✅ | Enable Directory Table + manual REFRESH |
+| Real-time auto-ingest (Snowpipe) | ❌ | Use scheduled REFRESH or FPolicy + Lambda |
+| Iceberg write-back | ❌ | Use native S3 for transactional writes |
+
+> Choose Snowflake when governed external tables, tags, Directory Tables, or Snowpark integration are required. Choose Athena when lightweight AWS-native serverless SQL over NAS data is sufficient.
+
 ## Overview
 
 Integrate Amazon FSx for NetApp ONTAP (FSx for ONTAP) S3 Access Points with Snowflake
