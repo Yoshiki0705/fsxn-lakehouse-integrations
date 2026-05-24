@@ -2,10 +2,22 @@
 
 🌐 [日本語ドキュメント](docs/ja/setup-guide.md) | [English Documentation](docs/en/setup-guide.md)
 
+> **Validation Status: Experimental**
+> - Unity Catalog External Location with FSx for ONTAP S3 Access Point did not succeed in the tested environment due to a session policy boundary.
+> - Instance Profile + boto3 succeeded only as a controlled driver-node PoC.
+> - Kernel NFS mount from Databricks Dedicated cluster was blocked by a local runtime boundary in the tested environment.
+> - This repository does not claim production support for Databricks + FSx S3 Access Points.
+>
+> For production Delta Lake tables, use [Databricks-supported cloud storage patterns](https://docs.databricks.com/aws/en/connect/storage/amazon-s3) unless platform support for S3 Access Point ARNs is confirmed.
+
 ## Overview
 
-Amazon FSx for NetApp ONTAP（FSx for ONTAP）を Databricks Unity Catalog の External Location として統合し、
-Delta Lake / Iceberg テーブルのストレージレイヤーとして使用するパターンです。
+This is an experimental validation package exploring integration paths between
+Amazon FSx for NetApp ONTAP (FSx for ONTAP) and Databricks via S3 Access Points.
+
+Some README sections describe intended integration patterns, while the
+[Verification Status](#verification-status-2026-05-17) section documents the
+current validation results and observed platform boundaries.
 
 ## Architecture
 
@@ -40,14 +52,16 @@ s3://<s3ap-alias>/gold/      # Business-ready aggregates
 
 ## Data Format Support
 
-| Format | Read | Write | Table Type |
-|--------|------|-------|------------|
-| Parquet | ✅ | ✅ | External Table |
-| Delta Lake | ✅ | ✅ | Managed / External |
-| Iceberg | ✅ | ✅ | External (Unity Catalog) |
-| CSV | ✅ | ✅ | External Table |
-| JSON | ✅ | ✅ | External Table |
-| ORC | ✅ | ❌ | External Table (read-only) |
+> **Note**: The table below reflects the intended integration design. See [Verification Status](#verification-status-2026-05-17) for actual test results. Unity Catalog External Location did not succeed in the tested environment, so read/write through UC governance is not currently validated.
+
+| Format | Read via FSx S3 AP | Write via FSx S3 AP | Validation Status |
+|--------|:------------------:|:-------------------:|-------------------|
+| Parquet | Not validated through UC | Not validated | Requires UC External Location (currently blocked) |
+| Delta Lake | Not validated | Not Supported | Delta commit requires atomic rename (not available on S3 AP) |
+| Iceberg | Not validated | Not Supported | S3FileIO metadata write fails on AP alias |
+| CSV | Possible via boto3 PoC | Not recommended | Driver-only PoC, bypasses UC governance |
+| JSON | Possible via boto3 PoC | Not recommended | Driver-only PoC, bypasses UC governance |
+| ORC | Not validated | Not validated | — |
 
 ## ONTAP Value for Databricks
 
@@ -123,6 +137,8 @@ Managed VPC から FSx VPC への接続。NFS mount は seccomp でブロック�
 ONTAP REST API アクセスや将来の再検証用に保持。
 
 ## Verification Status (2026-05-17)
+
+> **Note**: Instance Profile is classified as a [legacy data access pattern](https://docs.databricks.com/en/admin/sql/data-access-configuration.html) by Databricks. Unity Catalog external locations are the recommended governance model. The Instance Profile path documented below bypasses Unity Catalog governance and should be treated as a controlled PoC only.
 
 | アプローチ | 結果 | 備考 |
 |-----------|------|------|
