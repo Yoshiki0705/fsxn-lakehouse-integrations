@@ -2,6 +2,23 @@
 
 🌐 [日本語ドキュメント](docs/ja/setup-guide.md) | [English Documentation](docs/en/setup-guide.md)
 
+> **Validation Status: ✅ Verified (with `AWS_ACCESS_POINT_ARN`)**
+>
+> Snowflake can query FSx for ONTAP S3 Access Point data using the `AWS_ACCESS_POINT_ARN` stage parameter.
+> SELECT, External Table creation, and LIST all work when this parameter is configured.
+> Without it, SELECT fails with "access denied" while LIST works.
+
+## Observed Results
+
+| Operation | Without `AWS_ACCESS_POINT_ARN` | With `AWS_ACCESS_POINT_ARN` |
+|---|:---:|:---:|
+| Storage Integration | ✅ | ✅ |
+| Stage creation | ✅ | ✅ |
+| LIST @stage | ✅ | ✅ |
+| SELECT @stage | ❌ Access Denied | ✅ |
+| External Table | ❌ | ✅ |
+| GET_PRESIGNED_URL | ✅ (observed) | ✅ |
+
 ## Overview
 
 Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Point を Snowflake の

@@ -95,7 +95,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 | [AWS Glue ETL](integrations/glue/) | ✅ Functional Verified | Crawler + ETL + Medallion | Read + Write-back (Parquet). [64s for 10K row ETL](verification-pack/glue-etl/) |
 | [Delta Lake OSS](integrations/delta-lake-oss/) | ✅ Read Verified / ❌ Write | delta-rs + Spark | Read works. Write returns 501 (conditional writes not supported). |
 | [Databricks](integrations/databricks/) | ⚠️ Blocked | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
-| [Snowflake](integrations/snowflake/) | ⚠️ Blocked (GetObject) | External Stage + Iceberg | LIST succeeds, GetObject denied. Session policy issue. Support case filed. |
+| [Snowflake](integrations/snowflake/) | ✅ Verified | External Stage + External Table | Works with `AWS_ACCESS_POINT_ARN` stage parameter. SELECT + External Table verified. |
 | [Apache Iceberg](integrations/iceberg/) | ⚠️ Read Experimental / ❌ Write Failed | REST Catalog (vendor-neutral) | Write fails: S3FileIO cannot handle AP alias for metadata. Read of pre-existing tables expected to work. |
 | [EMR + Spark](integrations/emr-spark/) | ✅ Functional Verified | Spark SQL + Iceberg | Read + Write-back verified. [10K rows in 16s total (EMR Serverless)](verification-pack/emr-spark/) |
 | [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Functional Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
@@ -105,7 +105,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 | [BigQuery Omni](integrations/bigquery-omni/) | 🔲 Planned | BigLake | Requires GCP environment |
 | [Microsoft Fabric](integrations/microsoft-fabric/) | 🔲 Planned | OneLake Shortcut | Requires Azure environment |
 
-> **Key finding**: AWS-native services (Athena, Glue, EMR, Bedrock) work correctly. Third-party platforms (Snowflake, Databricks) are blocked by session policies that do not recognize S3 Access Point ARN format. See [Compatibility Matrix](docs/en/compatibility-matrix.md) for details.
+> **Key finding**: AWS-native services (Athena, Glue, EMR, Bedrock) work correctly. Third-party platforms require explicit S3 AP ARN configuration: Snowflake uses `AWS_ACCESS_POINT_ARN` (fully resolved), Databricks uses `access_point` field (partially resolved). See [Compatibility Matrix](docs/en/compatibility-matrix.md) for details.
 
 ---
 
