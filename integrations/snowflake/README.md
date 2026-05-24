@@ -10,25 +10,25 @@ External Stage として統合し、External Table / Iceberg Table のストレ�
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              AWS Account                                  │
-│                                                                           │
-│  ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐   │
-│  │ FSx for ONTAP   │     │ FSx for ONTAP S3 Access   │     │ IAM Role        │   │
-│  │ (NFS Volume)    │◀───▶│ Point            │◀────│ (Snowflake      │   │
-│  │                 │     │ (Internet origin) │     │  AssumeRole)    │   │
-│  └─────────────────┘     └────────┬─────────┘     └────────┬────────┘   │
-│                                    │                         │            │
-└────────────────────────────────────┼─────────────────────────┼────────────┘
-                                     │ S3 API                  │ STS
-                                     ▼                         ▼
-                          ┌──────────────────────────────────────────────┐
-                          │  Snowflake (SaaS — ap-northeast-1)           │
-                          │                                              │
-                          │  Storage Integration → External Stage        │
-                          │       → External Table / Iceberg Table       │
-                          │       → Snowpipe (via FPolicy + SNS)         │
-                          └──────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│                              AWS Account                               │
+│                                                                       │
+│  ┌─────────────────┐     ┌──────────────────┐     ┌───────────────┐  │
+│  │ FSx for ONTAP   │     │ FSx for ONTAP    │     │ IAM Role      │  │
+│  │ (NFS Volume)    │◀───▶│ S3 Access Point  │◀────│ (Snowflake    │  │
+│  │                 │     │ (Internet origin) │     │  AssumeRole)  │  │
+│  └─────────────────┘     └────────┬─────────┘     └───────┬───────┘  │
+│                                    │                        │         │
+└────────────────────────────────────┼────────────────────────┼─────────┘
+                                     │ S3 API                 │ STS
+                                     ▼                        ▼
+                          ┌────────────────────────────────────────────┐
+                          │  Snowflake (SaaS — ap-northeast-1)         │
+                          │                                            │
+                          │  Storage Integration → External Stage      │
+                          │       → External Table / Iceberg Table     │
+                          │       → Snowpipe (via FPolicy + SNS)       │
+                          └────────────────────────────────────────────┘
 ```
 
 **Key Architecture Points:**
