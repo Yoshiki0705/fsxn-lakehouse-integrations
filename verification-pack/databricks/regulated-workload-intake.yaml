@@ -116,6 +116,11 @@ regulated_workload_intake:
     selected_design: ""  # "source_enforcement" | "metadata_index" | "post_retrieval_filtering" | "do_not_proceed"
     validation_method: ""  # how the permission model will be tested
     negative_test_required: true
-    residual_risk: ""  # what risk remains after the selected design
+    residual_risk:
+      description: ""  # what risk remains after the selected design
+      severity: ""  # "low" | "medium" | "high" | "critical"
+      mitigation: ""  # how the residual risk is mitigated
+      accepted_by: ""  # name or role of risk acceptor
+      acceptance_date: ""  # YYYY-MM-DD
     approved_by_security_owner: ""  # name or role
     approval_date: ""  # YYYY-MM-DD

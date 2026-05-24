@@ -49,6 +49,12 @@ value_hypothesis:
     number_of_users_impacted: ""  # e.g., "50"
     expected_monthly_productivity_gain_hours: ""  # e.g., "400 hours"
 
+  # Financial impact (optional, for Value Engineer / Exec sponsor)
+  financial_impact_optional:
+    estimated_hourly_cost: ""  # e.g., "$50" (fully loaded cost per user hour)
+    expected_monthly_savings: ""  # e.g., "$20,000" (productivity_gain_hours × hourly_cost)
+    confidence_level: ""  # "low" | "medium" | "high"
+
   # Decision review (post-PoC)
   # Separate business, technical, and governance decisions
   decision_review:

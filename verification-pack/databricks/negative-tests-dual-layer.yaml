@@ -190,6 +190,15 @@ negative_tests:
       object_count: ""
       average_object_size_bytes: ""
       concurrent_executor_count: ""
+    # Cluster context (for executor-scale validation)
+    benchmark_context:
+      cluster_workers: ""  # e.g., "4"
+      executor_count: ""  # e.g., "8"
+      executor_cores: ""  # e.g., "4"
+      executor_memory: ""  # e.g., "16g"
+      fsx_throughput_capacity: ""  # e.g., "512 MB/s"
+      volume_security_style: ""  # "unix" | "ntfs" | "mixed"
+      s3_access_point_network_origin: ""  # "vpc" | "internet"
     runs:
       cold_run_count: 1  # minimum 1
       warm_run_count: 1  # minimum 1
