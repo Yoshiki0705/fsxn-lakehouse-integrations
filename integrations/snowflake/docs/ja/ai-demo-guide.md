@@ -105,7 +105,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 |---|---|---|---|
 | 検査報告書 OCR | PARSE_DOCUMENT (OCR モード) | スキャン報告書 (PNG/PDF) | [Snowflake PARSE_DOCUMENT ドキュメント](https://docs.snowflake.com/en/user-guide/snowflake-cortex/parse-document) |
 | センサー異常要約 | CORTEX.SUMMARIZE | IoT センサー Parquet/CSV | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
-| 外観欠陥検出 | AI_COMPLETE (vision) | 製品画像 | [AI_COMPLETE マルチモーダル](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-snowflake-cortex) |
+| 外観欠陥検出 | AI_COMPLETE (vision) | 製品画像 | [AI_COMPLETE マルチモーダル](https://docs.snowflake.com/en/sql-reference/functions/complete-snowflake-cortex-multimodal) |
 | ダッシュボードからの歩留まり分析 | AI_COMPLETE (vision) | ダッシュボードスクリーンショット | [Image Analysis Quickstart](https://www.snowflake.com/en/developers/guides/build-image-analysis-app-with-streamlit-and-snowflake-cortex/) |
 
 ### 金融 / 保険
@@ -130,7 +130,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 
 | ユースケース | Cortex 関数 | FSx 上のデータ | リファレンス |
 |---|---|---|---|
-| 画像メタデータ抽出 | AI_COMPLETE (vision) | メディアアセット | [AI_COMPLETE](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-snowflake-cortex) |
+| 画像メタデータ抽出 | AI_COMPLETE (vision) | メディアアセット | [AI_COMPLETE](https://docs.snowflake.com/en/sql-reference/functions/complete-snowflake-cortex-multimodal) |
 | 動画フレーム説明 | AI_COMPLETE (vision) | 抽出フレーム | [Image Analysis](https://www.snowflake.com/en/developers/guides/build-image-analysis-app-with-streamlit-and-snowflake-cortex/) |
 | アセットカタログ管理 | Directory Table + Tags | 全メディアファイル | [Directory Tables](https://docs.snowflake.com/en/user-guide/data-load-dirtables) |
 | コンテンツ翻訳 | CORTEX.TRANSLATE | テキストドキュメント | [Cortex TRANSLATE](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-translate) |
@@ -141,7 +141,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 |---|---|---|---|
 | ファイルからのスキーマ推論 | PARSE_DOCUMENT + LLM | 混合フォーマットファイル | [Cortex LLM](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
 | データ品質評価 | CORTEX.SUMMARIZE | データサンプル | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
-| ファイル分類/タグ付け | AI_COMPLETE + Tags | 非構造化ファイル | [Governance Tags](https://docs.snowflake.com/en/user-guide/governance-tag) |
+| ファイル分類/タグ付け | AI_COMPLETE + Tags | 非構造化ファイル | [Governance Tags](https://docs.snowflake.com/en/user-guide/object-tagging/introduction) |
 | 自動ドキュメント生成 | CORTEX.SUMMARIZE | コード/設定ファイル | [Cortex LLM Functions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) |
 
 ---
@@ -159,7 +159,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 - [Cortex AI 概要](https://docs.snowflake.com/en/user-guide/snowflake-cortex)
 - [LLM Functions (SUMMARIZE, COMPLETE, TRANSLATE)](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions)
 - [PARSE_DOCUMENT (OCR / Document AI)](https://docs.snowflake.com/en/user-guide/snowflake-cortex/parse-document)
-- [AI_COMPLETE (マルチモーダル/Vision)](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-snowflake-cortex)
+- [AI_COMPLETE (マルチモーダル/Vision)](https://docs.snowflake.com/en/sql-reference/functions/complete-snowflake-cortex-multimodal)
 - [Cortex Search (RAG)](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview)
 - [Directory Tables](https://docs.snowflake.com/en/user-guide/data-load-dirtables)
 - [OCR + RAG Quickstart](https://quickstarts.snowflake.com/guide/getting_started_with_ocr_and_rag_with_snowflake_notebooks/)
