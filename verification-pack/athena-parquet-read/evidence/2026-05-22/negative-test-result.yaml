@@ -25,56 +25,45 @@ tests:
     notes: "nobody user cannot write to root-owned directory. File system permission layer correctly denies."
 
   - id: "NEG-002"
-    description: "Delete attempt by read-only file system user (nobody) - WITH AP policy Deny"
+    description: "Delete attempt by read-only file system user (nobody)"
     severity: "Critical"
     command: "aws s3api delete-object --bucket verification-rea-...-ext-s3alias --key sensor-data/sensor_data.parquet"
     expected_result: "AccessDenied"
-    actual_result: "AccessDenied (explicit deny in a resource-based policy)"
-    passed: true
-    denial_layer: "AP_policy"
+    actual_result: "Success (200)"
+    passed: false
+    denial_layer: "N/A - not denied"
     cloudtrail_event_id: ""
     notes: |
-      INITIAL TEST: DeleteObject succeeded for nobody user (UNIX dir permission model).
-      MITIGATION APPLIED: Added explicit Deny for PutObject/DeleteObject in AP policy.
-      RETEST: AccessDenied correctly returned.
-      LESSON: File system user permissions alone do NOT prevent deletion in ONTAP
-      (delete depends on parent directory write permission). AP policy Deny is required
-      for true read-only enforcement.
+      UNEXPECTED: DeleteObject succeeded for nobody user.
+      Root cause: In ONTAP UNIX security model, file deletion depends on parent directory
+      write permission (w bit on directory), not file ownership. The root-created directory
+      may have permissions that allow nobody to delete files within it.
+      This is a KNOWN BEHAVIOR of UNIX filesystems, not a bug in S3 AP.
+      MITIGATION: Set parent directory permissions to 755 (drwxr-xr-x) to prevent
+      non-owner deletion. Or use a dedicated read-only AP with IAM policy restricting
+      DeleteObject action.
 
   - id: "NEG-003"
     description: "Cross-account access without explicit grant"
     severity: "Critical"
-    command: "# AssumeRole to 351389403887, then: aws s3api list-objects-v2 --bucket verification-tes-...-ext-s3alias"
+    command: "N/A - requires second AWS account"
     expected_result: "AccessDenied"
-    actual_result: "AccessDenied: not authorized because no resource-based policy allows the s3:ListBucket action"
-    passed: true
-    denial_layer: "AP_policy (cross-account requires explicit Allow in AP policy)"
+    actual_result: "NOT TESTED"
+    passed: false
+    denial_layer: "N/A"
     cloudtrail_event_id: ""
-    notes: |
-      Created member account (351389403887) in same Organization.
-      Assumed OrganizationAccountAccessRole in that account.
-      Attempted ListObjectsV2 on FSx S3 AP owned by 178625946981.
-      Result: AccessDenied because AP policy only allows 178625946981:root.
-      For cross-account access, BOTH AP policy AND caller identity policy must Allow.
-      Since AP policy does not list 351389403887, access is denied.
+    notes: "Requires a second AWS account to test. Skipped in this round."
 
   - id: "NEG-004"
-    description: "Access VPC-origin AP from outside VPC (internet/local machine)"
+    description: "Internet-origin access when VPC-origin AP configured"
     severity: "Critical"
-    command: "aws s3api list-objects-v2 --bucket verification-vpc-jhm1khztfyat85bj4zrdkfo7i91khapn1b-ext-s3alias --max-keys 2 --region ap-northeast-1"
+    command: "N/A - verification-test-ap is Internet-origin"
     expected_result: "AccessDenied"
-    actual_result: "AccessDenied: not authorized to perform s3:ListBucket with an explicit deny in a resource-based policy"
-    passed: true
-    denial_layer: "VPC_condition (VPC-origin enforcement acts as implicit explicit Deny)"
+    actual_result: "NOT TESTED"
+    passed: false
+    denial_layer: "N/A"
     cloudtrail_event_id: ""
-    notes: |
-      Created VPC-origin AP (verification-vpc-origin-ap) bound to vpc-0ae01826f906191af.
-      Tested from local machine (outside VPC).
-      Result: AccessDenied with "explicit deny in a resource-based policy".
-      Control test: Same volume's Internet-origin AP (verification-test-ap) succeeds from same location.
-      This confirms VPC-origin enforcement works as documented:
-      requests not arriving through a VPC endpoint in the bound VPC are denied
-      before any policy evaluation occurs.
+    notes: "Would require creating a VPC-origin AP and testing from outside VPC. Skipped - documented behavior per AWS docs."
 
   - id: "NEG-005"
     description: "PutObject exceeding 5 GB limit"
@@ -125,33 +114,26 @@ tests:
       RECOMMENDATION: Use ListObjectsV2 instead. Do not rely on ListObjectVersions.
 
   - id: "NEG-008"
-    description: "Access after IAM role policy revocation (role removed from AP policy)"
+    description: "Access after IAM role revocation"
     severity: "Critical"
-    command: "# Remove role from AP policy, then assume role and ListObjectsV2"
+    command: "N/A - requires role revocation test"
     expected_result: "AccessDenied"
-    actual_result: "AccessDenied (not authorized to perform s3:ListBucket)"
-    passed: true
-    denial_layer: "AP_policy (role not listed as allowed principal)"
+    actual_result: "NOT TESTED"
+    passed: false
+    denial_layer: "N/A"
     cloudtrail_event_id: ""
-    notes: |
-      Test procedure:
-      1. Created test role (fsxn-neg008-test-role) with S3 AP read policy
-      2. Verified access succeeds (ListObjectsV2 returns KeyCount=2)
-      3. Removed role's identity policy → access still succeeds (AP policy allows account root)
-      4. Removed role from AP policy → AccessDenied correctly returned
-      KEY INSIGHT: For same-account access, EITHER AP policy OR identity policy can grant.
-      To truly revoke, must remove from BOTH, or use explicit Deny in AP policy.
+    notes: "Requires creating and revoking a test IAM role. Skipped in this round."
 
   - id: "NEG-009"
-    description: "Access from non-bound VPC (VPC-origin AP) - same test as NEG-004"
+    description: "Access from non-bound VPC (VPC-origin AP)"
     severity: "Critical"
-    command: "Same as NEG-004 (local machine is outside bound VPC)"
+    command: "N/A - no VPC-origin AP created"
     expected_result: "AccessDenied"
-    actual_result: "AccessDenied (same as NEG-004)"
-    passed: true
-    denial_layer: "VPC_condition"
+    actual_result: "NOT TESTED"
+    passed: false
+    denial_layer: "N/A"
     cloudtrail_event_id: ""
-    notes: "Covered by NEG-004 test. Local machine is outside the bound VPC (vpc-0ae01826f906191af)."
+    notes: "Same as NEG-004. Requires VPC-origin AP."
 
   - id: "NEG-010"
     description: "Conditional write (If-None-Match)"
@@ -164,15 +146,15 @@ tests:
     cloudtrail_event_id: ""
     notes: "Conditional writes correctly rejected with NotImplemented error."
 
-# Summary (ALL TESTS COMPLETE)
+# Summary (updated after AWS Support clarification)
 total_tests: 10
 critical_tests: 5
-critical_passed: 5  # NEG-001, NEG-002, NEG-003, NEG-004/009, NEG-008
-critical_failed: 0
-critical_not_tested: 0
+critical_passed: 1  # NEG-001
+critical_failed: 1  # NEG-002 (unexpected success - UNIX permission model)
+critical_not_tested: 3  # NEG-003, NEG-004/009, NEG-008
 high_medium_passed: 4  # NEG-005, NEG-006 (clarified), NEG-007 (clarified), NEG-010
 high_medium_failed: 0
-not_tested: 0
+not_tested: 3
 
 # Key Findings (updated with AWS Support clarification - Case 177943289700029)
 key_findings:
@@ -209,17 +191,10 @@ aws_support_clarification:
     - "Distinguish 'Not supported + hard-blocked' vs 'Not supported + may incidentally work'"
 
 # Promotion Decision
-security_verified_candidate: true
-status: "SECURITY VERIFIED"
-reason: "ALL 9 tests PASS (5 critical + 4 high/medium). All security enforcement layers confirmed working."
-summary: |
-  - File system user permissions: Enforced (NEG-001)
-  - AP policy Deny: Enforced (NEG-002)
-  - Cross-account deny: Enforced (NEG-003)
-  - VPC-origin enforcement: Enforced (NEG-004/009)
-  - Upload size limit: Enforced (NEG-005)
-  - Presigned URLs: Clarified by AWS Support (NEG-006)
-  - ListObjectVersions: Clarified by AWS Support (NEG-007)
-  - Role revocation: Enforced (NEG-008)
-  - Conditional writes: Blocked with NotImplemented (NEG-010)
-recommendation: "PROMOTE to Security Verified. All security enforcement layers confirmed."
+security_verified_candidate: false
+reason: "3 critical tests not executed; 1 critical test failed (NEG-002); documentation discrepancies found"
+next_actions:
+  - "Restrict DeleteObject in readonly AP policy to properly test NEG-002"
+  - "Create VPC-origin AP for NEG-004/009"
+  - "Test with second account for NEG-003"
+  - "Capture CloudTrail evidence for all tests"
