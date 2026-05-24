@@ -132,7 +132,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 |----------|----------|-------------|--------------------------|
 | [Financial Services](use-cases/financial-data-mesh/) | Data Mesh | Pattern D (Data Sharing) | Segregation of duties, per-domain access points, audit retention (7+ years), DR/BCP |
 | [Manufacturing](use-cases/manufacturing-iot-lake/) | IoT Data Lake | Pattern C (ETL Pipeline) | OT/IT boundary separation, edge ingestion via NFS, long-term retention (FabricPool) |
-| [Healthcare](use-cases/healthcare-research/) | Research Data | Pattern B (Managed Tables) | De-identification pipeline, VPC-origin AP, read-only access, synthetic test data only, BAA |
+| [Healthcare](use-cases/healthcare-research/) | Research Data | Pattern A (Read-Only) + Staging | De-identification pipeline, VPC-origin AP, read-only access, synthetic test data only, BAA |
 | [Media](use-cases/media-asset-analytics/) | Asset Analytics | Pattern A (Read-Only) | Large file handling (5 GB upload limit), CloudFront integration for streaming |
 
 ---
