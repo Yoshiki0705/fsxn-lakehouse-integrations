@@ -25,6 +25,10 @@ SELECT SNOWFLAKE.CORTEX.PARSE_DOCUMENT(
 
 **結果**: 画像から構造化テキストを抽出（6.0秒）。
 
+![PARSE_DOCUMENT OCR が FSx S3 AP 上の画像からテキストを抽出](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-08-parse-document-ocr.png)
+
+*PARSE_DOCUMENT が FSx for ONTAP S3 Access Point 経由で保存された請求書画像からテキストを抽出（6.0秒）。*
+
 **製造業ユースケース**: NFS に保存された紙ベースの検査報告書をデジタル化し、手動データ入力なしで検索・分析可能に。
 
 ## デモ 2: AI テキスト要約 (CORTEX.SUMMARIZE)
@@ -39,6 +43,10 @@ LIMIT 1;
 ```
 
 **結果**: "The text is a JSON object containing data on humidity, pressure, temperature, sensor ID, status, and timestamp."（3.3秒）
+
+![Cortex SUMMARIZE が External Table 経由で FSx S3 AP データの AI 要約を生成](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-07-cortex-llm-summary.png)
+
+*Cortex SUMMARIZE が FSx for ONTAP に保存されたセンサーデータの AI 要約を生成（External Table 経由、3.3秒）。*
 
 **製造業ユースケース**: FSx for ONTAP に保存された IoT センサーデータからシフトサマリーを自動生成。
 
@@ -60,6 +68,10 @@ ORDER BY LAST_MODIFIED DESC;
 ```
 
 **結果**: 各画像のダウンロード URL 付きファイルカタログ。
+
+![Directory Table が FSx S3 AP 上の非構造化データをカタログ化し presigned URL を生成](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-06-directory-table-presigned-url.png)
+
+*Directory Table が FSx for ONTAP 上の画像ファイルをメタデータ付きでカタログ化し、各ファイルのダウンロード URL を生成。*
 
 **製造業ユースケース**: 品質エンジニアが日付/場所で検査写真を検索し、レビュー用にダウンロード。
 
