@@ -12,10 +12,12 @@
 
 Query FSx for ONTAP data via S3 Access Points using Trino — an open-source distributed SQL query engine. Trino uses its own S3 filesystem implementation that supports path-style access, making it compatible with FSx S3 AP aliases.
 
-### Status: 🔲 Verification Pending
+### Status: 🔲 Verification Pending (Infrastructure Blocker)
 
 - Infrastructure prepared (Docker Compose + config)
-- Requires execution from within VPC or EC2 with FSx S3 AP access
+- S3 AP connectivity from EC2 in same VPC is timing out (under investigation)
+- Possible cause: S3 Gateway endpoint may not route FSx S3 AP traffic correctly
+- Next step: Verify with S3 Interface endpoint or internet-routed access
 
 ### Architecture
 
@@ -113,10 +115,12 @@ integrations/trino-starburst/
 
 Trino（オープンソース分散 SQL クエリエンジン）を使用して、FSx for ONTAP のデータを S3 Access Points 経由でクエリします。Trino は path-style アクセスをサポートする独自の S3 ファイルシステム実装を持ち、FSx S3 AP alias と互換性があります。
 
-### ステータス: 🔲 検証待ち
+### ステータス: 🔲 検証待ち（インフラブロッカー）
 
 - インフラ準備済み（Docker Compose + 設定）
-- VPC 内または FSx S3 AP アクセス可能な EC2 からの実行が必要
+- 同一 VPC 内 EC2 からの S3 AP 接続がタイムアウト（調査中）
+- 原因候補: S3 Gateway エンドポイントが FSx S3 AP トラフィックを正しくルーティングしていない可能性
+- 次のステップ: S3 Interface エンドポイントまたはインターネット経由アクセスで検証
 
 ### 主な設定
 

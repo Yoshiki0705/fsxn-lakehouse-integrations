@@ -1,0 +1,211 @@
+# Negative Tests: Dual-Layer Authorization
+# FSx for ONTAP S3 Access Points use a dual-layer authorization model:
+#   Layer 1 — S3-side authorization (IAM + S3 AP policy + VPC endpoint policy + SCP/RCP)
+#   Layer 2 — FSx-side authorization (file system user + UNIX/NTFS permissions)
+#
+# Reference: https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html
+#
+# This template separates negative tests by which layer should deny the request,
+# enabling clear evidence of where authorization enforcement occurs.
+
+negative_tests:
+
+  # --- AWS-side (Layer 1) denial tests ---
+  aws_side:
+    - id: AWS-DENY-001
+      test: "Access unauthorized S3 AP prefix"
+      description: "Attempt ListObjectsV2 on a prefix not permitted by S3 AP policy"
+      expected_result: "AccessDenied"
+      expected_source: "S3 Access Point resource policy"
+      evidence_fields:
+        - error_code
+        - error_message
+        - request_id
+        - caller_arn
+        - target_prefix
+
+    - id: AWS-DENY-002
+      test: "PutObject when IAM permits only read"
+      description: "Attempt PutObject with an IAM role that only has s3:GetObject and s3:ListBucket"
+      expected_result: "AccessDenied"
+      expected_source: "IAM identity-based policy"
+      evidence_fields:
+        - error_code
+        - error_message
+        - request_id
+        - caller_arn
+        - attempted_action
+
+    - id: AWS-DENY-003
+      test: "Access from non-permitted VPC (VPC-origin AP)"
+      description: "Attempt GetObject from a VPC not specified in the VPC-origin access point"
+      expected_result: "AccessDenied"
+      expected_source: "VPC-origin access point network restriction"
+      evidence_fields:
+        - error_code
+        - error_message
+        - source_vpc_id
+        - access_point_vpc_configuration
+
+    - id: AWS-DENY-004
+      test: "Cross-account access without resource policy grant"
+      description: "Attempt access from a different AWS account without S3 AP resource policy allowing it"
+      expected_result: "AccessDenied"
+      expected_source: "S3 Access Point resource policy (cross-account)"
+      evidence_fields:
+        - error_code
+        - caller_account_id
+        - access_point_account_id
+
+  # --- FSx/ONTAP-side (Layer 2) denial tests ---
+  ontap_side:
+    - id: ONTAP-DENY-001
+      test: "GetObject for file not readable by associated file system user"
+      description: "Attempt GetObject on a file where the S3 AP associated UNIX user lacks read permission (mode bits)"
+      expected_result: "AccessDenied"
+      expected_source: "FSx-side authorization (file system user permissions)"
+      setup_notes: |
+        - Create a file owned by root with mode 0600
+        - Associate S3 AP with a non-root UNIX user (e.g., UID 1001)
+        - Attempt GetObject through the access point
+      evidence_fields:
+        - error_code
+        - error_message
+        - file_path
+        - file_mode_bits
+        - ap_associated_user
+
+    - id: ONTAP-DENY-002
+      test: "PutObject when file system user is read-only"
+      description: "Attempt PutObject when the S3 AP associated user has read-only access to the directory"
+      expected_result: "AccessDenied"
+      expected_source: "FSx-side authorization (file system user write permission)"
+      setup_notes: |
+        - Set directory permissions to allow read+execute but not write for the AP user
+        - Attempt PutObject through the access point
+      evidence_fields:
+        - error_code
+        - error_message
+        - target_path
+        - directory_permissions
+        - ap_associated_user
+
+    - id: ONTAP-DENY-003
+      test: "Access file in directory without execute permission"
+      description: "Attempt GetObject on a file in a directory where the AP user lacks execute (traverse) permission"
+      expected_result: "AccessDenied"
+      expected_source: "FSx-side authorization (directory traverse permission)"
+      setup_notes: |
+        - Remove execute permission on parent directory for AP user
+        - Attempt GetObject on a file within that directory
+      evidence_fields:
+        - error_code
+        - file_path
+        - parent_directory_permissions
+        - ap_associated_user
+
+  # --- Evidence recording template ---
+  evidence_template:
+    test_id: ""
+    test_date: ""  # YYYY-MM-DD
+    tester: ""
+    environment:
+      account_id: ""
+      region: ""
+      fsxn_filesystem_id: ""
+      svm_id: ""
+      volume_name: ""
+      access_point_arn: ""
+      ap_associated_user: ""
+    result:
+      status: ""  # "denied_as_expected" | "unexpected_allow" | "unexpected_error"
+      error_code: ""
+      error_message: ""
+      request_id: ""
+    notes: ""
+
+  # --- Allow/Deny paired tests ---
+  # These pairs prove that the same path allows or denies based on permission changes,
+  # confirming that the authorization layer is actively enforcing (not just failing).
+  paired_tests:
+    - id: ONTAP-PERM-PAIR-001
+      description: "Validate FSx-side file permission enforcement (read)"
+      allow_case:
+        file_system_user: "analytics_ro"
+        file_permission: "read allowed (mode 0644 or ACL read grant)"
+        operation: "GetObject"
+        expected: "success"
+      deny_case:
+        file_system_user: "analytics_ro"
+        file_permission: "read denied (mode 0600, file owned by root)"
+        operation: "GetObject"
+        expected: "AccessDenied from FSx-side authorization"
+
+    - id: ONTAP-PERM-PAIR-002
+      description: "Validate FSx-side directory write permission enforcement"
+      allow_case:
+        file_system_user: "analytics_rw"
+        directory_permission: "write allowed (mode 0777 or ACL write grant)"
+        operation: "PutObject"
+        expected: "success"
+      deny_case:
+        file_system_user: "analytics_rw"
+        directory_permission: "write denied (mode 0555)"
+        operation: "PutObject"
+        expected: "AccessDenied from FSx-side authorization"
+
+    - id: AWS-PERM-PAIR-001
+      description: "Validate S3 AP policy enforcement"
+      allow_case:
+        ap_policy: "s3:GetObject allowed for caller ARN"
+        operation: "GetObject"
+        expected: "success"
+      deny_case:
+        ap_policy: "s3:GetObject explicitly denied for caller ARN"
+        operation: "GetObject"
+        expected: "AccessDenied from S3 Access Point policy"
+
+    - id: AWS-PERM-PAIR-002
+      description: "Validate IAM identity-based policy enforcement"
+      allow_case:
+        iam_policy: "s3:PutObject allowed on AP ARN"
+        operation: "PutObject"
+        expected: "success"
+      deny_case:
+        iam_policy: "s3:PutObject not granted (read-only policy)"
+        operation: "PutObject"
+        expected: "AccessDenied from IAM policy"
+
+  # --- Benchmark reporting template ---
+  # Use this when capturing performance evidence for S3 AP access
+  benchmark_report:
+    test_id: ""
+    test_date: ""
+    environment:
+      fsxn_filesystem_id: ""
+      provisioned_throughput_mbps: ""
+      volume_name: ""
+      access_point_arn: ""
+      prefix_depth: ""  # e.g., 2 (s3://ap/dir1/dir2/)
+      object_count: ""
+      average_object_size_bytes: ""
+      concurrent_executor_count: ""
+    runs:
+      cold_run_count: 1  # minimum 1
+      warm_run_count: 1  # minimum 1
+      repeated_run_count: 3  # minimum 3
+    metrics:
+      p50_latency_ms: ""
+      p90_latency_ms: ""
+      p95_latency_ms: ""
+      p99_latency_ms: ""
+      average_latency_ms: ""
+      min_latency_ms: ""
+      max_latency_ms: ""
+      outliers: []  # latency values > p99
+    fsx_metrics_during_test:
+      throughput_utilization_percent: ""
+      cpu_utilization_percent: ""
+      network_throughput_mbps: ""
+      s3_api_request_count: ""
+      nfs_smb_latency_during_test_ms: ""  # contention indicator

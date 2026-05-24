@@ -54,16 +54,16 @@ s3://<s3ap-alias>/gold/      # Business-ready aggregates
 
 ## Data Format Support
 
-> **Note**: The table below reflects the intended integration design. See [Verification Status](#verification-status-2026-05-17) for actual test results. Unity Catalog External Location did not succeed in the tested environment, so read/write through UC governance is not currently validated.
+> **Important**: The table below represents intended validation targets, not production support status. Unity Catalog External Location did not succeed in the tested environment due to a session policy boundary. The Databricks Unity Catalog + FSx S3 AP path is currently documented as an observed boundary in this validation.
 
-| Format | Read via FSx S3 AP | Write via FSx S3 AP | Validation Status |
-|--------|:------------------:|:-------------------:|-------------------|
-| Parquet | Not validated through UC | Not validated | Requires UC External Location (currently blocked) |
-| Delta Lake | Not validated | Not Supported | Delta commit requires atomic rename (not available on S3 AP) |
-| Iceberg | Not validated | Not Supported | S3FileIO metadata write fails on AP alias |
-| CSV | Possible via boto3 PoC | Not recommended | Driver-only PoC, bypasses UC governance |
-| JSON | Possible via boto3 PoC | Not recommended | Driver-only PoC, bypasses UC governance |
-| ORC | Not validated | Not validated | — |
+| Format | Validation Status | Notes |
+|--------|-------------------|-------|
+| Parquet | Not validated as production Databricks path on FSx S3 AP | Requires UC External Location (currently blocked by session policy) |
+| Delta Lake | Not validated for write-path semantics on FSx S3 AP | Delta commit requires atomic rename (not available on S3 AP) |
+| Iceberg | Not validated for production use on FSx S3 AP | S3FileIO metadata write fails on AP alias |
+| CSV | Driver-only boto3 PoC possible | Bypasses UC governance; not a production path |
+| JSON | Driver-only boto3 PoC possible | Bypasses UC governance; not a production path |
+| ORC | Not validated | — |
 
 ## ONTAP Value for Databricks
 
@@ -150,4 +150,4 @@ ONTAP REST API アクセスや将来の再検証用に保持。
 | NFS mount (Customer VPC) | ❌ | seccomp フィルターが NFS mount をブロック |
 | NFS RPC 直接 (Customer VPC) | ✅ | Python RPC で全操作成功 |
 | ONTAP REST API (Customer VPC) | ✅ | 認証・設定変更可能 |
-| Instance Profile + boto3 | 🔲 | 未検証 (次のステップ) |
+| Instance Profile + boto3 (Customer VPC, Dedicated) | ✅ | Driver-node で S3 AP 読み取り成功。UC ガバナンスをバイパスするため PoC 限定 |
