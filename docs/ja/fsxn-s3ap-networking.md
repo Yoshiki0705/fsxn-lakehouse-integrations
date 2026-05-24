@@ -85,6 +85,110 @@ FSx S3 AP アクセスがタイムアウトする場合:
 - 通常の S3 バケットアクセスには S3 Gateway エンドポイントを維持（無料、低レイテンシ）
 - FSx S3 AP トラフィックは NAT Gateway 経由でルーティング（またはコンピュートを VPC 外に配置）
 
+---
+
+## 7. SVM の DNS/AD 設定と S3 AP 可用性
+
+### 問題: 到達不能な DNS サーバーによる S3 AP ReadTimeout
+
+SVM に DNS サーバーが設定されており（Active Directory ドメイン参加のため）、その DNS サーバーが到達不能になった場合、**その SVM 上の全 S3 Access Point がタイムアウトします** — 以下の条件であっても:
+- S3 AP ボリュームが UNIX セキュリティスタイルである
+- 顧客設定の FPolicy が無効化されている
+- NFS エクスポートポリシーが全アクセスを許可している
+- S3 AP のライフサイクル状態が AVAILABLE である
+
+これは、S3 AP リクエスト処理パスが SVM のネームサービススタックを経由するためです。CIFS/AD が設定されている場合、ONTAP はユーザーマッピング解決（UNIX ↔ Windows）を試み、これにドメインコントローラーとの DNS 通信が必要になります。
+
+### 根本原因のメカニズム
+
+```
+S3 API リクエスト
+  → FSx S3 AP バックエンド
+    → SVM ファイルシステムアクセス
+      → ONTAP ネームサービススタック (ns-switch: files, dns)
+        → CIFS サーバーが存在 → ユーザーマッピングに DC 参照が必要
+          → 設定された DNS サーバーに問い合わせ (例: 10.0.x.x)
+            → DNS サーバー到達不能 → タイムアウト (30秒以上)
+              → S3 API クライアントが ReadTimeout を受信
+```
+
+### 認証方式ごとの挙動マトリクス
+
+| SVM 構成 | S3 AP の DNS 依存 | DNS ダウン時の S3 AP 挙動 |
+|---|---|---|
+| NFS のみ（CIFS なし、DNS なし） | なし | ✅ 正常動作 |
+| CIFS ワークグループモード（AD 非参加） | なし | ✅ 正常動作 |
+| CIFS + AD ドメイン参加 + DNS 設定 + DNS 到達可能 | あり（透過的） | ✅ 正常動作 |
+| CIFS + AD ドメイン参加 + DNS 設定 + **DNS 到達不能** | あり（ブロック） | ❌ ReadTimeout |
+| FPolicy 設定あり（任意の状態）+ CIFS/DNS なし | なし | ✅ 正常動作 |
+
+**重要な知見**: DNS 依存は AD ドメインに参加した CIFS サーバーの存在によってトリガーされます。FPolicy、エクスポートポリシー、ボリュームセキュリティスタイルは関係ありません。
+
+### 診断コマンド
+
+```bash
+# 1. SVM の DNS 設定を確認
+vserver services dns show -vserver <SVM名>
+
+# 2. DNS サーバーの到達性を確認（重要）
+vserver services dns check -vserver <SVM名>
+# ステータスが "down" または "Operation timed out" → これが原因の可能性が高い
+
+# 3. CIFS/AD メンバーシップを確認
+vserver cifs show -vserver <SVM名>
+
+# 4. ns-switch 設定を確認
+vserver services name-service ns-switch show -vserver <SVM名>
+# hosts データベースのソースに "dns" が含まれているか確認
+```
+
+### 解決オプション
+
+**オプション A: DNS と CIFS を削除（AD/SMB が不要な場合）**
+
+```bash
+# CIFS を強制削除（AD サーバーが消失している場合、force フラグを使用）
+set adv -c off
+vserver cifs delete -vserver <SVM名> -admin-username x -admin-password x -force-account-delete true
+
+# DNS 設定を削除
+vserver services dns delete -vserver <SVM名>
+
+# ns-switch から DNS を除去
+vserver services name-service ns-switch modify -vserver <SVM名> -database hosts -sources files
+```
+
+**オプション B: DNS を到達可能なサーバーに変更（AD/SMB が必要な場合）**
+
+```bash
+# VPC 提供の DNS（AmazonProvidedDNS）に更新
+# VPC CIDR が 10.0.0.0/16 の場合、リゾルバーは 10.0.0.2
+vserver services dns modify -vserver <SVM名> -name-servers 10.0.0.2 -domains <ドメイン>
+```
+
+注意: オプション B は DNS 解決を復旧しますが、ドメインコントローラーも到達可能でない限り CIFS/AD 認証は失敗します。
+
+**オプション C: AD ドメインコントローラーを復旧**
+
+同じ IP アドレスで AD サーバーを再作成します。最も重い選択肢であり、AD 認証付きの CIFS/SMB アクセスが必要な場合のみ必要です。
+
+### 検証結果（2026-05-24）
+
+| テスト | SVM | DNS 設定 | CIFS/AD | S3 AP 結果 |
+|------|-----|-----------|---------|-------------|
+| 修正前 | FSxN_OnPre | 10.0.5.22, 10.0.28.223（両方 DOWN） | FPOLICY.LOCAL ドメイン | ❌ ReadTimeout |
+| 修正前 | verification-svm | なし | なし | ✅ 即座に成功 |
+| 修正後（オプション A） | FSxN_OnPre | 削除済み | 削除済み | ✅ 即座に成功 |
+
+### 予防策
+
+- **孤立した DNS/AD 設定を放置しない。** AD ドメインコントローラーを廃止する場合、SVM から CIFS サーバーと DNS 設定を削除すること。
+- **DNS ヘルスを監視する。** 定期的に `vserver services dns check` を実行して DNS サーバーの到達性を確認する。
+- **関心の分離。** S3 AP アクセスが主要なユースケースの場合、CIFS/AD 依存のない専用 SVM の使用を検討する。これにより DNS 依存を完全に排除できる。
+- **AD サーバーのライフサイクルを文書化する。** どの SVM がどの AD サーバーに依存しているかを追跡し、AD サーバーの廃止時に SVM 設定のクリーンアップをトリガーする。
+
+---
+
 ## 参考資料
 
 - [FSx for ONTAP S3 Access Points ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)
