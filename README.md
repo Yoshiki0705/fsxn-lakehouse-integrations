@@ -2,10 +2,19 @@
 
 🌐 [日本語](docs/ja/architecture.md) | [English](docs/en/architecture.md)
 
-> **Validation status: Experimental.**
-> This repository documents observed validation behavior across analytics and lakehouse engines.
+> **Validation Status: Experimental**
+>
+> This repository documents observed validation behavior for FSx for ONTAP S3 Access Points across analytics, AI/ML, and lakehouse access patterns.
 > It is not a production integration pattern, Marketplace listing, or certified partner solution.
-> The Databricks Unity Catalog + FSx S3 AP path is currently documented as an observed boundary in this validation.
+
+## Current Validation Summary
+
+| Category | Paths |
+|---|---|
+| Verified in this series | Athena, Glue, EMR Spark, Redshift Spectrum, DuckDB Lambda, Trino |
+| Candidate / AWS-documented | Bedrock KB, Lake Formation, QuickSight via Athena |
+| Blocked in validation | Databricks Unity Catalog, Snowflake External Stage |
+| Not suitable for this path | Delta / Iceberg / Hudi transactional write paths |
 
 > **`fsxn-lakehouse-integrations` is a validation framework for testing how different analytics and lakehouse engines interact with FSx for ONTAP S3 Access Points.** Each integration directory contains reproducible evidence, test templates, and observed boundary documentation — not production-ready connectors.
 
@@ -64,14 +73,19 @@ Lakehouse Platform → (S3 API) → S3 Access Point → FSx for ONTAP Volume
 - Register as External Table / External Stage
 - Query Parquet, CSV, JSON, ORC files directly
 
-### Pattern B: Read-Write Managed Tables
+### Pattern B: Transactional Table Writes
+
+> **Status**: Not suitable in this validation for direct FSx S3 AP table-log storage.
+> Use native S3 for Delta / Iceberg / Hudi table write paths.
+> Use FSx S3 AP as read-only source or flat-file write-back path where validated.
 
 ```
-Lakehouse Platform ←→ S3 Access Point ←→ FSx for ONTAP Volume
+Lakehouse Platform ←→ Native S3 (table log + data files)
+                  ←── FSx for ONTAP S3 AP (read-only source data)
 ```
 
-- Use as storage layer for Iceberg / Delta / Hudi tables
-- ONTAP Snapshot for point-in-time table recovery
+- Transactional table formats require atomic rename / conditional writes not available on S3 AP
+- FSx S3 AP is suitable as a **source** for ETL, not as table-log storage
 
 ### Pattern C: ETL Pipeline (Medallion Architecture)
 
