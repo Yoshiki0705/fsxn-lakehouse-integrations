@@ -274,6 +274,28 @@ While waiting for UC session policy resolution, use these validated paths for AI
 
 ---
 
+## ONTAP Value for AI/ML Workloads
+
+| ONTAP Feature | AI/ML Benefit | Reference |
+|---|---|---|
+| **FlexCache** | Cache hot training data across regions/sites for low-latency access; reduce WAN bandwidth for distributed ML workloads; write-back mode for write-heavy feature engineering | [FlexCache overview](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/using-flexcache.html) |
+| **SnapLock / Tamperproof Snapshot** | Immutable data protection — even administrators cannot delete locked snapshots during retention period; meets SEC 17a-4(f), HIPAA, FINRA compliance for training data governance | [SnapLock on FSx for ONTAP](https://netapp.com/blog/snaplock-on-amazon-fsx-ontap/) |
+| **ARP/AI (Autonomous Ransomware Protection)** | AI-powered real-time detection of ransomware encryption patterns; automatic snapshot creation before damage spreads to training data or model artifacts | [ARP on FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/ARP.html) |
+| **FlexClone** | Zero-copy instant clones for ML experimentation — test different preprocessing without duplicating data; instant dev/test dataset provisioning | [FlexClone docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
+| **Snapshot** | Point-in-time recovery of training datasets; version control for feature engineering pipelines; complements Delta Lake Time Travel | [Snapshot docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
+| **FabricPool** | Auto-tier cold training data and old model artifacts to S3 — transparent to Databricks compute | [FabricPool docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **Multi-protocol** | Same data accessible via NFS (data scientists), SMB (Windows users), S3 AP (Databricks/Spark) simultaneously | [Multi-protocol access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+| **Deduplication** | Reduce storage for Delta version files, similar embeddings, and overlapping feature datasets | [Storage efficiency](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
+| **SnapMirror** | Cross-region DR for critical ML pipelines and feature stores | [SnapMirror docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
+
+### AI/ML-Specific Scenarios
+
+- **FlexCache for distributed training**: Cache training datasets from on-premises NAS to cloud FSx for ONTAP — Databricks clusters read locally cached data with sub-millisecond latency instead of crossing WAN. Write-back mode (available since May 2025) enables low-latency writes for feature engineering pipelines.
+- **SnapLock for model governance**: Lock training data snapshots to ensure reproducibility — auditors can verify that the exact dataset used for model training has not been modified. Critical for regulated industries (healthcare, finance).
+- **ARP/AI for data pipeline protection**: Detect and block ransomware that targets training data or model artifacts — automatic snapshot preserves clean state for recovery. Protects the entire ML data lifecycle from ingestion to serving.
+
+---
+
 ## Getting Started
 
 1. **Deploy infrastructure** — Follow the [Setup Guide](setup-guide.md)

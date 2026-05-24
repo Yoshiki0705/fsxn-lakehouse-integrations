@@ -274,6 +274,28 @@ UC セッションポリシーの解消を待つ間、FSx for ONTAP データに
 
 ---
 
+## AI/ML ワークロードにおける ONTAP の価値
+
+| ONTAP 機能 | AI/ML メリット | リファレンス |
+|---|---|---|
+| **FlexCache** | リージョン/拠点間で学習データをキャッシュし低遅延アクセスを実現。分散 ML ワークロードの WAN 帯域を削減。Write-back モードにより特徴量エンジニアリングの書き込みレイテンシを低減 | [FlexCache 概要](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/using-flexcache.html) |
+| **SnapLock / Tamperproof Snapshot** | 不変のデータ保護 — 管理者権限でも保持期間中はロックされたスナップショットを削除不可。学習データガバナンスにおいて SEC 17a-4(f)、HIPAA、FINRA コンプライアンスに対応 | [SnapLock on FSx for ONTAP](https://netapp.com/blog/snaplock-on-amazon-fsx-ontap/) |
+| **ARP/AI（自律型ランサムウェア防御）** | AI によるランサムウェア暗号化パターンのリアルタイム検知。学習データやモデルアーティファクトへの被害拡大前に自動スナップショットを作成 | [ARP on FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/ARP.html) |
+| **FlexClone** | ML 実験用のゼロコピー即時クローン — データを複製せずに異なる前処理をテスト。開発/テスト用データセットの即時プロビジョニング | [FlexClone ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
+| **Snapshot** | 学習データセットのポイントインタイムリカバリ。特徴量エンジニアリングパイプラインのバージョン管理。Delta Lake Time Travel を補完 | [Snapshot ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
+| **FabricPool** | コールドな学習データや古いモデルアーティファクトを S3 に自動階層化 — Databricks コンピュートに対して透過的 | [FabricPool ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **マルチプロトコル** | 同一データに NFS（データサイエンティスト）、SMB（Windows ユーザー）、S3 AP（Databricks/Spark）から同時アクセス可能 | [マルチプロトコルアクセス](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+| **重複排除** | Delta バージョンファイル、類似エンベディング、重複する特徴量データセットのストレージを削減 | [ストレージ効率](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
+| **SnapMirror** | 重要な ML パイプラインと Feature Store のクロスリージョン DR | [SnapMirror ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
+
+### AI/ML 固有のシナリオ
+
+- **FlexCache による分散学習**: オンプレミス NAS からクラウド FSx for ONTAP に学習データセットをキャッシュ — Databricks クラスターが WAN を経由せずローカルキャッシュからサブミリ秒のレイテンシでデータを読み取り。Write-back モード（2025年5月提供開始）により特徴量エンジニアリングパイプラインの書き込みレイテンシを低減。
+- **SnapLock によるモデルガバナンス**: 学習データのスナップショットをロックし再現性を保証 — 監査人がモデル学習に使用された正確なデータセットが変更されていないことを検証可能。規制産業（医療、金融）で特に重要。
+- **ARP/AI によるデータパイプライン保護**: 学習データやモデルアーティファクトを標的とするランサムウェアを検知・ブロック — 自動スナップショットがリカバリ用のクリーンな状態を保持。取り込みからサービングまでの ML データライフサイクル全体を保護。
+
+---
+
 ## はじめに
 
 1. **インフラデプロイ** — [セットアップガイド](setup-guide.md) に従う
