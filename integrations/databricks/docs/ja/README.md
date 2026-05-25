@@ -25,6 +25,73 @@ Unity Catalog External Location は現在セッションポリシーの制約に
 | ONTAP REST API (Customer VPC) | ✅ | 認証・設定変更可能 |
 | Instance Profile + boto3 (Customer VPC, Dedicated) | ✅ | S3 AP 読み取り成功。UC ガバナンスをバイパス — PoC のみ |
 
+## 主要概念: Databricks ストレージ & 取り込みアーキテクチャ
+
+Databricks のストレージと取り込みの概念を理解することが、FSx for ONTAP S3 AP 統合の評価に不可欠です。
+
+### Storage Credential → External Location → External Table/Volume
+
+```
+Storage Credential（IAM ロール ARN + External ID）
+    │
+    └── External Location（クラウドストレージパス + クレデンシャル）
+            │
+            ├── External Table（表形式データ: Parquet, Delta, Iceberg）
+            └── External Volume（非表形式: 画像、ドキュメント、音声）
+```
+
+| 概念 | 説明 | FSx S3 AP ステータス | リファレンス |
+|---|---|:---:|---|
+| **[Storage Credential](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)** | Databricks がクラウドストレージにアクセスするために引き受ける IAM ロール | ✅ 作成済み | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) |
+| **[External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual)** | S3 パスを Storage Credential にマッピング。アクセス境界を定義 | ✅ 作成済み（`access_point` フィールド付き） | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual) |
+| **[External Table](https://docs.databricks.com/aws/en/tables/external)** | External Location にデータが存在する UC ガバナンス付きテーブル | ❌ CREATE TABLE ブロック | [ドキュメント](https://docs.databricks.com/aws/en/tables/external) |
+| **[External Volume](https://docs.databricks.com/aws/en/volumes/managed-vs-external)** | External Location の非構造化ファイルに対する UC ガバナンス付きボリューム | ❌ ブロック（同じセッションポリシー問題） | [ドキュメント](https://docs.databricks.com/aws/en/volumes/managed-vs-external) |
+| **[Managed Table](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external)** | UC マネージドテーブル（データライフサイクルを Databricks が制御） | ✅ 動作（標準 S3 上） | [ドキュメント](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external) |
+| **[Managed Volume](https://docs.databricks.com/aws/en/volumes/managed-vs-external)** | 非構造化ファイル用 UC マネージドボリューム（Databricks マネージドストレージ） | ✅ 動作（標準 S3 上） | [ドキュメント](https://docs.databricks.com/aws/en/volumes/managed-vs-external) |
+
+### Auto Loader（増分取り込み）
+
+[Auto Loader](https://docs.databricks.com/ingestion/auto-loader/index.html) は Snowflake の Snowpipe に相当する機能 — クラウドストレージに到着した新しいファイルを増分的に処理します。
+
+| モード | 説明 | S3 Event Notifications 必要 | FSx S3 AP ステータス |
+|---|---|:---:|:---:|
+| **[Directory Listing](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/directory-listing-mode)** | 定期的にディレクトリを一覧して新規ファイルを検出 | ❌ 不要 | ⚠️ External Location が必要（ブロック） |
+| **[File Notification](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/file-notification-mode)** | S3 Event Notifications + SQS でリアルタイム検出 | ✅ 必要 | ❌ 不可（FSx S3 AP は S3 Events 非サポート） |
+
+**Snowflake との比較:**
+
+| 機能 | Snowflake (Snowpipe) | Databricks (Auto Loader) | FSx S3 AP サポート |
+|---|---|---|:---:|
+| イベント駆動取り込み | Snowpipe (S3 Events → SNS → Snowflake) | File Notification モード (S3 Events → SQS) | ❌ 両方ブロック（FSx S3 AP に S3 Events なし） |
+| ポーリングベース取り込み | スケジュール `ALTER STAGE REFRESH` (Task) | Directory Listing モード | ⚠️ Snowflake: 動作; Databricks: UC でブロック |
+| FSx 向け代替手段 | FPolicy → Lambda → SNS → Snowpipe | FPolicy → Lambda → S3 に書き込み → Auto Loader | ✅ 回避策あり |
+| 増分処理 | Snowpipe がロード済みファイルを追跡 | Auto Loader がチェックポイントで処理済みファイルを追跡 | — |
+
+### Volumes: 非構造化データガバナンス
+
+[Unity Catalog Volumes](https://docs.databricks.com/aws/en/volumes/managed-vs-external) は Snowflake の Directory Table に相当 — 非表形式ファイル（画像、ドキュメント、音声、動画）へのガバナンス付きアクセスを提供します。
+
+| 概念 | Snowflake 相当 | 説明 | FSx S3 AP ステータス |
+|---|---|---|:---:|
+| **External Volume** | 外部ステージの Directory Table | 外部ストレージ上のガバナンス付きファイルアクセス | ❌ ブロック（External Location が必要） |
+| **Managed Volume** | 内部ステージ + Directory Table | Databricks マネージドストレージ上のガバナンス付きファイルアクセス | ✅ 動作（標準 S3） |
+| **Volume パス** (`/Volumes/catalog/schema/volume/`) | `@stage/path/` | SQL/Python でのファイルアクセス統一パス | ❌ FSx S3 AP では利用不可 |
+
+**重要な違い**: Snowflake の Directory Table は FSx S3 AP 外部ステージで今日動作します。Databricks の External Volumes は External Location の作成が必要で、セッションポリシーによりブロックされています。
+
+### 概念マッピング: Snowflake ↔ Databricks
+
+| Snowflake 概念 | Databricks 相当 | 目的 | FSx S3 AP (Snowflake) | FSx S3 AP (Databricks) |
+|---|---|---|:---:|:---:|
+| Storage Integration | Storage Credential | IAM ロール参照 | ✅ | ✅ |
+| External Stage | External Location | クラウドストレージパスマッピング | ✅ | ✅（部分的） |
+| External Table | External Table | 外部データへのガバナンス付き読み取り | ✅ | ❌ ブロック |
+| Directory Table | External Volume | 非構造化データのファイルカタログ | ✅ | ❌ ブロック |
+| Snowpipe | Auto Loader | 増分ファイル取り込み | ⚠️（S3 Events なし） | ❌ ブロック |
+| COPY INTO | COPY INTO / Auto Loader | バッチデータロード | ✅ | ❌ ブロック |
+| Internal Stage | Managed Volume | Snowflake/Databricks マネージドストレージ | ✅ | ✅ |
+| `AWS_ACCESS_POINT_ARN` | `access_point` フィールド | セッションポリシー用 S3 AP ARN | ✅（全て解決） | ⚠️（部分的解決） |
+
 ## マネージドテーブル vs 外部テーブル — 設計ガイド
 
 Unity Catalog におけるマネージドテーブルと外部テーブルの違いを理解することがアーキテクチャ判断に不可欠です — 特に現在の FSx S3 AP セッションポリシーの制限を考慮して。
