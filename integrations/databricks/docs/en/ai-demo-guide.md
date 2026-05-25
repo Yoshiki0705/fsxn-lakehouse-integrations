@@ -219,6 +219,112 @@ docs_df = spark.read.format("binaryFile") \
 
 ---
 
+## Governance Tags & Data Protection (ABAC)
+
+Databricks Unity Catalog provides Attribute-Based Access Control (ABAC) using governed tags to enforce row-level and column-level security. However, this capability has specific requirements and limitations when used with FSx for ONTAP S3 Access Points.
+
+### How It Works
+
+```
+Governed Tag (classification attribute)
+    │
+    ├── ABAC Column Mask Policy
+    │     → Automatically masks columns matching tag conditions
+    │     → Applies across catalog/schema scope
+    │
+    └── ABAC Row Filter Policy
+          → Restricts visible rows based on tag + user attributes
+          → Enforced at query time by Unity Catalog
+```
+
+### Governance Boundary: What's Protected
+
+| Level | Tag Support | Column Mask | Row Filter | Notes |
+|---|:---:|:---:|:---:|---|
+| Catalog | ✅ | ✅ (ABAC scope) | ✅ (ABAC scope) | Tags cascade to schemas/tables below |
+| Schema | ✅ | ✅ (ABAC scope) | ✅ (ABAC scope) | Tags cascade to tables below |
+| Table (Managed) | ✅ | ✅ | ✅ | Full governance |
+| Table (External, on S3 bucket) | ✅ | ✅ | ✅ | Full governance (standard S3) |
+| Table (External, on FSx S3 AP) | ❌ **Blocked** | ❌ | ❌ | **CREATE TABLE fails — no governance possible** |
+| Column | ✅ (via table) | ✅ (direct or ABAC) | — | Tags do NOT inherit to column level |
+| External Location | ✅ (tag only) | ❌ | ❌ | Classification only, no query-time enforcement |
+
+### Critical Limitation: FSx for ONTAP S3 AP
+
+**Unity Catalog table creation on FSx S3 AP is currently blocked** (UC_CLOUD_STORAGE_ACCESS_FAILURE). This means:
+
+- ❌ Cannot apply governed tags to FSx S3 AP data as a UC table
+- ❌ Cannot apply ABAC column masks to FSx S3 AP data
+- ❌ Cannot apply row filter policies to FSx S3 AP data
+- ❌ Cannot track data lineage for FSx S3 AP data
+- ❌ Cannot use automated data classification on FSx S3 AP data
+
+**Workaround (PoC only)**: Read data via boto3 → write to UC-managed table → apply governance there. This creates a copy and breaks the "zero-copy" value proposition.
+
+### What Would Work (When UC Session Policy Is Resolved)
+
+```python
+# FUTURE: Full ABAC on FSx for ONTAP data (requires CREATE TABLE support)
+
+# 1. Create governed tag
+spark.sql("""
+  CREATE GOVERNED TAG IF NOT EXISTS pii
+  WITH ALLOWED_VALUES ('ssn', 'email', 'phone', 'address')
+""")
+
+# 2. Create External Table on FSx S3 AP
+spark.sql("""
+  CREATE TABLE fsxn_lakehouse.bronze.customer_data
+  USING PARQUET
+  LOCATION 's3://<s3ap-alias>/bronze/customers/'
+""")
+
+# 3. Apply governed tag to column
+spark.sql("""
+  ALTER TABLE fsxn_lakehouse.bronze.customer_data
+  ALTER COLUMN ssn SET GOVERNED TAG pii = 'ssn'
+""")
+
+# 4. Create ABAC column mask policy
+spark.sql("""
+  CREATE COLUMN MASK POLICY mask_pii
+  ON COLUMNS MATCHING (pii IN ('ssn', 'email'))
+  USING (CASE WHEN is_account_group_member('data_admin') THEN col ELSE '***' END)
+""")
+
+# Result: SSN/email columns automatically masked for non-admin users
+```
+
+### Comparison with Snowflake
+
+| Capability | Databricks (on FSx S3 AP) | Snowflake (on FSx S3 AP) |
+|---|---|---|
+| Tag creation | ✅ Works (governed tags) | ✅ Works (object tags) |
+| Tag on External Table | ❌ **Blocked** (no table creation) | ✅ **Works** (verified) |
+| Column masking | ❌ **Blocked** | ✅ Works (Enterprise Edition) |
+| Row filtering | ❌ **Blocked** | ✅ Works (Enterprise Edition) |
+| Auto PII classification | ❌ **Blocked** | ✅ Works (Enterprise Edition) |
+| Tag inheritance | Catalog → Schema → Table | Database → Schema → Table → Column |
+| Enforcement model | Query-time (UC engine) | Query-time (Snowflake engine) |
+
+### Recommendation for Regulated Workloads
+
+Until Databricks resolves the UC session policy boundary for S3 Access Points:
+
+1. **For governed analytics on FSx for ONTAP data**: Use **Snowflake** (External Table + Tag-based Masking + Row Access Policy)
+2. **For governed ML pipelines**: Stage data from FSx S3 AP into UC-managed storage (S3 bucket), then apply full ABAC governance
+3. **For PoC/exploration only**: Use Instance Profile + boto3 with compensating controls (approval record, time-limited, audit logging)
+
+### References
+
+- [ABAC in Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/)
+- [Governed Tags](https://docs.databricks.com/aws/en/database-objects/tags)
+- [Row Filters and Column Masks](https://docs.databricks.com/aws/en/data-governance/unity-catalog/filters-and-masks)
+- [ABAC Tutorial](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/tutorial)
+- [Multi-domain Column Masking](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/multi-domain)
+
+---
+
 ## Industry Use Cases (Future State)
 
 ### Manufacturing / Quality Inspection

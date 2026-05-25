@@ -219,6 +219,112 @@ docs_df = spark.read.format("binaryFile") \
 
 ---
 
+## ガバナンスタグとデータ保護 (ABAC)
+
+Databricks Unity Catalog は Governed Tags を使用した属性ベースアクセス制御（ABAC）を提供し、行レベル・カラムレベルのセキュリティを適用します。ただし、FSx for ONTAP S3 Access Point との組み合わせでは特定の要件と制限があります。
+
+### 仕組み
+
+```
+Governed Tag（分類属性）
+    │
+    ├── ABAC Column Mask Policy
+    │     → タグ条件に一致するカラムを自動マスク
+    │     → Catalog/Schema スコープで適用
+    │
+    └── ABAC Row Filter Policy
+          → タグ + ユーザー属性に基づいて表示行を制限
+          → Unity Catalog がクエリ時に適用
+```
+
+### ガバナンス境界: 何が保護されるか
+
+| レベル | タグサポート | カラムマスク | Row Filter | 備考 |
+|---|:---:|:---:|:---:|---|
+| Catalog | ✅ | ✅ (ABAC スコープ) | ✅ (ABAC スコープ) | タグは配下のスキーマ/テーブルにカスケード |
+| Schema | ✅ | ✅ (ABAC スコープ) | ✅ (ABAC スコープ) | タグは配下のテーブルにカスケード |
+| Table (Managed) | ✅ | ✅ | ✅ | 完全ガバナンス |
+| Table (External, S3 バケット上) | ✅ | ✅ | ✅ | 完全ガバナンス（標準 S3） |
+| Table (External, FSx S3 AP 上) | ❌ **ブロック** | ❌ | ❌ | **CREATE TABLE 失敗 — ガバナンス適用不可** |
+| Column | ✅（テーブル経由） | ✅（直接または ABAC） | — | タグはカラムレベルには継承しない |
+| External Location | ✅（タグのみ） | ❌ | ❌ | 分類のみ、クエリ時の適用なし |
+
+### 重大な制限: FSx for ONTAP S3 AP
+
+**FSx S3 AP 上での Unity Catalog テーブル作成が現在ブロック**（UC_CLOUD_STORAGE_ACCESS_FAILURE）。これにより:
+
+- ❌ FSx S3 AP データに UC テーブルとして Governed Tags を適用不可
+- ❌ FSx S3 AP データに ABAC カラムマスクを適用不可
+- ❌ FSx S3 AP データに Row Filter ポリシーを適用不可
+- ❌ FSx S3 AP データのデータリネージを追跡不可
+- ❌ FSx S3 AP データに自動データ分類を使用不可
+
+**回避策（PoC のみ）**: boto3 でデータを読み取り → UC マネージドテーブルに書き込み → そこでガバナンスを適用。これはコピーを作成し、「ゼロコピー」の価値提案を損なう。
+
+### 将来動作するもの（UC セッションポリシー解消後）
+
+```python
+# 将来: FSx for ONTAP データへの完全 ABAC（CREATE TABLE サポートが必要）
+
+# 1. Governed Tag を作成
+spark.sql("""
+  CREATE GOVERNED TAG IF NOT EXISTS pii
+  WITH ALLOWED_VALUES ('ssn', 'email', 'phone', 'address')
+""")
+
+# 2. FSx S3 AP 上に External Table を作成
+spark.sql("""
+  CREATE TABLE fsxn_lakehouse.bronze.customer_data
+  USING PARQUET
+  LOCATION 's3://<s3ap-alias>/bronze/customers/'
+""")
+
+# 3. カラムに Governed Tag を適用
+spark.sql("""
+  ALTER TABLE fsxn_lakehouse.bronze.customer_data
+  ALTER COLUMN ssn SET GOVERNED TAG pii = 'ssn'
+""")
+
+# 4. ABAC カラムマスクポリシーを作成
+spark.sql("""
+  CREATE COLUMN MASK POLICY mask_pii
+  ON COLUMNS MATCHING (pii IN ('ssn', 'email'))
+  USING (CASE WHEN is_account_group_member('data_admin') THEN col ELSE '***' END)
+""")
+
+# 結果: SSN/email カラムが非管理者ユーザーに対して自動マスク
+```
+
+### Snowflake との比較
+
+| 機能 | Databricks（FSx S3 AP 上） | Snowflake（FSx S3 AP 上） |
+|---|---|---|
+| タグ作成 | ✅ 動作（Governed Tags） | ✅ 動作（Object Tags） |
+| External Table へのタグ | ❌ **ブロック**（テーブル作成不可） | ✅ **動作**（検証済み） |
+| カラムマスキング | ❌ **ブロック** | ✅ 動作（Enterprise Edition） |
+| 行フィルタリング | ❌ **ブロック** | ✅ 動作（Enterprise Edition） |
+| PII 自動分類 | ❌ **ブロック** | ✅ 動作（Enterprise Edition） |
+| タグ継承 | Catalog → Schema → Table | Database → Schema → Table → Column |
+| 適用モデル | クエリ時（UC エンジン） | クエリ時（Snowflake エンジン） |
+
+### 規制ワークロードへの推奨
+
+Databricks が S3 Access Point に対する UC セッションポリシーの境界を解消するまで:
+
+1. **FSx for ONTAP データのガバナンス付き分析**: **Snowflake** を使用（External Table + Tag-based Masking + Row Access Policy）
+2. **ガバナンス付き ML パイプライン**: FSx S3 AP から UC マネージドストレージ（S3 バケット）にデータをステージングし、完全 ABAC ガバナンスを適用
+3. **PoC/探索のみ**: Instance Profile + boto3 を補償コントロール付きで使用（承認記録、期間限定、監査ログ）
+
+### リファレンス
+
+- [ABAC in Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/)
+- [Governed Tags](https://docs.databricks.com/aws/en/database-objects/tags)
+- [Row Filters and Column Masks](https://docs.databricks.com/aws/en/data-governance/unity-catalog/filters-and-masks)
+- [ABAC チュートリアル](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/tutorial)
+- [Multi-domain Column Masking](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/multi-domain)
+
+---
+
 ## 業界別ユースケース（将来の状態）
 
 ### 製造業 / 品質検査
