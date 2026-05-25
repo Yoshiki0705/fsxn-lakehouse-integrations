@@ -51,6 +51,10 @@ print(f"✅ FSx for ONTAP S3 AP から {df.count()} 行を読み取り")
 
 **制限事項**: 明示的ファイルパスのみ動作。ディレクトリレベルの読み取り（例: `spark.read.parquet("s3://<alias>/bronze/")`）はセッションポリシーによりサブディレクトリ一覧がブロックされるため失敗。
 
+![トップレベル一覧は成功 — FSx S3 AP 上で 287 アイテムが表示](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ls-success-287-items.png)
+
+*トップレベルの `dbutils.fs.ls` は 287 アイテムを表示して成功。ただし、サブディレクトリ一覧とテーブル作成は引き続きブロック。*
+
 ---
 
 ## デモ 2: CREATE TABLE — ブロック（エラー証跡）
@@ -252,6 +256,10 @@ Governed Tag（分類属性）
 ### 重大な制限: FSx for ONTAP S3 AP
 
 **FSx S3 AP 上での Unity Catalog テーブル作成が現在ブロック**（UC_CLOUD_STORAGE_ACCESS_FAILURE）。これにより:
+
+![Databricks ガバナンス影響 — FSx S3 AP 上で UC ガバナンスがブロック](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-summary-governance-impact.png)
+
+*ガバナンス影響サマリー: テーブル作成がセッションポリシーによりブロックされるため、Unity Catalog ガバナンス機能（タグ、マスキング、Row Filter、リネージ）を FSx S3 AP データに適用不可。*
 
 - ❌ FSx S3 AP データに UC テーブルとして Governed Tags を適用不可
 - ❌ FSx S3 AP データに ABAC カラムマスクを適用不可
