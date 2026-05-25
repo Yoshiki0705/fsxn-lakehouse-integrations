@@ -52,6 +52,73 @@ s3://<s3ap-alias>/silver/    # Cleaned & transformed
 s3://<s3ap-alias>/gold/      # Business-ready aggregates
 ```
 
+## Key Concepts: Databricks Storage & Ingestion Architecture
+
+Understanding Databricks' storage and ingestion concepts is essential for evaluating FSx for ONTAP S3 AP integration.
+
+### Storage Credential → External Location → External Table/Volume
+
+```
+Storage Credential (IAM Role ARN + External ID)
+    │
+    └── External Location (cloud storage path + credential)
+            │
+            ├── External Table (tabular data: Parquet, Delta, Iceberg)
+            └── External Volume (non-tabular: images, documents, audio)
+```
+
+| Concept | Description | FSx S3 AP Status | Reference |
+|---|---|:---:|---|
+| **[Storage Credential](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)** | IAM Role that Databricks assumes to access cloud storage | ✅ Created | [Docs](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) |
+| **[External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual)** | Maps S3 path to a Storage Credential; defines access boundary | ✅ Created (with `access_point` field) | [Docs](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual) |
+| **[External Table](https://docs.databricks.com/aws/en/tables/external)** | UC-governed table whose data resides in External Location | ❌ CREATE TABLE blocked | [Docs](https://docs.databricks.com/aws/en/tables/external) |
+| **[External Volume](https://docs.databricks.com/aws/en/volumes/managed-vs-external)** | UC-governed volume for unstructured files in External Location | ❌ Blocked (same session policy issue) | [Docs](https://docs.databricks.com/aws/en/volumes/managed-vs-external) |
+| **[Managed Table](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external)** | UC-managed table (data lifecycle controlled by Databricks) | ✅ Works (on standard S3) | [Docs](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external) |
+| **[Managed Volume](https://docs.databricks.com/aws/en/volumes/managed-vs-external)** | UC-managed volume for unstructured files (Databricks-managed storage) | ✅ Works (on standard S3) | [Docs](https://docs.databricks.com/aws/en/volumes/managed-vs-external) |
+
+### Auto Loader (Incremental Ingestion)
+
+[Auto Loader](https://docs.databricks.com/ingestion/auto-loader/index.html) is Databricks' equivalent of Snowflake's Snowpipe — it incrementally processes new files as they arrive in cloud storage.
+
+| Mode | Description | S3 Event Notifications Required | FSx S3 AP Status |
+|---|---|:---:|:---:|
+| **[Directory Listing](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/directory-listing-mode)** | Periodically lists directory to find new files | ❌ No | ⚠️ Requires External Location (blocked) |
+| **[File Notification](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/file-notification-mode)** | Uses S3 Event Notifications + SQS for real-time detection | ✅ Yes | ❌ Not possible (FSx S3 AP doesn't support S3 Events) |
+
+**Comparison with Snowflake:**
+
+| Feature | Snowflake (Snowpipe) | Databricks (Auto Loader) | FSx S3 AP Support |
+|---|---|---|:---:|
+| Event-driven ingestion | Snowpipe (S3 Events → SNS → Snowflake) | File Notification mode (S3 Events → SQS) | ❌ Both blocked (no S3 Events on FSx S3 AP) |
+| Polling-based ingestion | Scheduled `ALTER STAGE REFRESH` (Task) | Directory Listing mode | ⚠️ Snowflake: works; Databricks: blocked by UC |
+| Alternative for FSx | FPolicy → Lambda → SNS → Snowpipe | FPolicy → Lambda → write to S3 → Auto Loader | ✅ Workaround available |
+| Incremental processing | Snowpipe tracks loaded files | Auto Loader tracks processed files (checkpoint) | — |
+
+### Volumes: Unstructured Data Governance
+
+[Unity Catalog Volumes](https://docs.databricks.com/aws/en/volumes/managed-vs-external) are the Databricks equivalent of Snowflake's Directory Table — they provide governed access to non-tabular files (images, documents, audio, video).
+
+| Concept | Snowflake Equivalent | Description | FSx S3 AP Status |
+|---|---|---|:---:|
+| **External Volume** | Directory Table on External Stage | Governed file access on external storage | ❌ Blocked (requires External Location) |
+| **Managed Volume** | Internal Stage + Directory Table | Governed file access on Databricks-managed storage | ✅ Works (standard S3) |
+| **Volume path** (`/Volumes/catalog/schema/volume/`) | `@stage/path/` | Unified path for file access in SQL/Python | ❌ Not available for FSx S3 AP |
+
+**Key difference**: Snowflake's Directory Table works on FSx S3 AP external stages today. Databricks' External Volumes require External Location creation, which is blocked by the session policy.
+
+### Concept Mapping: Snowflake ↔ Databricks
+
+| Snowflake Concept | Databricks Equivalent | Purpose | FSx S3 AP (Snowflake) | FSx S3 AP (Databricks) |
+|---|---|---|:---:|:---:|
+| Storage Integration | Storage Credential | IAM Role reference | ✅ | ✅ |
+| External Stage | External Location | Cloud storage path mapping | ✅ | ✅ (partial) |
+| External Table | External Table | Governed read on external data | ✅ | ❌ Blocked |
+| Directory Table | External Volume | File catalog for unstructured data | ✅ | ❌ Blocked |
+| Snowpipe | Auto Loader | Incremental file ingestion | ⚠️ (no S3 Events) | ❌ Blocked |
+| COPY INTO | COPY INTO / Auto Loader | Batch data load | ✅ | ❌ Blocked |
+| Internal Stage | Managed Volume | Snowflake/Databricks-managed storage | ✅ | ✅ |
+| `AWS_ACCESS_POINT_ARN` | `access_point` field | S3 AP ARN for session policy | ✅ (resolves all) | ⚠️ (partial resolution) |
+
 ## Data Format Support
 
 > **Important**: The table below represents intended validation targets, not production support status. Unity Catalog External Location did not succeed in the tested environment due to a session policy boundary. The Databricks Unity Catalog + FSx S3 AP path is currently documented as an observed boundary in this validation.
