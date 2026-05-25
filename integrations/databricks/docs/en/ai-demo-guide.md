@@ -445,6 +445,22 @@ The two governance layers (ONTAP file-level and Databricks ABAC) are designed to
 | **Immutable training data** | SnapLock volume for training datasets | MLflow records source snapshot ID | Strong (storage-enforced) |
 | **Network isolation** | VPC-scoped S3 AP + Export Policy | Customer-managed VPC + security groups | Strong (network-enforced) |
 
+#### References: ONTAP File-Level + Databricks Tag Integration
+
+| Topic | Reference |
+|---|---|
+| FSx S3 AP dual-layer authorization | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
+| FSx S3 AP with Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
+| ONTAP Export Policy (NFS access control) | [How export rules work](https://docs.netapp.com/us-en/ontap/nfs-admin/export-rules-concept.html) |
+| ONTAP FPolicy (file monitoring/blocking) | [FPolicy configuration types](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| ONTAP Storage-Level Access Guard | [Secure file access with SLAG](https://docs.netapp.com/us-en/ontap/smb-admin/secure-file-access-storage-level-access-guard-concept.html) |
+| Databricks ABAC overview | [Attribute-based access control](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/) |
+| Databricks Governed Tags | [Apply tags to UC objects](https://docs.databricks.com/aws/en/database-objects/tags) |
+| Databricks Row Filters & Column Masks | [Row filters and column masks](https://docs.databricks.com/aws/en/data-governance/unity-catalog/filters-and-masks) |
+| Databricks ABAC Tutorial | [Configure ABAC tutorial](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/tutorial) |
+| Databricks ABAC + Delta Sharing | [ABAC across governance boundaries](https://www.databricks.com/blog/how-delta-sharing-supports-abac-sharing-providers-and-recipients) |
+| Databricks Data Classification (GA) | [ABAC, governed tags, and data classification GA](https://www.databricks.com/blog/abac-row-filtering-and-column-masking-policies-governed-tags-and-data-classification-are-now) |
+
 #### Governance Layers Summary (Databricks + ONTAP)
 
 | Layer | Enforcement Point | Scope | Status on FSx S3 AP |

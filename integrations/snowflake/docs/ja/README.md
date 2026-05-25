@@ -104,6 +104,15 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | FPolicy | イベント駆動 Snowpipe 取り込み（<30秒レイテンシ） |
 | マルチプロトコル | NFS（取り込み）+ S3 AP（Snowflake）— 同一データ、コピー不要 |
 
+## ガバナンス & AI/ML ガイド
+
+| ガイド | 説明 |
+|---|---|
+| [AI/ML デモガイド](ai-demo-guide.md) | Cortex AI デモ（OCR、SUMMARIZE、Vision）、業界別ユースケース、AI 向け ONTAP 価値 |
+| [ガバナンス: タグとデータ保護](ai-demo-guide.md#ガバナンスタグとデータ保護) | Tag-based masking、Row Access Policy、エディション要件 |
+| [ガバナンス: ファイルレベルアクセス制御](ai-demo-guide.md#ファイルレベルのアクセス制御-ontap-ネイティブレイヤー) | ONTAP デュアルレイヤー認可、FPolicy、コンシューマーごとの S3 AP 分離 |
+| [統合: ONTAP × Snowflake タグ](ai-demo-guide.md#統合-ontap-ファイルレベル制御--snowflake-タグガバナンス) | 組み合わせガバナンスマトリクス、設計パターン、フロー図 |
+
 ## クイックスタート
 
 ```bash

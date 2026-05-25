@@ -97,6 +97,15 @@ s3://<s3ap-alias>/gold/      # Business-ready aggregates
 | Deduplication | Reduce storage for Delta version files and similar datasets |
 | SnapMirror | Cross-region DR for lakehouse data |
 
+## Governance & AI/ML Guides
+
+| Guide | Description |
+|---|---|
+| [AI/ML Demo Guide](docs/en/ai-demo-guide.md) | Current status, working demos, blocked paths, future capabilities |
+| [Governance: Tags & Data Protection (ABAC)](docs/en/ai-demo-guide.md#governance-tags--data-protection-abac) | UC ABAC, governed tags, column masks, row filters — current limitations |
+| [Governance: File-Level Access Control](docs/en/ai-demo-guide.md#file-level-access-control-ontap-native-layer) | ONTAP dual-layer auth, FPolicy, per-team S3 AP isolation (compensating control) |
+| [Integration: ONTAP × Databricks Tags](docs/en/ai-demo-guide.md#integration-ontap-file-level-control--databricks-tag-governance) | Combined governance matrix, current vs future state, design patterns |
+
 ## Quick Start
 
 1. Deploy CloudFormation template: `template.yaml`

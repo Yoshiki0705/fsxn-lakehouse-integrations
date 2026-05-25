@@ -140,6 +140,15 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | FPolicy | Event-driven Snowpipe ingestion (<30s latency) |
 | Multi-protocol | NFS (ingest) + S3 AP (Snowflake) — same data, no copy |
 
+## Governance & AI/ML Guides
+
+| Guide | Description |
+|---|---|
+| [AI/ML Demo Guide](docs/en/ai-demo-guide.md) | Cortex AI demos (OCR, SUMMARIZE, Vision), industry use cases, ONTAP value for AI |
+| [Governance: Tags & Data Protection](docs/en/ai-demo-guide.md#governance-tags--data-protection) | Tag-based masking, row access policies, edition requirements |
+| [Governance: File-Level Access Control](docs/en/ai-demo-guide.md#file-level-access-control-ontap-native-layer) | ONTAP dual-layer auth, FPolicy, per-consumer S3 AP isolation |
+| [Integration: ONTAP × Snowflake Tags](docs/en/ai-demo-guide.md#integration-ontap-file-level-control--snowflake-tag-governance) | Combined governance matrix, design patterns, flow diagram |
+
 ## Quick Start
 
 ```bash
