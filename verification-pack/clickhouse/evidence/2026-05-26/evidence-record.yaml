@@ -1,0 +1,60 @@
+# Verification Evidence Record — ClickHouse
+test_id: "CLICKHOUSE-001"
+date_tested: "2026-05-26"
+tester: "Yoshiki Fujiwara"
+
+# Result
+result: "BLOCKED (STS session token not supported in s3() function)"
+verification_method: "Docker ClickHouse 26.5.1 + s3() table function"
+
+# Infrastructure
+clickhouse_version: "26.5.1"
+deployment: "Docker (colima)"
+authentication_attempted: "STS temporary credentials (session token)"
+
+# Tests
+tests:
+  - name: "s3() with SETTINGS s3_session_token"
+    result: "FAILED"
+    error: "UNKNOWN_SETTING: s3_session_token is neither a builtin setting"
+    note: "ClickHouse does not have s3_session_token setting"
+  - name: "s3() with environment variables (AWS_SESSION_TOKEN)"
+    result: "FAILED"
+    error: "HTTP 400 Bad Request — Failed to get object info"
+    note: "Environment variable session token not picked up by s3() function"
+  - name: "s3() with explicit access_key + secret (STS creds)"
+    result: "FAILED"
+    error: "HTTP 400 — STS credentials require session token which cannot be passed"
+    note: "STS temporary credentials without session token are invalid"
+
+# Key Findings
+key_findings:
+  - "ClickHouse s3() function does NOT support STS session tokens (v26.5.1)"
+  - "Path-style access URL format works (https://s3.region.amazonaws.com/bucket/key)"
+  - "ClickHouse recognizes the S3 AP alias as a bucket name"
+  - "Authentication blocker: requires IAM user long-term credentials or EC2 Instance Profile (IMDS)"
+  - "On EC2 with Instance Profile, ClickHouse should work (IMDS provides credentials without session token in URL)"
+
+# Expected to Work With
+expected_to_work_with:
+  - "IAM user access key (long-term credentials, no session token needed)"
+  - "EC2 Instance Profile (IMDS v1/v2 — ClickHouse supports this)"
+  - "ClickHouse Cloud with IAM Role trust (cross-account)"
+
+# Configuration Required (for future full verification)
+config_for_success: |
+  Option 1: Deploy ClickHouse on EC2 with Instance Profile
+    - Instance Profile with s3:GetObject on S3 AP ARN
+    - ClickHouse uses IMDS automatically
+    - s3('https://s3.ap-northeast-1.amazonaws.com/<AP-alias>/path/file.parquet', 'Parquet')
+  
+  Option 2: IAM user long-term access key
+    - s3('url', 'ACCESS_KEY', 'SECRET_KEY', 'Parquet')
+    - No session token needed for IAM user keys
+  
+  Option 3: ClickHouse Cloud
+    - Configure S3 source with IAM Role trust
+    - Internet-origin S3 AP required
+
+# Priority
+priority: "Low — execute when customer demand arises or EC2 deployment available"
