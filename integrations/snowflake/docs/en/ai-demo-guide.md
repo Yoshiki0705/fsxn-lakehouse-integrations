@@ -88,9 +88,99 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 ) AS defect_analysis;
 ```
 
-**Status**: ⚠️ The multimodal AI_COMPLETE syntax for External Stage files requires additional validation. The function is supported in Snowflake but the correct SQL syntax for passing stage file URLs to vision models needs confirmation.
+**Status**: ✅ **Verified with workaround** — Vision AI works when files are copied to an unencrypted internal stage. Direct `TO_FILE()` on FSx S3 AP external stage returns "Remote file not found."
 
-**Manufacturing use case**: Automated visual quality inspection — natural language instructions like "identify scratches on this component" or "check alignment of this assembly."
+**Workaround (validated)**:
+```sql
+-- Step 1: Copy file from FSx S3 AP to unencrypted internal stage
+CREATE OR REPLACE STAGE fsxn_ai_noenc_stage ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE');
+COPY FILES INTO @fsxn_ai_noenc_stage FROM @fsxn_ap_arn_test_stage/media/documents/invoice_sample.png;
+ALTER STAGE fsxn_ai_noenc_stage SET DIRECTORY = (ENABLE = TRUE);
+ALTER STAGE fsxn_ai_noenc_stage REFRESH;
+
+-- Step 2: Enable Cross-Region Inference (required for vision models in ap-northeast-1)
+ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
+
+-- Step 3: Run Vision AI
+SELECT SNOWFLAKE.CORTEX.COMPLETE(
+  'pixtral-large',
+  'Describe this invoice image. What is the invoice number, customer name, and total amount?',
+  FILE
+) AS vision_result
+FROM (
+  SELECT TO_FILE(BUILD_SCOPED_FILE_URL(@fsxn_ai_noenc_stage, RELATIVE_PATH)) AS FILE
+  FROM DIRECTORY(@fsxn_ai_noenc_stage)
+  WHERE RELATIVE_PATH LIKE '%.png' LIMIT 1
+);
+```
+
+**Result**: ✅ Vision AI correctly identified: Invoice #INV-2026-0524, Customer: Acme Corp, Amount: USD 1,234.56 (41s)
+
+![Vision AI successfully analyzes invoice image from FSx for ONTAP (via internal stage workaround)](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-15-vision-ai-success.png)
+
+*Cortex COMPLETE (pixtral-large) correctly extracts invoice details from an image originally stored on FSx for ONTAP, accessed via the COPY FILES → internal stage → TO_FILE workaround.*
+
+**Why direct TO_FILE on FSx S3 AP fails**:
+
+![TO_FILE returns "Remote file not found" on FSx S3 AP external stage](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-10-tofile-remote-not-found.png)
+
+*TO_FILE() cannot resolve files on FSx S3 AP external stages. The same file is accessible via PARSE_DOCUMENT (which uses a different file access mechanism) but not via TO_FILE.*
+
+**Manufacturing use case**: Automated visual quality inspection — natural language instructions like "identify scratches on this component" or "check alignment of this assembly." Requires the COPY FILES workaround for now.
+
+## Demo 5: Text-based Cortex AI Functions (All Working)
+
+All text-based Cortex AI functions work directly on FSx S3 AP External Table data without any workaround:
+
+```sql
+-- TRANSLATE: Translate sensor status to Japanese
+SELECT SNOWFLAKE.CORTEX.TRANSLATE(VALUE:status::VARCHAR, 'en', 'ja') AS translated
+FROM fsxn_sensor_ext_table LIMIT 1;
+
+-- SENTIMENT: Analyze sentiment of text data
+SELECT SNOWFLAKE.CORTEX.SENTIMENT(VALUE:status::VARCHAR) AS sentiment_score
+FROM fsxn_sensor_ext_table LIMIT 3;
+
+-- COMPLETE (text-only): AI analysis of sensor data
+SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large2',
+  'Analyze this IoT sensor reading and identify anomalies: ' || VALUE::VARCHAR
+) AS ai_analysis FROM fsxn_sensor_ext_table LIMIT 1;
+
+-- EXTRACT_ANSWER: Extract specific information
+SELECT SNOWFLAKE.CORTEX.EXTRACT_ANSWER(VALUE::VARCHAR,
+  'What is the sensor ID and temperature reading?'
+) AS extracted FROM fsxn_sensor_ext_table LIMIT 1;
+```
+
+![CORTEX.TRANSLATE successfully translates External Table data from FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-11-cortex-translate-success.png)
+
+*CORTEX.TRANSLATE translates sensor status text from English to Japanese directly from External Table on FSx S3 AP (5.1s).*
+
+![CORTEX.COMPLETE generates AI analysis of sensor data from FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-12-cortex-complete-text-success.png)
+
+*CORTEX.COMPLETE (mistral-large2) generates detailed AI analysis of IoT sensor data stored on FSx for ONTAP (16s).*
+
+## Cortex AI Comprehensive Compatibility Matrix
+
+| Function | Input Source | FSx S3 AP Direct | Workaround | Duration |
+|---|---|:---:|:---:|---|
+| **PARSE_DOCUMENT (OCR)** | Stage path string | ✅ Direct | — | ~8s |
+| **CORTEX.SUMMARIZE** | External Table column | ✅ Direct | — | 3.3s |
+| **CORTEX.TRANSLATE** | External Table column | ✅ Direct | — | 5.1s |
+| **CORTEX.SENTIMENT** | External Table column | ✅ Direct | — | 2.5s |
+| **CORTEX.COMPLETE (text)** | External Table column | ✅ Direct | — | 16s |
+| **CORTEX.EXTRACT_ANSWER** | External Table column | ✅ Direct | — | 2.7s |
+| **COMPLETE (vision/multimodal)** | TO_FILE + image | ❌ Remote file not found | ✅ COPY FILES → internal stage | 41s |
+| **TO_FILE on external stage** | FSx S3 AP stage | ❌ Not supported | COPY FILES to internal | — |
+| **TO_FILE on encrypted internal** | Default internal stage | ❌ Encryption not supported | Use SNOWFLAKE_SSE | — |
+
+### Key Findings
+
+1. **Text-based functions work directly** — No workaround needed for SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE (text), EXTRACT_ANSWER on External Table data
+2. **PARSE_DOCUMENT works directly** — Uses stage path string (different mechanism from TO_FILE)
+3. **TO_FILE does NOT work on FSx S3 AP external stages** — "Remote file not found" (confirmed, matches NetApp support case)
+4. **Vision AI workaround exists**: `COPY FILES` → unencrypted internal stage → `TO_FILE(BUILD_SCOPED_FILE_URL())` → COMPLETE multimodal
+5. **Cross-Region Inference required** for vision models in ap-northeast-1
 
 ## Verified Results Summary
 
@@ -98,14 +188,24 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 |---|:---:|---|---|
 | PARSE_DOCUMENT (OCR) | ✅ Verified | ~8s | Invoice/report text extraction |
 | CORTEX.SUMMARIZE | ✅ Verified | 3.3s | Sensor data / document summarization |
+| CORTEX.TRANSLATE | ✅ Verified | 5.1s | Multi-language support |
+| CORTEX.SENTIMENT | ✅ Verified | 2.5s | Text sentiment analysis |
+| CORTEX.COMPLETE (text) | ✅ Verified | 16s | AI analysis, anomaly detection |
+| CORTEX.EXTRACT_ANSWER | ✅ Verified | 2.7s | Information extraction from text |
+| COMPLETE (vision) via workaround | ✅ Verified | 41s | Image analysis, defect detection |
 | Directory Table + URLs | ✅ Verified | 1.3s | Unstructured data catalog |
-| AI_COMPLETE (Vision) | ⚠️ TBD | — | Image defect detection, yield analysis |
+| TO_FILE on FSx S3 AP | ❌ Blocked | — | Multimodal direct access not supported |
 
 ## Screenshots
 
-- OCR + Query History: `docs/images/snowflake-08-parse-document-ocr.png`
+- OCR success: `docs/images/snowflake-08-parse-document-ocr.png`
 - Cortex SUMMARIZE: `docs/images/snowflake-07-cortex-llm-summary.png`
 - Directory Table: `docs/images/snowflake-06-directory-table-presigned-url.png`
+- TO_FILE compilation error: `docs/images/snowflake-09-tofile-compilation-error.png`
+- TO_FILE remote not found: `docs/images/snowflake-10-tofile-remote-not-found.png`
+- CORTEX.TRANSLATE success: `docs/images/snowflake-11-cortex-translate-success.png`
+- CORTEX.COMPLETE text success: `docs/images/snowflake-12-cortex-complete-text-success.png`
+- Vision AI success (workaround): `docs/images/snowflake-15-vision-ai-success.png`
 
 ---
 
