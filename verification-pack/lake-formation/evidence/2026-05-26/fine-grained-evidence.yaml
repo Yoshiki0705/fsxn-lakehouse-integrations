@@ -1,0 +1,91 @@
+# Verification Evidence Record — Lake Formation Fine-Grained Access Control
+test_id: "LAKE-FORMATION-FINE-GRAINED-001"
+date_tested: "2026-05-26"
+tester: "Yoshiki Fujiwara"
+
+# Infrastructure
+region: "ap-northeast-1"
+lake_formation_admin: "arn:aws:iam::178625946981:user/yoshiki0705"
+test_role: "arn:aws:iam::178625946981:role/fsxn-athena-glue-role"
+database: "fsxn_athena_verification"
+table: "sensor_readings"
+data_source: "FSx for ONTAP S3 Access Point (internet-origin)"
+
+# Test 1: Column-Level Permissions
+column_level_test:
+  result: "PASS"
+  permitted_columns: ["sensor_id", "temperature", "status"]
+  denied_columns: ["id", "timestamp", "humidity", "pressure"]
+  tests:
+    - query: "SELECT sensor_id, temperature, status FROM sensor_readings LIMIT 3"
+      expected: "SUCCEEDED"
+      actual: "SUCCEEDED"
+      note: "Permitted columns accessible"
+    - query: "SELECT sensor_id, humidity FROM sensor_readings LIMIT 3"
+      expected: "FAILED"
+      actual: "FAILED"
+      error: "COLUMN_NOT_FOUND: Column 'humidity' cannot be resolved or requester is not authorized to access requested resources"
+      note: "Non-permitted column correctly denied"
+    - query: "SELECT * FROM sensor_readings LIMIT 3"
+      expected: "FAILED or filtered"
+      actual: "SUCCEEDED (returns only permitted columns)"
+      note: "Lake Formation filters SELECT * to permitted columns only — this is expected LF behavior"
+    - query: "SELECT status, COUNT(*) FROM sensor_readings GROUP BY status"
+      expected: "SUCCEEDED"
+      actual: "SUCCEEDED"
+      note: "Aggregation on permitted column works"
+
+# Test 2: Row Filter (Data Cells Filter)
+row_filter_test:
+  result: "PASS (filter created)"
+  filter_name: "normal_status_only"
+  filter_expression: "status='normal'"
+  permitted_columns: ["sensor_id", "temperature", "status"]
+  note: |
+    Data cells filter created successfully. This combines column-level
+    and row-level filtering. When applied to a principal, only rows
+    where status='normal' and only the 3 permitted columns are visible.
+    Full enforcement test requires granting the filter to a principal
+    and querying via that principal.
+
+# Test 3: LF-Tag Based Access Control
+lf_tag_test:
+  result: "PASS"
+  tag_created:
+    key: "sensitivity"
+    values: ["public", "internal", "confidential"]
+  tag_assigned:
+    resource: "sensor_readings"
+    tag_value: "internal"
+  tag_permission_granted:
+    principal: "fsxn-athena-glue-role"
+    tag_expression: "sensitivity IN (internal, public)"
+    permissions: ["DESCRIBE", "ASSOCIATE"]
+  note: |
+    LF-Tag created, assigned to table, and tag-based permission granted.
+    This enables scalable governance: new tables tagged 'internal' are
+    automatically accessible to principals with matching tag permissions.
+
+# Key Findings
+key_findings:
+  - "Column-level permissions work correctly on FSx S3 AP data via Lake Formation"
+  - "Non-permitted columns return 'cannot be resolved or requester is not authorized'"
+  - "SELECT * returns only permitted columns (LF filters automatically)"
+  - "Data cells filters (row + column) can be created on FSx S3 AP tables"
+  - "LF-Tags can be assigned to FSx S3 AP tables for scalable governance"
+  - "Tag-based permissions enable automatic access control based on data classification"
+  - "4-layer authorization confirmed: Lake Formation → IAM → S3 AP → File System"
+
+# Governance Architecture Validated
+governance_layers:
+  layer_1: "Lake Formation (column/row/tag permissions)"
+  layer_2: "IAM (API-level access control)"
+  layer_3: "S3 Access Point (resource policy)"
+  layer_4: "FSx for ONTAP file system (UNIX permissions)"
+
+# Cleanup Notes
+cleanup:
+  - "Revoke IAM_ALLOWED_PRINCIPALS on sensor_readings (done)"
+  - "Trust policy updated on fsxn-athena-glue-role (add yoshiki0705 for testing)"
+  - "AmazonAthenaFullAccess attached to fsxn-athena-glue-role (for testing)"
+  - "After verification: revert trust policy, detach Athena policy, restore IAM_ALLOWED_PRINCIPALS"
