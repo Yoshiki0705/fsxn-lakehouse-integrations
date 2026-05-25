@@ -88,9 +88,99 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 ) AS defect_analysis;
 ```
 
-**ステータス**: ⚠️ External Stage ファイルに対するマルチモーダル AI_COMPLETE の構文は追加検証が必要です。Snowflake で機能はサポートされていますが、ステージファイル URL をビジョンモデルに渡す正確な SQL 構文の確認が必要です。
+**ステータス**: ✅ **回避策で検証済み** — ファイルを暗号化なし内部ステージにコピーすれば Vision AI が動作。FSx S3 AP 外部ステージへの直接 `TO_FILE()` は "Remote file not found" を返す。
 
-**製造業ユースケース**: 自動視覚品質検査 — 「このコンポーネントの傷を特定」「このアセンブリのアライメントを確認」などの自然言語指示。
+**回避策（検証済み）**:
+```sql
+-- Step 1: FSx S3 AP から暗号化なし内部ステージにファイルをコピー
+CREATE OR REPLACE STAGE fsxn_ai_noenc_stage ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE');
+COPY FILES INTO @fsxn_ai_noenc_stage FROM @fsxn_ap_arn_test_stage/media/documents/invoice_sample.png;
+ALTER STAGE fsxn_ai_noenc_stage SET DIRECTORY = (ENABLE = TRUE);
+ALTER STAGE fsxn_ai_noenc_stage REFRESH;
+
+-- Step 2: Cross-Region Inference を有効化（ap-northeast-1 で Vision モデルに必要）
+ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
+
+-- Step 3: Vision AI を実行
+SELECT SNOWFLAKE.CORTEX.COMPLETE(
+  'pixtral-large',
+  '請求書画像を説明してください。請求書番号、顧客名、合計金額は？',
+  FILE
+) AS vision_result
+FROM (
+  SELECT TO_FILE(BUILD_SCOPED_FILE_URL(@fsxn_ai_noenc_stage, RELATIVE_PATH)) AS FILE
+  FROM DIRECTORY(@fsxn_ai_noenc_stage)
+  WHERE RELATIVE_PATH LIKE '%.png' LIMIT 1
+);
+```
+
+**結果**: ✅ Vision AI が正確に識別: Invoice #INV-2026-0524, Customer: Acme Corp, Amount: USD 1,234.56（41秒）
+
+![Vision AI が FSx for ONTAP の請求書画像を正常に分析（内部ステージ回避策経由）](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-15-vision-ai-success.png)
+
+*Cortex COMPLETE (pixtral-large) が FSx for ONTAP に保存された画像から請求書詳細を正確に抽出。COPY FILES → 内部ステージ → TO_FILE 回避策を使用。*
+
+**FSx S3 AP で直接 TO_FILE が失敗する理由**:
+
+![TO_FILE が FSx S3 AP 外部ステージで "Remote file not found" を返す](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-10-tofile-remote-not-found.png)
+
+*TO_FILE() は FSx S3 AP 外部ステージのファイルを解決できない。同じファイルは PARSE_DOCUMENT（異なるファイルアクセスメカニズムを使用）ではアクセス可能だが、TO_FILE では不可。*
+
+**製造業ユースケース**: 自動視覚品質検査 — 「このコンポーネントの傷を特定」「このアセンブリのアライメントを確認」などの自然言語指示。現時点では COPY FILES 回避策が必要。
+
+## デモ 5: テキストベース Cortex AI 関数（全て動作）
+
+全てのテキストベース Cortex AI 関数が FSx S3 AP External Table データで回避策なしに直接動作:
+
+```sql
+-- TRANSLATE: センサーステータスを日本語に翻訳
+SELECT SNOWFLAKE.CORTEX.TRANSLATE(VALUE:status::VARCHAR, 'en', 'ja') AS translated
+FROM fsxn_sensor_ext_table LIMIT 1;
+
+-- SENTIMENT: テキストデータの感情分析
+SELECT SNOWFLAKE.CORTEX.SENTIMENT(VALUE:status::VARCHAR) AS sentiment_score
+FROM fsxn_sensor_ext_table LIMIT 3;
+
+-- COMPLETE (テキストのみ): センサーデータの AI 分析
+SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large2',
+  'この IoT センサー読み取り値を分析し異常を特定: ' || VALUE::VARCHAR
+) AS ai_analysis FROM fsxn_sensor_ext_table LIMIT 1;
+
+-- EXTRACT_ANSWER: 特定情報の抽出
+SELECT SNOWFLAKE.CORTEX.EXTRACT_ANSWER(VALUE::VARCHAR,
+  'センサー ID と温度の読み取り値は？'
+) AS extracted FROM fsxn_sensor_ext_table LIMIT 1;
+```
+
+![CORTEX.TRANSLATE が FSx S3 AP の External Table データを正常に翻訳](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-11-cortex-translate-success.png)
+
+*CORTEX.TRANSLATE が FSx S3 AP 上の External Table からセンサーステータステキストを英語から日本語に翻訳（5.1秒）。*
+
+![CORTEX.COMPLETE が FSx S3 AP のセンサーデータの AI 分析を生成](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-12-cortex-complete-text-success.png)
+
+*CORTEX.COMPLETE (mistral-large2) が FSx for ONTAP に保存された IoT センサーデータの詳細な AI 分析を生成（16秒）。*
+
+## Cortex AI 包括的互換性マトリクス
+
+| 関数 | 入力ソース | FSx S3 AP 直接 | 回避策 | 所要時間 |
+|---|---|:---:|:---:|---|
+| **PARSE_DOCUMENT (OCR)** | ステージパス文字列 | ✅ 直接 | — | 約8秒 |
+| **CORTEX.SUMMARIZE** | External Table カラム | ✅ 直接 | — | 3.3秒 |
+| **CORTEX.TRANSLATE** | External Table カラム | ✅ 直接 | — | 5.1秒 |
+| **CORTEX.SENTIMENT** | External Table カラム | ✅ 直接 | — | 2.5秒 |
+| **CORTEX.COMPLETE (テキスト)** | External Table カラム | ✅ 直接 | — | 16秒 |
+| **CORTEX.EXTRACT_ANSWER** | External Table カラム | ✅ 直接 | — | 2.7秒 |
+| **COMPLETE (vision/multimodal)** | TO_FILE + 画像 | ❌ Remote file not found | ✅ COPY FILES → 内部ステージ | 41秒 |
+| **TO_FILE on 外部ステージ** | FSx S3 AP ステージ | ❌ 非サポート | COPY FILES to internal | — |
+| **TO_FILE on 暗号化内部ステージ** | デフォルト内部ステージ | ❌ 暗号化非サポート | SNOWFLAKE_SSE を使用 | — |
+
+### 重要な発見
+
+1. **テキストベース関数は直接動作** — SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE (text), EXTRACT_ANSWER は External Table データで回避策不要
+2. **PARSE_DOCUMENT は直接動作** — ステージパス文字列を使用（TO_FILE とは異なるメカニズム）
+3. **TO_FILE は FSx S3 AP 外部ステージで動作しない** — "Remote file not found"（確認済み、NetApp サポートケースと一致）
+4. **Vision AI 回避策が存在**: `COPY FILES` → 暗号化なし内部ステージ → `TO_FILE(BUILD_SCOPED_FILE_URL())` → COMPLETE multimodal
+5. **Cross-Region Inference が必要** — ap-northeast-1 での Vision モデル利用に必須
 
 ## 検証結果サマリー
 
@@ -98,14 +188,24 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 |---|:---:|---|---|
 | PARSE_DOCUMENT (OCR) | ✅ 検証済み | 約8秒 | 請求書/報告書テキスト抽出 |
 | CORTEX.SUMMARIZE | ✅ 検証済み | 3.3秒 | センサーデータ/ドキュメント要約 |
+| CORTEX.TRANSLATE | ✅ 検証済み | 5.1秒 | 多言語対応 |
+| CORTEX.SENTIMENT | ✅ 検証済み | 2.5秒 | テキスト感情分析 |
+| CORTEX.COMPLETE (テキスト) | ✅ 検証済み | 16秒 | AI 分析、異常検知 |
+| CORTEX.EXTRACT_ANSWER | ✅ 検証済み | 2.7秒 | テキストからの情報抽出 |
+| COMPLETE (vision) 回避策経由 | ✅ 検証済み | 41秒 | 画像分析、欠陥検出 |
 | Directory Table + URLs | ✅ 検証済み | 1.3秒 | 非構造化データカタログ |
-| AI_COMPLETE (Vision) | ⚠️ 検証中 | — | 画像欠陥検出、歩留まり分析 |
+| TO_FILE on FSx S3 AP | ❌ ブロック | — | マルチモーダル直接アクセス非サポート |
 
 ## スクリーンショット
 
-- OCR + クエリ履歴: `docs/images/snowflake-08-parse-document-ocr.png`
+- OCR 成功: `docs/images/snowflake-08-parse-document-ocr.png`
 - Cortex SUMMARIZE: `docs/images/snowflake-07-cortex-llm-summary.png`
 - Directory Table: `docs/images/snowflake-06-directory-table-presigned-url.png`
+- TO_FILE コンパイルエラー: `docs/images/snowflake-09-tofile-compilation-error.png`
+- TO_FILE remote not found: `docs/images/snowflake-10-tofile-remote-not-found.png`
+- CORTEX.TRANSLATE 成功: `docs/images/snowflake-11-cortex-translate-success.png`
+- CORTEX.COMPLETE テキスト成功: `docs/images/snowflake-12-cortex-complete-text-success.png`
+- Vision AI 成功（回避策）: `docs/images/snowflake-15-vision-ai-success.png`
 
 ---
 
