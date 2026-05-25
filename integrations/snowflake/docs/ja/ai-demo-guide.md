@@ -192,6 +192,78 @@ ALTER TAG data_classification SET MASKING POLICY pii_mask;
 
 **意味**: Snowflake Enterprise Edition を使用する組織は、FSx for ONTAP データに対して完全な ABAC ガバナンス（分類、マスキング、行フィルタリング）を External Table 経由で適用可能 — データを Snowflake マネージドストレージにコピーする必要なし。
 
+### ファイルレベルのアクセス制御: ONTAP ネイティブレイヤー
+
+NetApp ユーザーにとって重要なガバナンスの問いは、テーブル/カラムレベルのマスキングだけでなく、**非構造化データ（画像、ドキュメント、動画）のファイルレベルのアクセス制御と統制**です。FSx for ONTAP S3 Access Points はデュアルレイヤー認可モデルを提供します:
+
+```
+Layer 1: AWS IAM + S3 AP Policy（誰が S3 API を呼べるか）
+    │
+Layer 2: ONTAP ファイルシステム権限（どのファイルにアクセスできるか）
+    │
+    ├── Export Policy（NFS: クライアント IP、プロトコル、RO/RW/root）
+    ├── NTFS ACL / NFSv4 ACL（ファイル/ディレクトリ単位の権限）
+    ├── Storage-Level Access Guard（ボリュームレベルの ACL オーバーライド）
+    ├── FPolicy（ファイル操作の監視、スクリーニング、ブロック）
+    └── File System User マッピング（S3 AP → UNIX/Windows ID）
+```
+
+#### S3 AP ファイルレベル制御の仕組み
+
+各 S3 Access Point は**ファイルシステムユーザー**（UNIX UID/GID または Windows ID）にマッピングされます。その AP 経由の全 S3 API 操作はそのユーザーとして実行されます:
+
+| S3 AP 設定 | ファイルアクセス範囲 | ユースケース |
+|---|---|---|
+| File system user = `root` (UID 0) | 全ファイルにフルアクセス | 管理者/分析（広範な読み取り） |
+| File system user = `analytics` (UID 1001) | UID 1001 が読めるファイルのみ | スコープ付き分析アクセス |
+| File system user = `dept_finance` | 財務部門のファイルのみ | 部門レベルの分離 |
+| ボリュームごとに複数 S3 AP | AP ごとに異なるユーザー | コンシューマーごとのアクセススコーピング |
+
+#### コンシューマーごとの S3 Access Point（データ分離パターン）
+
+```
+FSx for ONTAP Volume: /vol1
+├── /finance/     (owner: finance_user, mode: 750)
+├── /engineering/ (owner: eng_user, mode: 750)
+├── /shared/      (owner: root, mode: 755)
+│
+├── S3 AP "snowflake-finance"    → file_system_user: finance_user
+│     → /finance/ と /shared/ を読み取り可、/engineering/ は読み取り不可
+│
+├── S3 AP "snowflake-engineering" → file_system_user: eng_user
+│     → /engineering/ と /shared/ を読み取り可、/finance/ は読み取り不可
+│
+└── S3 AP "snowflake-admin"      → file_system_user: root
+      → 全て読み取り可（管理者/ガバナンス用）
+```
+
+#### FPolicy: ファイル操作の監視とブロック
+
+FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監視とブロックを提供 — どのプロトコル（NFS、SMB、S3 AP）が使用されても適用:
+
+| FPolicy 機能 | 説明 | 分析への関連性 |
+|---|---|---|
+| ネイティブファイルブロック | 特定のファイル拡張子をブロック（.exe, .bat 等） | どのプロトコル経由でも悪意あるファイルアップロードを防止 |
+| 外部 FPolicy サーバー | ファイルアクセスイベントを外部アプリに送信 | コンプライアンス用監査証跡（誰が何にいつアクセスしたか） |
+| ファイルスクリーニング | ファイルタイプやパターンに基づく許可/拒否 | アクセス可能なデータタイプの制御 |
+| 操作モニタリング | open, create, rename, delete, read, write を監視 | データアクセスパターンの完全な監査 |
+
+**NetApp ユーザーへの重要な知見**: Snowflake が S3 AP 経由でデータをクエリする場合でも、ONTAP のファイルレベル権限と FPolicy は引き続き適用されます。S3 AP は ONTAP セキュリティをバイパスしません — S3 API コールをファイルシステム操作にマッピングし、設定された権限を尊重します。
+
+#### ガバナンスレイヤーサマリー（Snowflake + ONTAP）
+
+| レイヤー | 適用ポイント | スコープ | 制御内容 |
+|---|---|---|---|
+| **ONTAP Export Policy** | ファイルシステム | ボリューム/qtree レベル | クライアント IP、プロトコル、RO/RW |
+| **ONTAP ファイル権限** | ファイルシステム | ファイル/ディレクトリ単位 | UNIX mode, NFSv4 ACL, NTFS ACL |
+| **ONTAP FPolicy** | ファイルシステム | 操作単位 | ファイル操作の監視、スクリーニング、ブロック |
+| **ONTAP Storage-Level Access Guard** | ファイルシステム | ボリュームレベル | 全プロトコルに対する ACL オーバーライド |
+| **S3 AP Policy** | AWS | Access Point 単位 | IAM 条件、VPC 制限 |
+| **S3 AP File System User** | ファイルシステム | Access Point 単位 | S3 ID を UNIX/Windows ユーザーにマッピング |
+| **Snowflake Object Tags** | クエリエンジン | テーブル/カラム | 分類メタデータ |
+| **Snowflake Masking Policy** | クエリエンジン | カラム | クエリ時の動的データマスキング |
+| **Snowflake Row Access Policy** | クエリエンジン | 行 | クエリ時の行レベルフィルタリング |
+
 ### リファレンス
 
 - [Object Tagging](https://docs.snowflake.com/en/user-guide/object-tagging/introduction)

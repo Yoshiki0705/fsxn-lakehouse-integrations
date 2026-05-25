@@ -315,6 +315,82 @@ Until Databricks resolves the UC session policy boundary for S3 Access Points:
 2. **For governed ML pipelines**: Stage data from FSx S3 AP into UC-managed storage (S3 bucket), then apply full ABAC governance
 3. **For PoC/exploration only**: Use Instance Profile + boto3 with compensating controls (approval record, time-limited, audit logging)
 
+### File-Level Access Control: ONTAP Native Layer
+
+For NetApp users, the critical governance question is not just table/column-level masking but **file-level access control on unstructured data** (images, documents, videos). FSx for ONTAP S3 Access Points provide a dual-layer authorization model that applies regardless of whether Databricks UC governance is available:
+
+```
+Layer 1: AWS IAM + S3 AP Policy (who can call the S3 API)
+    │
+Layer 2: ONTAP File System Permissions (what files the user can access)
+    │
+    ├── Export Policy (NFS: client IP, protocol, RO/RW/root)
+    ├── NTFS ACL / NFSv4 ACL (per-file/directory permissions)
+    ├── Storage-Level Access Guard (volume-level ACL override)
+    ├── FPolicy (file operation monitoring, screening, blocking)
+    └── File System User mapping (S3 AP → UNIX/Windows identity)
+```
+
+#### How S3 AP File-Level Control Works
+
+Each S3 Access Point is mapped to a **file system user**. All S3 API operations (including those from Databricks via boto3 or Spark) execute as that user:
+
+| S3 AP Configuration | File Access Scope | Use Case |
+|---|---|---|
+| File system user = `root` (UID 0) | Full access to all files | Admin/analytics (broad read) |
+| File system user = `ml_team` (UID 1001) | Only files readable by UID 1001 | ML team data isolation |
+| File system user = `dept_finance` | Only finance department files | Department-level isolation |
+| Multiple S3 APs per volume | Different users per AP | Per-team or per-workload scoping |
+
+#### Per-Team S3 Access Points (Compensating Control for UC Gap)
+
+Since Databricks UC governance is currently blocked on FSx S3 AP, file-level isolation via multiple access points provides a compensating control:
+
+```
+FSx for ONTAP Volume: /vol1
+├── /training-data/   (owner: ml_team, mode: 750)
+├── /sensitive-docs/  (owner: compliance, mode: 700)
+├── /shared-assets/   (owner: root, mode: 755)
+│
+├── S3 AP "databricks-ml-team"     → file_system_user: ml_team
+│     → Databricks ML cluster reads /training-data/ and /shared-assets/
+│     → Cannot access /sensitive-docs/ (permission denied at ONTAP level)
+│
+├── S3 AP "databricks-compliance"  → file_system_user: compliance
+│     → Compliance team reads /sensitive-docs/
+│     → Separate Instance Profile, separate cluster
+│
+└── S3 AP "databricks-admin"       → file_system_user: root
+      → Admin access for governance review
+```
+
+#### FPolicy: File Operation Monitoring & Blocking
+
+FPolicy provides real-time file access monitoring at the ONTAP level — even when Databricks bypasses UC via Instance Profile + boto3:
+
+| FPolicy Capability | Description | Relevance to Databricks |
+|---|---|---|
+| Native file blocking | Block specific file extensions | Prevent unwanted file types in ML pipelines |
+| External FPolicy server | Send access events to external app | Audit trail when UC lineage is unavailable |
+| File screening | Allow/deny based on file type | Control what data types ML jobs can access |
+| Operation monitoring | Monitor all file operations | Compensating audit for boto3 PoC path |
+
+**Key insight for NetApp users**: Even when Databricks bypasses Unity Catalog governance (via Instance Profile + boto3), ONTAP's file-level permissions and FPolicy still enforce access control at the storage layer. This provides a compensating control until UC session policy support is resolved.
+
+#### Governance Layers Summary (Databricks + ONTAP)
+
+| Layer | Enforcement Point | Scope | Status on FSx S3 AP |
+|---|---|---|---|
+| **ONTAP Export Policy** | File system | Volume/qtree | ✅ Always enforced |
+| **ONTAP File Permissions** | File system | Per-file/directory | ✅ Always enforced |
+| **ONTAP FPolicy** | File system | Per-operation | ✅ Always enforced |
+| **ONTAP Storage-Level Access Guard** | File system | Volume | ✅ Always enforced |
+| **S3 AP Policy** | AWS | Per-access-point | ✅ Always enforced |
+| **S3 AP File System User** | File system | Per-access-point | ✅ Always enforced |
+| **Databricks UC Tags** | Query engine | Table/column | ❌ Blocked (no table creation) |
+| **Databricks ABAC Masks** | Query engine | Column | ❌ Blocked |
+| **Databricks Row Filters** | Query engine | Row | ❌ Blocked |
+
 ### References
 
 - [ABAC in Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/)

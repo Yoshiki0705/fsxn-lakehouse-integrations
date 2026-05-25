@@ -315,6 +315,82 @@ Databricks が S3 Access Point に対する UC セッションポリシーの境
 2. **ガバナンス付き ML パイプライン**: FSx S3 AP から UC マネージドストレージ（S3 バケット）にデータをステージングし、完全 ABAC ガバナンスを適用
 3. **PoC/探索のみ**: Instance Profile + boto3 を補償コントロール付きで使用（承認記録、期間限定、監査ログ）
 
+### ファイルレベルのアクセス制御: ONTAP ネイティブレイヤー
+
+NetApp ユーザーにとって重要なガバナンスの問いは、テーブル/カラムレベルのマスキングだけでなく、**非構造化データ（画像、ドキュメント、動画）のファイルレベルのアクセス制御と統制**です。FSx for ONTAP S3 Access Points はデュアルレイヤー認可モデルを提供し、Databricks UC ガバナンスの利用可否に関係なく適用されます:
+
+```
+Layer 1: AWS IAM + S3 AP Policy（誰が S3 API を呼べるか）
+    │
+Layer 2: ONTAP ファイルシステム権限（どのファイルにアクセスできるか）
+    │
+    ├── Export Policy（NFS: クライアント IP、プロトコル、RO/RW/root）
+    ├── NTFS ACL / NFSv4 ACL（ファイル/ディレクトリ単位の権限）
+    ├── Storage-Level Access Guard（ボリュームレベルの ACL オーバーライド）
+    ├── FPolicy（ファイル操作の監視、スクリーニング、ブロック）
+    └── File System User マッピング（S3 AP → UNIX/Windows ID）
+```
+
+#### S3 AP ファイルレベル制御の仕組み
+
+各 S3 Access Point は**ファイルシステムユーザー**にマッピングされます。全 S3 API 操作（Databricks からの boto3 や Spark を含む）はそのユーザーとして実行されます:
+
+| S3 AP 設定 | ファイルアクセス範囲 | ユースケース |
+|---|---|---|
+| File system user = `root` (UID 0) | 全ファイルにフルアクセス | 管理者/分析（広範な読み取り） |
+| File system user = `ml_team` (UID 1001) | UID 1001 が読めるファイルのみ | ML チームのデータ分離 |
+| File system user = `dept_finance` | 財務部門のファイルのみ | 部門レベルの分離 |
+| ボリュームごとに複数 S3 AP | AP ごとに異なるユーザー | チームごと/ワークロードごとのスコーピング |
+
+#### チームごとの S3 Access Point（UC ギャップの補償コントロール）
+
+Databricks UC ガバナンスが FSx S3 AP 上で現在ブロックされているため、複数 Access Point によるファイルレベル分離が補償コントロールを提供:
+
+```
+FSx for ONTAP Volume: /vol1
+├── /training-data/   (owner: ml_team, mode: 750)
+├── /sensitive-docs/  (owner: compliance, mode: 700)
+├── /shared-assets/   (owner: root, mode: 755)
+│
+├── S3 AP "databricks-ml-team"     → file_system_user: ml_team
+│     → Databricks ML クラスターが /training-data/ と /shared-assets/ を読み取り
+│     → /sensitive-docs/ にはアクセス不可（ONTAP レベルで permission denied）
+│
+├── S3 AP "databricks-compliance"  → file_system_user: compliance
+│     → コンプライアンスチームが /sensitive-docs/ を読み取り
+│     → 別の Instance Profile、別のクラスター
+│
+└── S3 AP "databricks-admin"       → file_system_user: root
+      → ガバナンスレビュー用の管理者アクセス
+```
+
+#### FPolicy: ファイル操作の監視とブロック
+
+FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監視を提供 — Databricks が Instance Profile + boto3 で UC をバイパスする場合でも適用:
+
+| FPolicy 機能 | 説明 | Databricks への関連性 |
+|---|---|---|
+| ネイティブファイルブロック | 特定のファイル拡張子をブロック | ML パイプラインでの不要なファイルタイプを防止 |
+| 外部 FPolicy サーバー | アクセスイベントを外部アプリに送信 | UC リネージが利用不可時の監査証跡 |
+| ファイルスクリーニング | ファイルタイプに基づく許可/拒否 | ML ジョブがアクセスできるデータタイプの制御 |
+| 操作モニタリング | 全ファイル操作を監視 | boto3 PoC パスの補償監査 |
+
+**NetApp ユーザーへの重要な知見**: Databricks が Unity Catalog ガバナンスをバイパスする場合（Instance Profile + boto3 経由）でも、ONTAP のファイルレベル権限と FPolicy はストレージレイヤーでアクセス制御を適用し続けます。これは UC セッションポリシーサポートが解消されるまでの補償コントロールを提供します。
+
+#### ガバナンスレイヤーサマリー（Databricks + ONTAP）
+
+| レイヤー | 適用ポイント | スコープ | FSx S3 AP でのステータス |
+|---|---|---|---|
+| **ONTAP Export Policy** | ファイルシステム | ボリューム/qtree | ✅ 常に適用 |
+| **ONTAP ファイル権限** | ファイルシステム | ファイル/ディレクトリ単位 | ✅ 常に適用 |
+| **ONTAP FPolicy** | ファイルシステム | 操作単位 | ✅ 常に適用 |
+| **ONTAP Storage-Level Access Guard** | ファイルシステム | ボリューム | ✅ 常に適用 |
+| **S3 AP Policy** | AWS | Access Point 単位 | ✅ 常に適用 |
+| **S3 AP File System User** | ファイルシステム | Access Point 単位 | ✅ 常に適用 |
+| **Databricks UC Tags** | クエリエンジン | テーブル/カラム | ❌ ブロック（テーブル作成不可） |
+| **Databricks ABAC Masks** | クエリエンジン | カラム | ❌ ブロック |
+| **Databricks Row Filters** | クエリエンジン | 行 | ❌ ブロック |
+
 ### リファレンス
 
 - [ABAC in Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/)
