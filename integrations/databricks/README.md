@@ -65,6 +65,87 @@ s3://<s3ap-alias>/gold/      # Business-ready aggregates
 | JSON | Driver-only boto3 PoC possible | Bypasses UC governance; not a production path |
 | ORC | Not validated | — |
 
+## Managed Table vs External Table — Design Guide
+
+Understanding the difference between managed and external tables in Unity Catalog is critical for architecture decisions — especially given the current FSx S3 AP session policy limitation.
+
+### Comparison Matrix
+
+| Aspect | UC External Table (on FSx S3 AP) | UC Managed Table (on S3 bucket) | boto3 PoC (no UC table) |
+|---|---|---|---|
+| **Data location** | FSx for ONTAP (zero-copy) | Databricks-managed S3 | FSx for ONTAP |
+| **UC governance** | ❌ **Blocked** (CREATE TABLE fails) | ✅ Full (tags, masks, lineage) | ❌ None |
+| **ONTAP features preserved** | ✅ Snapshot, FlexClone, FPolicy | ❌ Data outside ONTAP | ✅ (read-only) |
+| **Multi-protocol access** | ✅ NFS/SMB/S3 AP | ❌ S3 only | ✅ NFS/SMB/S3 AP |
+| **Query performance** | N/A (table creation blocked) | ✅ Optimized Delta/Iceberg | ❌ No Spark optimization |
+| **Delta Lake features** | ❌ Blocked | ✅ ACID, Time Travel, MERGE | ❌ Not applicable |
+| **ML Feature Store** | ❌ Blocked | ✅ Full support | ❌ Not applicable |
+| **Data freshness** | Would be real-time (if supported) | Depends on ingestion pipeline | Real-time (boto3 reads current state) |
+| **Storage cost** | FSx only | FSx + S3 (duplicate) | FSx only |
+| **Production suitability** | ❌ Not viable today | ✅ Recommended | ⚠️ PoC only |
+
+### Current State: What Works and What Doesn't
+
+```
+FSx for ONTAP S3 AP
+     │
+     ├── UC External Location (access_point field set)
+     │     ├── Top-level ls: ✅ (287 items)
+     │     ├── Explicit file read (spark.read.csv): ✅ (1000 rows)
+     │     ├── Subdirectory listing: ❌ (AccessDenied)
+     │     ├── CREATE TABLE: ❌ (UC_CLOUD_STORAGE_ACCESS_FAILURE)
+     │     └── Write operations: ❌ (PutObject AccessDenied)
+     │
+     └── Instance Profile + boto3 (Customer VPC, Dedicated cluster)
+           ├── GetObject: ✅
+           ├── ListObjectsV2: ✅
+           └── UC governance: ❌ (bypassed entirely)
+```
+
+### Recommended Architecture Pattern (Today)
+
+Since UC External Tables on FSx S3 AP are blocked, the recommended pattern is a **staged ingestion** approach:
+
+```
+FSx for ONTAP ──S3 AP──▶ Ingestion Job ──▶ S3 Bucket ──▶ UC Managed Table ──▶ ML/AI
+     │                    (Glue/EMR/Lambda)                    │
+     │                                                         └── Full UC governance
+     └── Same data via NFS/SMB (source of truth)
+```
+
+**Or for read-only analytics:**
+```
+FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
+                    └──▶ Snowflake External Table (governed, no copy needed)
+```
+
+### When to Use Each Pattern
+
+| Requirement | Recommended Pattern | Why |
+|---|---|---|
+| Governed ML training data | S3 bucket → UC Managed Table | Full UC governance, Feature Store, lineage |
+| Read-only SQL analytics on NAS | Athena + FSx S3 AP | No copy, serverless, governed |
+| Governed external tables on NAS | Snowflake External Table | Works today with full governance |
+| Exploratory data access (PoC) | Instance Profile + boto3 | Quick access, no governance |
+| Production Delta Lake tables | S3 bucket (standard pattern) | Required for ACID, MERGE, OPTIMIZE |
+| Real-time NAS data + UC governance | Wait for platform support | UC session policy resolution needed |
+
+### Cost & Governance Trade-off
+
+| Pattern | Storage Cost | Governance | Performance | ONTAP Features |
+|---|---|---|---|---|
+| **Athena + FSx S3 AP** | Lowest (FSx only) | AWS-side (IAM, S3 AP) | Good (serverless) | ✅ Preserved |
+| **Snowflake External Table** | Low (FSx only) | ✅ Full (tags, masking) | Moderate | ✅ Preserved |
+| **Staged to S3 → UC Table** | Higher (FSx + S3) | ✅ Full UC | Best (Delta optimized) | ❌ Lost on copy |
+| **boto3 PoC** | Lowest (FSx only) | ❌ None | Poor (driver-only) | ✅ Preserved |
+
+### References
+
+- [Unity Catalog External Tables](https://docs.databricks.com/aws/en/tables/external)
+- [Managed vs External Assets](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external)
+- [External Locations](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)
+- [Delta Lake on Databricks](https://docs.databricks.com/aws/en/delta/index)
+
 ## Unstructured Data Support
 
 | Format | Support | Access Method | Use Case |

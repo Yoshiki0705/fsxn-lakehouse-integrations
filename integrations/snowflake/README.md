@@ -98,6 +98,118 @@ External Stages, using them as the storage layer for External Tables and Iceberg
 | Avro | ✅ | ❌ | External Table |
 | Iceberg | ✅ | ✅ | Iceberg Table |
 
+## Internal Table vs External Table — Design Guide
+
+Understanding the difference between internal (managed) tables and external tables is critical for architecture decisions when integrating FSx for ONTAP with Snowflake.
+
+### Comparison Matrix
+
+| Aspect | External Table (on FSx S3 AP) | Internal Table (COPY INTO) |
+|---|---|---|
+| **Data location** | Remains on FSx for ONTAP (zero-copy) | Copied into Snowflake-managed storage |
+| **Data ownership** | Customer owns and manages data lifecycle | Snowflake manages storage lifecycle |
+| **DROP TABLE behavior** | Data NOT deleted (only metadata removed) | Data IS deleted from Snowflake storage |
+| **Multi-protocol access** | Same data via NFS/SMB/S3 AP simultaneously | Only accessible via Snowflake |
+| **Data freshness** | Real-time (reads current file state) | Stale until next COPY INTO / Snowpipe |
+| **Query performance** | Slower (S3 API latency, no micro-partitions) | Faster (optimized micro-partitions, pruning) |
+| **Governance (Tags, Masking)** | ✅ Full support (Enterprise Edition) | ✅ Full support |
+| **Time Travel** | ❌ Not available | ✅ Available (up to 90 days) |
+| **Clustering / Optimization** | ❌ Not available | ✅ AUTO_CLUSTERING, OPTIMIZE |
+| **Cortex AI (text functions)** | ✅ Direct (SUMMARIZE, TRANSLATE, etc.) | ✅ Direct |
+| **Cortex AI (Vision/TO_FILE)** | ❌ TO_FILE blocked on FSx S3 AP | ✅ Works on internal stage |
+| **ONTAP features preserved** | ✅ Snapshot, FlexClone, Dedup, FPolicy | ❌ Data is outside ONTAP |
+| **Storage cost** | FSx for ONTAP only (no Snowflake storage) | FSx + Snowflake storage (duplicate) |
+| **Compliance (data residency)** | ✅ Data stays on FSx (controlled location) | ⚠️ Data in Snowflake-managed storage |
+
+### When to Use External Table (Zero-Copy Pattern)
+
+```
+FSx for ONTAP ──S3 AP──▶ Snowflake External Table ──▶ Query / Governance / AI
+     │
+     └── Same data accessible via NFS/SMB (no copy)
+```
+
+**Choose External Table when:**
+- Data must remain on FSx for ONTAP (compliance, data residency, multi-protocol access)
+- Real-time access to current file state is required
+- ONTAP features (Snapshot, FlexClone, FPolicy, SnapLock) must be preserved
+- Storage cost optimization is a priority (avoid duplicate storage)
+- Data is read-heavy with infrequent updates
+- Multiple consumers (NFS users, Snowflake, Athena, etc.) need the same data
+
+**Limitations:**
+- No Time Travel, no clustering, no micro-partition optimization
+- Query performance depends on FSx S3 AP latency and file layout
+- TO_FILE (Vision AI) does not work directly — requires COPY FILES workaround
+- AUTO_REFRESH not available (manual REFRESH or scheduled Task required)
+
+### When to Use Internal Table (COPY INTO Pattern)
+
+```
+FSx for ONTAP ──S3 AP──▶ COPY INTO ──▶ Snowflake Internal Table ──▶ Query / AI / Time Travel
+                                              │
+                                              └── Optimized micro-partitions, full Snowflake features
+```
+
+**Choose Internal Table when:**
+- Maximum query performance is required (micro-partitions, pruning, clustering)
+- Time Travel (point-in-time queries, UNDROP) is needed
+- Vision AI / TO_FILE is required without workaround
+- Data transformation (ELT) is part of the pipeline
+- Snowflake-native features (streams, tasks, dynamic tables) are needed
+- Data can tolerate staleness between COPY INTO runs
+
+**Limitations:**
+- Data is duplicated (FSx + Snowflake storage cost)
+- Data freshness depends on COPY INTO frequency
+- ONTAP features (Snapshot, FlexClone) no longer apply to the copy
+- Data residency shifts to Snowflake-managed storage
+
+### Hybrid Pattern (Recommended for AI/ML Workloads)
+
+```
+FSx for ONTAP
+     │
+     ├── External Table (structured data) ──▶ Text AI (SUMMARIZE, TRANSLATE, SENTIMENT)
+     │                                        Governance (Tags, Masking, Row Policy)
+     │
+     └── COPY FILES → Internal Stage ──▶ Vision AI (COMPLETE multimodal)
+                                          Document AI (when TO_FILE is needed)
+```
+
+**Best practice**: Use External Tables for governed read access and text-based AI. Use COPY FILES to internal stage only when Vision AI (TO_FILE) is required.
+
+### Decision Flowchart
+
+```
+Q: Does the data need to stay on FSx for ONTAP?
+├── YES → External Table
+│         Q: Do you need Vision AI on images?
+│         ├── YES → COPY FILES to internal stage for Vision AI only
+│         └── NO → External Table is sufficient (text AI works directly)
+│
+└── NO → COPY INTO internal table
+          Q: Do you need real-time freshness?
+          ├── YES → Snowpipe (if S3 bucket) or scheduled COPY INTO (if FSx S3 AP)
+          └── NO → Batch COPY INTO on schedule
+```
+
+### Cost Comparison
+
+| Pattern | FSx Storage | Snowflake Storage | Snowflake Compute | Total |
+|---|---|---|---|---|
+| External Table only | ✅ (existing) | None | Query time only | Lowest |
+| COPY INTO (full) | ✅ (existing) | + full copy | Query + COPY time | Highest |
+| Hybrid (External + selective COPY) | ✅ (existing) | + images only | Query + selective COPY | Medium |
+
+### References
+
+- [Snowflake External Tables](https://docs.snowflake.com/en/user-guide/tables-external)
+- [COPY INTO table](https://docs.snowflake.com/en/sql-reference/sql/copy-into-table)
+- [COPY FILES](https://docs.snowflake.com/en/sql-reference/sql/copy-files)
+- [Directory Tables](https://docs.snowflake.com/en/user-guide/data-load-dirtables)
+- [Time Travel](https://docs.snowflake.com/en/user-guide/data-time-travel)
+
 ## Unstructured Data Support
 
 | Format | Access Method | Use Case |
