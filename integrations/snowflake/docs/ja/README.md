@@ -314,12 +314,16 @@ cp params.example.json params.json  # 編集: S3AccessPointArn を設定
 
 ## 既知の制限事項
 
+> ⚠️ **重要な前提**: Snowflake は External Stage のストレージバックエンドとして FSx for ONTAP S3 Access Point を公式にはサポート対象として文書化していません。本リポジトリの検証により、`AWS_ACCESS_POINT_ARN` パラメータを設定することで読み取り・ガバナンス操作が動作することを確認していますが、これは Snowflake の公式サポート対象外の構成です。本番利用の際は Snowflake サポートに確認することを推奨します。
+
+以下の制限事項は、FSx for ONTAP S3 AP を Snowflake External Stage として使用した場合に観測されたものです:
+
 1. **FSx for ONTAP S3 AP レイテンシ**: ListObjects に数十秒〜数分かかる場合がある
-2. **Pre-signed URL**: AWS ドキュメントでは「非サポート」だが、実際には `GET_PRESIGNED_URL()` で動作確認済み
-3. **S3 Event Notifications 非サポート**: Snowpipe の直接トリガー不可（FPolicy で代替）
+2. **Pre-signed URL（FSx S3 AP 側の制限）**: AWS の FSx for ONTAP S3 AP ドキュメントでは Pre-signed URL を「非サポート」と記載しているが、Snowflake の `GET_PRESIGNED_URL()` 関数で実際にはダウンロード可能な URL が生成されることを確認済み。ただし公式サポート外のため、本番利用は自己責任
+3. **S3 Event Notifications 非サポート（FSx S3 AP 側の制限）**: FSx for ONTAP S3 AP が S3 Event Notifications をサポートしないため、Snowpipe の自動取り込みトリガーが不可（FPolicy + Lambda で代替）
 4. **最大アップロードサイズ**: 5GB（Multipart Upload 対応）
-5. **AUTO_REFRESH 不可**: 手動 REFRESH または Snowflake Task でスケジュール実行が必要
-6. **TO_FILE / FILE データ型**: FSx S3 AP 外部ステージでは "Remote file not found" — Vision AI に直接使用不可。回避策: `COPY FILES` で暗号化なし内部ステージ（SNOWFLAKE_SSE）にコピー後、`TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))` を使用
+5. **AUTO_REFRESH 不可**: S3 Event Notifications に依存するため利用不可。手動 REFRESH または Snowflake Task でスケジュール実行が必要
+6. **TO_FILE / FILE データ型（Snowflake 側の制限）**: FSx S3 AP 外部ステージでは `TO_FILE()` が "Remote file not found" を返し、Vision AI に直接使用不可。回避策: `COPY FILES` で暗号化なし内部ステージ（SNOWFLAKE_SSE）にコピー後、`TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))` を使用
 
 ## 顧客適格化質問
 
