@@ -408,7 +408,11 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 | **FlexClone** | ML 実験用のゼロコピー即時クローン — データを複製せずに異なる前処理をテスト | [FlexClone ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
 | **Snapshot** | 学習データセットのポイントインタイムリカバリ。特徴量エンジニアリングパイプラインのバージョン管理 | [Snapshot ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
 | **FabricPool** | コールドな学習データや古いモデルアーティファクトを S3 に自動階層化 — Snowflake クエリに対して透過的 | [FabricPool ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **ストレージ効率化** | 重複排除 + 圧縮 + コンパクションで学習データやエンベディングを最大 65% 削減 | [ストレージ効率](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
+| **SnapMirror** | 重要な ML パイプラインと学習データセットのクロスリージョン DR | [SnapMirror ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
 | **マルチプロトコル** | 同一データに NFS（データサイエンティスト）、SMB（Windows ユーザー）、S3 AP（Snowflake/分析）から同時アクセス可能 | [マルチプロトコルアクセス](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+| **FPolicy** | AI データアクセス監査用のファイル操作監視。ML パイプラインでの不正ファイルタイプのブロック | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **BlueXP Workload Factory** | GenAI インフラの自動デプロイ — FSx for ONTAP + Bedrock による RAG パイプライン（画像データインサイト含む） | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ### AI/ML 固有のシナリオ
 

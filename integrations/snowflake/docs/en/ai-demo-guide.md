@@ -408,7 +408,11 @@ The two governance layers (ONTAP file-level and Snowflake tag-based) operate ind
 | **FlexClone** | Zero-copy instant clones for ML experimentation — test different preprocessing without duplicating data | [FlexClone docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
 | **Snapshot** | Point-in-time recovery of training datasets; version control for feature engineering pipelines | [Snapshot docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
 | **FabricPool** | Auto-tier cold training data and old model artifacts to S3 — transparent to Snowflake queries | [FabricPool docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **Storage Efficiency** | Up to 65% savings via deduplication + compression + compaction on training data and embeddings | [Storage efficiency](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
+| **SnapMirror** | Cross-region DR for critical ML pipelines and training datasets | [SnapMirror docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
 | **Multi-protocol** | Same data accessible via NFS (data scientists), SMB (Windows users), S3 AP (Snowflake/analytics) simultaneously | [Multi-protocol access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+| **FPolicy** | File operation monitoring for AI data access audit; block unauthorized file types in ML pipelines | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **BlueXP Workload Factory** | Automated GenAI infrastructure deployment — RAG pipelines with FSx for ONTAP + Bedrock, including visual data insights | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ### AI/ML-Specific Scenarios
 

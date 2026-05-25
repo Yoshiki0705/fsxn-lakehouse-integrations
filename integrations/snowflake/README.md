@@ -130,15 +130,19 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 
 ## ONTAP Value for Snowflake
 
-| ONTAP Feature | Snowflake Benefit |
-|---------------|-------------------|
-| FlexClone | Instant staging environment with production data |
-| Snapshot | Recover data beyond Snowflake Time Travel retention |
-| FabricPool | Auto-tier historical partitions (transparent to Snowflake) |
-| Deduplication | Reduce storage for similar file versions |
-| SnapMirror | Cross-region data availability for Snowflake replication |
-| FPolicy | Event-driven Snowpipe ingestion (<30s latency) |
-| Multi-protocol | NFS (ingest) + S3 AP (Snowflake) — same data, no copy |
+| ONTAP Feature | Snowflake Benefit | Reference |
+|---|---|---|
+| **FlexCache** | Cache data across regions/sites for low-latency Snowflake access; reduce WAN bandwidth | [FlexCache docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/using-flexcache.html) |
+| **SnapLock / Tamperproof Snapshot** | Immutable data protection for compliance — admin cannot delete during retention period | [SnapLock on FSx](https://netapp.com/blog/snaplock-on-amazon-fsx-ontap/) |
+| **ARP/AI** | AI-powered ransomware detection; auto-snapshot before damage spreads to analytics data | [ARP on FSx](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/ARP.html) |
+| **FlexClone** | Instant staging environment with production data (zero-copy) | [FlexClone docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
+| **Snapshot** | Recover data beyond Snowflake Time Travel retention; version control for data pipelines | [Snapshot docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
+| **FabricPool** | Auto-tier historical partitions to S3 (transparent to Snowflake queries) | [FabricPool docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **Storage Efficiency** | Up to 65% savings via deduplication + compression + compaction on file data | [Storage efficiency](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
+| **SnapMirror** | Cross-region data availability for Snowflake replication and DR | [SnapMirror docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
+| **Multi-protocol** | NFS (ingest) + SMB (Windows users) + S3 AP (Snowflake) — same data, no copy | [Multi-protocol](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+| **FPolicy** | Event-driven Snowpipe ingestion via Lambda (<30s latency) | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **BlueXP Workload Factory** | Automated GenAI infrastructure deployment with FSx for ONTAP + Bedrock | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ## Governance & AI/ML Guides
 
