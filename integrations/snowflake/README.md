@@ -35,6 +35,7 @@
 | Unstructured data catalog | ✅ | Enable Directory Table + manual REFRESH |
 | AI text processing (OCR, summarize, translate) | ✅ | Cortex functions on External Table — no copy needed |
 | AI Vision (image analysis) | ✅ | COPY FILES to internal stage → TO_FILE workaround |
+| AI RAG / Semantic Search (Cortex Search) | ✅ | External Table → COPY INTO → Cortex Search Service (198ms query) |
 | Real-time auto-ingest (Snowpipe) | ❌ | Use scheduled REFRESH or FPolicy + Lambda |
 | Iceberg write-back | ❌ | Use native S3 for transactional writes |
 
@@ -43,7 +44,7 @@
 ### Partner Conversation Script
 
 **For customers with NAS data + AI requirements:**
-> "Snowflake can query and run AI on your FSx for ONTAP NAS data directly — without copying. Seven Cortex AI functions including OCR, summarization, and translation work on External Tables in place. For image analysis, a one-step staging workaround enables Vision AI. All with full governance: tags, masking, and row-level security on the same data your NFS/SMB users access."
+> "Snowflake can query and run AI on your FSx for ONTAP NAS data directly — without copying. Eight out of ten tested Cortex AI functions work on FSx data, including OCR, summarization, translation, and semantic search (Cortex Search at 198ms query latency). For image analysis, a one-step staging workaround enables Vision AI. All with full governance: tags, masking, and row-level security on the same data your NFS/SMB users access."
 
 **For customers concerned about data movement:**
 > "With External Tables, your data stays on FSx for ONTAP. No copy to Snowflake storage. Same files accessible via NFS, SMB, and S3 AP simultaneously. ONTAP features like Snapshot, FlexClone, and SnapLock continue to protect the data. Snowflake adds governance and AI on top — without owning the storage."
@@ -247,6 +248,16 @@ Q: Does the data need to stay on FSx for ONTAP?
 | COPY INTO (full) | ✅ (existing) | + full copy | Query + COPY time | Highest |
 | Hybrid (External + selective COPY) | ✅ (existing) | + images only | Query + selective COPY | Medium |
 
+### Industry-Specific Recommendations
+
+| Industry | Recommended Pattern | Rationale | PoC Success Criteria |
+|---|---|---|---|
+| **Manufacturing** | External Table + PARSE_DOCUMENT (OCR) | Data stays on FSx; inspection images processed in place | OCR extracts text from 10+ inspection images in <10s each |
+| **Financial Services** | Hybrid (External Table + COPY INTO for Cortex Search) | Compliance requires data on FSx; RAG needs internal table | Cortex Search returns relevant compliance docs in <500ms |
+| **Healthcare** | External Table + SnapLock | PHI must not leave controlled storage; immutable audit | SELECT on External Table succeeds with governance tags applied |
+| **Media / Entertainment** | External Table + COPY FILES (Vision AI) | Large media files stay on FSx; selective staging for AI | Vision AI describes image content correctly via staging path |
+| **Cross-Industry Analytics** | COPY INTO (full) | Maximum query performance; data duplication acceptable | COPY INTO completes in <10s for representative dataset |
+
 ### AI Readiness Score
 
 | Pattern | Governance | Performance | AI Capability | Cost | Operational Simplicity | Overall |
@@ -260,6 +271,15 @@ Q: Does the data need to stay on FSx for ONTAP?
 - **AI Capability**: How many Cortex functions work without workaround
 - **Cost**: Storage efficiency (avoid duplication)
 - **Operational Simplicity**: Setup and maintenance effort
+
+> **Scoring methodology**: Each dimension rated by the author based on validated evidence in this repository. This is not an official AWS or Snowflake assessment. Scores reflect observed capabilities in one test environment (Snowflake Standard, ap-northeast-1).
+
+> **How to use this score**: Use Overall score as a starting point for pattern selection. Scores ≥ 4.0 indicate strong fit for governed production workloads. Scores 3.5–3.9 indicate viable paths with trade-offs. Scores < 3.0 indicate PoC-only paths.
+
+**When to choose which:**
+- Choose **External Table only** (4.0) when data must stay on FSx and text-based AI is sufficient
+- Choose **COPY INTO (full)** (3.8) when maximum performance, Time Travel, and Vision AI are required
+- Choose **Hybrid** (3.8) when both data residency and full AI capability are needed
 
 ### References
 
@@ -355,6 +375,8 @@ Since FSx S3 AP does not support S3 Event Notifications, standard Snowpipe auto-
 |---|---|---|---|---|
 | **FPolicy → Lambda → SNS → Snowpipe** | FPolicy detects file changes → Lambda sends SNS notification → Snowpipe REST API triggers load | Seconds (<30s) | Medium | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
 | **Snowflake Task + COPY INTO** | Scheduled Task runs COPY INTO from stage at intervals | Minutes (configurable) | Low | [Tasks docs](https://docs.snowflake.com/en/user-guide/tasks-intro) |
+
+> **FPolicy throughput note**: FPolicy introduces minimal latency on the NFS/SMB I/O path (typically <1ms per operation for passthrough mode). However, under high-frequency file write workloads (thousands of files/second), validate throughput impact on the FSx for ONTAP file system before production deployment.
 | **Snowflake Task + ALTER STAGE REFRESH** | Scheduled Task refreshes Directory Table metadata | Minutes | Low | [Tasks docs](https://docs.snowflake.com/en/user-guide/tasks-intro) |
 | **External function + Lambda** | Snowflake calls Lambda to check for new files | On-demand | Medium | [External functions](https://docs.snowflake.com/en/sql-reference/external-functions) |
 | **AWS Glue → Snowflake** | Glue reads FSx S3 AP → writes to Snowflake via connector | Minutes | Medium | [Glue + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |

@@ -29,6 +29,8 @@ Unity Catalog External Location は現在セッションポリシーの制約に
 
 Databricks のストレージと取り込みの概念を理解することが、FSx for ONTAP S3 AP 統合の評価に不可欠です。
 
+> **パートナー向けクイックリファレンス**: 顧客から「Databricks で NAS データを S3 Access Points 経由で読めますか？」と聞かれた場合 — 答えは「部分的に可能だが制限あり」。ファイルレベルの読み取りは UC ガバナンス下で動作するが、テーブル作成とディレクトリ一覧はブロックされている。NAS データに対するガバナンス付き分析には、現時点で Snowflake External Table または Athena を推奨。Databricks 固有のワークロードには、S3 へのステージング取り込み → UC マネージドテーブルを推奨（[推奨アーキテクチャパターン](#推奨アーキテクチャパターン現時点)参照）。顧客が既に Databricks を使用している場合、FPolicy → Lambda → S3 → Auto Loader パターンで取り込みデータに完全 UC ガバナンスを維持可能。
+
 ### Storage Credential → External Location → External Table/Volume
 
 ```
@@ -42,7 +44,7 @@ Storage Credential（IAM ロール ARN + External ID）
 
 | 概念 | 説明 | FSx S3 AP ステータス | リファレンス |
 |---|---|:---:|---|
-| **[Storage Credential](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)** | Databricks がクラウドストレージにアクセスするために引き受ける IAM ロール | ✅ 作成済み | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) |
+| **[Storage Credential](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)** | Databricks がクラウドストレージにアクセスするために引き受ける IAM ロール。AssumeRole 時に Databricks がセッションポリシーを生成し、IAM ロール自体がより広い権限を持っていても、引き受けたセッションの操作を制限する。 | ✅ 作成済み | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) |
 | **[External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual)** | S3 パスを Storage Credential にマッピング。アクセス境界を定義 | ✅ 作成済み（`access_point` フィールド付き） | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual) |
 | **[External Table](https://docs.databricks.com/aws/en/tables/external)** | External Location にデータが存在する UC ガバナンス付きテーブル | ❌ CREATE TABLE ブロック | [ドキュメント](https://docs.databricks.com/aws/en/tables/external) |
 | **[External Volume](https://docs.databricks.com/aws/en/volumes/managed-vs-external)** | External Location の非構造化ファイルに対する UC ガバナンス付きボリューム | ❌ ブロック（同じセッションポリシー問題） | [ドキュメント](https://docs.databricks.com/aws/en/volumes/managed-vs-external) |
@@ -105,6 +107,8 @@ Auto Loader は External Location が必要（FSx S3 AP 上で現在ブロック
 | **AWS DataSync** | FSx NFS → S3 バケットのスケジュール同期 | 分〜時間 | AWS 側 | [DataSync ドキュメント](https://docs.aws.amazon.com/datasync/latest/userguide/create-ontap-location.html) |
 | **SnapMirror to S3** | ONTAP ネイティブの S3 バケットへのレプリケーション | 分 | ONTAP 側 | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
 | **Instance Profile + boto3 (PoC)** | Databricks ドライバーからの直接 S3 AP 読み取り | リアルタイム | ❌ UC なし | ガバナンスをバイパス |
+
+> **SnapMirror to S3 の注意**: SnapMirror S3 ターゲットのオブジェクトメタデータは NFS ファイルメタデータと異なります。分析エンジンの取り込みパスとして使用する前に、スキーマ互換性とファイル命名規則を検証してください。
 
 **推奨本番パターン:**
 ```
@@ -231,6 +235,18 @@ FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
 - **AI 機能**: 利用可能な AI/ML 関数の幅
 - **コスト**: ストレージ効率、コンピュートコスト
 - **運用容易性**: セットアップ、メンテナンス、パイプラインの複雑さ
+
+> **スコアリング方法論**: 各次元は本リポジトリの検証済みエビデンスに基づき著者が評価。AWS の公式アセスメントではありません。スコアは1つのテスト環境（DBR 17.3 LTS, ap-northeast-1）での観測結果を反映。
+
+> **性能スコアに関する注意**: 性能スコアは FSx S3 AP アクセスパターン内での相対比較であり、ネイティブ S3 バケット性能との比較ではありません。FSx S3 AP 経由の全パターンは、同等のネイティブ S3 操作より高いレイテンシを持ちます。
+
+> **スコアの使い方**: Overall スコアをパターン選択の出発点として使用。4.0 以上はガバナンス付き本番ワークロードに適合。3.5〜3.9 はトレードオフを評価した上で利用可能。3.0 未満は PoC 専用パスで、補償コントロールと明示的承認が必要。
+
+**パターン選択ガイド:**
+- **Snowflake External Table**（4.0）: コピーなしで NAS データに対するガバナンス付き AI が優先の場合
+- **S3 にステージング → UC テーブル**（3.8）: Databricks の最大性能と全 Mosaic AI が必要な場合（データ重複コストを許容）
+- **Bedrock KB**（3.8）: FSx 上のゼロコピーで AWS ネイティブ RAG が主要要件の場合
+- **boto3 PoC**（2.8）: 明示的承認付きの期間限定探索のみ
 
 ### リファレンス
 
