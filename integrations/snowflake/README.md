@@ -405,7 +405,13 @@ cp params.example.json params.json  # Edit: set S3AccessPointArn
 
 ## Known Limitations
 
+> ⚠️ **Important premise**: Snowflake does NOT officially document FSx for ONTAP S3 Access Points as a supported External Stage storage backend. Our validation confirms that read and governance operations work when `AWS_ACCESS_POINT_ARN` is configured, but this is NOT an officially supported configuration by Snowflake. Consult Snowflake Support before production use.
+
+The following limitations are observed when using FSx for ONTAP S3 AP as a Snowflake External Stage:
+
 1. **FSx for ONTAP S3 AP latency**: ListObjects can take tens of seconds to minutes
-2. **Pre-signed URL**: AWS docs say "Not supported" but works in practice with `GET_PRESIGNED_URL()`
-3. **S3 Event Notifications not supported**: Direct Snowpipe trigger not possible (use FPolicy as alternative)
+2. **Pre-signed URL (FSx S3 AP limitation)**: AWS FSx for ONTAP S3 AP documentation states Pre-signed URLs are "Not supported," but Snowflake's `GET_PRESIGNED_URL()` function generates working download URLs in practice. Use at own risk as this is outside official FSx S3 AP support
+3. **S3 Event Notifications not supported (FSx S3 AP limitation)**: FSx for ONTAP S3 AP does not support S3 Event Notifications, so Snowpipe auto-ingest trigger is not possible (use FPolicy + Lambda as alternative)
 4. **Max upload size**: 5GB (Multipart Upload supported)
+5. **AUTO_REFRESH unavailable**: Depends on S3 Event Notifications which are not supported. Use manual `ALTER STAGE REFRESH` or schedule via Snowflake Task
+6. **TO_FILE / FILE data type (Snowflake limitation)**: `TO_FILE()` returns "Remote file not found" on FSx S3 AP external stages — Vision AI cannot be used directly. Workaround: `COPY FILES` to unencrypted internal stage (SNOWFLAKE_SSE), then use `TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))`
