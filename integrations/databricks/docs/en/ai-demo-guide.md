@@ -51,6 +51,10 @@ print(f"✅ Read {df.count()} rows from FSx for ONTAP S3 AP")
 
 **Limitation**: Only explicit file paths work. Directory-level reads (e.g., `spark.read.parquet("s3://<alias>/bronze/")`) fail because subdirectory listing is blocked by the session policy.
 
+![Top-level listing succeeds — 287 items visible on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ls-success-287-items.png)
+
+*Top-level `dbutils.fs.ls` succeeds with 287 items visible. However, subdirectory listing and table creation remain blocked.*
+
 ---
 
 ## Demo 2: CREATE TABLE — Blocked (Error Evidence)
@@ -252,6 +256,10 @@ Governed Tag (classification attribute)
 ### Critical Limitation: FSx for ONTAP S3 AP
 
 **Unity Catalog table creation on FSx S3 AP is currently blocked** (UC_CLOUD_STORAGE_ACCESS_FAILURE). This means:
+
+![Databricks governance impact — UC governance blocked on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-summary-governance-impact.png)
+
+*Governance Impact Summary: Unity Catalog governance features (tags, masking, row filters, lineage) cannot be applied to FSx S3 AP data because table creation is blocked by the session policy.*
 
 - ❌ Cannot apply governed tags to FSx S3 AP data as a UC table
 - ❌ Cannot apply ABAC column masks to FSx S3 AP data

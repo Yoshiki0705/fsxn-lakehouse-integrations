@@ -141,6 +141,10 @@ Object Tag（分類）
 
 一部のプラットフォームとは異なり、Snowflake は External Table にもネイティブテーブルと同じガバナンス制御を適用します:
 
+![AWS_ACCESS_POINT_ARN なしでは SELECT が失敗 — LIST は動作するのに access denied](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-03-select-denied.png)
+
+*`AWS_ACCESS_POINT_ARN` なし: LIST は動作するが SELECT は "access denied" で失敗。パラメータ設定後は、FSx S3 AP 上の External Table に完全なガバナンス（タグ、マスキング、Row Policy）を適用可能。*
+
 ```sql
 -- 1. 分類タグを作成
 CREATE TAG IF NOT EXISTS data_classification ALLOWED_VALUES 'PII', 'CONFIDENTIAL', 'PUBLIC';
@@ -183,6 +187,10 @@ ALTER TAG data_classification SET MASKING POLICY pii_mask;
 | データがガバナンスパスから出ない | ✅ クエリ時マスキング、生データエクスポート不可 | ✅ クエリ時マスキング、生データエクスポート不可 |
 
 ### FSx for ONTAP S3 AP + Snowflake ガバナンス: 検証済み
+
+![Snowflake 検証サマリー — 全ての読み取りおよびガバナンスパスを検証](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-05-summary-table.png)
+
+*検証結果サマリー: LIST、SELECT、External Table、COPY INTO、Directory Table、Governance Tags の全てを `AWS_ACCESS_POINT_ARN` 付きで検証済み。*
 
 検証環境（Standard edition）で以下を確認:
 - ✅ `CREATE TAG` + `ALTER TABLE SET TAG` が FSx S3 AP バックエンドの External Table で動作

@@ -141,6 +141,10 @@ Object Tag (classification)
 
 Unlike some platforms, Snowflake applies the same governance controls to External Tables as to native tables:
 
+![SELECT fails without AWS_ACCESS_POINT_ARN — access denied despite LIST working](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-03-select-denied.png)
+
+*Without `AWS_ACCESS_POINT_ARN`: SELECT fails with "access denied" even though LIST works. With the parameter set, full governance (tags, masking, row policies) can be applied to External Tables on FSx S3 AP.*
+
 ```sql
 -- 1. Create classification tag
 CREATE TAG IF NOT EXISTS data_classification ALLOWED_VALUES 'PII', 'CONFIDENTIAL', 'PUBLIC';
@@ -183,6 +187,10 @@ ALTER TAG data_classification SET MASKING POLICY pii_mask;
 | Data never leaves governed path | ✅ Masking at query time, no raw data export | ✅ Masking at query time, no raw data export |
 
 ### FSx for ONTAP S3 AP + Snowflake Governance: Validated
+
+![Snowflake validation summary — all read and governance paths verified](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-05-summary-table.png)
+
+*Complete validation summary: LIST, SELECT, External Table, COPY INTO, Directory Table, and Governance Tags all verified with `AWS_ACCESS_POINT_ARN`.*
 
 In our validation environment (Standard edition), we confirmed:
 - ✅ `CREATE TAG` + `ALTER TABLE SET TAG` works on External Tables backed by FSx S3 AP
