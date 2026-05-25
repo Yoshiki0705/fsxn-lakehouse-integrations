@@ -247,6 +247,20 @@ Q: Does the data need to stay on FSx for ONTAP?
 | COPY INTO (full) | ✅ (existing) | + full copy | Query + COPY time | Highest |
 | Hybrid (External + selective COPY) | ✅ (existing) | + images only | Query + selective COPY | Medium |
 
+### AI Readiness Score
+
+| Pattern | Governance | Performance | AI Capability | Cost | Operational Simplicity | Overall |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **External Table only** | ★★★★☆ | ★★☆☆☆ | ★★★★☆ (text AI direct) | ★★★★★ | ★★★★☆ | **4.0** |
+| **COPY INTO (full)** | ★★★★★ | ★★★★★ | ★★★★★ (all AI) | ★★☆☆☆ | ★★★☆☆ | **3.8** |
+| **Hybrid (External + COPY for Vision)** | ★★★★☆ | ★★★☆☆ | ★★★★★ (all AI) | ★★★★☆ | ★★★☆☆ | **3.8** |
+
+- **Governance**: Tag-based masking, row policies, audit trail
+- **Performance**: Query latency, optimization features
+- **AI Capability**: How many Cortex functions work without workaround
+- **Cost**: Storage efficiency (avoid duplication)
+- **Operational Simplicity**: Setup and maintenance effort
+
 ### References
 
 - [Snowflake External Tables](https://docs.snowflake.com/en/user-guide/tables-external)

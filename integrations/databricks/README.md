@@ -143,6 +143,22 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 | **Staged to S3 → UC Table** | Higher (FSx + S3) | ✅ Full UC | Best (Delta optimized) | ❌ Lost on copy |
 | **boto3 PoC** | Lowest (FSx only) | ❌ None | Poor (driver-only) | ✅ Preserved |
 
+### AI Readiness Score
+
+| Pattern | Governance | Performance | AI Capability | Cost | Operational Simplicity | Overall |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Athena + FSx S3 AP** | ★★★☆☆ | ★★★★☆ | ★☆☆☆☆ (SQL only) | ★★★★★ | ★★★★★ | **3.6** |
+| **Snowflake External Table** | ★★★★☆ | ★★★☆☆ | ★★★★☆ (Cortex AI) | ★★★★★ | ★★★★☆ | **4.0** |
+| **Staged to S3 → UC Table** | ★★★★★ | ★★★★★ | ★★★★★ (full Mosaic AI) | ★★☆☆☆ | ★★☆☆☆ | **3.8** |
+| **boto3 PoC (Databricks)** | ★☆☆☆☆ | ★★☆☆☆ | ★★★☆☆ (driver-only) | ★★★★★ | ★★★☆☆ | **2.8** |
+| **Bedrock KB + FSx S3 AP** | ★★★☆☆ | ★★★★☆ | ★★★★☆ (RAG) | ★★★★☆ | ★★★★☆ | **3.8** |
+
+- **Governance**: UC lineage, tags, masking, row filters
+- **Performance**: Query latency, distributed processing
+- **AI Capability**: Breadth of AI/ML functions available
+- **Cost**: Storage efficiency, compute cost
+- **Operational Simplicity**: Setup, maintenance, pipeline complexity
+
 ### References
 
 - [Unity Catalog External Tables](https://docs.databricks.com/aws/en/tables/external)
