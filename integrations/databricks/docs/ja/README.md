@@ -25,6 +25,87 @@ Unity Catalog External Location は現在セッションポリシーの制約に
 | ONTAP REST API (Customer VPC) | ✅ | 認証・設定変更可能 |
 | Instance Profile + boto3 (Customer VPC, Dedicated) | ✅ | S3 AP 読み取り成功。UC ガバナンスをバイパス — PoC のみ |
 
+## マネージドテーブル vs 外部テーブル — 設計ガイド
+
+Unity Catalog におけるマネージドテーブルと外部テーブルの違いを理解することがアーキテクチャ判断に不可欠です — 特に現在の FSx S3 AP セッションポリシーの制限を考慮して。
+
+### 比較マトリクス
+
+| 観点 | UC 外部テーブル（FSx S3 AP 上） | UC マネージドテーブル（S3 バケット上） | boto3 PoC（UC テーブルなし） |
+|---|---|---|---|
+| **データ所在** | FSx for ONTAP（ゼロコピー） | Databricks マネージド S3 | FSx for ONTAP |
+| **UC ガバナンス** | ❌ **ブロック**（CREATE TABLE 失敗） | ✅ 完全（タグ、マスク、リネージ） | ❌ なし |
+| **ONTAP 機能の保持** | ✅ Snapshot, FlexClone, FPolicy | ❌ データは ONTAP 外 | ✅（読み取り専用） |
+| **マルチプロトコルアクセス** | ✅ NFS/SMB/S3 AP | ❌ S3 のみ | ✅ NFS/SMB/S3 AP |
+| **クエリ性能** | N/A（テーブル作成ブロック） | ✅ 最適化 Delta/Iceberg | ❌ Spark 最適化なし |
+| **Delta Lake 機能** | ❌ ブロック | ✅ ACID, Time Travel, MERGE | ❌ 適用外 |
+| **ML Feature Store** | ❌ ブロック | ✅ 完全サポート | ❌ 適用外 |
+| **データ鮮度** | リアルタイム（サポートされれば） | 取り込みパイプラインに依存 | リアルタイム（boto3 が現在の状態を読み取り） |
+| **ストレージコスト** | FSx のみ | FSx + S3（重複） | FSx のみ |
+| **本番適合性** | ❌ 現時点で不可 | ✅ 推奨 | ⚠️ PoC のみ |
+
+### 現在の状態: 動作するものと動作しないもの
+
+```
+FSx for ONTAP S3 AP
+     │
+     ├── UC External Location（access_point フィールド設定済み）
+     │     ├── トップレベル ls: ✅（287 アイテム）
+     │     ├── 明示的ファイル読み取り（spark.read.csv）: ✅（1000 行）
+     │     ├── サブディレクトリ一覧: ❌（AccessDenied）
+     │     ├── CREATE TABLE: ❌（UC_CLOUD_STORAGE_ACCESS_FAILURE）
+     │     └── 書き込み操作: ❌（PutObject AccessDenied）
+     │
+     └── Instance Profile + boto3（Customer VPC, Dedicated クラスター）
+           ├── GetObject: ✅
+           ├── ListObjectsV2: ✅
+           └── UC ガバナンス: ❌（完全にバイパス）
+```
+
+### 推奨アーキテクチャパターン（現時点）
+
+FSx S3 AP 上の UC 外部テーブルがブロックされているため、推奨パターンは**ステージング取り込み**アプローチ:
+
+```
+FSx for ONTAP ──S3 AP──▶ 取り込みジョブ ──▶ S3 バケット ──▶ UC マネージドテーブル ──▶ ML/AI
+     │                    (Glue/EMR/Lambda)                    │
+     │                                                         └── 完全 UC ガバナンス
+     └── 同一データに NFS/SMB でアクセス（ソースオブトゥルース）
+```
+
+**または読み取り専用分析の場合:**
+```
+FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
+                    └──▶ Snowflake External Table（ガバナンス付き、コピー不要）
+```
+
+### パターン別の選択ガイド
+
+| 要件 | 推奨パターン | 理由 |
+|---|---|---|
+| ガバナンス付き ML 学習データ | S3 バケット → UC マネージドテーブル | 完全 UC ガバナンス、Feature Store、リネージ |
+| NAS 上の読み取り専用 SQL 分析 | Athena + FSx S3 AP | コピー不要、サーバーレス、ガバナンス付き |
+| NAS 上のガバナンス付き外部テーブル | Snowflake External Table | 現時点で完全ガバナンス付きで動作 |
+| 探索的データアクセス（PoC） | Instance Profile + boto3 | 迅速なアクセス、ガバナンスなし |
+| 本番 Delta Lake テーブル | S3 バケット（標準パターン） | ACID, MERGE, OPTIMIZE に必要 |
+| リアルタイム NAS データ + UC ガバナンス | プラットフォームサポート待ち | UC セッションポリシー解消が必要 |
+
+### コスト & ガバナンスのトレードオフ
+
+| パターン | ストレージコスト | ガバナンス | 性能 | ONTAP 機能 |
+|---|---|---|---|---|
+| **Athena + FSx S3 AP** | 最低（FSx のみ） | AWS 側（IAM, S3 AP） | 良好（サーバーレス） | ✅ 保持 |
+| **Snowflake External Table** | 低（FSx のみ） | ✅ 完全（タグ、マスキング） | 中程度 | ✅ 保持 |
+| **S3 にステージング → UC テーブル** | 高（FSx + S3） | ✅ 完全 UC | 最高（Delta 最適化） | ❌ コピーで失われる |
+| **boto3 PoC** | 最低（FSx のみ） | ❌ なし | 低（ドライバーのみ） | ✅ 保持 |
+
+### リファレンス
+
+- [Unity Catalog External Tables](https://docs.databricks.com/aws/en/tables/external)
+- [Managed vs External Assets](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external)
+- [External Locations](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)
+- [Delta Lake on Databricks](https://docs.databricks.com/aws/en/delta/index)
+
 ## 非構造化データ対応
 
 | フォーマット | 対応 | アクセス方法 | ユースケース |

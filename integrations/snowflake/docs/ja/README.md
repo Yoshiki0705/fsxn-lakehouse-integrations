@@ -62,6 +62,118 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Point を Snowflake 
 | ORC | ✅ | ❌ | External Table |
 | Avro | ✅ | ❌ | External Table |
 
+## 内部テーブル vs 外部テーブル — 設計ガイド
+
+FSx for ONTAP と Snowflake を統合する際、内部（マネージド）テーブルと外部テーブルの違いを理解することがアーキテクチャ判断に不可欠です。
+
+### 比較マトリクス
+
+| 観点 | 外部テーブル（FSx S3 AP 上） | 内部テーブル（COPY INTO） |
+|---|---|---|
+| **データ所在** | FSx for ONTAP に残る（ゼロコピー） | Snowflake マネージドストレージにコピー |
+| **データ所有権** | 顧客がデータライフサイクルを管理 | Snowflake がストレージライフサイクルを管理 |
+| **DROP TABLE 動作** | データは削除されない（メタデータのみ削除） | Snowflake ストレージからデータが削除される |
+| **マルチプロトコルアクセス** | 同一データに NFS/SMB/S3 AP で同時アクセス可能 | Snowflake 経由のみアクセス可能 |
+| **データ鮮度** | リアルタイム（現在のファイル状態を読み取り） | 次の COPY INTO / Snowpipe まで古い |
+| **クエリ性能** | 遅い（S3 API レイテンシ、マイクロパーティションなし） | 速い（最適化マイクロパーティション、プルーニング） |
+| **ガバナンス（タグ、マスキング）** | ✅ 完全サポート（Enterprise Edition） | ✅ 完全サポート |
+| **Time Travel** | ❌ 利用不可 | ✅ 利用可能（最大90日） |
+| **クラスタリング / 最適化** | ❌ 利用不可 | ✅ AUTO_CLUSTERING, OPTIMIZE |
+| **Cortex AI（テキスト関数）** | ✅ 直接（SUMMARIZE, TRANSLATE 等） | ✅ 直接 |
+| **Cortex AI（Vision/TO_FILE）** | ❌ FSx S3 AP で TO_FILE ブロック | ✅ 内部ステージで動作 |
+| **ONTAP 機能の保持** | ✅ Snapshot, FlexClone, Dedup, FPolicy | ❌ データは ONTAP 外 |
+| **ストレージコスト** | FSx for ONTAP のみ（Snowflake ストレージなし） | FSx + Snowflake ストレージ（重複） |
+| **コンプライアンス（データレジデンシー）** | ✅ データは FSx に残る（管理された場所） | ⚠️ Snowflake マネージドストレージにデータ |
+
+### 外部テーブルを選ぶべき場合（ゼロコピーパターン）
+
+```
+FSx for ONTAP ──S3 AP──▶ Snowflake External Table ──▶ クエリ / ガバナンス / AI
+     │
+     └── 同一データに NFS/SMB でアクセス可能（コピーなし）
+```
+
+**外部テーブルを選択する条件:**
+- データが FSx for ONTAP に残る必要がある（コンプライアンス、データレジデンシー、マルチプロトコル）
+- 現在のファイル状態へのリアルタイムアクセスが必要
+- ONTAP 機能（Snapshot, FlexClone, FPolicy, SnapLock）を保持する必要がある
+- ストレージコスト最適化が優先（重複ストレージを回避）
+- 読み取り中心で更新頻度が低いデータ
+- 複数のコンシューマー（NFS ユーザー、Snowflake、Athena 等）が同じデータを必要とする
+
+**制限事項:**
+- Time Travel、クラスタリング、マイクロパーティション最適化なし
+- クエリ性能は FSx S3 AP レイテンシとファイルレイアウトに依存
+- TO_FILE（Vision AI）が直接動作しない — COPY FILES 回避策が必要
+- AUTO_REFRESH 利用不可（手動 REFRESH またはスケジュール Task が必要）
+
+### 内部テーブルを選ぶべき場合（COPY INTO パターン）
+
+```
+FSx for ONTAP ──S3 AP──▶ COPY INTO ──▶ Snowflake 内部テーブル ──▶ クエリ / AI / Time Travel
+                                              │
+                                              └── 最適化マイクロパーティション、全 Snowflake 機能
+```
+
+**内部テーブルを選択する条件:**
+- 最大クエリ性能が必要（マイクロパーティション、プルーニング、クラスタリング）
+- Time Travel（ポイントインタイムクエリ、UNDROP）が必要
+- Vision AI / TO_FILE を回避策なしで使用したい
+- データ変換（ELT）がパイプラインの一部
+- Snowflake ネイティブ機能（Streams, Tasks, Dynamic Tables）が必要
+- COPY INTO 実行間のデータ鮮度の遅延を許容できる
+
+**制限事項:**
+- データが重複（FSx + Snowflake ストレージコスト）
+- データ鮮度は COPY INTO 頻度に依存
+- ONTAP 機能（Snapshot, FlexClone）はコピーに適用されない
+- データレジデンシーが Snowflake マネージドストレージに移行
+
+### ハイブリッドパターン（AI/ML ワークロード推奨）
+
+```
+FSx for ONTAP
+     │
+     ├── External Table（構造化データ）──▶ テキスト AI（SUMMARIZE, TRANSLATE, SENTIMENT）
+     │                                     ガバナンス（タグ、マスキング、Row Policy）
+     │
+     └── COPY FILES → 内部ステージ ──▶ Vision AI（COMPLETE multimodal）
+                                        Document AI（TO_FILE が必要な場合）
+```
+
+**ベストプラクティス**: ガバナンス付き読み取りアクセスとテキストベース AI には External Table を使用。Vision AI（TO_FILE）が必要な場合のみ COPY FILES で内部ステージにコピー。
+
+### 判断フローチャート
+
+```
+Q: データは FSx for ONTAP に残す必要がある？
+├── YES → External Table
+│         Q: 画像に対する Vision AI が必要？
+│         ├── YES → Vision AI 用のみ COPY FILES で内部ステージへ
+│         └── NO → External Table で十分（テキスト AI は直接動作）
+│
+└── NO → COPY INTO で内部テーブル
+          Q: リアルタイムの鮮度が必要？
+          ├── YES → Snowpipe（S3 バケットの場合）またはスケジュール COPY INTO（FSx S3 AP の場合）
+          └── NO → バッチ COPY INTO をスケジュール実行
+```
+
+### コスト比較
+
+| パターン | FSx ストレージ | Snowflake ストレージ | Snowflake コンピュート | 合計 |
+|---|---|---|---|---|
+| External Table のみ | ✅（既存） | なし | クエリ時間のみ | 最低 |
+| COPY INTO（全量） | ✅（既存） | + 全量コピー | クエリ + COPY 時間 | 最高 |
+| ハイブリッド（External + 選択的 COPY） | ✅（既存） | + 画像のみ | クエリ + 選択的 COPY | 中間 |
+
+### リファレンス
+
+- [Snowflake External Tables](https://docs.snowflake.com/en/user-guide/tables-external)
+- [COPY INTO table](https://docs.snowflake.com/en/sql-reference/sql/copy-into-table)
+- [COPY FILES](https://docs.snowflake.com/en/sql-reference/sql/copy-files)
+- [Directory Tables](https://docs.snowflake.com/en/user-guide/data-load-dirtables)
+- [Time Travel](https://docs.snowflake.com/en/user-guide/data-time-travel)
+
 ## 非構造化データ対応
 
 | フォーマット | アクセス方法 | ユースケース |
