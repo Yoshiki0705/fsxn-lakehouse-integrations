@@ -1,0 +1,58 @@
+# Verification Evidence Record — Dremio
+test_id: "DREMIO-001"
+date_tested: "2026-05-26"
+tester: "Yoshiki Fujiwara"
+
+# Result
+result: "PARTIALLY TESTED (server started, S3 source creation timed out)"
+verification_method: "Docker Dremio OSS + REST API"
+
+# Infrastructure
+dremio_version: "dremio/dremio-oss:latest (Community Edition)"
+deployment: "Docker (colima)"
+authentication: "STS temporary credentials via REST API"
+
+# Tests
+tests:
+  - name: "Dremio server startup"
+    result: "PASS"
+    note: "Started on http://localhost:9047, Flight on port 32010"
+  - name: "Admin user creation (REST API)"
+    result: "PASS"
+    note: "PUT /apiv2/bootstrap/firstuser succeeded"
+  - name: "S3 source creation with FSx S3 AP"
+    result: "TIMEOUT"
+    note: "POST /apiv3/catalog with S3 source config timed out (>15s)"
+    possible_cause: "Dremio validates bucket access during source creation; FSx S3 AP ListObjects latency may exceed timeout"
+
+# Key Findings
+key_findings:
+  - "Dremio OSS starts successfully in Docker"
+  - "REST API for admin setup works"
+  - "S3 source creation with FSx S3 AP alias timed out — likely due to ListObjects latency"
+  - "Dremio uses S3A filesystem (same as Spark) — path-style access should work with fs.s3a.path.style.access=true"
+  - "Full verification requires longer timeout or pre-configured source"
+
+# Expected Behavior (Based on Architecture)
+expected_behavior:
+  read_parquet: "EXPECTED TO WORK (with path-style S3A config)"
+  iceberg_read: "EXPECTED TO WORK (Dremio is Iceberg-native)"
+  iceberg_write: "LIKELY FAILS (same S3FileIO issue as EMR Iceberg)"
+  nessie_catalog: "EXPECTED TO WORK (Dremio-managed catalog)"
+  reflections: "EXPECTED TO WORK (materialized on local storage)"
+
+# Configuration Required (for future full verification)
+config_for_success: |
+  Dremio S3 Source Configuration:
+    - Type: S3
+    - Bucket: <FSx-S3-AP-alias>
+    - Path Style Access: true (fs.s3a.path.style.access=true)
+    - Endpoint: s3.ap-northeast-1.amazonaws.com
+    - Authentication: Access Key + Secret (or IAM Role for Dremio Cloud)
+    - Session Token: via fs.s3a.session.token property
+  
+  Note: Source creation may timeout due to FSx S3 AP ListObjects latency.
+  Workaround: Increase Dremio source validation timeout or skip validation.
+
+# Priority
+priority: "Low — execute when customer demand arises. Requires UI-based configuration or longer API timeout."
