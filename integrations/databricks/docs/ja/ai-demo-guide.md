@@ -377,6 +377,74 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 
 **NetApp ユーザーへの重要な知見**: Databricks が Unity Catalog ガバナンスをバイパスする場合（Instance Profile + boto3 経由）でも、ONTAP のファイルレベル権限と FPolicy はストレージレイヤーでアクセス制御を適用し続けます。これは UC セッションポリシーサポートが解消されるまでの補償コントロールを提供します。
 
+### 統合: ONTAP ファイルレベル制御 × Databricks タグガバナンス
+
+2つのガバナンスレイヤー（ONTAP ファイルレベルと Databricks ABAC）は連携して動作するよう設計されていますが、現在の S3 AP セッションポリシーの制限によりギャップが存在します。統合の仕組みと現時点で利用可能なものを示します:
+
+#### 統合マトリクス（現在の状態）
+
+| シナリオ | ONTAP レイヤー（ファイルレベル） | Databricks レイヤー（ABAC） | 組み合わせ効果 | ステータス |
+|---|---|---|---|:---:|
+| **部門分離** | 部門ごとに別 S3 AP（異なる file_system_user） | Governed Tags でテーブルを部門別分類 | ファイル物理的アクセス不可 + 共有テーブルの ABAC マスク | ⚠️ ONTAP のみ（ABAC ブロック） |
+| **PII 保護** | FPolicy が PII ディレクトリへのアクセスを監視 | PII タグ付きカラムに ABAC Column Mask | ファイルアクセス監査 + カラム値マスク | ⚠️ ONTAP のみ（ABAC ブロック） |
+| **ML 学習データ制御** | Export Policy がどのクラスターが読めるか制限 | Governed Tags でテーブルに機密レベル | ネットワーク制限 + 機密特徴量のカラムマスキング | ⚠️ ONTAP のみ（ABAC ブロック） |
+| **ランサムウェア防御** | ARP/AI が暗号化を検知 + 自動スナップショット | N/A（ストレージレイヤーの関心事） | ストレージ保護。コンピュートは影響なし | ✅ 完全利用可能 |
+| **コンプライアンスホールド** | SnapLock がファイル削除を防止 | Row Filter がクエリ結果を制限 | データ不変 + ロールによるクエリフィルタ | ⚠️ ONTAP のみ（Row Filter ブロック） |
+| **チーム間データ共有** | 共有ディレクトリを共通 S3 AP 経由 | ABAC Row Filter がチームロールでフィルタ | 全チームがテーブル表示、各自は認可行のみ | ⚠️ ONTAP のみ（ABAC ブロック） |
+
+#### 連携の仕組み（将来の状態）
+
+```
+1. データサイエンティストが FSx S3 AP 上の UC External Table をクエリ
+       │
+       ▼
+2. Unity Catalog チェック: ユーザーに SELECT 権限あり？ ──── NO → PermissionDenied
+       │ YES
+       ▼
+3. Spark が S3 API コール（GetObject）を生成
+       │
+       ▼
+4. S3 AP Policy チェック: IAM ロール許可？ ──── NO → AccessDenied
+       │ YES
+       ▼
+5. ONTAP チェック: file_system_user に権限あり？ ──── NO → AccessDenied
+       │ YES
+       ▼
+6. ファイルデータが Spark に返却
+       │
+       ▼
+7. UC が ABAC Column Mask を適用 ──── Governed Tags に基づき PII カラムをマスク
+       │
+       ▼
+8. UC が ABAC Row Filter を適用 ──── タグに基づき非認可行をフィルタ
+       │
+       ▼
+9. ユーザーに表示: 認可された行のみ、機密カラムはマスク済み
+```
+
+**現在の実態**: ステップ 1-2 が「CREATE TABLE」で失敗（UC_CLOUD_STORAGE_ACCESS_FAILURE）するため、ステップ 7-9 に到達不可。
+
+#### 現在利用可能なもの vs 将来
+
+| ガバナンスニーズ | 現在利用可能（ONTAP のみ） | 将来（ONTAP + UC ABAC） |
+|---|---|---|
+| ファイルレベル分離 | ✅ スコープ付き file_system_user のコンシューマーごと S3 AP | ✅ 同上 + UC テーブルレベルガバナンス |
+| カラムマスキング | ❌ ファイルレベルでは不可（ファイルは不透明なブロブ） | ✅ タグ付きカラムへの ABAC Column Mask |
+| 行フィルタリング | ❌ ファイルレベルでは不可 | ✅ タグ付きテーブルへの ABAC Row Filter |
+| アクセス監査 | ✅ FPolicy + CloudTrail S3 データイベント | ✅ 同上 + リネージ付き UC 監査ログ |
+| データ不変性 | ✅ SnapLock / Tamperproof Snapshot | ✅ 同上（ストレージレイヤー、常に利用可能） |
+| ランサムウェア防御 | ✅ ARP/AI | ✅ 同上（ストレージレイヤー、常に利用可能） |
+| データ分類 | ❌ 手動（ファイル命名/ディレクトリ構造） | ✅ UC 自動データ分類 |
+
+#### 組み合わせガバナンスの設計パターン（現在利用可能）
+
+| パターン | ONTAP 設定 | Databricks 設定 | ガバナンスレベル |
+|---|---|---|---|
+| **ファイル分離（主要）** | チームごとの S3 AP（スコープ付きユーザー） | チームごとの Instance Profile | 強（ONTAP 適用） |
+| **監査証跡（補償）** | FPolicy 外部サーバー | CloudTrail + boto3 内カスタムログ | 中（UC リネージなし） |
+| **不変学習データ** | 学習データセット用 SnapLock ボリューム | MLflow がソーススナップショット ID を記録 | 強（ストレージ適用） |
+| **ネットワーク分離** | VPC スコープ S3 AP + Export Policy | Customer-managed VPC + セキュリティグループ | 強（ネットワーク適用） |
+
 #### ガバナンスレイヤーサマリー（Databricks + ONTAP）
 
 | レイヤー | 適用ポイント | スコープ | FSx S3 AP でのステータス |

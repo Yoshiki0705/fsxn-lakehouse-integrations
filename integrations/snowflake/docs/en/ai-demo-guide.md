@@ -250,6 +250,57 @@ FPolicy provides real-time file access monitoring and blocking at the ONTAP leve
 
 **Key insight for NetApp users**: Even when Snowflake queries data via S3 AP, ONTAP's file-level permissions and FPolicy still apply. The S3 AP does not bypass ONTAP security — it maps S3 API calls to file system operations that respect the configured permissions.
 
+### Integration: ONTAP File-Level Control × Snowflake Tag Governance
+
+The two governance layers (ONTAP file-level and Snowflake tag-based) operate independently but can be combined for defense-in-depth:
+
+#### Integration Matrix
+
+| Scenario | ONTAP Layer (File-Level) | Snowflake Layer (Tag/Policy) | Combined Effect |
+|---|---|---|---|
+| **Department isolation** | Separate S3 AP per dept (different file_system_user) | Tags classify tables by department | Files physically inaccessible + query-time masking on shared tables |
+| **PII protection** | FPolicy monitors access to PII directories | Tag-based Masking Policy on PII columns | File access audited + column values masked for unauthorized roles |
+| **Compliance hold** | SnapLock prevents file deletion | Row Access Policy restricts query results | Data immutable at storage + query results filtered by role |
+| **ML training data control** | Export Policy limits which clusters can read | Tags mark sensitivity level on External Table | Network-level restriction + column masking for sensitive features |
+| **Ransomware defense** | ARP/AI detects encryption + auto-snapshot | N/A (storage-layer concern) | Storage protected; analytics layer unaffected |
+| **Cross-team data sharing** | Shared directory (mode 755) via common S3 AP | Row Access Policy filters by team role | All teams see the table, each sees only their authorized rows |
+
+#### How They Work Together (Example Flow)
+
+```
+1. Data scientist queries External Table via Snowflake
+       │
+       ▼
+2. Snowflake generates S3 API call (GetObject)
+       │
+       ▼
+3. S3 AP Policy checks: IAM role allowed? ──── If NO → AccessDenied
+       │ YES
+       ▼
+4. ONTAP checks: file_system_user has permission? ──── If NO → AccessDenied
+       │ YES
+       ▼
+5. File data returned to Snowflake
+       │
+       ▼
+6. Snowflake applies Tag-based Masking Policy ──── PII columns masked
+       │
+       ▼
+7. Snowflake applies Row Access Policy ──── Unauthorized rows filtered
+       │
+       ▼
+8. User sees: only authorized rows with sensitive columns masked
+```
+
+#### Design Patterns for Combined Governance
+
+| Pattern | ONTAP Configuration | Snowflake Configuration | Best For |
+|---|---|---|---|
+| **Broad read + fine-grained mask** | Single S3 AP (root user), all files readable | Tag-based masking on sensitive columns | Analytics teams needing broad access with PII protection |
+| **Strict file isolation + tag classification** | Per-department S3 AP (scoped user) | Tags for audit/compliance tracking only | Regulated industries requiring physical data separation |
+| **Shared data + role-based filtering** | Shared S3 AP (read-only user) | Row Access Policy by department/role | Cross-functional analytics on common datasets |
+| **Immutable audit + governed query** | SnapLock volume + FPolicy audit | Tags + masking + row policy | Financial/healthcare compliance |
+
 #### Governance Layers Summary (Snowflake + ONTAP)
 
 | Layer | Enforcement Point | Scope | Controls |
