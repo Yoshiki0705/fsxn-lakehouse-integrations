@@ -1,0 +1,85 @@
+# Verification Evidence Record — Trino (Self-Managed Docker)
+test_id: "TRINO-VERIFIED-001"
+date_tested: "2026-05-26"
+tester: "Yoshiki Fujiwara"
+
+# Result
+result: "PASS"
+verification_method: "Docker Trino 481 + Glue Catalog + native-s3 path-style"
+
+# Infrastructure
+region: "ap-northeast-1"
+trino_version: "481 (trinodb/trino:latest)"
+deployment: "Docker (colima, single-node)"
+metastore: "AWS Glue Catalog"
+s3_access: "native-s3 with path-style access"
+s3_endpoint: "https://s3.ap-northeast-1.amazonaws.com"
+authentication: "AWS environment variables (session token)"
+
+# S3 Access Point
+ap_alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+ap_network_origin: "INTERNET"
+
+# Catalog Configuration
+catalog_config: |
+  connector.name=hive
+  hive.metastore=glue
+  hive.metastore.glue.region=ap-northeast-1
+  fs.native-s3.enabled=true
+  s3.path-style-access=true
+  s3.endpoint=https://s3.ap-northeast-1.amazonaws.com
+  s3.region=ap-northeast-1
+
+# Tests
+tests:
+  - name: "SHOW SCHEMAS FROM fsxn_hive"
+    result: "PASS"
+    output: "default, fsxn_athena_verification, fsxn_iceberg_test, information_schema"
+  - name: "COUNT(*) 10K rows (sensor_readings)"
+    result: "PASS"
+    rows_returned: 10000
+  - name: "GROUP BY aggregation"
+    result: "PASS"
+    output: "normal=8505, warning=1221, critical=274"
+    note: "Same results as Athena, DuckDB, Snowflake — data consistency confirmed"
+  - name: "COUNT(*) 5M rows (sensor_benchmark)"
+    result: "PASS"
+    rows_returned: 5000000
+  - name: "Filter query (temperature > 38)"
+    result: "PASS"
+    note: "Predicate pushdown works"
+
+# Key Findings
+key_findings:
+  - "Trino 481 successfully queries FSx for ONTAP S3 AP data via Glue Catalog"
+  - "native-s3 with path-style access (s3.path-style-access=true) resolves AP alias correctly"
+  - "No session policy issues — direct AWS credentials work (unlike Databricks/Snowflake)"
+  - "Glue Catalog integration works seamlessly (same tables as Athena/Redshift Spectrum)"
+  - "5M row scan succeeds — no size limitations observed"
+  - "File metastore (hive.metastore=file) does NOT work in Trino 481 — use Glue or Thrift"
+  - "AWS session tokens work via environment variables (AWS_SESSION_TOKEN)"
+
+# Configuration Notes
+configuration_notes:
+  critical_settings:
+    - "fs.native-s3.enabled=true — required for native S3 filesystem"
+    - "s3.path-style-access=true — required for S3 AP alias resolution"
+    - "s3.endpoint=https://s3.ap-northeast-1.amazonaws.com — explicit endpoint required"
+    - "s3.region=ap-northeast-1 — must match FSx region"
+    - "hive.metastore=glue — file metastore broken in Trino 481"
+  failed_approaches:
+    - "hive.metastore=file — 'No factory for location' error in Trino 481"
+    - "hive.s3.* properties — deprecated in Trino 481, replaced by s3.* with fs.native-s3.enabled"
+    - "s3.aws-session-token — not a valid property; use AWS_SESSION_TOKEN env var instead"
+
+# Comparison with Previous Verification (Logical Deduction)
+comparison_with_previous:
+  previous_status: "EXPECTED TO WORK (logical deduction from EMR Spark + DuckDB)"
+  current_status: "VERIFIED (actual execution)"
+  delta: "Confirmed working. Key discovery: Glue Catalog required (file metastore broken)"
+
+# Write Test (Not Performed)
+write_test:
+  status: "NOT TESTED"
+  expected: "Flat Parquet write should work (same as EMR Spark). Delta/Iceberg write NOT SUPPORTED (same constraints)."
+  note: "Write verification deferred — read path is the primary validation target"
