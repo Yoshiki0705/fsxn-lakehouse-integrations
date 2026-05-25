@@ -2,8 +2,9 @@
 
 🌐 [English](../../README.md) | **日本語**
 
-> **検証ステータス: 実験的**
-> - Unity Catalog External Location と FSx for ONTAP S3 Access Point の組み合わせは、テスト環境においてセッションポリシー境界により成功しませんでした。
+> **検証ステータス: 実験的 — S3 AP は UC で非サポート（確認済み）**
+> - Unity Catalog External Location は現在 S3 Access Points をストレージターゲットとしてサポートしていません（Databricks サポートにより 2026 年 5 月確認）。`access_point` フィールドは GA としてリリースされたことはなく、ドキュメントから削除されています。
+> - 観測された部分的成功（ルートレベルの一覧取得、明示的ファイル読み取り）は「不完全な内部処理の副作用であり、サポートされたコードパスではない」とのことです。
 > - Instance Profile + boto3 は、制御されたドライバーノード PoC としてのみ成功しました。
 > - 本リポジトリは Databricks + FSx S3 Access Points の本番サポートを主張するものではありません。
 
@@ -18,12 +19,27 @@ Unity Catalog External Location は現在セッションポリシーの制約に
 | アプローチ | 結果 | 備考 |
 |----------|------|------|
 | S3 AP + Unity Catalog | ❌ | セッションポリシーが S3 AP ARN をサポートしない |
+| S3 AP + Unity Catalog（`access_point` フィールド） | ⚠️ GA ではない | `access_point` フィールドは GA としてリリースされていない。部分的成功は不完全な内部処理の副作用（Databricks サポート 2026 年 5 月確認） |
 | S3 AP + boto3 (Managed VPC) | ❌ | IMDS ブロック |
 | NFS マウント (Managed VPC) | ❌ | Egress 制限 + seccomp |
 | NFS マウント (Customer VPC) | ❌ | seccomp フィルターが NFS マウントをブロック |
 | NFS RPC 直接 (Customer VPC) | ✅ | Python RPC で全操作成功 |
 | ONTAP REST API (Customer VPC) | ✅ | 認証・設定変更可能 |
 | Instance Profile + boto3 (Customer VPC, Dedicated) | ✅ | S3 AP 読み取り成功。UC ガバナンスをバイパス — PoC のみ |
+
+## サポート確認 (2026-05-26)
+
+Databricks サポート（2026 年 5 月）により以下が確認されました:
+
+1. **Unity Catalog External Location は現在 S3 Access Points をストレージターゲットとしてサポートしていない**
+2. `access_point` フィールドは一般提供（GA）機能としてリリースされたことはなく、ドキュメントから削除された
+3. 観測された部分的成功（ルートレベルの一覧取得）は「不完全な内部処理の副作用であり、サポートされたコードパスではない」
+4. CREATE TABLE および書き込み操作は S3 AP パスでサポートされていない — セッションポリシージェネレーターのプラットフォーム制限
+5. 機能ギャップとして UC エンジニアリングチームに報告済み — エンジニアリングタイムラインは未定
+
+**推奨される暫定パス**: FSx ONTAP から標準 S3 バケットにデータを同期（DataSync または SnapMirror）し、その S3 バケットを UC External Location として登録。
+
+UC ガバナンスなしの読み取り専用分析には、AWS ネイティブサービス（Athena、EMR Serverless、DuckDB Lambda）または Snowflake を FSx S3 AP 上で直接使用。
 
 ## 主要概念: Databricks ストレージ & 取り込みアーキテクチャ
 
@@ -45,7 +61,7 @@ Storage Credential（IAM ロール ARN + External ID）
 | 概念 | 説明 | FSx S3 AP ステータス | リファレンス |
 |---|---|:---:|---|
 | **[Storage Credential](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)** | Databricks がクラウドストレージにアクセスするために引き受ける IAM ロール。AssumeRole 時に Databricks がセッションポリシーを生成し、IAM ロール自体がより広い権限を持っていても、引き受けたセッションの操作を制限する。 | ✅ 作成済み | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) |
-| **[External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual)** | S3 パスを Storage Credential にマッピング。アクセス境界を定義 | ✅ 作成済み（`access_point` フィールド付き） | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual) |
+| **[External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual)** | S3 パスを Storage Credential にマッピング。アクセス境界を定義 | ⚠️ 作成済み（`access_point` フィールド付き — GA ではない; [サポート確認](#サポート確認-2026-05-26)参照） | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual) |
 | **[External Table](https://docs.databricks.com/aws/en/tables/external)** | External Location にデータが存在する UC ガバナンス付きテーブル | ❌ CREATE TABLE ブロック | [ドキュメント](https://docs.databricks.com/aws/en/tables/external) |
 | **[External Volume](https://docs.databricks.com/aws/en/volumes/managed-vs-external)** | External Location の非構造化ファイルに対する UC ガバナンス付きボリューム | ❌ ブロック（同じセッションポリシー問題） | [ドキュメント](https://docs.databricks.com/aws/en/volumes/managed-vs-external) |
 | **[Managed Table](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external)** | UC マネージドテーブル（データライフサイクルを Databricks が制御） | ✅ 動作（標準 S3 上） | [ドキュメント](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external) |
