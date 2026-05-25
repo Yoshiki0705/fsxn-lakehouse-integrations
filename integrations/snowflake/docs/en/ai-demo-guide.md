@@ -192,6 +192,78 @@ In our validation environment (Standard edition), we confirmed:
 
 **Implication**: Organizations using Snowflake Enterprise Edition can apply full ABAC governance (classification, masking, row filtering) to FSx for ONTAP data accessed via External Tables — without copying data into Snowflake-managed storage.
 
+### File-Level Access Control: ONTAP Native Layer
+
+For NetApp users, the critical governance question is not just table/column-level masking but **file-level access control on unstructured data** (images, documents, videos). FSx for ONTAP S3 Access Points provide a dual-layer authorization model:
+
+```
+Layer 1: AWS IAM + S3 AP Policy (who can call the S3 API)
+    │
+Layer 2: ONTAP File System Permissions (what files the user can access)
+    │
+    ├── Export Policy (NFS: client IP, protocol, RO/RW/root)
+    ├── NTFS ACL / NFSv4 ACL (per-file/directory permissions)
+    ├── Storage-Level Access Guard (volume-level ACL override)
+    ├── FPolicy (file operation monitoring, screening, blocking)
+    └── File System User mapping (S3 AP → UNIX/Windows identity)
+```
+
+#### How S3 AP File-Level Control Works
+
+Each S3 Access Point is mapped to a **file system user** (UNIX UID/GID or Windows identity). All S3 API operations through that access point execute as that user:
+
+| S3 AP Configuration | File Access Scope | Use Case |
+|---|---|---|
+| File system user = `root` (UID 0) | Full access to all files | Admin/analytics (broad read) |
+| File system user = `analytics` (UID 1001) | Only files readable by UID 1001 | Scoped analytics access |
+| File system user = `dept_finance` | Only finance department files | Department-level isolation |
+| Multiple S3 APs per volume | Different users per AP | Per-consumer access scoping |
+
+#### Per-Consumer S3 Access Points (Data Isolation Pattern)
+
+```
+FSx for ONTAP Volume: /vol1
+├── /finance/     (owner: finance_user, mode: 750)
+├── /engineering/ (owner: eng_user, mode: 750)
+├── /shared/      (owner: root, mode: 755)
+│
+├── S3 AP "snowflake-finance"    → file_system_user: finance_user
+│     → Can read /finance/ and /shared/, cannot read /engineering/
+│
+├── S3 AP "snowflake-engineering" → file_system_user: eng_user
+│     → Can read /engineering/ and /shared/, cannot read /finance/
+│
+└── S3 AP "snowflake-admin"      → file_system_user: root
+      → Can read everything (for admin/governance use)
+```
+
+#### FPolicy: File Operation Monitoring & Blocking
+
+FPolicy provides real-time file access monitoring and blocking at the ONTAP level — independent of which protocol (NFS, SMB, or S3 AP) is used:
+
+| FPolicy Capability | Description | Relevance to Analytics |
+|---|---|---|
+| Native file blocking | Block specific file extensions (e.g., .exe, .bat) | Prevent malicious file upload via any protocol |
+| External FPolicy server | Send file access events to external application | Audit trail for compliance (who accessed what, when) |
+| File screening | Allow/deny based on file type or pattern | Control what data types are accessible |
+| Operation monitoring | Monitor open, create, rename, delete, read, write | Complete audit of data access patterns |
+
+**Key insight for NetApp users**: Even when Snowflake queries data via S3 AP, ONTAP's file-level permissions and FPolicy still apply. The S3 AP does not bypass ONTAP security — it maps S3 API calls to file system operations that respect the configured permissions.
+
+#### Governance Layers Summary (Snowflake + ONTAP)
+
+| Layer | Enforcement Point | Scope | Controls |
+|---|---|---|---|
+| **ONTAP Export Policy** | File system | Volume/qtree level | Client IP, protocol, RO/RW |
+| **ONTAP File Permissions** | File system | Per-file/directory | UNIX mode, NFSv4 ACL, NTFS ACL |
+| **ONTAP FPolicy** | File system | Per-operation | Monitor, screen, block file operations |
+| **ONTAP Storage-Level Access Guard** | File system | Volume level | ACL override for all protocols |
+| **S3 AP Policy** | AWS | Per-access-point | IAM conditions, VPC restriction |
+| **S3 AP File System User** | File system | Per-access-point | Maps S3 identity to UNIX/Windows user |
+| **Snowflake Object Tags** | Query engine | Table/column | Classification metadata |
+| **Snowflake Masking Policy** | Query engine | Column | Dynamic data masking at query time |
+| **Snowflake Row Access Policy** | Query engine | Row | Row-level filtering at query time |
+
 ### References
 
 - [Object Tagging](https://docs.snowflake.com/en/user-guide/object-tagging/introduction)
