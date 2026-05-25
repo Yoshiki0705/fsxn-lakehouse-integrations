@@ -67,6 +67,52 @@ Storage Credential（IAM ロール ARN + External ID）
 | FSx 向け代替手段 | FPolicy → Lambda → SNS → Snowpipe | FPolicy → Lambda → S3 に書き込み → Auto Loader | ✅ 回避策あり |
 | 増分処理 | Snowpipe がロード済みファイルを追跡 | Auto Loader がチェックポイントで処理済みファイルを追跡 | — |
 
+### サポートされる取り込みフォーマット
+
+**Auto Loader 対応フォーマット:**
+
+| フォーマット | Auto Loader | スキーマ推論 | スキーマ進化 | 備考 |
+|---|:---:|:---:|:---:|---|
+| JSON | ✅ | ✅ | ✅ | ネスト構造対応 |
+| CSV | ✅ | ✅ | ✅ | ヘッダー検出、デリミタオプション |
+| Parquet | ✅ | ✅ | ✅ | カラムプルーニング、述語プッシュダウン |
+| Avro | ✅ | ✅ | ✅ | スキーマレジストリ互換 |
+| ORC | ✅ | ✅ | ❌ | 読み取り専用スキーマ |
+| XML | ✅ | ✅ | ✅ | ネイティブサポート |
+| TEXT | ✅ | — | — | 行単位取り込み |
+| BINARYFILE | ✅ | — | — | 画像、PDF、音声 — バイナリとして取り込み |
+
+**Auto Loader 非対応フォーマット（代替取り込み方法が必要）:**
+
+| フォーマット | 代替取り込み方法 | 考慮事項 |
+|---|---|---|
+| Delta Lake（既存） | `CONVERT TO DELTA` または `SHALLOW CLONE` | 外部ストレージ上の既存 Delta テーブル用 |
+| Iceberg（既存） | `CREATE TABLE ... USING ICEBERG LOCATION` | 既存 Iceberg メタデータを登録 |
+| 動画 (MP4, MOV) | `BINARYFILE` フォーマット → カスタム UDF 処理 | 大容量ファイル。ストリーミングフレーム抽出を検討 |
+| 音声 (WAV, MP3) | `BINARYFILE` フォーマット → 文字起こし UDF | Spark ML または外部 API で文字起こし |
+| DB エクスポート (mysqldump, pg_dump) | カスタム ETL（Spark SQL パース） | SQL 文を構造化データにパース |
+| 圧縮アーカイブ (ZIP, TAR.GZ) | カスタム UDF で解凍 → 内容を処理 | 取り込み前に展開 |
+
+### FSx for ONTAP 向けデータ取り込み代替手段（Auto Loader がブロックされている場合）
+
+Auto Loader は External Location が必要（FSx S3 AP 上で現在ブロック）のため、以下の代替手段を使用:
+
+| 方法 | 説明 | レイテンシ | ガバナンス | リファレンス |
+|---|---|---|---|---|
+| **FPolicy → Lambda → S3 → Auto Loader** | FPolicy が FSx 上のファイル変更を検知 → Lambda が S3 バケットにコピー → Auto Loader が取り込み | 秒 | ✅ 完全 UC（S3 コピー上） | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **AWS Glue ETL** | Glue ジョブが FSx S3 AP から読み取り → S3/Delta に書き込み | 分 | AWS 側 | [Glue + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
+| **EMR Serverless** | Spark ジョブが FSx S3 AP から読み取り → S3/Delta に書き込み | 分 | AWS 側 | [EMR + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-run-spark-with-emr-serverless.html) |
+| **AWS DataSync** | FSx NFS → S3 バケットのスケジュール同期 | 分〜時間 | AWS 側 | [DataSync ドキュメント](https://docs.aws.amazon.com/datasync/latest/userguide/create-ontap-location.html) |
+| **SnapMirror to S3** | ONTAP ネイティブの S3 バケットへのレプリケーション | 分 | ONTAP 側 | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
+| **Instance Profile + boto3 (PoC)** | Databricks ドライバーからの直接 S3 AP 読み取り | リアルタイム | ❌ UC なし | ガバナンスをバイパス |
+
+**推奨本番パターン:**
+```
+FSx for ONTAP ──FPolicy──▶ Lambda ──▶ S3 バケット ──▶ Auto Loader ──▶ Delta Table（UC ガバナンス付き）
+     │                                                                      │
+     └── NFS/SMB ユーザーが同じデータにアクセス                                  └── 完全 UC ガバナンス
+```
+
 ### Volumes: 非構造化データガバナンス
 
 [Unity Catalog Volumes](https://docs.databricks.com/aws/en/volumes/managed-vs-external) は Snowflake の Directory Table に相当 — 非表形式ファイル（画像、ドキュメント、音声、動画）へのガバナンス付きアクセスを提供します。

@@ -94,6 +94,52 @@ Storage Credential (IAM Role ARN + External ID)
 | Alternative for FSx | FPolicy → Lambda → SNS → Snowpipe | FPolicy → Lambda → write to S3 → Auto Loader | ✅ Workaround available |
 | Incremental processing | Snowpipe tracks loaded files | Auto Loader tracks processed files (checkpoint) | — |
 
+### Supported Ingestion Formats
+
+**Auto Loader supported formats:**
+
+| Format | Auto Loader | Schema Inference | Schema Evolution | Notes |
+|---|:---:|:---:|:---:|---|
+| JSON | ✅ | ✅ | ✅ | Nested structures supported |
+| CSV | ✅ | ✅ | ✅ | Header detection, delimiter options |
+| Parquet | ✅ | ✅ | ✅ | Column pruning, predicate pushdown |
+| Avro | ✅ | ✅ | ✅ | Schema registry compatible |
+| ORC | ✅ | ✅ | ❌ | Read-only schema |
+| XML | ✅ | ✅ | ✅ | Native support |
+| TEXT | ✅ | — | — | Line-by-line ingestion |
+| BINARYFILE | ✅ | — | — | Images, PDFs, audio — ingested as binary |
+
+**Formats NOT supported by Auto Loader (require alternative ingestion):**
+
+| Format | Alternative Ingestion Method | Considerations |
+|---|---|---|
+| Delta Lake (existing) | `CONVERT TO DELTA` or `SHALLOW CLONE` | For pre-existing Delta tables on external storage |
+| Iceberg (existing) | `CREATE TABLE ... USING ICEBERG LOCATION` | Register existing Iceberg metadata |
+| Video (MP4, MOV) | `BINARYFILE` format → custom UDF processing | Large files; consider streaming frame extraction |
+| Audio (WAV, MP3) | `BINARYFILE` format → transcription UDF | Use Spark ML or external API for transcription |
+| Database exports (mysqldump, pg_dump) | Custom ETL (Spark SQL parsing) | Parse SQL statements into structured data |
+| Compressed archives (ZIP, TAR.GZ) | Custom UDF to decompress → process contents | Extract before ingestion |
+
+### Data Ingestion Alternatives for FSx for ONTAP (When Auto Loader Is Blocked)
+
+Since Auto Loader requires External Location (currently blocked on FSx S3 AP), use these alternatives:
+
+| Method | Description | Latency | Governance | Reference |
+|---|---|---|---|---|
+| **FPolicy → Lambda → S3 → Auto Loader** | FPolicy detects file changes on FSx → Lambda copies to S3 bucket → Auto Loader ingests | Seconds | ✅ Full UC (on S3 copy) | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **AWS Glue ETL** | Glue job reads from FSx S3 AP → writes to S3/Delta | Minutes | AWS-side | [Glue + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
+| **EMR Serverless** | Spark job reads from FSx S3 AP → writes to S3/Delta | Minutes | AWS-side | [EMR + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-run-spark-with-emr-serverless.html) |
+| **AWS DataSync** | Scheduled sync from FSx NFS → S3 bucket | Minutes-Hours | AWS-side | [DataSync docs](https://docs.aws.amazon.com/datasync/latest/userguide/create-ontap-location.html) |
+| **SnapMirror to S3** | ONTAP-native replication to S3 bucket | Minutes | ONTAP-side | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
+| **Instance Profile + boto3 (PoC)** | Direct S3 AP read from Databricks driver | Real-time | ❌ No UC | Bypasses governance |
+
+**Recommended production pattern:**
+```
+FSx for ONTAP ──FPolicy──▶ Lambda ──▶ S3 Bucket ──▶ Auto Loader ──▶ Delta Table (UC governed)
+     │                                                                      │
+     └── NFS/SMB users access same data                                     └── Full UC governance
+```
+
 ### Volumes: Unstructured Data Governance
 
 [Unity Catalog Volumes](https://docs.databricks.com/aws/en/volumes/managed-vs-external) are the Databricks equivalent of Snowflake's Directory Table — they provide governed access to non-tabular files (images, documents, audio, video).

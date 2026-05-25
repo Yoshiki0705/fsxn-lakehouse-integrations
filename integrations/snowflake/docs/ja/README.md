@@ -246,6 +246,57 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | [ガバナンス: ファイルレベルアクセス制御](ai-demo-guide.md#ファイルレベルのアクセス制御-ontap-ネイティブレイヤー) | ONTAP デュアルレイヤー認可、FPolicy、コンシューマーごとの S3 AP 分離 |
 | [統合: ONTAP × Snowflake タグ](ai-demo-guide.md#統合-ontap-ファイルレベル制御--snowflake-タグガバナンス) | 組み合わせガバナンスマトリクス、設計パターン、フロー図 |
 
+## Snowpipe & 取り込みフォーマット
+
+### Snowpipe 対応フォーマット
+
+| フォーマット | Snowpipe | COPY INTO | External Table | 備考 |
+|---|:---:|:---:|:---:|---|
+| CSV | ✅ | ✅ | ✅ | デリミタ、ヘッダー、エンコーディングオプション |
+| JSON | ✅ | ✅ | ✅ | ネスト、半構造化 |
+| Parquet | ✅ | ✅ | ✅ | カラムプルーニング、述語プッシュダウン |
+| Avro | ✅ | ✅ | ✅ | スキーマ進化対応 |
+| ORC | ✅ | ✅ | ✅ | 読み取り専用 |
+| XML | ✅ | ✅ | ✅ | ネイティブサポート |
+
+**Snowpipe/COPY INTO で直接サポートされないフォーマット（代替手段が必要）:**
+
+| フォーマット | 代替方法 | 考慮事項 |
+|---|---|---|
+| 画像 (JPEG, PNG, TIFF) | Directory Table + GET_PRESIGNED_URL / PARSE_DOCUMENT (OCR) | Cortex AI でテキスト抽出。Vision AI は COPY FILES 回避策経由 |
+| 動画 (MP4, MOV) | Directory Table + GET_PRESIGNED_URL → 外部処理 | CloudFront 経由ストリーミングまたは外部フレーム処理 |
+| 音声 (WAV, MP3) | Directory Table + GET_PRESIGNED_URL → 文字起こしサービス | 外部 ASR（Bedrock, Whisper）または将来の AI_TRANSCRIBE |
+| ドキュメント (PDF, DOCX) | PARSE_DOCUMENT（ステージ上で直接） | OCR/LAYOUT モードで FSx S3 AP から直接テキスト抽出 |
+| バイナリ / アーカイブ | GET_PRESIGNED_URL → 外部処理 | ダウンロードして Snowflake 外で処理 |
+| DB エクスポート | Snowpark UDF でカスタムパース | SQL/dump フォーマットを構造化データにパース |
+
+### FSx for ONTAP 向けデータ取り込み代替手段（Snowpipe が利用不可の場合）
+
+FSx S3 AP は S3 Event Notifications をサポートしないため、標準 Snowpipe 自動取り込みは利用不可。以下の代替手段を使用:
+
+| 方法 | 説明 | レイテンシ | 複雑さ | リファレンス |
+|---|---|---|---|---|
+| **FPolicy → Lambda → SNS → Snowpipe** | FPolicy がファイル変更を検知 → Lambda が SNS 通知送信 → Snowpipe REST API がロードをトリガー | 秒（<30秒） | 中 | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **Snowflake Task + COPY INTO** | スケジュール Task が定期的にステージから COPY INTO を実行 | 分（設定可能） | 低 | [Tasks ドキュメント](https://docs.snowflake.com/en/user-guide/tasks-intro) |
+| **Snowflake Task + ALTER STAGE REFRESH** | スケジュール Task が Directory Table メタデータを更新 | 分 | 低 | [Tasks ドキュメント](https://docs.snowflake.com/en/user-guide/tasks-intro) |
+| **External function + Lambda** | Snowflake が Lambda を呼び出して新規ファイルを確認 | オンデマンド | 中 | [External functions](https://docs.snowflake.com/en/sql-reference/external-functions) |
+| **AWS Glue → Snowflake** | Glue が FSx S3 AP から読み取り → コネクタ経由で Snowflake に書き込み | 分 | 中 | [Glue + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
+| **Snowpipe REST API（手動トリガー）** | アプリケーションがファイルリスト付きで Snowpipe REST API を呼び出し | 秒 | 低 | [Snowpipe REST](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-rest-overview) |
+
+**推奨本番パターン:**
+```
+FSx for ONTAP ──FPolicy──▶ Lambda ──▶ SNS ──▶ Snowpipe REST API ──▶ COPY INTO ターゲットテーブル
+     │                                              │
+     └── NFS/SMB ユーザーが同じデータにアクセス         └── ロードデータに Snowflake ガバナンス
+```
+
+**シンプルな代替（FPolicy なし）:**
+```
+Snowflake Task（5分ごと）──▶ COPY INTO from @fsxn_stage
+                                      │
+                                      └── ロード済みファイルを自動追跡（COPY 履歴）
+```
+
 ## クイックスタート
 
 ```bash
