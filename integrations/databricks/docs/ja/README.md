@@ -49,13 +49,19 @@ Unity Catalog External Location は現在セッションポリシーの制約に
 
 ## ONTAP の価値
 
-| ONTAP 機能 | Databricks へのメリット |
-|-----------|---------------------|
-| FlexClone | フルコピーなしの即時 dev/test データセットプロビジョニング |
-| Snapshot | テーブルレベルのポイントインタイムリカバリ（Delta Time Travel を補完） |
-| FabricPool | コールドパーティションの S3 自動階層化（Databricks に透過的） |
-| 重複排除 | Delta バージョンファイルと類似データセットのストレージ削減 |
-| SnapMirror | レイクハウスデータのクロスリージョン DR |
+| ONTAP 機能 | Databricks へのメリット | リファレンス |
+|---|---|---|
+| **FlexCache** | リージョン/拠点間で学習データをキャッシュし低遅延アクセスを実現。Write-back モードで特徴量エンジニアリングを高速化 | [FlexCache ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/using-flexcache.html) |
+| **SnapLock / Tamperproof Snapshot** | 不変の学習データ保護 — 管理者権限でも保持期間中は削除不可。規制 ML のコンプライアンス | [SnapLock on FSx](https://netapp.com/blog/snaplock-on-amazon-fsx-ontap/) |
+| **ARP/AI** | AI によるランサムウェア検知。学習データとモデルアーティファクトを自動スナップショットで保護 | [ARP on FSx](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/ARP.html) |
+| **FlexClone** | フルコピーなしの即時 dev/test データセットプロビジョニング。ゼロコピー ML 実験 | [FlexClone ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
+| **Snapshot** | テーブルレベルのポイントインタイムリカバリ（Delta Time Travel を補完）。特徴量パイプラインのバージョン管理 | [Snapshot ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
+| **FabricPool** | コールドパーティションの S3 自動階層化（Databricks コンピュートに透過的） | [FabricPool ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **ストレージ効率化** | 重複排除 + 圧縮 + コンパクションで Delta バージョンファイルを最大 65% 削減 | [ストレージ効率](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
+| **SnapMirror** | レイクハウスデータと ML パイプラインのクロスリージョン DR | [SnapMirror ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
+| **マルチプロトコル** | NFS（データサイエンティスト）+ SMB（Windows ユーザー）+ S3 AP（Databricks/Spark）— 同一データ、コピー不要 | [マルチプロトコル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+| **FPolicy** | ファイル操作の監視とブロック。データアクセスコンプライアンスの監査証跡 | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **BlueXP Workload Factory** | FSx for ONTAP + Bedrock による GenAI インフラの自動デプロイ | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ## ガバナンス & AI/ML ガイド
 

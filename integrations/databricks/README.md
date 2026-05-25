@@ -89,13 +89,19 @@ s3://<s3ap-alias>/gold/      # Business-ready aggregates
 
 ## ONTAP Value for Databricks
 
-| ONTAP Feature | Databricks Benefit |
-|---------------|-------------------|
-| FlexClone | Instant dev/test dataset provisioning without full copy |
-| Snapshot | Table-level point-in-time recovery (complements Delta Time Travel) |
-| FabricPool | Auto-tier cold partitions to S3 (transparent to Databricks) |
-| Deduplication | Reduce storage for Delta version files and similar datasets |
-| SnapMirror | Cross-region DR for lakehouse data |
+| ONTAP Feature | Databricks Benefit | Reference |
+|---|---|---|
+| **FlexCache** | Cache training data across regions/sites for low-latency access; write-back mode for feature engineering | [FlexCache docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/using-flexcache.html) |
+| **SnapLock / Tamperproof Snapshot** | Immutable training data protection — admin cannot delete during retention; compliance for regulated ML | [SnapLock on FSx](https://netapp.com/blog/snaplock-on-amazon-fsx-ontap/) |
+| **ARP/AI** | AI-powered ransomware detection; auto-snapshot protects training data and model artifacts | [ARP on FSx](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/ARP.html) |
+| **FlexClone** | Instant dev/test dataset provisioning without full copy; zero-copy ML experimentation | [FlexClone docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
+| **Snapshot** | Table-level point-in-time recovery (complements Delta Time Travel); feature pipeline versioning | [Snapshot docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
+| **FabricPool** | Auto-tier cold partitions to S3 (transparent to Databricks compute) | [FabricPool docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **Storage Efficiency** | Up to 65% savings via deduplication + compression + compaction on Delta version files | [Storage efficiency](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
+| **SnapMirror** | Cross-region DR for lakehouse data and ML pipelines | [SnapMirror docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
+| **Multi-protocol** | NFS (data scientists) + SMB (Windows users) + S3 AP (Databricks/Spark) — same data, no copy | [Multi-protocol](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+| **FPolicy** | File operation monitoring and blocking; audit trail for data access compliance | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **BlueXP Workload Factory** | Automated GenAI infrastructure deployment with FSx for ONTAP + Bedrock | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ## Governance & AI/ML Guides
 

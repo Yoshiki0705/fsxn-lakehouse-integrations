@@ -94,15 +94,19 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 
 ## ONTAP の価値
 
-| ONTAP 機能 | Snowflake へのメリット |
-|-----------|---------------------|
-| FlexClone | 本番データを使った即時ステージング環境 |
-| Snapshot | Snowflake Time Travel 保持期間を超えたデータ復旧 |
-| FabricPool | 過去パーティションの自動階層化（Snowflake に透過的） |
-| 重複排除 | 類似ファイルバージョンのストレージ削減 |
-| SnapMirror | Snowflake レプリケーション向けクロスリージョンデータ可用性 |
-| FPolicy | イベント駆動 Snowpipe 取り込み（<30秒レイテンシ） |
-| マルチプロトコル | NFS（取り込み）+ S3 AP（Snowflake）— 同一データ、コピー不要 |
+| ONTAP 機能 | Snowflake へのメリット | リファレンス |
+|---|---|---|
+| **FlexCache** | リージョン/拠点間でデータをキャッシュし低遅延の Snowflake アクセスを実現。WAN 帯域を削減 | [FlexCache ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/using-flexcache.html) |
+| **SnapLock / Tamperproof Snapshot** | コンプライアンス向け不変データ保護 — 管理者権限でも保持期間中は削除不可 | [SnapLock on FSx](https://netapp.com/blog/snaplock-on-amazon-fsx-ontap/) |
+| **ARP/AI** | AI によるランサムウェア検知。分析データへの被害拡大前に自動スナップショット | [ARP on FSx](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/ARP.html) |
+| **FlexClone** | 本番データを使った即時ステージング環境（ゼロコピー） | [FlexClone ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/managing-volumes.html) |
+| **Snapshot** | Snowflake Time Travel 保持期間を超えたデータ復旧。データパイプラインのバージョン管理 | [Snapshot ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/snapshots-ontap.html) |
+| **FabricPool** | 過去パーティションの S3 自動階層化（Snowflake クエリに透過的） | [FabricPool ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/fabricpool.html) |
+| **ストレージ効率化** | 重複排除 + 圧縮 + コンパクションでファイルデータを最大 65% 削減 | [ストレージ効率](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
+| **SnapMirror** | Snowflake レプリケーションと DR 向けクロスリージョンデータ可用性 | [SnapMirror ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
+| **マルチプロトコル** | NFS（取り込み）+ SMB（Windows ユーザー）+ S3 AP（Snowflake）— 同一データ、コピー不要 | [マルチプロトコル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
+| **FPolicy** | Lambda 経由のイベント駆動 Snowpipe 取り込み（<30秒レイテンシ） | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **BlueXP Workload Factory** | FSx for ONTAP + Bedrock による GenAI インフラの自動デプロイ | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ## ガバナンス & AI/ML ガイド
 
