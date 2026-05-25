@@ -66,6 +66,10 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Point を Snowflake 
 
 FSx for ONTAP と Snowflake を統合する際、内部（マネージド）テーブルと外部テーブルの違いを理解することがアーキテクチャ判断に不可欠です。
 
+> **主要概念**: [外部ステージ](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage)（S3/クラウドストレージ）| [内部ステージ](https://docs.snowflake.com/en/user-guide/data-load-local-file-system-create-stage)（Snowflake マネージド）| [外部テーブル](https://docs.snowflake.com/en/user-guide/tables-external)（ステージから読み取り）| [COPY INTO](https://docs.snowflake.com/en/sql-reference/sql/copy-into-table)（内部テーブルにロード）
+>
+> AI/ML 固有の影響（各パターンでどの Cortex 関数が動作するか）については [AI/ML デモガイド](ai-demo-guide.md) の互換性マトリクスを参照。
+
 ### 比較マトリクス
 
 | 観点 | 外部テーブル（FSx S3 AP 上） | 内部テーブル（COPY INTO） |

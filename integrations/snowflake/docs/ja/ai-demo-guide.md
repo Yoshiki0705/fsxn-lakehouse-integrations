@@ -2,7 +2,9 @@
 
 # Snowflake Cortex AI デモガイド — FSx for ONTAP S3 AP
 
-本ガイドでは、`AWS_ACCESS_POINT_ARN` を使用した Snowflake External Stage 経由で FSx for ONTAP データに対する AI/ML 機能を実演します。
+本ガイドでは、`AWS_ACCESS_POINT_ARN` を使用した Snowflake [External Stage](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage) 経由で FSx for ONTAP データに対する AI/ML 機能を実演します。
+
+> 📖 **外部テーブル vs 内部テーブル**（ゼロコピー vs COPY INTO）の詳細比較、判断フローチャート、コスト分析については [内部テーブル vs 外部テーブル設計ガイド](../../README.md) の該当セクションを参照してください。
 
 ## 前提条件
 
@@ -88,7 +90,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 ) AS defect_analysis;
 ```
 
-**ステータス**: ✅ **回避策で検証済み** — ファイルを暗号化なし内部ステージにコピーすれば Vision AI が動作。FSx S3 AP 外部ステージへの直接 `TO_FILE()` は "Remote file not found" を返す。
+**ステータス**: ✅ **回避策で検証済み** — ファイルを暗号化なし[内部ステージ](https://docs.snowflake.com/en/user-guide/data-load-local-file-system-create-stage)にコピーすれば Vision AI が動作。FSx S3 AP [外部ステージ](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage)への直接 `TO_FILE()` は "Remote file not found" を返す。アーキテクチャのトレードオフについては[内部テーブル vs 外部テーブル設計ガイド](../../README.md)を参照。
 
 **回避策（検証済み）**:
 ```sql

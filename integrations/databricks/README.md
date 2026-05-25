@@ -69,6 +69,10 @@ s3://<s3ap-alias>/gold/      # Business-ready aggregates
 
 Understanding the difference between managed and external tables in Unity Catalog is critical for architecture decisions — especially given the current FSx S3 AP session policy limitation.
 
+> **Key concepts**: [External Table](https://docs.databricks.com/aws/en/tables/external) (UC governs metadata, not storage) | [Managed Table](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external) (UC governs both) | [External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) (maps cloud path to credential)
+>
+> For AI/ML-specific implications, see the [AI/ML Demo Guide](docs/en/ai-demo-guide.md).
+
 ### Comparison Matrix
 
 | Aspect | UC External Table (on FSx S3 AP) | UC Managed Table (on S3 bucket) | boto3 PoC (no UC table) |

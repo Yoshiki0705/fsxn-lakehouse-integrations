@@ -143,6 +143,10 @@ External Stages, using them as the storage layer for External Tables and Iceberg
 
 Understanding the difference between internal (managed) tables and external tables is critical for architecture decisions when integrating FSx for ONTAP with Snowflake.
 
+> **Key concepts**: [External Stage](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage) (S3/cloud storage) | [Internal Stage](https://docs.snowflake.com/en/user-guide/data-load-local-file-system-create-stage) (Snowflake-managed) | [External Table](https://docs.snowflake.com/en/user-guide/tables-external) (reads from stage) | [COPY INTO](https://docs.snowflake.com/en/sql-reference/sql/copy-into-table) (loads to internal table)
+>
+> For AI/ML-specific implications (which Cortex functions work on each pattern), see the [AI/ML Demo Guide](docs/en/ai-demo-guide.md#cortex-ai-comprehensive-compatibility-matrix).
+
 ### Comparison Matrix
 
 | Aspect | External Table (on FSx S3 AP) | Internal Table (COPY INTO) |
