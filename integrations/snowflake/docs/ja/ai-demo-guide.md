@@ -109,6 +109,99 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 
 ---
 
+## ガバナンスタグとデータ保護
+
+Snowflake はタグベースのガバナンスを提供し、FSx for ONTAP S3 AP をバックエンドとする External Table を含め、自動的なデータ保護の適用を可能にします。
+
+### 仕組み
+
+```
+Object Tag（分類）
+    │
+    ├── Tag-based Masking Policy（カラムレベル保護）
+    │     → タグ値に基づいて機密カラムを自動マスク
+    │     → タグを継承する全テーブル/ビューに適用
+    │
+    └── Row Access Policy（行レベルフィルタリング）
+          → ユーザーのロール/属性に基づいて表示行を制限
+          → クエリ時に適用、ユーザーに対して透過的
+```
+
+### ガバナンス境界: 何が保護されるか
+
+| レベル | タグサポート | マスキングポリシー | Row Access Policy | 備考 |
+|---|:---:|:---:|:---:|---|
+| データベース | ✅ | ✅（継承） | — | タグは配下の全スキーマ/テーブルにカスケード |
+| スキーマ | ✅ | ✅（継承） | — | タグは配下の全テーブルにカスケード |
+| テーブル（External Table 含む） | ✅ | ✅ | ✅ | **FSx S3 AP データに完全ガバナンス適用可能** |
+| カラム | ✅ | ✅（直接） | — | 最も粒度の細かいマスキング対象 |
+| ステージ / ファイル | ✅（タグのみ） | ❌ | ❌ | 分類用タグ。クエリ時の適用なし |
+
+### 重要な知見: External Table は完全にガバナンス対象
+
+一部のプラットフォームとは異なり、Snowflake は External Table にもネイティブテーブルと同じガバナンス制御を適用します:
+
+```sql
+-- 1. 分類タグを作成
+CREATE TAG IF NOT EXISTS data_classification ALLOWED_VALUES 'PII', 'CONFIDENTIAL', 'PUBLIC';
+
+-- 2. External Table のカラムにタグを適用
+ALTER TABLE fsxn_sensor_ext_table MODIFY COLUMN customer_name SET TAG data_classification = 'PII';
+
+-- 3. タグベースのマスキングポリシーを作成（Enterprise Edition 必要）
+CREATE MASKING POLICY pii_mask AS (val STRING) RETURNS STRING ->
+  CASE WHEN CURRENT_ROLE() IN ('DATA_ADMIN') THEN val
+       ELSE '***MASKED***'
+  END;
+
+-- 4. マスキングポリシーをタグに紐付け
+ALTER TAG data_classification SET MASKING POLICY pii_mask;
+
+-- 結果: 'PII' タグが付いたカラムは非管理者ロールに対して自動マスク
+```
+
+### エディション要件
+
+| 機能 | Standard | Enterprise | Business Critical |
+|---|:---:|:---:|:---:|
+| Object Tags (CREATE TAG, SET TAG) | ✅ | ✅ | ✅ |
+| Tag-based Masking Policies | ❌ | ✅ | ✅ |
+| Row Access Policies | ❌ | ✅ | ✅ |
+| Data Classification（PII 自動検出） | ❌ | ✅ | ✅ |
+| External Tokenization | ❌ | ✅ | ✅ |
+
+### Databricks との比較
+
+| 機能 | Snowflake | Databricks |
+|---|---|---|
+| タグベースカラムマスキング | ✅ Tag-based Masking Policy (Enterprise) | ✅ ABAC Governed Tags + Column Masks |
+| 行レベルフィルタリング | ✅ Row Access Policy (Enterprise) | ✅ ABAC Row Filter Policies |
+| 自動分類（PII 検出） | ✅ 組み込み (Enterprise) | ✅ 組み込み（自動データ分類） |
+| External Table へのガバナンス | ✅ **完全サポート**（FSx S3 AP で検証済み） | ❌ **ブロック**（S3 AP 上の CREATE TABLE 失敗） |
+| タグ継承 | Database → Schema → Table → Column | Catalog → Schema → Table（Column には継承しない） |
+| 適用境界 | クエリ時リライト（サーバーサイド） | クエリ時リライト（サーバーサイド） |
+| データがガバナンスパスから出ない | ✅ クエリ時マスキング、生データエクスポート不可 | ✅ クエリ時マスキング、生データエクスポート不可 |
+
+### FSx for ONTAP S3 AP + Snowflake ガバナンス: 検証済み
+
+検証環境（Standard edition）で以下を確認:
+- ✅ `CREATE TAG` + `ALTER TABLE SET TAG` が FSx S3 AP バックエンドの External Table で動作
+- ✅ `SYSTEM$GET_TAG` がタグ値を正しく取得
+- ⚠️ Tag-based Masking Policies は Enterprise Edition が必要（Standard では未テスト）
+- ⚠️ Row Access Policies は Enterprise Edition が必要（Standard では未テスト）
+
+**意味**: Snowflake Enterprise Edition を使用する組織は、FSx for ONTAP データに対して完全な ABAC ガバナンス（分類、マスキング、行フィルタリング）を External Table 経由で適用可能 — データを Snowflake マネージドストレージにコピーする必要なし。
+
+### リファレンス
+
+- [Object Tagging](https://docs.snowflake.com/en/user-guide/object-tagging/introduction)
+- [Tag-based Masking Policies](https://docs.snowflake.com/en/user-guide/tag-based-masking-policies)
+- [Row Access Policies](https://docs.snowflake.com/en/user-guide/security-row-using)
+- [Dynamic Data Masking](https://docs.snowflake.com/en/user-guide/security-column-ddm-intro)
+- [Data Classification](https://docs.snowflake.com/en/user-guide/classify-using)
+
+---
+
 ## 業界別ユースケース: Snowflake Cortex AI + FSx for ONTAP
 
 ### 製造業 / 品質検査
