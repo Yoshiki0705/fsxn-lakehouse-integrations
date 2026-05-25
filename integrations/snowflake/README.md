@@ -33,10 +33,47 @@
 | Query NAS files from Snowflake | ✅ | Set `AWS_ACCESS_POINT_ARN` on stage |
 | Governed external tables | ✅ | Create External Table + apply tags |
 | Unstructured data catalog | ✅ | Enable Directory Table + manual REFRESH |
+| AI text processing (OCR, summarize, translate) | ✅ | Cortex functions on External Table — no copy needed |
+| AI Vision (image analysis) | ✅ | COPY FILES to internal stage → TO_FILE workaround |
 | Real-time auto-ingest (Snowpipe) | ❌ | Use scheduled REFRESH or FPolicy + Lambda |
 | Iceberg write-back | ❌ | Use native S3 for transactional writes |
 
-> Choose Snowflake when governed external tables, tags, Directory Tables, or Snowpark integration are required. Choose Athena when lightweight AWS-native serverless SQL over NAS data is sufficient.
+> Choose Snowflake when governed external tables, tags, Directory Tables, AI/ML on NAS data, or Snowpark integration are required. Choose Athena when lightweight AWS-native serverless SQL over NAS data is sufficient.
+
+### Partner Conversation Script
+
+**For customers with NAS data + AI requirements:**
+> "Snowflake can query and run AI on your FSx for ONTAP NAS data directly — without copying. Seven Cortex AI functions including OCR, summarization, and translation work on External Tables in place. For image analysis, a one-step staging workaround enables Vision AI. All with full governance: tags, masking, and row-level security on the same data your NFS/SMB users access."
+
+**For customers concerned about data movement:**
+> "With External Tables, your data stays on FSx for ONTAP. No copy to Snowflake storage. Same files accessible via NFS, SMB, and S3 AP simultaneously. ONTAP features like Snapshot, FlexClone, and SnapLock continue to protect the data. Snowflake adds governance and AI on top — without owning the storage."
+
+**For customers evaluating Snowflake vs Databricks for NAS integration:**
+> "Snowflake's External Table with `AWS_ACCESS_POINT_ARN` provides governed read access today — including AI functions. Databricks Unity Catalog currently cannot create tables on S3 Access Points due to a session policy limitation. For governed analytics on NAS data, Snowflake is the validated path."
+
+### Customer Qualification Questions
+
+Use these questions to determine the right architecture pattern:
+
+1. **Data residency**: Must the data remain on FSx for ONTAP, or can it be copied to Snowflake-managed storage?
+   - Stay on FSx → External Table pattern
+   - Can copy → COPY INTO for maximum performance
+
+2. **AI/ML requirements**: Do you need text AI (summarize, translate, OCR) or Vision AI (image analysis)?
+   - Text AI only → External Table (direct, no copy)
+   - Vision AI needed → Hybrid pattern (External Table + COPY FILES for images)
+
+3. **Query performance**: Is sub-second query response required, or is seconds-level acceptable?
+   - Sub-second → COPY INTO internal table (micro-partitions, clustering)
+   - Seconds acceptable → External Table (S3 AP latency)
+
+4. **Compliance constraints**: Are there regulatory requirements (HIPAA, SOX, GDPR) that restrict data movement?
+   - Yes → External Table + SnapLock + FPolicy audit (data never leaves FSx)
+   - No → Choose based on performance/cost trade-off
+
+5. **Multi-protocol access**: Do NFS/SMB users need to access the same data that Snowflake queries?
+   - Yes → External Table (zero-copy, multi-protocol)
+   - No → Either pattern works
 
 ## Overview
 
@@ -82,10 +119,14 @@ External Stages, using them as the storage layer for External Tables and Iceberg
 | DeleteObject | ✅ | |
 | HeadObject | ✅ | |
 | **Pre-signed URL** | ✅ | AWS docs say unsupported, but works in practice |
+| **TO_FILE / FILE data type** | ❌ | "Remote file not found" — Cortex multimodal cannot resolve S3 AP files |
+| **PARSE_DOCUMENT** | ✅ | Uses different file access mechanism (stage path string) |
 | S3 Event Notifications | ❌ | Use FPolicy as alternative |
 | Object Versioning | ❌ | |
 
 > ℹ️ **Note**: AWS documentation states Pre-signed URLs are "Not supported," but testing confirms `GET_PRESIGNED_URL()` works correctly with FSx for ONTAP S3 AP.
+
+> ⚠️ **TO_FILE limitation**: Snowflake's `TO_FILE()` function (used by multimodal AI_COMPLETE/Vision AI) cannot resolve files on FSx S3 AP external stages. Workaround: `COPY FILES` to an unencrypted internal stage (SNOWFLAKE_SSE), then use `TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))`.
 
 ## Data Format Support
 
