@@ -29,6 +29,10 @@ Unity Catalog External Location は現在セッションポリシーの制約に
 
 Unity Catalog におけるマネージドテーブルと外部テーブルの違いを理解することがアーキテクチャ判断に不可欠です — 特に現在の FSx S3 AP セッションポリシーの制限を考慮して。
 
+> **主要概念**: [外部テーブル](https://docs.databricks.com/aws/en/tables/external)（UC がメタデータのみ管理）| [マネージドテーブル](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external)（UC が両方管理）| [External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)（クラウドパスをクレデンシャルにマッピング）
+>
+> AI/ML 固有の影響については [AI/ML デモガイド](ai-demo-guide.md) を参照。
+
 ### 比較マトリクス
 
 | 観点 | UC 外部テーブル（FSx S3 AP 上） | UC マネージドテーブル（S3 バケット上） | boto3 PoC（UC テーブルなし） |

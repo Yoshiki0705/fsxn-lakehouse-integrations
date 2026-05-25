@@ -2,7 +2,9 @@
 
 # Snowflake Cortex AI Demo Guide — FSx for ONTAP S3 AP
 
-This guide demonstrates AI/ML capabilities on FSx for ONTAP data accessed via Snowflake External Stage with `AWS_ACCESS_POINT_ARN`.
+This guide demonstrates AI/ML capabilities on FSx for ONTAP data accessed via Snowflake [External Stage](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage) with `AWS_ACCESS_POINT_ARN`.
+
+> 📖 For a detailed comparison of **External Table vs Internal Table** (zero-copy vs COPY INTO) including decision flowchart and cost analysis, see the [Internal Table vs External Table Design Guide](../../README.md#internal-table-vs-external-table--design-guide).
 
 ## Prerequisites
 
@@ -88,7 +90,7 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 ) AS defect_analysis;
 ```
 
-**Status**: ✅ **Verified with workaround** — Vision AI works when files are copied to an unencrypted internal stage. Direct `TO_FILE()` on FSx S3 AP external stage returns "Remote file not found."
+**Status**: ✅ **Verified with workaround** — Vision AI works when files are copied to an unencrypted [internal stage](https://docs.snowflake.com/en/user-guide/data-load-local-file-system-create-stage). Direct `TO_FILE()` on FSx S3 AP [external stage](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage) returns "Remote file not found." See [Internal vs External Table Design Guide](../../README.md#internal-table-vs-external-table--design-guide) for architecture trade-offs.
 
 **Workaround (validated)**:
 ```sql

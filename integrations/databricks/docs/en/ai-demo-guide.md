@@ -4,6 +4,8 @@
 
 This guide documents AI/ML capabilities and their current status when accessing FSx for ONTAP data from Databricks via S3 Access Points.
 
+> 📖 For a detailed comparison of **Managed Table vs External Table** including current limitations and recommended patterns, see the [Managed Table vs External Table Design Guide](../../README.md#managed-table-vs-external-table--design-guide).
+
 > **Important**: Unity Catalog session policy currently blocks table creation and subdirectory listing on FSx for ONTAP S3 Access Points. The scenarios below document what works today (driver-only PoC), what's blocked, and what would be possible once the platform boundary is resolved.
 
 ## Prerequisites
