@@ -377,6 +377,74 @@ FPolicy provides real-time file access monitoring at the ONTAP level — even wh
 
 **Key insight for NetApp users**: Even when Databricks bypasses Unity Catalog governance (via Instance Profile + boto3), ONTAP's file-level permissions and FPolicy still enforce access control at the storage layer. This provides a compensating control until UC session policy support is resolved.
 
+### Integration: ONTAP File-Level Control × Databricks Tag Governance
+
+The two governance layers (ONTAP file-level and Databricks ABAC) are designed to work together, but the current S3 AP session policy limitation creates a gap. Here's how they would integrate and what's available today:
+
+#### Integration Matrix (Current State)
+
+| Scenario | ONTAP Layer (File-Level) | Databricks Layer (ABAC) | Combined Effect | Status |
+|---|---|---|---|:---:|
+| **Department isolation** | Separate S3 AP per dept (different file_system_user) | Governed Tags classify tables by dept | Files physically inaccessible + ABAC masks on shared tables | ⚠️ ONTAP only (ABAC blocked) |
+| **PII protection** | FPolicy monitors access to PII directories | ABAC Column Mask on PII-tagged columns | File access audited + column values masked | ⚠️ ONTAP only (ABAC blocked) |
+| **ML training data control** | Export Policy limits which clusters can read | Governed Tags mark sensitivity on tables | Network restriction + column masking for sensitive features | ⚠️ ONTAP only (ABAC blocked) |
+| **Ransomware defense** | ARP/AI detects encryption + auto-snapshot | N/A (storage-layer concern) | Storage protected; compute unaffected | ✅ Fully available |
+| **Compliance hold** | SnapLock prevents file deletion | Row Filter restricts query results | Data immutable + query filtered by role | ⚠️ ONTAP only (Row Filter blocked) |
+| **Cross-team data sharing** | Shared directory via common S3 AP | ABAC Row Filter by team role | All teams see table, each sees authorized rows | ⚠️ ONTAP only (ABAC blocked) |
+
+#### How They Would Work Together (Future State)
+
+```
+1. Data scientist queries UC External Table on FSx S3 AP
+       │
+       ▼
+2. Unity Catalog checks: user has SELECT privilege? ──── If NO → PermissionDenied
+       │ YES
+       ▼
+3. Spark generates S3 API call (GetObject)
+       │
+       ▼
+4. S3 AP Policy checks: IAM role allowed? ──── If NO → AccessDenied
+       │ YES
+       ▼
+5. ONTAP checks: file_system_user has permission? ──── If NO → AccessDenied
+       │ YES
+       ▼
+6. File data returned to Spark
+       │
+       ▼
+7. UC applies ABAC Column Mask ──── PII columns masked based on governed tags
+       │
+       ▼
+8. UC applies ABAC Row Filter ──── Unauthorized rows filtered based on tags
+       │
+       ▼
+9. User sees: only authorized rows with sensitive columns masked
+```
+
+**Current reality**: Steps 1-2 fail at step "CREATE TABLE" (UC_CLOUD_STORAGE_ACCESS_FAILURE), so steps 7-9 are unreachable.
+
+#### What's Available Today vs Future
+
+| Governance Need | Available Today (ONTAP only) | Future (ONTAP + UC ABAC) |
+|---|---|---|
+| File-level isolation | ✅ Per-consumer S3 AP with scoped file_system_user | ✅ Same + UC table-level governance |
+| Column masking | ❌ Not at file level (files are opaque blobs) | ✅ ABAC Column Mask on tagged columns |
+| Row filtering | ❌ Not at file level | ✅ ABAC Row Filter on tagged tables |
+| Access audit | ✅ FPolicy + CloudTrail S3 data events | ✅ Same + UC audit logs with lineage |
+| Data immutability | ✅ SnapLock / Tamperproof Snapshot | ✅ Same (storage-layer, always available) |
+| Ransomware protection | ✅ ARP/AI | ✅ Same (storage-layer, always available) |
+| Data classification | ❌ Manual (file naming/directory structure) | ✅ Automated UC data classification |
+
+#### Design Patterns for Combined Governance (Available Today)
+
+| Pattern | ONTAP Configuration | Databricks Configuration | Governance Level |
+|---|---|---|---|
+| **File isolation (primary)** | Per-team S3 AP with scoped user | Separate Instance Profile per team | Strong (ONTAP-enforced) |
+| **Audit trail (compensating)** | FPolicy external server | CloudTrail + custom logging in boto3 | Moderate (no UC lineage) |
+| **Immutable training data** | SnapLock volume for training datasets | MLflow records source snapshot ID | Strong (storage-enforced) |
+| **Network isolation** | VPC-scoped S3 AP + Export Policy | Customer-managed VPC + security groups | Strong (network-enforced) |
+
 #### Governance Layers Summary (Databricks + ONTAP)
 
 | Layer | Enforcement Point | Scope | Status on FSx S3 AP |
