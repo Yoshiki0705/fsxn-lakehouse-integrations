@@ -106,7 +106,6 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | **SnapMirror** | Snowflake レプリケーションと DR 向けクロスリージョンデータ可用性 | [SnapMirror ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
 | **マルチプロトコル** | NFS（取り込み）+ SMB（Windows ユーザー）+ S3 AP（Snowflake）— 同一データ、コピー不要 | [マルチプロトコル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
 | **FPolicy** | Lambda 経由のイベント駆動 Snowpipe 取り込み（<30秒レイテンシ） | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
-| **BlueXP Workload Factory** | FSx for ONTAP + Bedrock による GenAI インフラの自動デプロイ | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ## ガバナンス & AI/ML ガイド
 

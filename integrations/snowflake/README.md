@@ -142,7 +142,6 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | **SnapMirror** | Cross-region data availability for Snowflake replication and DR | [SnapMirror docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
 | **Multi-protocol** | NFS (ingest) + SMB (Windows users) + S3 AP (Snowflake) — same data, no copy | [Multi-protocol](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
 | **FPolicy** | Event-driven Snowpipe ingestion via Lambda (<30s latency) | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
-| **BlueXP Workload Factory** | Automated GenAI infrastructure deployment with FSx for ONTAP + Bedrock | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ## Governance & AI/ML Guides
 
