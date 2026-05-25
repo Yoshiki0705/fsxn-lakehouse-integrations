@@ -323,6 +323,57 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | [Governance: File-Level Access Control](docs/en/ai-demo-guide.md#file-level-access-control-ontap-native-layer) | ONTAP dual-layer auth, FPolicy, per-consumer S3 AP isolation |
 | [Integration: ONTAP × Snowflake Tags](docs/en/ai-demo-guide.md#integration-ontap-file-level-control--snowflake-tag-governance) | Combined governance matrix, design patterns, flow diagram |
 
+## Snowpipe & Ingestion Formats
+
+### Snowpipe Supported Formats
+
+| Format | Snowpipe | COPY INTO | External Table | Notes |
+|---|:---:|:---:|:---:|---|
+| CSV | ✅ | ✅ | ✅ | Delimiter, header, encoding options |
+| JSON | ✅ | ✅ | ✅ | Nested, semi-structured |
+| Parquet | ✅ | ✅ | ✅ | Column pruning, predicate pushdown |
+| Avro | ✅ | ✅ | ✅ | Schema evolution supported |
+| ORC | ✅ | ✅ | ✅ | Read-only |
+| XML | ✅ | ✅ | ✅ | Native support |
+
+**Formats NOT directly supported by Snowpipe/COPY INTO (require alternative):**
+
+| Format | Alternative Method | Considerations |
+|---|---|---|
+| Images (JPEG, PNG, TIFF) | Directory Table + GET_PRESIGNED_URL / PARSE_DOCUMENT (OCR) | Use Cortex AI for text extraction; Vision AI via COPY FILES workaround |
+| Video (MP4, MOV) | Directory Table + GET_PRESIGNED_URL → external processing | Stream via CloudFront or process frames externally |
+| Audio (WAV, MP3) | Directory Table + GET_PRESIGNED_URL → transcription service | Use external ASR (Bedrock, Whisper) or future AI_TRANSCRIBE |
+| Documents (PDF, DOCX) | PARSE_DOCUMENT (direct on stage) | OCR/LAYOUT mode extracts text directly from FSx S3 AP |
+| Binary / Archives | GET_PRESIGNED_URL → external processing | Download and process outside Snowflake |
+| Database exports | Custom parsing via Snowpark UDF | Parse SQL/dump format into structured data |
+
+### Data Ingestion Alternatives for FSx for ONTAP (When Snowpipe Is Unavailable)
+
+Since FSx S3 AP does not support S3 Event Notifications, standard Snowpipe auto-ingest is not available. Use these alternatives:
+
+| Method | Description | Latency | Complexity | Reference |
+|---|---|---|---|---|
+| **FPolicy → Lambda → SNS → Snowpipe** | FPolicy detects file changes → Lambda sends SNS notification → Snowpipe REST API triggers load | Seconds (<30s) | Medium | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| **Snowflake Task + COPY INTO** | Scheduled Task runs COPY INTO from stage at intervals | Minutes (configurable) | Low | [Tasks docs](https://docs.snowflake.com/en/user-guide/tasks-intro) |
+| **Snowflake Task + ALTER STAGE REFRESH** | Scheduled Task refreshes Directory Table metadata | Minutes | Low | [Tasks docs](https://docs.snowflake.com/en/user-guide/tasks-intro) |
+| **External function + Lambda** | Snowflake calls Lambda to check for new files | On-demand | Medium | [External functions](https://docs.snowflake.com/en/sql-reference/external-functions) |
+| **AWS Glue → Snowflake** | Glue reads FSx S3 AP → writes to Snowflake via connector | Minutes | Medium | [Glue + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
+| **Snowpipe REST API (manual trigger)** | Application calls Snowpipe REST API with file list | Seconds | Low | [Snowpipe REST](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-rest-overview) |
+
+**Recommended production pattern:**
+```
+FSx for ONTAP ──FPolicy──▶ Lambda ──▶ SNS ──▶ Snowpipe REST API ──▶ COPY INTO target table
+     │                                              │
+     └── NFS/SMB users access same data             └── Snowflake governance on loaded data
+```
+
+**Simple alternative (no FPolicy):**
+```
+Snowflake Task (every 5 min) ──▶ COPY INTO from @fsxn_stage
+                                      │
+                                      └── Tracks loaded files automatically (COPY history)
+```
+
 ## Quick Start
 
 ```bash
