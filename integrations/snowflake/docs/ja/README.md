@@ -184,6 +184,25 @@ Q: データは FSx for ONTAP に残す必要がある？
 - **コスト**: ストレージ効率（重複回避）
 - **運用容易性**: セットアップとメンテナンスの手間
 
+> **スコアリング方法論**: 各次元は本リポジトリの検証済みエビデンスに基づき著者が評価。AWS または Snowflake の公式アセスメントではありません。スコアは1つのテスト環境（Snowflake Standard, ap-northeast-1）での観測結果を反映。
+
+> **スコアの使い方**: Overall スコアをパターン選択の出発点として使用。4.0 以上はガバナンス付き本番ワークロードに適合。3.5〜3.9 はトレードオフを評価した上で利用可能。
+
+**パターン選択ガイド:**
+- **External Table のみ**（4.0）: データが FSx に残る必要があり、テキストベース AI で十分な場合
+- **COPY INTO（全量）**（3.8）: 最大性能、Time Travel、Vision AI が必要な場合
+- **ハイブリッド**（3.8）: データ残留要件と全 AI 機能の両方が必要な場合
+
+### 業種別推奨パターン
+
+| 業種 | 推奨パターン | 根拠 | PoC 成功基準 |
+|---|---|---|---|
+| **製造業** | External Table + PARSE_DOCUMENT (OCR) | データは FSx に残留。検査画像をその場で処理 | OCR が 10 枚以上の検査画像から各 10 秒以内にテキスト抽出 |
+| **金融サービス** | ハイブリッド（External Table + Cortex Search 用 COPY INTO） | コンプライアンスで FSx にデータ残留必須。RAG には内部テーブルが必要 | Cortex Search が関連コンプライアンス文書を 500ms 以内に返却 |
+| **医療** | External Table + SnapLock | PHI は管理されたストレージから出してはならない。不変の監査 | External Table への SELECT がガバナンスタグ付きで成功 |
+| **メディア / エンタメ** | External Table + COPY FILES (Vision AI) | 大容量メディアファイルは FSx に残留。AI 用に選択的ステージング | Vision AI がステージングパス経由で画像内容を正しく記述 |
+| **汎用分析** | COPY INTO（全量） | 最大クエリ性能。データ重複は許容 | 代表的データセットで COPY INTO が 10 秒以内に完了 |
+
 ### リファレンス
 
 - [Snowflake External Tables](https://docs.snowflake.com/en/user-guide/tables-external)
@@ -278,6 +297,8 @@ FSx S3 AP は S3 Event Notifications をサポートしないため、標準 Sno
 |---|---|---|---|---|
 | **FPolicy → Lambda → SNS → Snowpipe** | FPolicy がファイル変更を検知 → Lambda が SNS 通知送信 → Snowpipe REST API がロードをトリガー | 秒（<30秒） | 中 | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
 | **Snowflake Task + COPY INTO** | スケジュール Task が定期的にステージから COPY INTO を実行 | 分（設定可能） | 低 | [Tasks ドキュメント](https://docs.snowflake.com/en/user-guide/tasks-intro) |
+
+> **FPolicy スループットに関する注意**: FPolicy は NFS/SMB I/O パスに最小限のレイテンシを追加します（パススルーモードで通常 1 操作あたり <1ms）。ただし、高頻度ファイル書き込みワークロード（毎秒数千ファイル）では、本番デプロイ前に FSx for ONTAP ファイルシステムへのスループット影響を検証してください。
 | **Snowflake Task + ALTER STAGE REFRESH** | スケジュール Task が Directory Table メタデータを更新 | 分 | 低 | [Tasks ドキュメント](https://docs.snowflake.com/en/user-guide/tasks-intro) |
 | **External function + Lambda** | Snowflake が Lambda を呼び出して新規ファイルを確認 | オンデマンド | 中 | [External functions](https://docs.snowflake.com/en/sql-reference/external-functions) |
 | **AWS Glue → Snowflake** | Glue が FSx S3 AP から読み取り → コネクタ経由で Snowflake に書き込み | 分 | 中 | [Glue + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |

@@ -56,6 +56,8 @@ s3://<s3ap-alias>/gold/      # Business-ready aggregates
 
 Understanding Databricks' storage and ingestion concepts is essential for evaluating FSx for ONTAP S3 AP integration.
 
+> **Partner Quick Reference**: If your customer asks "Can Databricks read our NAS data via S3 Access Points?" — the answer is "partially, with limitations." File-level read works under UC governance, but table creation and directory listing are blocked. For governed analytics on NAS data today, recommend Snowflake External Table or Athena. For Databricks-specific workloads, recommend staged ingestion to S3 → UC Managed Table (see [Recommended Architecture Pattern](#recommended-architecture-pattern-today)). If the customer already uses Databricks, the FPolicy → Lambda → S3 → Auto Loader pattern preserves full UC governance on ingested data.
+
 ### Storage Credential → External Location → External Table/Volume
 
 ```
@@ -69,7 +71,7 @@ Storage Credential (IAM Role ARN + External ID)
 
 | Concept | Description | FSx S3 AP Status | Reference |
 |---|---|:---:|---|
-| **[Storage Credential](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)** | IAM Role that Databricks assumes to access cloud storage | ✅ Created | [Docs](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) |
+| **[Storage Credential](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)** | IAM Role that Databricks assumes to access cloud storage. During AssumeRole, Databricks generates a session policy that restricts what the assumed session can do — even if the IAM role itself has broader permissions. | ✅ Created | [Docs](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) |
 | **[External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual)** | Maps S3 path to a Storage Credential; defines access boundary | ✅ Created (with `access_point` field) | [Docs](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual) |
 | **[External Table](https://docs.databricks.com/aws/en/tables/external)** | UC-governed table whose data resides in External Location | ❌ CREATE TABLE blocked | [Docs](https://docs.databricks.com/aws/en/tables/external) |
 | **[External Volume](https://docs.databricks.com/aws/en/volumes/managed-vs-external)** | UC-governed volume for unstructured files in External Location | ❌ Blocked (same session policy issue) | [Docs](https://docs.databricks.com/aws/en/volumes/managed-vs-external) |
@@ -132,6 +134,8 @@ Since Auto Loader requires External Location (currently blocked on FSx S3 AP), u
 | **AWS DataSync** | Scheduled sync from FSx NFS → S3 bucket | Minutes-Hours | AWS-side | [DataSync docs](https://docs.aws.amazon.com/datasync/latest/userguide/create-ontap-location.html) |
 | **SnapMirror to S3** | ONTAP-native replication to S3 bucket | Minutes | ONTAP-side | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
 | **Instance Profile + boto3 (PoC)** | Direct S3 AP read from Databricks driver | Real-time | ❌ No UC | Bypasses governance |
+
+> **SnapMirror to S3 caveat**: Object metadata in SnapMirror S3 targets differs from NFS file metadata. Validate schema compatibility and file naming conventions before using SnapMirror S3 as an ingestion path for analytics engines.
 
 **Recommended production pattern:**
 ```
@@ -271,6 +275,18 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 - **AI Capability**: Breadth of AI/ML functions available
 - **Cost**: Storage efficiency, compute cost
 - **Operational Simplicity**: Setup, maintenance, pipeline complexity
+
+> **Scoring methodology**: Each dimension rated by the author based on validated evidence in this repository. This is not an official AWS assessment. Scores reflect observed capabilities in one test environment (DBR 17.3 LTS, ap-northeast-1).
+
+> **Performance note**: Performance scores reflect relative comparison within FSx S3 AP access patterns, not comparison with native S3 bucket performance. All patterns accessing FSx S3 AP have higher latency than equivalent native S3 operations.
+
+> **How to use this score**: Use Overall score as a starting point for pattern selection. Scores ≥ 4.0 indicate strong fit for governed production workloads. Scores 3.5–3.9 indicate viable paths with trade-offs to evaluate. Scores < 3.0 indicate PoC-only paths requiring compensating controls and explicit approval.
+
+**When to choose which:**
+- Choose **Snowflake External Table** (4.0) when governed AI on NAS data without copying is the priority
+- Choose **Staged to S3 → UC Table** (3.8) when maximum Databricks performance and full Mosaic AI are required (accepts data duplication cost)
+- Choose **Bedrock KB** (3.8) when AWS-native RAG with zero-copy on FSx is the primary requirement
+- Choose **boto3 PoC** (2.8) only for time-limited exploration with explicit approval
 
 ### References
 
