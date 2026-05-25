@@ -250,3 +250,28 @@ cp params.example.json params.json  # 編集: S3AccessPointArn を設定
 3. **S3 Event Notifications 非サポート**: Snowpipe の直接トリガー不可（FPolicy で代替）
 4. **最大アップロードサイズ**: 5GB（Multipart Upload 対応）
 5. **AUTO_REFRESH 不可**: 手動 REFRESH または Snowflake Task でスケジュール実行が必要
+6. **TO_FILE / FILE データ型**: FSx S3 AP 外部ステージでは "Remote file not found" — Vision AI に直接使用不可。回避策: `COPY FILES` で暗号化なし内部ステージ（SNOWFLAKE_SSE）にコピー後、`TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))` を使用
+
+## 顧客適格化質問
+
+アーキテクチャパターンを決定するための質問:
+
+1. **データレジデンシー**: データは FSx for ONTAP に残す必要がある？ Snowflake マネージドストレージにコピー可能？
+   - FSx に残す → External Table パターン
+   - コピー可 → COPY INTO で最大性能
+
+2. **AI/ML 要件**: テキスト AI（要約、翻訳、OCR）が必要？ Vision AI（画像分析）が必要？
+   - テキスト AI のみ → External Table（直接、コピー不要）
+   - Vision AI 必要 → ハイブリッドパターン（External Table + 画像のみ COPY FILES）
+
+3. **クエリ性能**: サブ秒のレスポンスが必要？ 秒レベルで許容可能？
+   - サブ秒 → COPY INTO 内部テーブル（マイクロパーティション、クラスタリング）
+   - 秒レベル → External Table（S3 AP レイテンシ）
+
+4. **コンプライアンス制約**: データ移動を制限する規制要件（HIPAA, SOX, GDPR）がある？
+   - あり → External Table + SnapLock + FPolicy 監査（データは FSx から出ない）
+   - なし → 性能/コストのトレードオフで選択
+
+5. **マルチプロトコルアクセス**: NFS/SMB ユーザーが Snowflake と同じデータにアクセスする必要がある？
+   - あり → External Table（ゼロコピー、マルチプロトコル）
+   - なし → どちらのパターンでも可
