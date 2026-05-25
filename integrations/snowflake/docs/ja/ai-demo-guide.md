@@ -301,6 +301,22 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 | **共有データ + ロールベースフィルタ** | 共有 S3 AP（読み取り専用ユーザー） | 部門/ロール別 Row Access Policy | 共通データセットでの部門横断分析 |
 | **不変監査 + ガバナンスクエリ** | SnapLock ボリューム + FPolicy 監査 | タグ + マスキング + Row Policy | 金融/医療コンプライアンス |
 
+#### リファレンス: ONTAP ファイルレベル + Snowflake タグ統合
+
+| トピック | リファレンス |
+|---|---|
+| FSx S3 AP デュアルレイヤー認可 | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
+| FSx S3 AP と Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
+| ONTAP Export Policy（NFS アクセス制御） | [Export rules の仕組み](https://docs.netapp.com/us-en/ontap/nfs-admin/export-rules-concept.html) |
+| ONTAP FPolicy（ファイル監視/ブロック） | [FPolicy 設定タイプ](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| ONTAP Storage-Level Access Guard | [SLAG によるファイルアクセス保護](https://docs.netapp.com/us-en/ontap/smb-admin/secure-file-access-storage-level-access-guard-concept.html) |
+| ONTAP NFSv4 ACL | [SVM の NFSv4 ACL](https://docs.netapp.com/us-en/ontap/nfs-admin/nfsv4-acls-concept.html) |
+| Snowflake Object Tagging | [Object Tagging 入門](https://docs.snowflake.com/en/user-guide/object-tagging/introduction) |
+| Snowflake Tag-based Masking | [Tag-based masking policies](https://docs.snowflake.com/en/user-guide/tag-based-masking-policies) |
+| Snowflake Row Access Policies | [Row access policies の使用](https://docs.snowflake.com/en/user-guide/security-row-using) |
+| Snowflake Data Classification | [機密データ分類](https://docs.snowflake.com/en/user-guide/classify-using) |
+| Snowflake Governed Lakehouse for AI | [AI 向けレイクハウスガバナンス Quickstart](https://www.snowflake.com/en/developers/guides/govern-your-lakehouse-for-ai/) |
+
 #### ガバナンスレイヤーサマリー（Snowflake + ONTAP）
 
 | レイヤー | 適用ポイント | スコープ | 制御内容 |

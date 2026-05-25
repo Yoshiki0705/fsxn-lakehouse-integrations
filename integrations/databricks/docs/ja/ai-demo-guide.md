@@ -445,6 +445,22 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 | **不変学習データ** | 学習データセット用 SnapLock ボリューム | MLflow がソーススナップショット ID を記録 | 強（ストレージ適用） |
 | **ネットワーク分離** | VPC スコープ S3 AP + Export Policy | Customer-managed VPC + セキュリティグループ | 強（ネットワーク適用） |
 
+#### リファレンス: ONTAP ファイルレベル + Databricks タグ統合
+
+| トピック | リファレンス |
+|---|---|
+| FSx S3 AP デュアルレイヤー認可 | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
+| FSx S3 AP と Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
+| ONTAP Export Policy（NFS アクセス制御） | [Export rules の仕組み](https://docs.netapp.com/us-en/ontap/nfs-admin/export-rules-concept.html) |
+| ONTAP FPolicy（ファイル監視/ブロック） | [FPolicy 設定タイプ](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| ONTAP Storage-Level Access Guard | [SLAG によるファイルアクセス保護](https://docs.netapp.com/us-en/ontap/smb-admin/secure-file-access-storage-level-access-guard-concept.html) |
+| Databricks ABAC 概要 | [属性ベースアクセス制御](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/) |
+| Databricks Governed Tags | [UC オブジェクトへのタグ適用](https://docs.databricks.com/aws/en/database-objects/tags) |
+| Databricks Row Filters & Column Masks | [Row filters and column masks](https://docs.databricks.com/aws/en/data-governance/unity-catalog/filters-and-masks) |
+| Databricks ABAC チュートリアル | [ABAC 設定チュートリアル](https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/tutorial) |
+| Databricks ABAC + Delta Sharing | [ガバナンス境界を越えた ABAC](https://www.databricks.com/blog/how-delta-sharing-supports-abac-sharing-providers-and-recipients) |
+| Databricks Data Classification (GA) | [ABAC、Governed Tags、データ分類 GA](https://www.databricks.com/blog/abac-row-filtering-and-column-masking-policies-governed-tags-and-data-classification-are-now) |
+
 #### ガバナンスレイヤーサマリー（Databricks + ONTAP）
 
 | レイヤー | 適用ポイント | スコープ | FSx S3 AP でのステータス |

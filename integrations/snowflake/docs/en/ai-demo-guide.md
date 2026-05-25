@@ -301,6 +301,22 @@ The two governance layers (ONTAP file-level and Snowflake tag-based) operate ind
 | **Shared data + role-based filtering** | Shared S3 AP (read-only user) | Row Access Policy by department/role | Cross-functional analytics on common datasets |
 | **Immutable audit + governed query** | SnapLock volume + FPolicy audit | Tags + masking + row policy | Financial/healthcare compliance |
 
+#### References: ONTAP File-Level + Snowflake Tag Integration
+
+| Topic | Reference |
+|---|---|
+| FSx S3 AP dual-layer authorization | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
+| FSx S3 AP with Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
+| ONTAP Export Policy (NFS access control) | [How export rules work](https://docs.netapp.com/us-en/ontap/nfs-admin/export-rules-concept.html) |
+| ONTAP FPolicy (file monitoring/blocking) | [FPolicy configuration types](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
+| ONTAP Storage-Level Access Guard | [Secure file access with SLAG](https://docs.netapp.com/us-en/ontap/smb-admin/secure-file-access-storage-level-access-guard-concept.html) |
+| ONTAP NFSv4 ACLs | [NFSv4 ACLs for SVMs](https://docs.netapp.com/us-en/ontap/nfs-admin/nfsv4-acls-concept.html) |
+| Snowflake Object Tagging | [Introduction to object tagging](https://docs.snowflake.com/en/user-guide/object-tagging/introduction) |
+| Snowflake Tag-based Masking | [Tag-based masking policies](https://docs.snowflake.com/en/user-guide/tag-based-masking-policies) |
+| Snowflake Row Access Policies | [Use row access policies](https://docs.snowflake.com/en/user-guide/security-row-using) |
+| Snowflake Data Classification | [Sensitive data classification](https://docs.snowflake.com/en/user-guide/classify-using) |
+| Snowflake Governed Lakehouse for AI | [Govern your lakehouse for AI quickstart](https://www.snowflake.com/en/developers/guides/govern-your-lakehouse-for-ai/) |
+
 #### Governance Layers Summary (Snowflake + ONTAP)
 
 | Layer | Enforcement Point | Scope | Controls |

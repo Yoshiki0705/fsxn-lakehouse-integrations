@@ -57,6 +57,15 @@ Unity Catalog External Location は現在セッションポリシーの制約に
 | 重複排除 | Delta バージョンファイルと類似データセットのストレージ削減 |
 | SnapMirror | レイクハウスデータのクロスリージョン DR |
 
+## ガバナンス & AI/ML ガイド
+
+| ガイド | 説明 |
+|---|---|
+| [AI/ML デモガイド](ai-demo-guide.md) | 現在のステータス、動作するデモ、ブロックされたパス、将来の機能 |
+| [ガバナンス: タグとデータ保護 (ABAC)](ai-demo-guide.md#ガバナンスタグとデータ保護-abac) | UC ABAC、Governed Tags、カラムマスク、Row Filter — 現在の制限 |
+| [ガバナンス: ファイルレベルアクセス制御](ai-demo-guide.md#ファイルレベルのアクセス制御-ontap-ネイティブレイヤー) | ONTAP デュアルレイヤー認可、FPolicy、チームごとの S3 AP 分離（補償コントロール） |
+| [統合: ONTAP × Databricks タグ](ai-demo-guide.md#統合-ontap-ファイルレベル制御--databricks-タグガバナンス) | 組み合わせガバナンスマトリクス、現在 vs 将来、設計パターン |
+
 ## クイックスタート
 
 ```bash
