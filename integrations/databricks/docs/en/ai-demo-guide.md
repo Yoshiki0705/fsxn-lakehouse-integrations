@@ -8,6 +8,8 @@ This guide documents AI/ML capabilities and their current status when accessing 
 
 > **Important**: Unity Catalog session policy currently blocks table creation and subdirectory listing on FSx for ONTAP S3 Access Points. The scenarios below document what works today (driver-only PoC), what's blocked, and what would be possible once the platform boundary is resolved.
 
+> **Note (2026-05-26)**: Databricks Support confirmed that the `access_point` field is not GA and S3 AP paths are not supported by UC External Locations. The observations below document side-effect behavior, not a supported code path.
+
 ## Prerequisites
 
 - Databricks workspace on AWS (Customer-managed VPC recommended)
