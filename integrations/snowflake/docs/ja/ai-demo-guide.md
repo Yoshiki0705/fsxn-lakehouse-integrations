@@ -412,7 +412,6 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 | **SnapMirror** | 重要な ML パイプラインと学習データセットのクロスリージョン DR | [SnapMirror ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
 | **マルチプロトコル** | 同一データに NFS（データサイエンティスト）、SMB（Windows ユーザー）、S3 AP（Snowflake/分析）から同時アクセス可能 | [マルチプロトコルアクセス](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
 | **FPolicy** | AI データアクセス監査用のファイル操作監視。ML パイプラインでの不正ファイルタイプのブロック | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
-| **BlueXP Workload Factory** | GenAI インフラの自動デプロイ — FSx for ONTAP + Bedrock による RAG パイプライン（画像データインサイト含む） | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ### AI/ML 固有のシナリオ
 

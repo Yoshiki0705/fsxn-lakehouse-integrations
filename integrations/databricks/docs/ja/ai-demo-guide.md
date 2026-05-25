@@ -562,7 +562,6 @@ UC セッションポリシーの解消を待つ間、FSx for ONTAP データに
 | **重複排除** | Delta バージョンファイル、類似エンベディング、重複する特徴量データセットのストレージを削減 | [ストレージ効率](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
 | **SnapMirror** | 重要な ML パイプラインと Feature Store のクロスリージョン DR | [SnapMirror ドキュメント](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
 | **FPolicy** | AI データアクセス監査用のファイル操作監視。ML パイプラインでの不正ファイルタイプのブロック | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
-| **BlueXP Workload Factory** | GenAI インフラの自動デプロイ — FSx for ONTAP + Bedrock による RAG パイプライン（画像データインサイト含む） | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ### AI/ML 固有のシナリオ
 

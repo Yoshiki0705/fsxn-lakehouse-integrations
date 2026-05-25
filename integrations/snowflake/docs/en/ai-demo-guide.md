@@ -412,7 +412,6 @@ The two governance layers (ONTAP file-level and Snowflake tag-based) operate ind
 | **SnapMirror** | Cross-region DR for critical ML pipelines and training datasets | [SnapMirror docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
 | **Multi-protocol** | Same data accessible via NFS (data scientists), SMB (Windows users), S3 AP (Snowflake/analytics) simultaneously | [Multi-protocol access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/supported-fsx-clients.html) |
 | **FPolicy** | File operation monitoring for AI data access audit; block unauthorized file types in ML pipelines | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
-| **BlueXP Workload Factory** | Automated GenAI infrastructure deployment — RAG pipelines with FSx for ONTAP + Bedrock, including visual data insights | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ### AI/ML-Specific Scenarios
 

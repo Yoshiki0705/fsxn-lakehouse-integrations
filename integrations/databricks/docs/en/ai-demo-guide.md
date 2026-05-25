@@ -562,7 +562,6 @@ While waiting for UC session policy resolution, use these validated paths for AI
 | **Deduplication** | Reduce storage for Delta version files, similar embeddings, and overlapping feature datasets | [Storage efficiency](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/storage-efficiency.html) |
 | **SnapMirror** | Cross-region DR for critical ML pipelines and feature stores | [SnapMirror docs](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html) |
 | **FPolicy** | File operation monitoring for AI data access audit; block unauthorized file types in ML pipelines | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
-| **BlueXP Workload Factory** | Automated GenAI infrastructure deployment — RAG pipelines with FSx for ONTAP + Bedrock, including visual data insights | [Workload Factory for GenAI](https://docs.netapp.com/us-en/workload-genai/general/ai-workloads-overview.html) |
 
 ### AI/ML-Specific Scenarios
 
