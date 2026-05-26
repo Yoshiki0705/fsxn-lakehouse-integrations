@@ -261,6 +261,7 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | ガイド | 説明 |
 |---|---|
 | [Analytics & AI デモガイド](ai-demo-guide.md) | 分析 & AI 機能（Cortex AI、OCR、Vision）、業界別ユースケース、ONTAP 価値 |
+| [内部テーブル取り込みガイド](internal-table-ingestion-guide.md) | COPY INTO が必要なケース — 機能利用可否マトリクス（External vs Internal Table）、取り込みパターン、二重管理の課題 |
 | [ガバナンス: タグとデータ保護](ai-demo-guide.md#ガバナンスタグとデータ保護) | Tag-based masking、Row Access Policy、エディション要件 |
 | [ガバナンス: ファイルレベルアクセス制御](ai-demo-guide.md#ファイルレベルのアクセス制御-ontap-ネイティブレイヤー) | ONTAP デュアルレイヤー認可、FPolicy、コンシューマーごとの S3 AP 分離 |
 | [統合: ONTAP × Snowflake タグ](ai-demo-guide.md#統合-ontap-ファイルレベル制御--snowflake-タグガバナンス) | 組み合わせガバナンスマトリクス、設計パターン、フロー図 |

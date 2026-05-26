@@ -339,6 +339,7 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | Guide | Description |
 |---|---|
 | [Analytics & AI Demo Guide](docs/en/ai-demo-guide.md) | Analytics & AI capabilities (Cortex AI, OCR, Vision), industry use cases, ONTAP value |
+| [Internal Table Ingestion Guide](docs/en/internal-table-ingestion-guide.md) | When COPY INTO is required — feature availability matrix (External vs Internal Table), ingestion patterns, dual management challenges |
 | [Governance: Tags & Data Protection](docs/en/ai-demo-guide.md#governance-tags--data-protection) | Tag-based masking, row access policies, edition requirements |
 | [Governance: File-Level Access Control](docs/en/ai-demo-guide.md#file-level-access-control-ontap-native-layer) | ONTAP dual-layer auth, FPolicy, per-consumer S3 AP isolation |
 | [Integration: ONTAP × Snowflake Tags](docs/en/ai-demo-guide.md#integration-ontap-file-level-control--snowflake-tag-governance) | Combined governance matrix, design patterns, flow diagram |
