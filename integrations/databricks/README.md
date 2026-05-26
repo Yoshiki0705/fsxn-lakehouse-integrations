@@ -189,7 +189,7 @@ Understanding the difference between managed and external tables in Unity Catalo
 
 > **Key concepts**: [External Table](https://docs.databricks.com/aws/en/tables/external) (UC governs metadata, not storage) | [Managed Table](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external) (UC governs both) | [External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) (maps cloud path to credential)
 >
-> For AI/ML-specific implications, see the [AI/ML Demo Guide](docs/en/ai-demo-guide.md).
+> For analytics and AI/ML-specific implications, see the [Analytics & AI Demo Guide](docs/en/ai-demo-guide.md).
 
 ### Comparison Matrix
 
@@ -337,7 +337,7 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 
 | Guide | Description |
 |---|---|
-| [AI/ML Demo Guide](docs/en/ai-demo-guide.md) | Current status, working demos, blocked paths, future capabilities |
+| [Analytics & AI Demo Guide](docs/en/ai-demo-guide.md) | Analytics & AI capabilities, current status, working demos, blocked paths |
 | [Governance: Tags & Data Protection (ABAC)](docs/en/ai-demo-guide.md#governance-tags--data-protection-abac) | UC ABAC, governed tags, column masks, row filters — current limitations |
 | [Governance: File-Level Access Control](docs/en/ai-demo-guide.md#file-level-access-control-ontap-native-layer) | ONTAP dual-layer auth, FPolicy, per-team S3 AP isolation (compensating control) |
 | [Integration: ONTAP × Databricks Tags](docs/en/ai-demo-guide.md#integration-ontap-file-level-control--databricks-tag-governance) | Combined governance matrix, current vs future state, design patterns |
