@@ -248,6 +248,8 @@ Databricks 受信者
 
 > **このパターンでの ONTAP の価値**: FabricPool により FSx for ONTAP 上のコールドデータは自動的に S3 に階層化（NFS/SMB ユーザーには透過的）、ストレージコストを削減。Snapshot により DataSync 転送のポイントインタイム整合性を確保 — Snapshot から同期することでデータの一貫したビューを保証。
 
+> **SnapMirror S3 に関する注記**: NetApp ONTAP ドキュメントでは SnapMirror S3（ONTAP S3 バケット → AWS S3 レプリケーション）が ONTAP 9.10.1+ から利用可能と記載されています。しかし、**この機能は FSx for ONTAP では無効化されています**（2026年5月検証、ONTAP 9.17.1P6）。`snapmirror object-store` CLI コマンドと `/api/cloud/targets` REST API はマネージドサービス制約としてブロックされています。AWS DataSync が唯一の検証済み同期パスです。AWS に機能要望を提出済み。
+
 **現在動作するもの（S3 コピーあり）:**
 
 ```sql

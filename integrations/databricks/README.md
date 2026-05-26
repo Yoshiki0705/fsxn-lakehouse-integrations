@@ -136,7 +136,7 @@ Since Auto Loader requires External Location (currently blocked on FSx S3 AP), u
 | **SnapMirror to S3** | ONTAP-native replication to S3 bucket | Minutes | ONTAP-side | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
 | **Instance Profile + boto3 (PoC)** | Direct S3 AP read from Databricks driver | Real-time | ❌ No UC | Bypasses governance |
 
-> **SnapMirror to S3 note**: SnapMirror to S3 has NOT been validated as a sync mechanism for this integration pattern. Object metadata in SnapMirror S3 targets may differ from NFS file metadata. **Use AWS DataSync as the validated sync mechanism.** SnapMirror to S3 is listed here as a theoretical ONTAP-native alternative pending validation.
+> **SnapMirror to S3 — Verified NOT available on FSx for ONTAP (May 2026)**: SnapMirror S3 (`snapmirror object-store` commands and `/api/cloud/targets` API) is **disabled on FSx for ONTAP** as a managed service restriction. While ONTAP S3 server and bucket creation work, the SnapMirror S3 replication commands return "not a recognized command" at all privilege levels (admin/advanced/diagnostic). The SnapMirror S3 "Continuous" policy exists but is unusable. This was verified on ONTAP 9.17.1P6. Feature request submitted to AWS. **Use AWS DataSync as the only validated sync mechanism from FSx for ONTAP to S3.**
 
 **Recommended production pattern:**
 ```

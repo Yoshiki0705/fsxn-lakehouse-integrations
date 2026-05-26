@@ -126,7 +126,7 @@ Auto Loader は External Location が必要（FSx S3 AP 上で現在ブロック
 | **SnapMirror to S3** | ONTAP ネイティブの S3 バケットへのレプリケーション | 分 | ONTAP 側 | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
 | **Instance Profile + boto3 (PoC)** | Databricks ドライバーからの直接 S3 AP 読み取り | リアルタイム | ❌ UC なし | ガバナンスをバイパス |
 
-> **SnapMirror to S3 の注意**: SnapMirror to S3 はこの統合パターンの同期メカニズムとして**未検証**です。SnapMirror S3 ターゲットのオブジェクトメタデータは NFS ファイルメタデータと異なる可能性があります。**検証済みの同期メカニズムとして AWS DataSync を使用してください。** SnapMirror to S3 は検証待ちの ONTAP ネイティブ代替手段として記載しています。
+> **SnapMirror to S3 — FSx for ONTAP で利用不可と確認（2026年5月）**: SnapMirror S3（`snapmirror object-store` コマンドおよび `/api/cloud/targets` API）は FSx for ONTAP のマネージドサービス制約として**無効化**されています。ONTAP S3 サーバーとバケットの作成は動作しますが、SnapMirror S3 レプリケーションコマンドは全権限レベル（admin/advanced/diagnostic）で "not a recognized command" を返します。SnapMirror S3 "Continuous" ポリシーは存在しますが使用不可。ONTAP 9.17.1P6 で検証済み。AWS に機能要望を提出済み。**FSx for ONTAP から S3 への唯一の検証済み同期メカニズムとして AWS DataSync を使用してください。**
 
 **推奨本番パターン:**
 ```
