@@ -313,6 +313,7 @@ FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
 | ガイド | 説明 |
 |---|---|
 | [Analytics & AI デモガイド](ai-demo-guide.md) | 分析 & AI 機能、現在のステータス、動作するデモ、ブロックされたパス |
+| [Delta Sharing & Volume Sharing ガイド](delta-sharing-volume-guide.md) | Delta Sharing で FSx ベースの構造化/非構造化データを Databricks に共有する方法 — 3パターン（メタデータテーブル、AI処理済み、Raw ファイル） |
 | [ガバナンス: タグとデータ保護 (ABAC)](ai-demo-guide.md#ガバナンスタグとデータ保護-abac) | UC ABAC、Governed Tags、カラムマスク、Row Filter — 現在の制限 |
 | [ガバナンス: ファイルレベルアクセス制御](ai-demo-guide.md#ファイルレベルのアクセス制御-ontap-ネイティブレイヤー) | ONTAP デュアルレイヤー認可、FPolicy、チームごとの S3 AP 分離（補償コントロール） |
 | [統合: ONTAP × Databricks タグ](ai-demo-guide.md#統合-ontap-ファイルレベル制御--databricks-タグガバナンス) | 組み合わせガバナンスマトリクス、現在 vs 将来、設計パターン |
