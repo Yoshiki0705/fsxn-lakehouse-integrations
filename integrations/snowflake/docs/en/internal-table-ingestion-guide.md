@@ -275,6 +275,21 @@ These operations work directly on FSx for ONTAP S3 AP External Tables — no dat
 
 ## Decision Framework
 
+**Quick decision table** — find your requirement and follow the recommendation:
+
+| Your requirement | Answer | Data movement |
+|---|---|---|
+| "I just need SQL queries" | → External Table (zero-copy) | None |
+| "I need text AI (summarize, translate, sentiment)" | → External Table (zero-copy) | None |
+| "I need governance tags and masking" | → External Table (zero-copy) | None |
+| "I need Cortex Search / RAG" | → Dynamic Table or COPY INTO | Full copy |
+| "I need Vision AI (image analysis)" | → COPY FILES to internal stage | File copy |
+| "I need DML (INSERT/UPDATE/DELETE)" | → COPY INTO internal table | Full copy |
+| "I need Time Travel" | → COPY INTO internal table | Full copy |
+| "I need high-performance queries (clustering)" | → COPY INTO internal table | Full copy |
+
+**Detailed flowchart:**
+
 ```
                     ┌─────────────────────────┐
                     │ What do you need?       │

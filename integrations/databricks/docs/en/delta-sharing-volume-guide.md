@@ -22,6 +22,19 @@ For FSx for ONTAP integration with Databricks, Delta Sharing provides a practica
 3. **For unstructured data**: The shareable asset is the derived structured representation (metadata, extracted text, captions, embeddings)
 4. **For true zero-copy raw file access**: Unity Catalog must support FSx for ONTAP S3 AP as first-class storage locations (feature gap — [reported to Databricks engineering](../../README.md#support-confirmation-2026-05-26))
 
+### Quick Start: What Should I Do Today?
+
+| Your situation | Recommended action | Pattern |
+|---|---|---|
+| **Databricks customer needing governed analytics on NAS data** | SnapMirror/DataSync → S3 → UC External Location → Delta Tables | SnapMirror path (fully supported) |
+| **Need to share file metadata with Databricks users** | Lambda + ListObjectsV2 → Delta Table → Delta Sharing | Pattern A |
+| **Need AI/RAG on NAS documents in Databricks** | Textract/Bedrock → Delta Table → Delta Sharing | Pattern B |
+| **Need to browse raw files (images/videos/PDFs) in Databricks** | DataSync → S3 → UC External Volume → Volume Sharing | Pattern C (with S3 sync) |
+| **Want zero-copy direct access (no S3 bucket)** | Not available today — awaiting Databricks UC feature development | Pattern C (blocked) |
+2. **FSx for ONTAP S3 Access Points provide object access** — Delta Sharing requires table semantics
+3. **For unstructured data**: The shareable asset is the derived structured representation (metadata, extracted text, captions, embeddings)
+4. **For true zero-copy raw file access**: Unity Catalog must support FSx for ONTAP S3 AP as first-class storage locations (feature gap — [reported to Databricks engineering](../../README.md#support-confirmation-2026-05-26))
+
 ---
 
 ## Three Integration Patterns
@@ -65,6 +78,8 @@ Databricks recipient
 - Amazon S3 — metadata table storage (recommended over FSx for ONTAP S3 AP for Delta Sharing compatibility)
 
 **PoC success criteria:** Databricks can query a Delta Sharing table that represents FSx for ONTAP file metadata.
+
+**ONTAP value in this pattern**: Snapshots enable instant point-in-time file inventory recovery. If a metadata scan produces incorrect results, revert to a previous Snapshot and re-scan — no data loss, no re-upload.
 
 **Production readiness checklist (Pattern A):**
 - [ ] Data freshness SLA defined (e.g., metadata table updated every N minutes/hours)
@@ -148,6 +163,8 @@ Databricks recipient (Mosaic AI, Vector Search, MLflow)
 
 **PoC success criteria:** Databricks can query AI-enriched metadata (extracted text, labels, summaries, embeddings) through Delta Sharing.
 
+**ONTAP value in this pattern**: FlexClone enables instant zero-copy dataset provisioning for AI processing — clone a volume for Textract/Rekognition processing without impacting production NFS/SMB workloads. Storage Efficiency (dedup + compression) reduces the cost of maintaining both source files and AI-derived tables.
+
 **Production readiness checklist (Pattern B):**
 - [ ] AI processing pipeline SLA: End-to-end latency from file creation to searchable embedding
 - [ ] Quality gates: Embedding quality validation, OCR accuracy thresholds, hallucination detection
@@ -219,6 +236,8 @@ This is the **fully supported, production-ready path** for Databricks + FSx for 
 > **For manufacturing use cases**: "How long until factory floor images appear in Databricks?" — With SnapMirror 5-min schedule + Auto Loader 5-min polling, the answer is "within 10 minutes." For near-real-time requirements (<1 min), use FPolicy → Lambda → S3 path.
 
 > **Key insight for Databricks customers**: The SnapMirror → S3 → UC path is not a workaround — it is the **recommended production architecture** confirmed by Databricks Support (May 2026). It provides capabilities that zero-copy paths cannot: ACID transactions, Time Travel, MERGE, OPTIMIZE, full Mosaic AI, and enterprise governance. The trade-off is data duplication and sync latency.
+
+> **ONTAP value in this pattern**: SnapMirror provides ONTAP-native incremental replication to S3 — more efficient than DataSync for large-scale continuous sync. Only changed blocks are transferred, reducing bandwidth and cost. Combined with FabricPool, cold data on FSx for ONTAP is automatically tiered to S3 (transparent to NFS/SMB users), further reducing storage costs.
 
 **What works today (with S3 copy):**
 

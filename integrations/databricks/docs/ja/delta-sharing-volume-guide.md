@@ -22,6 +22,16 @@ FSx for ONTAP と Databricks の統合において、Delta Sharing は以下の�
 3. **非構造化データの場合**: 共有可能な資産は派生した構造化表現（メタデータ、抽出テキスト、キャプション、embedding）
 4. **真のゼロコピー Raw ファイルアクセスには**: Unity Catalog が FSx for ONTAP S3 AP をファーストクラスのストレージロケーションとしてサポートする必要あり（機能ギャップ — [Databricks エンジニアリングに報告済み](../../README.md#support-confirmation-2026-05-26)）
 
+### Quick Start: 今日何をすべきか？
+
+| あなたの状況 | 推奨アクション | パターン |
+|---|---|---|
+| **Databricks 顧客で NAS データのガバナンス付き分析が必要** | SnapMirror/DataSync → S3 → UC External Location → Delta Tables | SnapMirror パス（完全サポート） |
+| **ファイルメタデータを Databricks ユーザーと共有したい** | Lambda + ListObjectsV2 → Delta Table → Delta Sharing | Pattern A |
+| **NAS ドキュメントに対する AI/RAG が Databricks で必要** | Textract/Bedrock → Delta Table → Delta Sharing | Pattern B |
+| **Raw ファイル（画像/動画/PDF）を Databricks で閲覧したい** | DataSync → S3 → UC External Volume → Volume Sharing | Pattern C（S3 同期あり） |
+| **ゼロコピー直接アクセスが欲しい（S3 バケットなし）** | 現時点では利用不可 — Databricks UC 機能開発待ち | Pattern C（ブロック中） |
+
 ---
 
 ## 3つの統合パターン
@@ -65,6 +75,8 @@ Databricks 受信者
 - Amazon S3 — メタデータテーブル保存先（Delta Sharing との互換性のため推奨）
 
 **PoC 成功基準:** Databricks が FSx for ONTAP ファイルメタデータを表す Delta Sharing テーブルをクエリできること。
+
+**このパターンでの ONTAP の価値**: Snapshot により過去のファイルインベントリを即座に復元可能。メタデータスキャンが不正確な結果を生成した場合、以前の Snapshot に戻して再スキャン — データ損失なし、再アップロード不要。
 
 **本番化チェックリスト (Pattern A):**
 - [ ] データ鮮度 SLA 定義（例: メタデータテーブルを N 分/時間ごとに更新）
@@ -148,6 +160,8 @@ Databricks 受信者 (Mosaic AI, Vector Search, MLflow)
 
 **PoC 成功基準:** Databricks が AI 処理済みメタデータ（抽出テキスト、ラベル、要約、embedding）を Delta Sharing 経由でクエリできること。
 
+**このパターンでの ONTAP の価値**: FlexClone により AI 処理用のデータセットを即座にゼロコピーで複製可能 — 本番 NFS/SMB ワークロードに影響なし。Storage Efficiency（重複排除 + 圧縮）によりソースファイルと AI 派生テーブルの両方を維持するコストを削減。
+
 **本番化チェックリスト (Pattern B):**
 - [ ] AI 処理パイプライン SLA: ファイル作成から検索可能な embedding までのエンドツーエンドレイテンシ
 - [ ] 品質ゲート: embedding 品質検証、OCR 精度閾値、ハルシネーション検出
@@ -219,6 +233,8 @@ Databricks 受信者
 > **製造業ユースケース向け**: 「工場の画像データが Databricks で見えるまで何分かかるか？」— SnapMirror 5分スケジュール + Auto Loader 5分ポーリングで「10分以内」。準リアルタイム要件（<1分）には FPolicy → Lambda → S3 パスを使用。
 
 > **Databricks 顧客への重要な洞察**: SnapMirror → S3 → UC パスは回避策ではなく、Databricks サポートが確認した**推奨本番アーキテクチャ**（2026年5月）です。ゼロコピーパスでは得られない機能を提供します: ACID トランザクション、Time Travel、MERGE、OPTIMIZE、完全な Mosaic AI、エンタープライズガバナンス。トレードオフはデータ重複と同期レイテンシです。
+
+> **このパターンでの ONTAP の価値**: SnapMirror は ONTAP ネイティブの増分レプリケーションを S3 に提供 — 大規模な継続的同期では DataSync より効率的。変更ブロックのみが転送され、帯域幅とコストを削減。FabricPool と組み合わせることで、FSx for ONTAP 上のコールドデータは自動的に S3 に階層化（NFS/SMB ユーザーには透過的）、ストレージコストをさらに削減。
 
 **現在動作するもの（S3 コピーあり）:**
 
