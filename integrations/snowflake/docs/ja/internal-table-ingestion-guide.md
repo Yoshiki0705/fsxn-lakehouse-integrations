@@ -345,6 +345,14 @@ WHERE RELATIVE_PATH LIKE '%.png' OR RELATIVE_PATH LIKE '%.jpg';
 
 ---
 
+## 次のステップ
+
+1. **最初の External Table を作成**: [設定ガイド](../../README.md#configuration-guide)に従い、ステージに `AWS_ACCESS_POINT_ARN` を設定して External Table を作成
+2. **RAG / Cortex Search 向け**: External Table ソースに `TARGET_LAG = '1 hour'` の Dynamic Table を設定し、Cortex Search Service を作成
+3. **イベント駆動取り込み向け**: FPolicy → Lambda → Snowpipe REST API をデプロイ（[Snowpipe 統合ガイド](snowpipe-integration.md)）
+
+---
+
 ## 参考資料
 
 - [COPY INTO <table>](https://docs.snowflake.com/en/sql-reference/sql/copy-into-table) — ステージからテーブルへのデータロード

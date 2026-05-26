@@ -345,6 +345,14 @@ These operations work directly on FSx for ONTAP S3 AP External Tables — no dat
 
 ---
 
+## Next Steps
+
+1. **Create your first External Table**: Follow the [Configuration Guide](../../README.md#configuration-guide) — set `AWS_ACCESS_POINT_ARN` on your stage and create an External Table
+2. **For RAG / Cortex Search**: Set up a Dynamic Table with `TARGET_LAG = '1 hour'` on your External Table source, then create a Cortex Search Service
+3. **For event-driven ingestion**: Deploy FPolicy → Lambda → Snowpipe REST API ([Snowpipe Integration Guide](snowpipe-integration.md))
+
+---
+
 ## References
 
 - [COPY INTO <table>](https://docs.snowflake.com/en/sql-reference/sql/copy-into-table) — Load data from stage to table

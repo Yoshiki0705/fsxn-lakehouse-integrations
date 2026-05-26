@@ -816,6 +816,14 @@ Delta Sharing
 
 ---
 
+## 次のステップ
+
+1. **Pattern A PoC を開始**: FSx for ONTAP S3 AP で ListObjectsV2 を呼び出す Lambda 関数をデプロイし、メタデータを S3 上の Delta Table に書き込み、Delta Sharing で公開
+2. **Databricks への即時アクセス**: SnapMirror → S3 → UC External Location を設定して完全ガバナンスを実現（[README 設定ガイド](../../README.md#quick-start)）
+3. **Databricks 機能ギャップを追跡**: UC エンジニアリングの FSx for ONTAP S3 AP ネイティブサポートへの回答を監視（2026年5月報告済み、タイムラインなし）
+
+---
+
 ## 参考資料
 
 - [Work with unstructured data in volumes](https://docs.databricks.com/aws/en/volumes/unstructured-data-tutorial) — Volume Sharing を含む完全チュートリアル
