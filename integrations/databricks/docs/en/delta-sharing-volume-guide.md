@@ -66,6 +66,15 @@ Databricks recipient
 
 **PoC success criteria:** Databricks can query a Delta Sharing table that represents FSx for ONTAP file metadata.
 
+**Production readiness checklist (Pattern A):**
+- [ ] Data freshness SLA defined (e.g., metadata table updated every N minutes/hours)
+- [ ] Failure handling: Lambda DLQ, Step Functions retry with exponential backoff
+- [ ] Monitoring: CloudWatch metrics for Lambda errors, invocation count, duration
+- [ ] Cost model: Lambda invocations × file count × schedule frequency
+- [ ] Schema evolution: How are new file types or metadata fields handled?
+- [ ] Access control: Who can query the shared metadata table? (Delta Sharing recipient permissions)
+- [ ] Operational runbook: What to do when metadata table is stale or Lambda fails
+
 ---
 
 ### Pattern B: AI-Enriched Table Sharing (RAG / Search / Analytics)
@@ -139,6 +148,16 @@ Databricks recipient (Mosaic AI, Vector Search, MLflow)
 
 **PoC success criteria:** Databricks can query AI-enriched metadata (extracted text, labels, summaries, embeddings) through Delta Sharing.
 
+**Production readiness checklist (Pattern B):**
+- [ ] AI processing pipeline SLA: End-to-end latency from file creation to searchable embedding
+- [ ] Quality gates: Embedding quality validation, OCR accuracy thresholds, hallucination detection
+- [ ] Cost model: Textract/Rekognition/Transcribe per-page/per-minute pricing × volume × frequency
+- [ ] Failure handling: Partial processing (some files fail OCR), retry logic, poison message handling
+- [ ] Data lineage: Track which source file produced which embedding/summary (for audit and reprocessing)
+- [ ] Incremental processing: Only process new/modified files (avoid full reprocessing on each run)
+- [ ] Monitoring: Processing success rate, embedding drift detection, pipeline lag metrics
+- [ ] Security: Ensure AI services do not retain customer data; validate data residency for regulated content
+
 ---
 
 ### Pattern C: Raw File Sharing via UC Volumes (Requires Databricks Enhancement)
@@ -172,6 +191,23 @@ Delta Sharing (Volume Sharing)
   ↓
 Databricks recipient
 ```
+
+**Production design for SnapMirror → S3 → UC path:**
+
+This is the **fully supported, production-ready path** for Databricks + FSx for ONTAP today. It provides full Unity Catalog governance, Delta Lake ACID, Mosaic AI, and Feature Store capabilities.
+
+| Component | Design Decision | Rationale |
+|-----------|----------------|-----------|
+| Sync mechanism | SnapMirror to S3 (preferred) or DataSync | SnapMirror: ONTAP-native, incremental, minute-level RPO. DataSync: AWS-native, scheduled |
+| S3 bucket design | `s3://fsxn-lakehouse-<env>/raw/`, `/bronze/`, `/silver/`, `/gold/` | Medallion architecture for progressive refinement |
+| UC Catalog structure | `fsxn_lakehouse.raw.*`, `fsxn_lakehouse.curated.*` | Separate raw ingestion from governed consumption |
+| Delta Table design | Managed Tables (UC controls lifecycle) | Enables OPTIMIZE, VACUUM, Time Travel, Z-ORDER |
+| Ingestion | Auto Loader (Directory Listing mode on S3 bucket) | Incremental, exactly-once, schema evolution |
+| Governance | UC Tags + Row Access Policies + Column Masks | Full enterprise governance on synced data |
+| AI/ML | Mosaic AI, Feature Store, MLflow on Delta Tables | Full platform capabilities available |
+| Cost | FSx storage + S3 storage + Databricks compute | Accept duplication cost for full platform value |
+
+> **Key insight for Databricks customers**: The SnapMirror → S3 → UC path is not a workaround — it is the **recommended production architecture** confirmed by Databricks Support (May 2026). It provides capabilities that zero-copy paths cannot: ACID transactions, Time Travel, MERGE, OPTIMIZE, full Mosaic AI, and enterprise governance. The trade-off is data duplication and sync latency.
 
 **What works today (with S3 copy):**
 
@@ -715,6 +751,25 @@ This is ETL by definition. The "E" (Extract) is reading from FSx for ONTAP. The 
 The only scenario where no data copy occurs is **Pattern C** (UC Volume Sharing) — but this requires Databricks to support FSx for ONTAP S3 AP as a first-class UC storage location. Volume Sharing shares file references, not table data, so no Delta commit log is needed.
 
 **Current status**: Blocked — awaiting Databricks UC feature development (reported May 2026, no timeline).
+
+### Alternative: OSS Delta Sharing Server with direct Parquet reference (experimental)
+
+The [OSS Delta Sharing server](https://github.com/delta-io/delta-sharing) supports sharing Parquet files without a full Delta commit log. If FSx for ONTAP S3 AP already contains well-structured Parquet files with known schemas, it may be possible to configure the OSS server to expose them as shared tables.
+
+**How it could work:**
+1. Parquet files exist on FSx for ONTAP (written by ETL jobs, NFS clients, or other engines)
+2. OSS Delta Sharing server is configured with a `delta-sharing-server.yaml` pointing to the S3 AP paths
+3. Recipients query the shared "table" through the Delta Sharing protocol
+
+**Constraints and risks:**
+- No ACID guarantees (no commit log = no transaction isolation)
+- No schema evolution tracking (schema must be managed externally)
+- No Time Travel or versioning
+- Concurrent writes to the same Parquet files could produce inconsistent reads
+- The OSS server must be able to generate presigned URLs for the S3 AP paths (requires IAM role with S3 AP access)
+- This is NOT a Databricks-supported path — it bypasses Unity Catalog entirely
+
+**When to consider**: Only when the requirement is "expose existing Parquet files on FSx for ONTAP to external consumers without any data movement" AND governance/ACID requirements are minimal. For production workloads requiring governance, use the SnapMirror → S3 → UC path instead.
 
 ---
 
