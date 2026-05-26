@@ -235,6 +235,18 @@ This is the **fully supported, production-ready path** for Databricks + FSx for 
 
 > **For manufacturing use cases**: "How long until factory floor images appear in Databricks?" — With SnapMirror 5-min schedule + Auto Loader 5-min polling, the answer is "within 10 minutes." For near-real-time requirements (<1 min), use FPolicy → Lambda → S3 path.
 
+**Representative cost estimate (SnapMirror → S3 → UC path):**
+
+| Component | 1 TB dataset | 10 TB dataset | Notes |
+|-----------|---|---|---|
+| SnapMirror to S3 | Included in FSx throughput | Included | No additional cost (uses provisioned throughput) |
+| S3 Standard storage | ~$23/month | ~$230/month | Stores synced copy of FSx for ONTAP data |
+| Auto Loader (Jobs compute) | ~$5-10/month | ~$15-30/month | Few minutes/day of job cluster |
+| Delta Table overhead | ~$2-5/month | ~$10-20/month | Metadata, transaction logs, versions |
+| **Total additional cost** | **~$30-40/month** | **~$260-280/month** | Beyond existing FSx for ONTAP cost |
+
+> This is the cost of "full Databricks platform capabilities" (ACID, Time Travel, Mosaic AI, governance). Compare with zero-copy paths (Athena, Snowflake External Table) which add $0 storage cost but lack these capabilities.
+
 > **Key insight for Databricks customers**: The SnapMirror → S3 → UC path is not a workaround — it is the **recommended production architecture** confirmed by Databricks Support (May 2026). It provides capabilities that zero-copy paths cannot: ACID transactions, Time Travel, MERGE, OPTIMIZE, full Mosaic AI, and enterprise governance. The trade-off is data duplication and sync latency.
 
 > **ONTAP value in this pattern**: SnapMirror provides ONTAP-native incremental replication to S3 — more efficient than DataSync for large-scale continuous sync. Only changed blocks are transferred, reducing bandwidth and cost. Combined with FabricPool, cold data on FSx for ONTAP is automatically tiered to S3 (transparent to NFS/SMB users), further reducing storage costs.

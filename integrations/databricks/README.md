@@ -263,14 +263,15 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 
 ### AI Readiness Score
 
-| Pattern | Governance | Performance | AI Capability | Cost | Operational Simplicity | Overall |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Athena + FSx S3 AP** | ★★★☆☆ | ★★★★☆ | ★☆☆☆☆ (SQL only) | ★★★★★ | ★★★★★ | **3.6** |
-| **Snowflake External Table** | ★★★★☆ | ★★★☆☆ | ★★★★☆ (Cortex AI) | ★★★★★ | ★★★★☆ | **4.0** |
-| **Staged to S3 → UC Table** | ★★★★★ | ★★★★★ | ★★★★★ (full Mosaic AI) | ★★☆☆☆ | ★★☆☆☆ | **3.8** |
-| **boto3 PoC (Databricks)** | ★☆☆☆☆ | ★★☆☆☆ | ★★★☆☆ (driver-only) | ★★★★★ | ★★★☆☆ | **2.8** |
-| **Bedrock KB + FSx S3 AP** | ★★★☆☆ | ★★★★☆ | ★★★★☆ (RAG) | ★★★★☆ | ★★★★☆ | **3.8** |
+| Pattern | Access Pattern | Governance | Performance | AI Capability | Cost | Operational Simplicity | Overall |
+|---|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Athena + FSx S3 AP** | Zero-copy | ★★★☆☆ | ★★★★☆ | ★☆☆☆☆ (SQL only) | ★★★★★ | ★★★★★ | **3.6** |
+| **Snowflake External Table** | Zero-copy | ★★★★☆ | ★★★☆☆ | ★★★★☆ (Cortex AI) | ★★★★★ | ★★★★☆ | **4.0** |
+| **Staged to S3 → UC Table** | With S3 sync | ★★★★★ | ★★★★★ | ★★★★★ (full Mosaic AI) | ★★☆☆☆ | ★★☆☆☆ | **3.8** |
+| **boto3 PoC (Databricks)** | Zero-copy (no governance) | ★☆☆☆☆ | ★★☆☆☆ | ★★★☆☆ (driver-only) | ★★★★★ | ★★★☆☆ | **2.8** |
+| **Bedrock KB + FSx S3 AP** | Zero-copy | ★★★☆☆ | ★★★★☆ | ★★★★☆ (RAG) | ★★★★☆ | ★★★★☆ | **3.8** |
 
+- **Access Pattern**: Whether data is read directly from FSx for ONTAP S3 AP (zero-copy) or requires sync to S3 first
 - **Governance**: UC lineage, tags, masking, row filters
 - **Performance**: Query latency, distributed processing
 - **AI Capability**: Breadth of AI/ML functions available
