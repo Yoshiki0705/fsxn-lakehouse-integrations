@@ -1,8 +1,8 @@
 🌐 **English** | [日本語](../ja/ai-demo-guide.md)
 
-# Databricks AI/ML Demo Guide — FSx for ONTAP S3 AP
+# Databricks Analytics & AI Demo Guide — FSx for ONTAP S3 AP
 
-This guide documents AI/ML capabilities and their current status when accessing FSx for ONTAP data from Databricks via S3 Access Points.
+This guide documents analytics and AI/ML capabilities and their current status when accessing FSx for ONTAP data from Databricks via S3 Access Points.
 
 > 📖 For a detailed comparison of **Managed Table vs External Table** including current limitations and recommended patterns, see the [Managed Table vs External Table Design Guide](../../README.md#managed-table-vs-external-table--design-guide).
 

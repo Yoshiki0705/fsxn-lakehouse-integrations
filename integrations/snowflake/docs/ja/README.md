@@ -68,7 +68,7 @@ FSx for ONTAP と Snowflake を統合する際、内部（マネージド）テ�
 
 > **主要概念**: [外部ステージ](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage)（S3/クラウドストレージ）| [内部ステージ](https://docs.snowflake.com/en/user-guide/data-load-local-file-system-create-stage)（Snowflake マネージド）| [外部テーブル](https://docs.snowflake.com/en/user-guide/tables-external)（ステージから読み取り）| [COPY INTO](https://docs.snowflake.com/en/sql-reference/sql/copy-into-table)（内部テーブルにロード）
 >
-> AI/ML 固有の影響（各パターンでどの Cortex 関数が動作するか）については [AI/ML デモガイド](ai-demo-guide.md) の互換性マトリクスを参照。
+> 分析および AI/ML 固有の影響（各パターンでどの Cortex 関数が動作するか）については [Analytics & AI デモガイド](ai-demo-guide.md) の互換性マトリクスを参照。
 
 ### 比較マトリクス
 
@@ -260,7 +260,7 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 
 | ガイド | 説明 |
 |---|---|
-| [AI/ML デモガイド](ai-demo-guide.md) | Cortex AI デモ（OCR、SUMMARIZE、Vision）、業界別ユースケース、AI 向け ONTAP 価値 |
+| [Analytics & AI デモガイド](ai-demo-guide.md) | 分析 & AI 機能（Cortex AI、OCR、Vision）、業界別ユースケース、ONTAP 価値 |
 | [ガバナンス: タグとデータ保護](ai-demo-guide.md#ガバナンスタグとデータ保護) | Tag-based masking、Row Access Policy、エディション要件 |
 | [ガバナンス: ファイルレベルアクセス制御](ai-demo-guide.md#ファイルレベルのアクセス制御-ontap-ネイティブレイヤー) | ONTAP デュアルレイヤー認可、FPolicy、コンシューマーごとの S3 AP 分離 |
 | [統合: ONTAP × Snowflake タグ](ai-demo-guide.md#統合-ontap-ファイルレベル制御--snowflake-タグガバナンス) | 組み合わせガバナンスマトリクス、設計パターン、フロー図 |

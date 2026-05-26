@@ -164,7 +164,7 @@ Unity Catalog におけるマネージドテーブルと外部テーブルの違
 
 > **主要概念**: [外部テーブル](https://docs.databricks.com/aws/en/tables/external)（UC がメタデータのみ管理）| [マネージドテーブル](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external)（UC が両方管理）| [External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)（クラウドパスをクレデンシャルにマッピング）
 >
-> AI/ML 固有の影響については [AI/ML デモガイド](ai-demo-guide.md) を参照。
+> 分析および AI/ML 固有の影響については [Analytics & AI デモガイド](ai-demo-guide.md) を参照。
 
 ### 比較マトリクス
 
@@ -312,7 +312,7 @@ FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
 
 | ガイド | 説明 |
 |---|---|
-| [AI/ML デモガイド](ai-demo-guide.md) | 現在のステータス、動作するデモ、ブロックされたパス、将来の機能 |
+| [Analytics & AI デモガイド](ai-demo-guide.md) | 分析 & AI 機能、現在のステータス、動作するデモ、ブロックされたパス |
 | [ガバナンス: タグとデータ保護 (ABAC)](ai-demo-guide.md#ガバナンスタグとデータ保護-abac) | UC ABAC、Governed Tags、カラムマスク、Row Filter — 現在の制限 |
 | [ガバナンス: ファイルレベルアクセス制御](ai-demo-guide.md#ファイルレベルのアクセス制御-ontap-ネイティブレイヤー) | ONTAP デュアルレイヤー認可、FPolicy、チームごとの S3 AP 分離（補償コントロール） |
 | [統合: ONTAP × Databricks タグ](ai-demo-guide.md#統合-ontap-ファイルレベル制御--databricks-タグガバナンス) | 組み合わせガバナンスマトリクス、現在 vs 将来、設計パターン |

@@ -1,8 +1,8 @@
 🌐 **English** | [日本語](../ja/ai-demo-guide.md)
 
-# Snowflake Cortex AI Demo Guide — FSx for ONTAP S3 AP
+# Snowflake Analytics & AI Demo Guide — FSx for ONTAP S3 AP
 
-This guide demonstrates AI/ML capabilities on FSx for ONTAP data accessed via Snowflake [External Stage](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage) with `AWS_ACCESS_POINT_ARN`.
+This guide demonstrates analytics and AI/ML capabilities on FSx for ONTAP data accessed via Snowflake [External Stage](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage) with `AWS_ACCESS_POINT_ARN`.
 
 > 📖 For a detailed comparison of **External Table vs Internal Table** (zero-copy vs COPY INTO) including decision flowchart and cost analysis, see the [Internal Table vs External Table Design Guide](../../README.md#internal-table-vs-external-table--design-guide).
 
