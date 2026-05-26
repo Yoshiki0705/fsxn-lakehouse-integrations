@@ -275,6 +275,21 @@ WHERE RELATIVE_PATH LIKE '%.png' OR RELATIVE_PATH LIKE '%.jpg';
 
 ## 判断フレームワーク
 
+**クイック判断テーブル** — あなたの要件を見つけて推奨に従ってください:
+
+| あなたの要件 | 答え | データ移動 |
+|---|---|---|
+| 「SQL クエリだけできればいい」 | → External Table（ゼロコピー） | なし |
+| 「テキスト AI（要約、翻訳、感情分析）が必要」 | → External Table（ゼロコピー） | なし |
+| 「ガバナンスタグとマスキングが必要」 | → External Table（ゼロコピー） | なし |
+| 「Cortex Search / RAG が必要」 | → Dynamic Table or COPY INTO | 全量コピー |
+| 「Vision AI（画像分析）が必要」 | → COPY FILES → 内部ステージ | ファイルコピー |
+| 「DML (INSERT/UPDATE/DELETE) が必要」 | → COPY INTO 内部テーブル | 全量コピー |
+| 「Time Travel が必要」 | → COPY INTO 内部テーブル | 全量コピー |
+| 「高性能クエリ（クラスタリング）が必要」 | → COPY INTO 内部テーブル | 全量コピー |
+
+**詳細フローチャート:**
+
 ```
                     ┌─────────────────────────┐
                     │ 何が必要ですか？         │
