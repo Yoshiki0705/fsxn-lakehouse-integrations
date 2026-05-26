@@ -1,3 +1,5 @@
+🌐 [English](../en/snowpipe-integration.md) | **日本語**
+
 # Snowpipe + FSx for ONTAP 統合ガイド
 
 ## 概要

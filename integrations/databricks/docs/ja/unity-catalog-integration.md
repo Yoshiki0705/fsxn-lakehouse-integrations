@@ -1,3 +1,5 @@
+🌐 [English](../en/unity-catalog-integration.md) | **日本語**
+
 # Unity Catalog 統合詳細
 
 ## 概要
