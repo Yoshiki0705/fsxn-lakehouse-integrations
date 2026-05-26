@@ -183,3 +183,4 @@ logs/
 .Trashes
 ehthumbs.db
 Desktop.ini
+.private-evidence-record.yaml
