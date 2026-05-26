@@ -109,6 +109,22 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 
 ---
 
+## Partner Quick Reference: Which Engine for Which Customer?
+
+| Customer's first question | Recommended engine | Part | Access Pattern | Governance | PoC Cost (1 day) |
+|---|---|:---:|---|---|---|
+| "Cheapest way to query NAS data" | DuckDB Lambda | 4 | Zero-copy | None (IAM only) | ~$0.01 |
+| "Serverless SQL, no infrastructure" | Athena | 1 | Zero-copy | Glue + Lake Formation | ~$0.05 |
+| "Need Spark ETL with write-back" | EMR Serverless | 5 | Zero-copy (read) + write to FSx for ONTAP | IAM | ~$0.50 |
+| "Need DWH JOINs + enterprise governance" | Redshift Spectrum + Lake Formation | 6 | Zero-copy | Lake Formation (column/row/tag) | ~$1.50 |
+| "Need AI/ML + governed external tables" | Snowflake | 3 | Zero-copy | Snowflake RBAC + Tags | ~$5 |
+| "Already use Databricks, need full UC" | DataSync → S3 → UC | 2 | With S3 sync | Unity Catalog (full) | ~$10 |
+| "Can we use Delta/Iceberg on FSx for ONTAP?" | No — read from FSx for ONTAP, write to S3 | 7 | Read: zero-copy, Write: S3 | Depends on engine | ~$0.50 |
+
+> **How to use this table**: Find the customer's primary question in the left column. The recommended engine and Part number give you the starting point. PoC cost is for a 1-day validation — enough to confirm the pattern works in the customer's environment.
+
+---
+
 ## Use Cases / ユースケース
 
 | Industry | Use Case | Key Pattern | Deployment Considerations |
