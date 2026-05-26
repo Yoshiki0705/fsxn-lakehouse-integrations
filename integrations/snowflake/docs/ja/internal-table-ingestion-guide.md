@@ -78,13 +78,13 @@ FSx for ONTAP S3 AP 上の Snowflake External Table は**ガバナンス付き�
 ```
 FSx for ONTAP (NFS/SMB)          Snowflake 内部テーブル
    ┌─────────────────┐              ┌─────────────────┐
-   │ Source of Truth  │──COPY INTO──▶│ 分析用コピー    │
-   │ (マルチプロトコル) │              │ (全機能利用可)  │
+   │ Source of Truth │──COPY INTO──▶│ 分析用コピー      │
+   │ (マルチプロトコル) │              │ (全機能利用可.)   │
    └─────────────────┘              └─────────────────┘
          │                                   │
     NFS/SMB で更新                      同期が必要
          │                                   │
-    ▼ 課題 ▼                            ▼ 課題 ▼
+     ▼ 課題 ▼                             ▼ 課題 ▼
   - S3 Event Notifications なし       - データ鮮度リスク
   - 変更検知はポーリング              - ストレージコスト
   - 削除が自動伝播されない            - コンピュートコスト
