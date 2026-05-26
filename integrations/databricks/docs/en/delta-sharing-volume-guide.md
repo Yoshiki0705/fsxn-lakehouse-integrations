@@ -313,6 +313,108 @@ Phase 3: Pattern C — Blocked (Databricks Feature Development Required)
 
 ---
 
+## FAQ: Why Can't We Just "Create a Delta Table on EC2" Without ETL?
+
+A common misconception is that Delta Sharing is purely a metadata problem — that you can simply point a Delta Table at FSx for ONTAP files and share them without any ETL or data movement. This section explains why that is not the case, with references to Databricks documentation.
+
+### Misconception: "Delta Sharing is just metadata, so create a Delta Table on EC2 and share it"
+
+**The assumption**: FSx for ONTAP stores files → an EC2 instance creates a Delta Table pointing to those files → Delta Sharing exposes the table → Databricks reads it. No ETL, no copy.
+
+**Why this doesn't work with FSx for ONTAP S3 Access Points:**
+
+#### 1. Delta Table ≠ a pointer to arbitrary files
+
+A Delta Table is not just metadata pointing to existing files. It is a **specific storage format** consisting of:
+- Parquet data files (the actual data)
+- A `_delta_log/` directory containing JSON commit files (transaction log)
+
+The transaction log records every change to the table and is what provides ACID guarantees. Creating a Delta Table requires **writing** both the Parquet files and the commit log to the storage location.
+
+Reference: [What are ACID guarantees on Databricks?](https://docs.databricks.com/aws/lakehouse/acid) — "Databricks uses Delta Lake by default for all reads and writes and builds upon the ACID guarantees provided by the open source Delta Lake protocol."
+
+#### 2. Delta Lake commit protocol requires conditional writes
+
+Delta Lake's commit protocol on S3 requires either:
+- **put-if-absent** (conditional write) semantics, OR
+- A **DynamoDB-based commit coordinator** (for multi-cluster writes)
+
+FSx for ONTAP S3 Access Points **do not support conditional writes** (`If-None-Match` header returns "not supported"). This means:
+- You cannot safely write Delta commit logs to FSx for ONTAP S3 AP
+- Concurrent writers would corrupt the transaction log
+- Even a single writer cannot guarantee atomic commits
+
+Reference: [Multi-cluster writes to Delta Lake on S3](https://delta.io/blog/2022-05-18-multi-cluster-writes-to-delta-lake-storage-in-s3/) — "S3 currently lacks 'put-If-Absent' consistency guarantees. Thus, to guarantee ACID transactions on S3, one would need to have concurrent writes originating from the same Apache Spark driver."
+
+Reference: [Delta Lake storage configuration](http://docs.delta.io/latest/delta-storage.html) — "Delta Lake uses the scheme of the path to dynamically identify the storage system and use the corresponding LogStore implementation that provides the transactional guarantees."
+
+#### 3. Delta Lake on S3 requires specific IAM permissions for `_delta_log`
+
+Even on standard S3, Delta Lake requires specific permissions beyond basic read/write:
+- `s3:PutObject` for data files AND commit log files
+- `s3:GetObject` for reading the latest commit version
+- `s3:ListBucket` for discovering commit log entries
+- `s3:DeleteObject` for vacuum operations
+
+On FSx for ONTAP S3 AP, the UC session policy blocks `PutObject` and subdirectory `ListBucket` — making Delta Table creation impossible under UC governance.
+
+Reference: [Access denied when writing Delta Lake tables to S3](https://kb.databricks.com/en_US/delta/s3-permissions-delta) — "Delta Lake requires creation of a _delta_log directory. The write operation also needs to check the latest version of the commit logs."
+
+#### 4. Delta Sharing requires the table to be registered in Unity Catalog
+
+Delta Sharing (Databricks-to-Databricks protocol) shares tables that are **registered in Unity Catalog**. A table registered in UC must reside in either:
+- A **UC Managed Storage** location (Databricks-managed S3 bucket), OR
+- A **UC External Location** (customer S3 bucket registered with Storage Credential)
+
+FSx for ONTAP S3 AP cannot be registered as a UC External Location (confirmed by Databricks Support, May 2026). Therefore, even if you could create a Delta Table on FSx for ONTAP S3 AP, you could not register it in UC for sharing.
+
+Reference: [Create and manage shares for Delta Sharing](https://docs.databricks.com/en/delta-sharing/create-share.html) — Shares can contain tables from "only one Unity Catalog metastore."
+
+Reference: [What is the Delta Sharing Databricks-to-Databricks protocol?](https://docs.databricks.com/aws/en/delta-sharing/share-data-databricks) — Requires UC-enabled workspace and UC-registered assets.
+
+#### 5. OSS Delta Sharing Server still needs a valid Delta Table
+
+Even using the [OSS Delta Sharing server](https://github.com/delta-io/delta-sharing) (bypassing UC), the server must point to a valid Delta Table with a consistent `_delta_log`. The same storage requirements apply — you need a storage backend that supports the Delta commit protocol.
+
+### What "creating a Delta Table on EC2" actually means
+
+If you run a Spark job on EC2 that reads files from FSx for ONTAP S3 AP and writes a Delta Table, you are performing ETL:
+
+```
+FSx for ONTAP S3 AP (source files: CSV, Parquet, JSON, images)
+  ↓ GetObject (read)
+EC2 / EMR / Glue (Spark job)
+  ↓ spark.read → transform → spark.write.format("delta")
+S3 bucket (Delta Table: Parquet files + _delta_log/)
+  ↓ Register in UC
+Delta Sharing
+```
+
+This is **not** "just metadata" — it is:
+1. **Reading** source files from FSx for ONTAP S3 AP (GetObject)
+2. **Transforming** them into Parquet format with Delta schema
+3. **Writing** Parquet data files + commit log to a different storage location (S3 bucket)
+4. **Registering** the table in Unity Catalog
+
+This is ETL by definition. The "E" (Extract) is reading from FSx for ONTAP. The "T" (Transform) is converting to Delta format. The "L" (Load) is writing to S3.
+
+### Summary: Why S3 bucket is required
+
+| Step | Why FSx for ONTAP S3 AP alone is insufficient |
+|------|---|
+| Write Delta commit log | Conditional writes not supported on FSx for ONTAP S3 AP |
+| Register in UC | UC External Location does not support S3 AP ARNs |
+| Multi-cluster safety | No DynamoDB LogStore equivalent for FSx for ONTAP S3 AP |
+| Delta Sharing | Requires UC-registered table or valid Delta Table on supported storage |
+
+### The only true "Zero Copy" path
+
+The only scenario where no data copy occurs is **Pattern C** (UC Volume Sharing) — but this requires Databricks to support FSx for ONTAP S3 AP as a first-class UC storage location. Volume Sharing shares file references, not table data, so no Delta commit log is needed.
+
+**Current status**: Blocked — awaiting Databricks UC feature development (reported May 2026, no timeline).
+
+---
+
 ## References
 
 - [Work with unstructured data in volumes](https://docs.databricks.com/aws/en/volumes/unstructured-data-tutorial) — Complete tutorial including Volume Sharing
