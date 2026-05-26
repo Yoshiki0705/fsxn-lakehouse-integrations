@@ -160,9 +160,9 @@ AS
 
 参照: [Snowpipe REST API](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-rest-apis), [FPolicy](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html)
 
-### パターン 3: Dynamic Table（自動変換）
+### パターン 3: Dynamic Table（自動変換） — 推奨
 
-最適用途: External Table ソースからの継続的変換パイプライン。
+最適用途: External Table ソースからの継続的変換パイプライン。**最も Snowflake ネイティブなアプローチ** — 宣言的、自動管理、SELECT 句で Cortex AI 関数をサポート（2025年9月 GA）。
 
 ```sql
 -- Dynamic Table: External Table から読み取り、内部として実体化
@@ -184,6 +184,12 @@ AS
 参照: [Dynamic Tables](https://docs.snowflake.com/en/user-guide/dynamic-tables-intro)
 
 > **注意**: Dynamic Table は External Table をソースとして使用可能（全量リフレッシュモード）。増分リフレッシュには変更追跡が必要で、External Table では利用不可。
+
+> **Dynamic Table が COPY INTO + Task より推奨される理由**:
+> - **宣言的**: TARGET_LAG（例: '1 hour'）を定義すれば Snowflake がリフレッシュスケジュールを自動管理
+> - **Cortex AI 統合**: Dynamic Table の SELECT 句で CORTEX.SUMMARIZE、CORTEX.SENTIMENT 等を直接使用可能（[2025年9月 GA](https://docs.snowflake.com/en/release-notes/2025/other/2025-09-11-dynamic-tables-cortex-aisql-support)）
+> - **運用オーバーヘッドなし**: Task スケジューリング、COPY INTO 重複排除ロジック、手動エラーハンドリングが不要
+> - **チェーニング**: Dynamic Table は他の Dynamic Table を参照可能（Bronze → Silver → Gold のマルチステージパイプライン）
 
 ### パターン 4: COPY INTO + Cortex Search（RAG パイプライン）
 

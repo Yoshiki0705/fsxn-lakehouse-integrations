@@ -207,6 +207,17 @@ Databricks 受信者
 | AI/ML | Mosaic AI, Feature Store, MLflow（Delta Tables 上） | プラットフォームの全機能が利用可能 |
 | コスト | FSx ストレージ + S3 ストレージ + Databricks コンピュート | プラットフォーム全機能のために重複コストを受容 |
 
+**エンドツーエンドデータ鮮度モデル:**
+
+| 同期パターン | SnapMirror RPO | Auto Loader 検出 | UC テーブル反映 | 合計ラグ |
+|---|---|---|---|---|
+| SnapMirror (5分) + Auto Loader (5分ポーリング) | 5分 | 5分 | <1分 | **最大約10分** |
+| SnapMirror (1分) + Auto Loader (1分ポーリング) | 1分 | 1分 | <1分 | **最大約2-3分** |
+| FPolicy → Lambda → S3 + Auto Loader (File Notification) | リアルタイム | 秒（SQS） | <1分 | **約30秒** |
+| DataSync (時間スケジュール) + Auto Loader (5分ポーリング) | 60分 | 5分 | <1分 | **最大約65分** |
+
+> **製造業ユースケース向け**: 「工場の画像データが Databricks で見えるまで何分かかるか？」— SnapMirror 5分スケジュール + Auto Loader 5分ポーリングで「10分以内」。準リアルタイム要件（<1分）には FPolicy → Lambda → S3 パスを使用。
+
 > **Databricks 顧客への重要な洞察**: SnapMirror → S3 → UC パスは回避策ではなく、Databricks サポートが確認した**推奨本番アーキテクチャ**（2026年5月）です。ゼロコピーパスでは得られない機能を提供します: ACID トランザクション、Time Travel、MERGE、OPTIMIZE、完全な Mosaic AI、エンタープライズガバナンス。トレードオフはデータ重複と同期レイテンシです。
 
 **現在動作するもの（S3 コピーあり）:**
@@ -754,7 +765,7 @@ Delta Sharing
 
 **現在のステータス**: ブロック中 — Databricks UC 機能開発待ち（2026 年 5 月報告済み、タイムラインなし）。
 
-### 代替案: OSS Delta Sharing Server による Parquet 直接参照（実験的）
+### 代替案: OSS Delta Sharing Server による Parquet 直接参照（実験的、未検証）
 
 [OSS Delta Sharing サーバー](https://github.com/delta-io/delta-sharing)は、完全な Delta コミットログなしで Parquet ファイルを共有することをサポートしています。FSx for ONTAP S3 AP 上に既知のスキーマを持つ構造化された Parquet ファイルが既に存在する場合、OSS サーバーがそれらを共有テーブルとして公開できる可能性があります。
 
@@ -772,6 +783,8 @@ Delta Sharing
 - これは Databricks サポート対象パスではない — Unity Catalog を完全にバイパス
 
 **検討すべき場面**: 「FSx for ONTAP 上の既存 Parquet ファイルをデータ移動なしで外部消費者に公開する」要件があり、かつガバナンス/ACID 要件が最小限の場合のみ。ガバナンスが必要な本番ワークロードには、SnapMirror → S3 → UC パスを使用してください。
+
+> **検証ステータス**: このアプローチは FSx for ONTAP S3 Access Points に対して**未検証**です。Pattern A PoC 検証の一環として検証予定の理論的代替案として記載しています。主な未知数: OSS サーバーが FSx for ONTAP S3 AP パスの有効な署名付き URL を生成できるか、ListObjectsV2 レイテンシが共有プロトコルのファイル検出に影響するか。
 
 ---
 

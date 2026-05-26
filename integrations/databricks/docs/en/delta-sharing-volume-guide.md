@@ -207,6 +207,17 @@ This is the **fully supported, production-ready path** for Databricks + FSx for 
 | AI/ML | Mosaic AI, Feature Store, MLflow on Delta Tables | Full platform capabilities available |
 | Cost | FSx storage + S3 storage + Databricks compute | Accept duplication cost for full platform value |
 
+**End-to-end data freshness model:**
+
+| Sync Pattern | SnapMirror RPO | Auto Loader Detection | UC Table Available | Total Lag |
+|---|---|---|---|---|
+| SnapMirror (5 min) + Auto Loader (5 min poll) | 5 min | 5 min | <1 min | **~10 min max** |
+| SnapMirror (1 min) + Auto Loader (1 min poll) | 1 min | 1 min | <1 min | **~2-3 min max** |
+| FPolicy → Lambda → S3 + Auto Loader (File Notification) | Real-time | Seconds (SQS) | <1 min | **~30 sec** |
+| DataSync (hourly schedule) + Auto Loader (5 min poll) | 60 min | 5 min | <1 min | **~65 min max** |
+
+> **For manufacturing use cases**: "How long until factory floor images appear in Databricks?" — With SnapMirror 5-min schedule + Auto Loader 5-min polling, the answer is "within 10 minutes." For near-real-time requirements (<1 min), use FPolicy → Lambda → S3 path.
+
 > **Key insight for Databricks customers**: The SnapMirror → S3 → UC path is not a workaround — it is the **recommended production architecture** confirmed by Databricks Support (May 2026). It provides capabilities that zero-copy paths cannot: ACID transactions, Time Travel, MERGE, OPTIMIZE, full Mosaic AI, and enterprise governance. The trade-off is data duplication and sync latency.
 
 **What works today (with S3 copy):**
@@ -752,7 +763,7 @@ The only scenario where no data copy occurs is **Pattern C** (UC Volume Sharing)
 
 **Current status**: Blocked — awaiting Databricks UC feature development (reported May 2026, no timeline).
 
-### Alternative: OSS Delta Sharing Server with direct Parquet reference (experimental)
+### Alternative: OSS Delta Sharing Server with direct Parquet reference (experimental, unverified)
 
 The [OSS Delta Sharing server](https://github.com/delta-io/delta-sharing) supports sharing Parquet files without a full Delta commit log. If FSx for ONTAP S3 AP already contains well-structured Parquet files with known schemas, it may be possible to configure the OSS server to expose them as shared tables.
 
@@ -770,6 +781,8 @@ The [OSS Delta Sharing server](https://github.com/delta-io/delta-sharing) suppor
 - This is NOT a Databricks-supported path — it bypasses Unity Catalog entirely
 
 **When to consider**: Only when the requirement is "expose existing Parquet files on FSx for ONTAP to external consumers without any data movement" AND governance/ACID requirements are minimal. For production workloads requiring governance, use the SnapMirror → S3 → UC path instead.
+
+> **Verification status**: This approach has NOT been validated against FSx for ONTAP S3 Access Points. It is documented as a theoretical alternative pending Pattern A PoC validation. Key unknowns: whether the OSS server can generate valid presigned URLs for FSx for ONTAP S3 AP paths, and whether ListObjectsV2 latency impacts the sharing protocol's file discovery.
 
 ---
 
