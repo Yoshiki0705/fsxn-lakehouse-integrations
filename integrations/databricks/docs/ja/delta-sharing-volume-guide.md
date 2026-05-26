@@ -66,6 +66,15 @@ Databricks 受信者
 
 **PoC 成功基準:** Databricks が FSx for ONTAP ファイルメタデータを表す Delta Sharing テーブルをクエリできること。
 
+**本番化チェックリスト (Pattern A):**
+- [ ] データ鮮度 SLA 定義（例: メタデータテーブルを N 分/時間ごとに更新）
+- [ ] 障害ハンドリング: Lambda DLQ、Step Functions 指数バックオフリトライ
+- [ ] 監視: CloudWatch メトリクス（Lambda エラー、呼び出し回数、実行時間）
+- [ ] コストモデル: Lambda 呼び出し × ファイル数 × スケジュール頻度
+- [ ] スキーマ進化: 新しいファイルタイプやメタデータフィールドの追加方法
+- [ ] アクセス制御: 共有メタデータテーブルを誰がクエリできるか（Delta Sharing Recipient 権限）
+- [ ] 運用ランブック: メタデータテーブルが古い場合や Lambda 失敗時の対応手順
+
 ---
 
 ### Pattern B: AI 処理済みテーブル共有（RAG / 検索 / 分析）
@@ -139,6 +148,16 @@ Databricks 受信者 (Mosaic AI, Vector Search, MLflow)
 
 **PoC 成功基準:** Databricks が AI 処理済みメタデータ（抽出テキスト、ラベル、要約、embedding）を Delta Sharing 経由でクエリできること。
 
+**本番化チェックリスト (Pattern B):**
+- [ ] AI 処理パイプライン SLA: ファイル作成から検索可能な embedding までのエンドツーエンドレイテンシ
+- [ ] 品質ゲート: embedding 品質検証、OCR 精度閾値、ハルシネーション検出
+- [ ] コストモデル: Textract/Rekognition/Transcribe のページ/分単位課金 × ボリューム × 頻度
+- [ ] 障害ハンドリング: 部分処理（一部ファイルの OCR 失敗）、リトライロジック、ポイズンメッセージ処理
+- [ ] データリネージ: どのソースファイルがどの embedding/要約を生成したか追跡（監査・再処理用）
+- [ ] 増分処理: 新規/変更ファイルのみ処理（毎回の全量再処理を回避）
+- [ ] 監視: 処理成功率、embedding ドリフト検出、パイプラインラグメトリクス
+- [ ] セキュリティ: AI サービスが顧客データを保持しないことを確認; 規制コンテンツのデータレジデンシー検証
+
 ---
 
 ### Pattern C: UC Volume による Raw ファイル共有（Databricks 機能拡張が必要）
@@ -172,6 +191,23 @@ Delta Sharing (Volume Sharing)
   ↓
 Databricks 受信者
 ```
+
+**SnapMirror → S3 → UC パスの本番設計:**
+
+これは FSx for ONTAP + Databricks の**完全にサポートされた本番対応パス**です。Unity Catalog の完全なガバナンス、Delta Lake ACID、Mosaic AI、Feature Store が全て利用可能です。
+
+| コンポーネント | 設計判断 | 根拠 |
+|------------|---------|------|
+| 同期メカニズム | SnapMirror to S3（推奨）または DataSync | SnapMirror: ONTAP ネイティブ、増分、分単位 RPO。DataSync: AWS ネイティブ、スケジュール |
+| S3 バケット設計 | `s3://fsxn-lakehouse-<env>/raw/`, `/bronze/`, `/silver/`, `/gold/` | メダリオンアーキテクチャによる段階的精製 |
+| UC カタログ構造 | `fsxn_lakehouse.raw.*`, `fsxn_lakehouse.curated.*` | Raw 取り込みとガバナンス付き消費を分離 |
+| Delta Table 設計 | Managed Tables（UC がライフサイクル制御） | OPTIMIZE, VACUUM, Time Travel, Z-ORDER が有効 |
+| 取り込み | Auto Loader（S3 バケット上の Directory Listing モード） | 増分、exactly-once、スキーマ進化 |
+| ガバナンス | UC Tags + Row Access Policies + Column Masks | 同期データに完全なエンタープライズガバナンス |
+| AI/ML | Mosaic AI, Feature Store, MLflow（Delta Tables 上） | プラットフォームの全機能が利用可能 |
+| コスト | FSx ストレージ + S3 ストレージ + Databricks コンピュート | プラットフォーム全機能のために重複コストを受容 |
+
+> **Databricks 顧客への重要な洞察**: SnapMirror → S3 → UC パスは回避策ではなく、Databricks サポートが確認した**推奨本番アーキテクチャ**（2026年5月）です。ゼロコピーパスでは得られない機能を提供します: ACID トランザクション、Time Travel、MERGE、OPTIMIZE、完全な Mosaic AI、エンタープライズガバナンス。トレードオフはデータ重複と同期レイテンシです。
 
 **現在動作するもの（S3 コピーあり）:**
 
@@ -717,6 +753,25 @@ Delta Sharing
 データコピーが発生しない唯一のシナリオは **Pattern C**（UC Volume Sharing）です — ただし Databricks が FSx for ONTAP S3 AP をファーストクラスの UC ストレージロケーションとしてサポートする必要があります。Volume Sharing はテーブルデータではなくファイル参照を共有するため、Delta コミットログは不要です。
 
 **現在のステータス**: ブロック中 — Databricks UC 機能開発待ち（2026 年 5 月報告済み、タイムラインなし）。
+
+### 代替案: OSS Delta Sharing Server による Parquet 直接参照（実験的）
+
+[OSS Delta Sharing サーバー](https://github.com/delta-io/delta-sharing)は、完全な Delta コミットログなしで Parquet ファイルを共有することをサポートしています。FSx for ONTAP S3 AP 上に既知のスキーマを持つ構造化された Parquet ファイルが既に存在する場合、OSS サーバーがそれらを共有テーブルとして公開できる可能性があります。
+
+**動作の仕組み:**
+1. Parquet ファイルが FSx for ONTAP 上に存在（ETL ジョブ、NFS クライアント、他のエンジンが書き込み）
+2. OSS Delta Sharing サーバーが S3 AP パスを指す `delta-sharing-server.yaml` で設定
+3. Recipient が Delta Sharing プロトコル経由で共有「テーブル」をクエリ
+
+**制約とリスク:**
+- ACID 保証なし（コミットログなし = トランザクション分離なし）
+- スキーマ進化追跡なし（スキーマは外部管理が必要）
+- Time Travel やバージョニングなし
+- 同じ Parquet ファイルへの並行書き込みが不整合な読み取りを生む可能性
+- OSS サーバーが S3 AP パスの署名付き URL を生成できる必要あり（S3 AP アクセス権限付き IAM ロールが必要）
+- これは Databricks サポート対象パスではない — Unity Catalog を完全にバイパス
+
+**検討すべき場面**: 「FSx for ONTAP 上の既存 Parquet ファイルをデータ移動なしで外部消費者に公開する」要件があり、かつガバナンス/ACID 要件が最小限の場合のみ。ガバナンスが必要な本番ワークロードには、SnapMirror → S3 → UC パスを使用してください。
 
 ---
 
