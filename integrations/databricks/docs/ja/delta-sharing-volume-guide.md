@@ -249,6 +249,160 @@ FROM read_files(
 
 ---
 
+## 非構造化データ: Unity Catalog での Raw ファイルの扱い
+
+### 核心の質問: 画像、動画、PDF を「そのまま」使えるか？
+
+**はい — UC Volume を通じて可能です。** Unity Catalog Volume はファイルを元の形式のまま保存します。Parquet や Delta に変換されません。JPEG は JPEG のまま、PDF は PDF のままです。
+
+参照: [What are Unity Catalog volumes?](https://docs.databricks.com/aws/en/volumes/managed-vs-external) — "Volumes govern non-tabular data of any format, including structured, semi-structured, or unstructured."
+
+### UC Volume でサポートされる非構造化ファイルフォーマット
+
+| カテゴリ | ファイルフォーマット | AI 処理 | ユースケース |
+|---------|---|---|---|
+| **画像** | JPEG, PNG, GIF, BMP, TIFF, WebP, SVG, HEIC, RAW (CR2, NEF, ARW) | `ai_query()` (Vision), `ai_parse_document()` | 画像分類、品質検査、OCR |
+| **ドキュメント** | PDF, DOCX, DOC, XLSX, XLS, PPTX, PPT, ODT, ODS, ODP, RTF, TXT, MD | `ai_parse_document()`, `ai_query()` | テキスト抽出、要約、RAG |
+| **動画** | MP4, MOV, AVI, MKV, WebM, FLV, WMV, MPEG, 3GP | カスタム UDF（フレーム抽出） | 動画分析、シーン検出 |
+| **音声** | WAV, MP3, FLAC, AAC, OGG, WMA, M4A, AIFF | カスタム UDF（文字起こし） | 音声テキスト変換、話者分離 |
+| **CAD/エンジニアリング** | DWG, DXF, STEP, STL, IGES, OBJ, FBX, GLTF | カスタム UDF | 製造業、3D 分析 |
+| **医療/科学** | DICOM, NIfTI, HDF5, FITS, NetCDF | カスタム UDF | 医療画像、科学データ |
+| **地理空間** | GeoTIFF, Shapefile (.shp), GeoJSON, KML, GPX, LAS/LAZ (LiDAR) | カスタム UDF | マッピング、地形分析 |
+| **アーカイブ** | ZIP, TAR, GZ, 7Z, RAR, BZIP2 | 展開 → 内容処理 | バッチ処理 |
+| **ログ/設定** | JSON, YAML, XML, CSV, TSV, LOG, INI, TOML | `read_files()` で直接 | ログ分析、設定管理 |
+| **コード/スクリプト** | PY, JS, TS, Java, C, CPP, SQL, SH, Notebook (.ipynb) | `ai_query()` でコード分析 | コードレビュー、ドキュメント生成 |
+| **メール** | EML, MSG, MBOX, PST | カスタム UDF | E-discovery、コンプライアンス |
+| **フォント/デザイン** | TTF, OTF, WOFF, PSD, AI, INDD, SKETCH, FIG | カスタム UDF | アセット管理 |
+
+### Databricks で非構造化データが見える3つの方法
+
+#### 方法 1: UC Volume（ファイルは元の形式のまま）
+
+```
+Unity Catalog
+  └── Catalog: enterprise_data
+       └── Schema: raw_media
+            └── Volume: fsxn_files (External Volume on S3)
+                 ├── images/
+                 │    ├── product_photo_001.jpg     ← 元の JPEG (2.3 MB)
+                 │    ├── xray_scan_042.dicom       ← 元の DICOM (15 MB)
+                 │    └── floor_plan.dwg            ← 元の CAD (8 MB)
+                 ├── videos/
+                 │    ├── security_cam_2026-05-26.mp4  ← 元の MP4 (1.2 GB)
+                 │    └── training_session.webm     ← 元の WebM (450 MB)
+                 ├── documents/
+                 │    ├── contract_v3.pdf           ← 元の PDF (340 KB)
+                 │    ├── financial_report.xlsx     ← 元の Excel (2.1 MB)
+                 │    └── meeting_notes.docx        ← 元の Word (89 KB)
+                 ├── audio/
+                 │    ├── customer_call_001.wav     ← 元の WAV (45 MB)
+                 │    └── podcast_ep12.mp3          ← 元の MP3 (62 MB)
+                 └── scientific/
+                      ├── brain_mri.nii.gz          ← 元の NIfTI (120 MB)
+                      └── sensor_data.hdf5          ← 元の HDF5 (3.4 GB)
+```
+
+**UC から見える姿**: ファイルパス、サイズ、更新日時。Volume レベルの権限でガバナンス。
+
+**ユーザーができること**:
+```sql
+-- 全ファイル一覧
+SELECT * FROM DIRECTORY('/Volumes/enterprise_data/raw_media/fsxn_files/');
+
+-- ファイル内容をバイナリとして読み取り
+SELECT path, content FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/documents/',
+  format => 'binaryFile'
+);
+
+-- 画像の AI 分析（Vision モデル）
+SELECT path,
+  ai_query('databricks-llama-4-maverick',
+    'Describe this image in detail:', files => content) AS description
+FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/images/',
+  format => 'binaryFile',
+  fileNamePattern => '*.{jpg,jpeg,png}')
+WHERE _metadata.file_size < 10000000;
+
+-- PDF ドキュメントのパース
+SELECT path,
+  ai_parse_document(content, map('version', '2.0')) AS parsed
+FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/documents/',
+  format => 'binaryFile',
+  fileNamePattern => '*.pdf');
+```
+
+参照: [Work with unstructured data in volumes](https://docs.databricks.com/aws/en/volumes/unstructured-data-tutorial)
+
+#### 方法 2: Delta Table に binaryFile として取り込み（ファイル内容が Parquet 内に格納）
+
+```sql
+CREATE TABLE image_embeddings AS
+SELECT
+  path,
+  _metadata.file_name,
+  _metadata.file_size,
+  _metadata.file_modification_time,
+  content  -- 元ファイルのバイト列が Parquet の BINARY カラムに格納される
+FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/images/',
+  format => 'binaryFile'
+);
+```
+
+**元ファイルに何が起きるか**:
+- ファイルのバイナリ内容が **Parquet ファイル内の BINARY カラムにコピー**される
+- 元ファイルは Volume 上にそのまま残る（削除されない）
+- Delta Table にはバイト列の**コピー**が含まれる（参照ではない）
+- テーブル内ではファイルは元の形式ではない — Parquet 内のバイト配列
+
+**使用すべき場面**: ファイル内容自体に ACID、Time Travel、Delta Sharing が必要な場合。
+
+#### 方法 3: メタデータのみテーブル化（ファイルは元の場所に残る）
+
+```sql
+CREATE TABLE file_catalog AS
+SELECT
+  path,
+  _metadata.file_name AS file_name,
+  _metadata.file_size AS size_bytes,
+  _metadata.file_modification_time AS last_modified,
+  SPLIT_PART(_metadata.file_name, '.', -1) AS extension
+FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/',
+  format => 'binaryFile'
+);
+```
+
+**元ファイルに何が起きるか**: 何も起きない — ファイルはそのまま元の場所に残る。テーブルにはメタデータ（パス、サイズ、タイムスタンプ）のみ含まれる。実際のファイル内容にアクセスするには、`path` カラムを使って Volume から読み取る。
+
+### 比較: 元ファイルはどうなるか？
+
+| 方法 | 元ファイル形式が保持されるか？ | ファイルの所在 | UC ガバナンスレベル | Delta Sharing 対応？ |
+|------|:---:|---|---|---|
+| **UC Volume** | ✅ はい（JPEG は JPEG のまま） | Volume ストレージ（S3 バケット） | Volume レベル (READ/WRITE VOLUME) | ✅ Volume Sharing |
+| **Delta Table (binaryFile)** | ❌ いいえ（Parquet 内のバイト列） | Delta Table（Parquet ファイル） | テーブルレベル (SELECT, カラムマスク) | ✅ Table Sharing |
+| **メタデータのみテーブル** | ✅ はい（ファイル未変更） | 元の場所（Volume/Stage） | テーブルレベル（メタデータ）+ Volume レベル（ファイルアクセス） | ⚠️ メタデータのみ共有 |
+
+### FSx for ONTAP S3 AP: 各方法の現在のステータス
+
+| 方法 | FSx for ONTAP S3 AP 直接？ | S3 同期あり？ | 備考 |
+|------|:---:|:---:|---|
+| UC Volume (External) | ❌ ブロック中 | ✅ 動作 | DataSync/SnapMirror → S3 → External Volume が必要 |
+| UC Volume (Managed) | N/A | ✅ 動作 | Managed Volume にファイルをコピー |
+| Delta Table (binaryFile) | ❌ ブロック中 | ✅ 動作 | 同期済み Volume から読み取り、Delta Table に書き込み |
+| メタデータのみテーブル | ✅ 可能 (Pattern A) | ✅ 動作 | FSx for ONTAP S3 AP で ListObjectsV2 → メタデータテーブル |
+
+### 重要なポイント
+
+**UC Volume は非構造化データの「変換なし」パス**です — ファイルは元の形式のまま、UC でガバナンスされ、SQL (`read_files`)、Python (`dbutils.fs`)、AI 関数 (`ai_query`, `ai_parse_document`) でアクセス可能です。
+
+FSx for ONTAP のブロッカーはファイル形式ではありません — **UC が FSx for ONTAP S3 AP をストレージロケーションとして登録できない**ことです。これが解決されれば（Databricks 機能開発）、FSx for ONTAP 上のファイルはフォーマット変換なしで UC Volume を通じて直接アクセスできるようになります。
+
+---
+
 ## Provider vs Recipient: 役割の明確化
 
 | 役割 | Databricks が Provider | Databricks が Recipient |
