@@ -817,6 +817,14 @@ The [OSS Delta Sharing server](https://github.com/delta-io/delta-sharing) suppor
 
 ---
 
+## Next Steps
+
+1. **Start Pattern A PoC**: Deploy a Lambda function that calls ListObjectsV2 on your FSx for ONTAP S3 AP, writes metadata to a Delta Table on S3, and exposes it via Delta Sharing
+2. **For immediate Databricks access**: Set up SnapMirror → S3 → UC External Location for full governance ([README Configuration Guide](../../README.md#quick-start))
+3. **Track Databricks feature gap**: Monitor UC engineering response for native FSx for ONTAP S3 AP support (reported May 2026, no timeline)
+
+---
+
 ## References
 
 - [Work with unstructured data in volumes](https://docs.databricks.com/aws/en/volumes/unstructured-data-tutorial) — Complete tutorial including Volume Sharing
