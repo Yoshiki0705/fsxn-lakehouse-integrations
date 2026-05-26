@@ -1,3 +1,5 @@
+🌐 [English](../../README.md) | **日本語**
+
 # Snowflake 統合
 
 🌐 [English](../../README.md) | **日本語**

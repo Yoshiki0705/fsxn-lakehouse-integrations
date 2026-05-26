@@ -1,3 +1,5 @@
+🌐 [English](../en/setup-guide.md) | **日本語**
+
 # Databricks セットアップガイド
 
 ## 概要

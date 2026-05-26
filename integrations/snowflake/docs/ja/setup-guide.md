@@ -1,3 +1,5 @@
+🌐 [English](../en/setup-guide.md) | **日本語**
+
 # Snowflake セットアップガイド
 
 ## 概要

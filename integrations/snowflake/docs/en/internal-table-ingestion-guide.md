@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](../ja/internal-table-ingestion-guide.md)
+
 # Internal Table Ingestion Guide — When COPY INTO Is Required
 
 > **Status**: Architecture Reference — Based on validated results (May 2026)

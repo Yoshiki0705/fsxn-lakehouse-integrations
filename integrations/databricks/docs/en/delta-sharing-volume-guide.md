@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](../ja/delta-sharing-volume-guide.md)
+
 # Delta Sharing & Volume Sharing Integration Guide
 
 > **Status**: Architecture Reference — Pattern A/B ready for PoC, Pattern C blocked (awaiting Databricks UC feature development)

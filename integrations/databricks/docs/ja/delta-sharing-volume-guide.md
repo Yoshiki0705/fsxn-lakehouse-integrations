@@ -1,3 +1,5 @@
+🌐 [English](../en/delta-sharing-volume-guide.md) | **日本語**
+
 # Delta Sharing & Volume Sharing 統合ガイド
 
 > **ステータス**: アーキテクチャリファレンス — Pattern A/B は PoC 実施可能、Pattern C は Databricks UC 機能開発待ち（ブロック中）

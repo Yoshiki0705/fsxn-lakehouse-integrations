@@ -1,3 +1,5 @@
+🌐 [English](../en/internal-table-ingestion-guide.md) | **日本語**
+
 # 内部テーブル取り込みガイド — COPY INTO が必要なケース
 
 > **ステータス**: アーキテクチャリファレンス — 検証結果に基づく（2026年5月）
