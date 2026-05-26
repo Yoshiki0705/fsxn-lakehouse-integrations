@@ -160,9 +160,9 @@ AS
 
 Reference: [Snowpipe REST API](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-rest-apis), [FPolicy](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html)
 
-### Pattern 3: Dynamic Table (Automated Transformation)
+### Pattern 3: Dynamic Table (Automated Transformation) — Recommended
 
-Best for: Continuous transformation pipeline from external table source.
+Best for: Continuous transformation pipeline from external table source. **This is the most Snowflake-native approach** — declarative, auto-managed, and supports Cortex AI functions in the SELECT clause (GA since September 2025).
 
 ```sql
 -- Dynamic Table reads from External Table, materializes as internal
@@ -184,6 +184,12 @@ AS
 Reference: [Dynamic Tables](https://docs.snowflake.com/en/user-guide/dynamic-tables-intro)
 
 > **Note**: Dynamic Tables can use external tables as source (full refresh mode). Incremental refresh requires change tracking, which is not available on external tables.
+
+> **Why Dynamic Table is recommended over COPY INTO + Task**:
+> - **Declarative**: Define TARGET_LAG (e.g., '1 hour') and Snowflake manages the refresh schedule automatically
+> - **Cortex AI integration**: Use CORTEX.SUMMARIZE, CORTEX.SENTIMENT, etc. directly in the Dynamic Table SELECT clause (GA since [September 2025](https://docs.snowflake.com/en/release-notes/2025/other/2025-09-11-dynamic-tables-cortex-aisql-support))
+> - **No operational overhead**: No Task scheduling, no COPY INTO deduplication logic, no manual error handling
+> - **Chaining**: Dynamic Tables can reference other Dynamic Tables for multi-stage pipelines (Bronze → Silver → Gold)
 
 ### Pattern 4: COPY INTO + Cortex Search (RAG Pipeline)
 
