@@ -1,0 +1,103 @@
+---
+verification_id: snapmirror-s3-fsxn-availability
+date: "2026-05-26"
+engineer: yoshiki
+platform: FSx for ONTAP
+ontap_version: "9.17.1P6"
+file_system_id: "<REDACTED>"
+region: ap-northeast-1
+
+objective: |
+  Verify whether SnapMirror S3 (ONTAP S3 bucket → AWS S3 bucket replication)
+  is available on FSx for ONTAP, as documented in NetApp ONTAP 9.10.1+ documentation.
+
+test_environment:
+  file_system: "<REDACTED>"
+  deployment_type: SINGLE_AZ_1
+  ontap_version: "NetApp Release 9.17.1P6: Wed Mar 25 15:38:10 UTC 2026"
+  test_svm: snapmirror-s3-test (no S3 Access Points)
+  existing_svms_with_s3ap: [verification-svm, FSxN_OnPre]
+  ec2_instance: "<REDACTED> (t4g.micro, SSM access)"
+  access_method: SSM → sshpass → ONTAP CLI / REST API
+
+results:
+  ontap_s3_server_create:
+    status: SUCCESS
+    command: "vserver object-store-server create -vserver snapmirror-s3-test -object-store-server sm-s3-server -is-http-enabled true -is-https-enabled false"
+    notes: "ONTAP S3 server creation works on new SVM without S3 Access Points"
+
+  ontap_s3_bucket_create:
+    status: SUCCESS
+    command: "vserver object-store-server bucket create -vserver snapmirror-s3-test -bucket sm-s3-source -size 100GB -type s3"
+    result: "Job succeeded: Successful"
+    notes: "Minimum bucket size ~100GB (volume constraint). Bucket created as type s3."
+
+  ontap_s3_server_on_s3ap_svm:
+    status: FAILED
+    command: "vserver object-store-server create -vserver verification-svm -object-store-server snapmirror-s3-test -is-http-enabled true -is-https-enabled false"
+    error: "Only one object store server is supported per Vserver"
+    notes: "SVMs with S3 Access Points already have an internal object-store-server (not visible via show command)"
+
+  snapmirror_object_store_command:
+    status: NOT_AVAILABLE
+    command: "snapmirror object-store show"
+    error: '"object-store" is not a recognized command'
+    privilege_levels_tested: [admin, advanced, diagnostic]
+    notes: "Command does not exist on FSx for ONTAP. Tested on both S3 AP SVM and new SVM."
+
+  cloud_targets_rest_api:
+    status: NOT_AUTHORIZED
+    endpoint: "/api/cloud/targets"
+    error: '{"error":{"message":"not authorized for that command","code":"6"}}'
+    privilege_levels_tested: [admin, advanced (X-Dot-CLI-Privilege-Level header), diagnostic]
+    notes: "Cloud targets API is blocked at FSx for ONTAP managed service level"
+
+  snapmirror_policy_continuous:
+    status: EXISTS
+    command: "snapmirror policy show -type continuous"
+    result: "Policy 'Continuous' exists with comment 'Policy for S3 bucket mirroring'"
+    notes: "The policy exists but cannot be used because snapmirror object-store commands are unavailable"
+
+  storage_aggregate_object_store_config:
+    status: EMPTY
+    command: "storage aggregate object-store config show"
+    result: "This table is currently empty"
+    notes: "No FabricPool/cloud tier object store configured"
+
+conclusion: |
+  SnapMirror S3 is NOT available on FSx for ONTAP as of ONTAP 9.17.1P6.
+
+  While ONTAP S3 server and bucket creation work (proving the S3 protocol layer is functional),
+  the SnapMirror S3 specific commands and APIs are disabled:
+  - `snapmirror object-store` CLI command: "not a recognized command"
+  - `/api/cloud/targets` REST API: "not authorized for that command"
+
+  This is a FSx for ONTAP managed service restriction, not an ONTAP version limitation.
+  The SnapMirror S3 "Continuous" policy exists in the system but is unusable.
+
+  NetApp ONTAP documentation states SnapMirror S3 is available from ONTAP 9.10.1+
+  and supports backup to AWS S3 as a target. However, FSx for ONTAP does not expose
+  the required commands/APIs to configure this feature.
+
+  Impact: Customers cannot use SnapMirror S3 to replicate ONTAP S3 bucket data to
+  standard AWS S3 buckets. The only validated sync mechanism from FSx for ONTAP to
+  S3 is AWS DataSync (NFS → S3).
+
+netapp_documentation_reference:
+  - url: "https://docs.netapp.com/us-en/ontap/s3-snapmirror/"
+    title: "Learn about ONTAP SnapMirror S3"
+    key_quote: "Beginning with ONTAP 9.10.1, you can protect buckets in ONTAP S3 object stores using SnapMirror mirroring and backup functionality. Unlike standard SnapMirror, SnapMirror S3 enables mirroring and backups to non-NetApp destinations like AWS S3."
+  - url: "https://docs.netapp.com/us-en/ontap/s3-snapmirror/create-cloud-backup-new-bucket-task.html"
+    title: "Create a cloud backup relationship for a new ONTAP S3 bucket"
+    key_quote: "you can back them up immediately to a SnapMirror S3 target bucket on an object store provider, which can be a StorageGRID system or an Amazon S3 deployment"
+
+aws_documentation_reference:
+  - url: "https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html"
+    notes: "Redirects to FSx for ONTAP main page — no dedicated SnapMirror S3 documentation exists"
+  - url: "https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/scheduled-replication.html"
+    notes: "Only documents volume-level SnapMirror (ONTAP → ONTAP). Does not mention SnapMirror S3."
+
+cleanup_required:
+  - "Delete SVM: snapmirror-s3-test"
+  - "Terminate EC2 test instance"
+  - "Delete VPC Endpoints (SSM, SSMMessages, EC2Messages)"
