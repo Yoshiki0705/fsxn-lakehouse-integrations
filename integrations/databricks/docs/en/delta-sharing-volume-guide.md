@@ -401,6 +401,153 @@ FROM read_files(
 
 The blocker for FSx for ONTAP is not the file format — it's that **UC cannot register FSx for ONTAP S3 AP as a storage location**. Once that is resolved (Databricks feature development), files on FSx for ONTAP could be accessed directly through UC Volumes without any format conversion.
 
+### Rendering & Viewing Unstructured Files in Databricks
+
+**Can users actually view images, play videos, listen to audio, and read PDFs within Databricks?**
+
+#### UC Volume path (original files — recommended for governed file browsing)
+
+Files in UC Volumes are accessed by path and can be rendered directly in notebooks:
+
+```python
+# === Images (JPEG, PNG, TIFF, DICOM, etc.) ===
+from IPython.display import display, Image
+
+# Display a single image from Volume
+display(Image(filename="/Volumes/catalog/schema/media/images/inspection_001.jpg"))
+
+# Display multiple images as a gallery
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+for i, img_path in enumerate([
+    "/Volumes/catalog/schema/media/images/assembly_line_cam01.jpg",
+    "/Volumes/catalog/schema/media/images/quality_check_042.png",
+    "/Volumes/catalog/schema/media/images/weld_inspection.tiff"
+]):
+    axes[i].imshow(mpimg.imread(img_path))
+    axes[i].set_title(img_path.split("/")[-1])
+plt.show()
+```
+
+```python
+# === PDFs and Documents ===
+from IPython.display import display, IFrame, HTML
+
+# Render PDF inline (via presigned URL or direct path)
+display(IFrame(src="/Volumes/catalog/schema/media/documents/safety_manual.pdf",
+               width=800, height=600))
+
+# Extract text from PDF using AI
+df = spark.sql("""
+  SELECT path,
+    ai_parse_document(content, map('version', '2.0')) AS parsed_text
+  FROM read_files(
+    '/Volumes/catalog/schema/media/documents/',
+    format => 'binaryFile',
+    fileNamePattern => '*.pdf')
+""")
+display(df)
+```
+
+```python
+# === Audio (WAV, MP3, FLAC, etc.) ===
+from IPython.display import display, Audio
+
+# Play audio file directly from Volume
+display(Audio(filename="/Volumes/catalog/schema/media/audio/customer_call_001.wav"))
+display(Audio(filename="/Volumes/catalog/schema/media/audio/machine_vibration.mp3"))
+```
+
+```python
+# === Video (MP4, WebM, MOV, etc.) ===
+from IPython.display import display, Video
+
+# Play video from Volume
+display(Video(filename="/Volumes/catalog/schema/media/videos/assembly_process.mp4",
+              embed=True, width=640))
+
+# For large videos, use HTML5 video tag with Volume path
+from IPython.display import HTML
+display(HTML('''
+  <video width="640" controls>
+    <source src="/Volumes/catalog/schema/media/videos/robot_arm_cycle.webm"
+            type="video/webm">
+  </video>
+'''))
+```
+
+```python
+# === 3D/CAD files (STL, OBJ, GLTF) ===
+import trimesh
+
+# Load and visualize 3D model
+mesh = trimesh.load("/Volumes/catalog/schema/media/cad/part_assembly.stl")
+mesh.show()  # Opens 3D viewer in notebook
+```
+
+```python
+# === Medical imaging (DICOM) ===
+import pydicom
+import matplotlib.pyplot as plt
+
+# Load and display DICOM image
+ds = pydicom.dcmread("/Volumes/catalog/schema/media/medical/chest_xray.dcm")
+plt.imshow(ds.pixel_array, cmap='gray')
+plt.title(f"Patient: {ds.PatientName}, Study: {ds.StudyDescription}")
+plt.show()
+```
+
+Reference: [Work with files in Unity Catalog volumes](https://docs.databricks.com/aws/en/volumes/volume-files) — "You can use standard Python, Scala, or R libraries to read and write files in volumes."
+
+Reference: [Work with unstructured data in volumes](https://docs.databricks.com/aws/en/volumes/unstructured-data-tutorial) — Complete tutorial for images, PDFs, and AI processing.
+
+#### Delta Table path (binaryFile — bytes stored in Parquet)
+
+When files are stored as BINARY columns in a Delta Table, they can still be rendered but require an extra decode step:
+
+```python
+# Read image bytes from Delta Table
+df = spark.read.table("shared_catalog.schema.image_table")
+row = df.filter("file_name = 'inspection_001.jpg'").first()
+
+# Decode and display
+from IPython.display import display, Image
+display(Image(data=row.content))  # 'content' is the BINARY column
+
+# Display audio from Delta Table
+from IPython.display import Audio
+audio_row = df.filter("file_name = 'machine_sound.wav'").first()
+display(Audio(data=audio_row.content, rate=44100))
+```
+
+```python
+# Databricks display() renders BINARY columns as thumbnails automatically
+display(spark.read.table("shared_catalog.schema.image_table")
+        .select("path", "content", "file_name"))
+# → Databricks UI shows image thumbnails in the content column
+```
+
+Reference: [Databricks display() function](https://docs.databricks.com/aws/en/notebooks/notebooks-manage#display-function) — Databricks notebooks can render binary image data inline.
+
+#### Comparison: User Experience for Governed File Browsing
+
+| Aspect | UC Volume (original files) | Delta Table (binaryFile) |
+|--------|---|---|
+| **Image viewing** | ✅ Direct path → `Image(filename=...)` | ✅ Decode bytes → `Image(data=...)` |
+| **Video playback** | ✅ `Video(filename=...)` or HTML5 `<video>` | ⚠️ Must write bytes to temp file first |
+| **Audio playback** | ✅ `Audio(filename=...)` | ⚠️ `Audio(data=bytes, rate=...)` |
+| **PDF rendering** | ✅ `IFrame(src=path)` | ⚠️ Must write bytes to temp file |
+| **3D/CAD viewing** | ✅ `trimesh.load(path)` | ⚠️ Must write bytes to temp file |
+| **DICOM medical** | ✅ `pydicom.dcmread(path)` | ⚠️ Must deserialize from bytes |
+| **Thumbnail gallery** | ✅ Catalog Explorer file browser | ⚠️ Custom notebook code |
+| **File download** | ✅ Direct download from Volume | ⚠️ Extract bytes → save → download |
+| **Sharing recipient UX** | File explorer (browse folders) | Table view (rows and columns) |
+| **Non-technical user friendly** | ✅ Familiar file/folder navigation | ❌ Requires SQL/Python knowledge |
+
+**Conclusion for governed file browsing**: UC Volume + Volume Sharing provides a **file-system-like browsing experience** where non-technical users (factory workers, managers, auditors) can navigate folders and view files directly. Delta Table (binaryFile) requires notebook code to render each file — suitable for data engineers but not for browsable, governed file access.
+
 ---
 
 ## Provider vs Recipient: Role Clarification

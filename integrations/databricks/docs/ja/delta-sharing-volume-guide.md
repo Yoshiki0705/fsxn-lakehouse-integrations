@@ -401,6 +401,153 @@ FROM read_files(
 
 FSx for ONTAP のブロッカーはファイル形式ではありません — **UC が FSx for ONTAP S3 AP をストレージロケーションとして登録できない**ことです。これが解決されれば（Databricks 機能開発）、FSx for ONTAP 上のファイルはフォーマット変換なしで UC Volume を通じて直接アクセスできるようになります。
 
+### Databricks 上での非構造化ファイルのレンダリング・閲覧
+
+**ユーザーは Databricks 上で画像を見たり、動画を再生したり、音声を聴いたり、PDF を読んだりできるか？**
+
+#### UC Volume パス（元ファイルのまま — ガバナンス付きファイル閲覧に推奨）
+
+UC Volume 内のファイルはパスでアクセスし、ノートブック上で直接レンダリング可能:
+
+```python
+# === 画像 (JPEG, PNG, TIFF, DICOM 等) ===
+from IPython.display import display, Image
+
+# Volume から画像を直接表示
+display(Image(filename="/Volumes/catalog/schema/media/images/inspection_001.jpg"))
+
+# 複数画像をギャラリーとして表示
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+for i, img_path in enumerate([
+    "/Volumes/catalog/schema/media/images/assembly_line_cam01.jpg",
+    "/Volumes/catalog/schema/media/images/quality_check_042.png",
+    "/Volumes/catalog/schema/media/images/weld_inspection.tiff"
+]):
+    axes[i].imshow(mpimg.imread(img_path))
+    axes[i].set_title(img_path.split("/")[-1])
+plt.show()
+```
+
+```python
+# === PDF・ドキュメント ===
+from IPython.display import display, IFrame, HTML
+
+# PDF をインラインでレンダリング
+display(IFrame(src="/Volumes/catalog/schema/media/documents/safety_manual.pdf",
+               width=800, height=600))
+
+# AI で PDF からテキスト抽出
+df = spark.sql("""
+  SELECT path,
+    ai_parse_document(content, map('version', '2.0')) AS parsed_text
+  FROM read_files(
+    '/Volumes/catalog/schema/media/documents/',
+    format => 'binaryFile',
+    fileNamePattern => '*.pdf')
+""")
+display(df)
+```
+
+```python
+# === 音声 (WAV, MP3, FLAC 等) ===
+from IPython.display import display, Audio
+
+# Volume から音声ファイルを直接再生
+display(Audio(filename="/Volumes/catalog/schema/media/audio/customer_call_001.wav"))
+display(Audio(filename="/Volumes/catalog/schema/media/audio/machine_vibration.mp3"))
+```
+
+```python
+# === 動画 (MP4, WebM, MOV 等) ===
+from IPython.display import display, Video
+
+# Volume から動画を再生
+display(Video(filename="/Volumes/catalog/schema/media/videos/assembly_process.mp4",
+              embed=True, width=640))
+
+# 大きな動画は HTML5 video タグで
+from IPython.display import HTML
+display(HTML('''
+  <video width="640" controls>
+    <source src="/Volumes/catalog/schema/media/videos/robot_arm_cycle.webm"
+            type="video/webm">
+  </video>
+'''))
+```
+
+```python
+# === 3D/CAD ファイル (STL, OBJ, GLTF) ===
+import trimesh
+
+# 3D モデルを読み込み・可視化
+mesh = trimesh.load("/Volumes/catalog/schema/media/cad/part_assembly.stl")
+mesh.show()  # ノートブック内で 3D ビューアが開く
+```
+
+```python
+# === 医療画像 (DICOM) ===
+import pydicom
+import matplotlib.pyplot as plt
+
+# DICOM 画像を読み込み・表示
+ds = pydicom.dcmread("/Volumes/catalog/schema/media/medical/chest_xray.dcm")
+plt.imshow(ds.pixel_array, cmap='gray')
+plt.title(f"Patient: {ds.PatientName}, Study: {ds.StudyDescription}")
+plt.show()
+```
+
+参照: [Work with files in Unity Catalog volumes](https://docs.databricks.com/aws/en/volumes/volume-files) — "You can use standard Python, Scala, or R libraries to read and write files in volumes."
+
+参照: [Work with unstructured data in volumes](https://docs.databricks.com/aws/en/volumes/unstructured-data-tutorial) — 画像、PDF、AI 処理の完全チュートリアル。
+
+#### Delta Table パス（binaryFile — Parquet 内にバイト列として格納）
+
+ファイルが Delta Table の BINARY カラムに格納されている場合でもレンダリング可能だが、デコードステップが追加で必要:
+
+```python
+# Delta Table から画像バイト列を読み取り
+df = spark.read.table("shared_catalog.schema.image_table")
+row = df.filter("file_name = 'inspection_001.jpg'").first()
+
+# デコードして表示
+from IPython.display import display, Image
+display(Image(data=row.content))  # 'content' は BINARY カラム
+
+# Delta Table から音声を再生
+from IPython.display import Audio
+audio_row = df.filter("file_name = 'machine_sound.wav'").first()
+display(Audio(data=audio_row.content, rate=44100))
+```
+
+```python
+# Databricks の display() は BINARY カラムをサムネイルとして自動レンダリング
+display(spark.read.table("shared_catalog.schema.image_table")
+        .select("path", "content", "file_name"))
+# → Databricks UI が content カラムに画像サムネイルを表示
+```
+
+参照: [Databricks display() function](https://docs.databricks.com/aws/en/notebooks/notebooks-manage#display-function) — Databricks ノートブックはバイナリ画像データをインラインでレンダリング可能。
+
+#### 比較: ガバナンス付きファイル閲覧のユーザー体験
+
+| 観点 | UC Volume（元ファイル） | Delta Table (binaryFile) |
+|------|---|---|
+| **画像閲覧** | ✅ パス直接 → `Image(filename=...)` | ✅ バイト列デコード → `Image(data=...)` |
+| **動画再生** | ✅ `Video(filename=...)` or HTML5 `<video>` | ⚠️ バイト列を一時ファイルに書き出す必要あり |
+| **音声再生** | ✅ `Audio(filename=...)` | ⚠️ `Audio(data=bytes, rate=...)` |
+| **PDF レンダリング** | ✅ `IFrame(src=path)` | ⚠️ バイト列を一時ファイルに書き出す必要あり |
+| **3D/CAD 閲覧** | ✅ `trimesh.load(path)` | ⚠️ バイト列を一時ファイルに書き出す必要あり |
+| **DICOM 医療画像** | ✅ `pydicom.dcmread(path)` | ⚠️ バイト列からデシリアライズ必要 |
+| **サムネイルギャラリー** | ✅ Catalog Explorer のファイルブラウザ | ⚠️ カスタムノートブックコード必要 |
+| **ファイルダウンロード** | ✅ Volume から直接ダウンロード | ⚠️ バイト列抽出 → 保存 → ダウンロード |
+| **共有受信者の体験** | ファイルエクスプローラー（フォルダ閲覧） | テーブルビュー（行と列） |
+| **非技術者フレンドリー** | ✅ 馴染みのあるファイル/フォルダナビゲーション | ❌ SQL/Python の知識が必要 |
+
+**ガバナンス付きファイル閲覧の結論**: UC Volume + Volume Sharing は**ファイルシステムのようなブラウジング体験**を提供し、非技術者（工場作業者、管理者、監査人）がフォルダをナビゲートしてファイルを直接閲覧できます。Delta Table (binaryFile) は各ファイルのレンダリングにノートブックコードが必要で、データエンジニア向けには適していますが、ブラウズ可能なガバナンス付きファイルアクセスには不向きです。
+
 ---
 
 ## Provider vs Recipient: 役割の明確化
