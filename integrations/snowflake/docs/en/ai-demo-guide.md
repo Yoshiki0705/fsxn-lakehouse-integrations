@@ -200,14 +200,14 @@ SELECT SNOWFLAKE.CORTEX.EXTRACT_ANSWER(VALUE::VARCHAR,
 
 ## Screenshots
 
-- OCR success: `docs/images/snowflake-08-parse-document-ocr.png`
-- Cortex SUMMARIZE: `docs/images/snowflake-07-cortex-llm-summary.png`
-- Directory Table: `docs/images/snowflake-06-directory-table-presigned-url.png`
-- TO_FILE compilation error: `docs/images/snowflake-09-tofile-compilation-error.png`
-- TO_FILE remote not found: `docs/images/snowflake-10-tofile-remote-not-found.png`
-- CORTEX.TRANSLATE success: `docs/images/snowflake-11-cortex-translate-success.png`
-- CORTEX.COMPLETE text success: `docs/images/snowflake-12-cortex-complete-text-success.png`
-- Vision AI success (workaround): `docs/images/snowflake-15-vision-ai-success.png`
+- [OCR success](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-08-parse-document-ocr.png)
+- [Cortex SUMMARIZE](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-07-cortex-llm-summary.png)
+- [Directory Table](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-06-directory-table-presigned-url.png)
+- [TO_FILE compilation error](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-09-tofile-compilation-error.png)
+- [TO_FILE remote not found](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-10-tofile-remote-not-found.png)
+- [CORTEX.TRANSLATE success](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-11-cortex-translate-success.png)
+- [CORTEX.COMPLETE text success](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-12-cortex-complete-text-success.png)
+- [Vision AI success (workaround)](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-15-vision-ai-success.png)
 
 ---
 
