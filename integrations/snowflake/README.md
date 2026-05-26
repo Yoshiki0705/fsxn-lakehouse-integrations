@@ -85,13 +85,13 @@ External Stages, using them as the storage layer for External Tables and Iceberg
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
-│                              AWS Account                               │
+│                              AWS Account                              │
 │                                                                       │
-│  ┌─────────────────┐     ┌──────────────────┐     ┌───────────────┐  │
-│  │ FSx for ONTAP   │     │ FSx for ONTAP    │     │ IAM Role      │  │
-│  │ (NFS Volume)    │◀───▶│ S3 Access Point  │◀────│ (Snowflake    │  │
-│  │                 │     │ (Internet origin) │     │  AssumeRole)  │  │
-│  └─────────────────┘     └────────┬─────────┘     └───────┬───────┘  │
+│  ┌─────────────────┐     ┌──────────────────┐     ┌───────────────┐   │
+│  │ FSx for ONTAP   │     │ FSx for ONTAP    │     │ IAM Role      │   │
+│  │ (NFS Volume)    │◀───▶│ S3 Access Point  │◀────│ (Snowflake    │   │
+│  │                 │     │ (Internet origin)│     │  AssumeRole)  │   │
+│  └─────────────────┘     └─────────┬────────┘     └─────────┬─────┘   │
 │                                    │                        │         │
 └────────────────────────────────────┼────────────────────────┼─────────┘
                                      │ S3 API                 │ STS
