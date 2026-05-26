@@ -136,7 +136,7 @@ Since Auto Loader requires External Location (currently blocked on FSx S3 AP), u
 | **SnapMirror to S3** | ONTAP-native replication to S3 bucket | Minutes | ONTAP-side | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
 | **Instance Profile + boto3 (PoC)** | Direct S3 AP read from Databricks driver | Real-time | ❌ No UC | Bypasses governance |
 
-> **SnapMirror to S3 caveat**: Object metadata in SnapMirror S3 targets differs from NFS file metadata. Validate schema compatibility and file naming conventions before using SnapMirror S3 as an ingestion path for analytics engines.
+> **SnapMirror to S3 note**: SnapMirror to S3 has NOT been validated as a sync mechanism for this integration pattern. Object metadata in SnapMirror S3 targets may differ from NFS file metadata. **Use AWS DataSync as the validated sync mechanism.** SnapMirror to S3 is listed here as a theoretical ONTAP-native alternative pending validation.
 
 **Recommended production pattern:**
 ```
@@ -432,6 +432,6 @@ Databricks Support (May 2026) confirmed:
 4. CREATE TABLE and write operations on S3 AP paths are not supported — this is a platform limitation in the session policy generator
 5. Feature gap reported to UC engineering team — engineering timeline pending
 
-**Recommended interim path**: Sync data from FSx ONTAP into a standard S3 bucket (DataSync or SnapMirror), then register that S3 bucket as a UC External Location.
+**Recommended interim path**: Sync data from FSx ONTAP into a standard S3 bucket (DataSync), then register that S3 bucket as a UC External Location.
 
 For read-only analytics without UC governance, use AWS-native services (Athena, EMR Serverless, DuckDB Lambda) or Snowflake directly on FSx S3 AP.

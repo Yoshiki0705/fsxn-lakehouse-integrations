@@ -26,7 +26,7 @@ FSx for ONTAP と Databricks の統合において、Delta Sharing は以下の�
 
 | あなたの状況 | 推奨アクション | パターン |
 |---|---|---|
-| **Databricks 顧客で NAS データのガバナンス付き分析が必要** | SnapMirror/DataSync → S3 → UC External Location → Delta Tables | SnapMirror パス（完全サポート） |
+| **Databricks 顧客で NAS データのガバナンス付き分析が必要** | DataSync → S3 → UC External Location → Delta Tables | DataSync パス（検証済み） |
 | **ファイルメタデータを Databricks ユーザーと共有したい** | Lambda + ListObjectsV2 → Delta Table → Delta Sharing | Pattern A |
 | **NAS ドキュメントに対する AI/RAG が Databricks で必要** | Textract/Bedrock → Delta Table → Delta Sharing | Pattern B |
 | **Raw ファイル（画像/動画/PDF）を Databricks で閲覧したい** | DataSync → S3 → UC External Volume → Volume Sharing | Pattern C（S3 同期あり） |
@@ -194,7 +194,7 @@ Databricks 受信者 (read_files, ai_query, ai_parse_document)
 **現在の現実（S3 コピーが必要）:**
 ```
 FSx for ONTAP
-  ↓ DataSync / SnapMirror
+  ↓ DataSync
 Amazon S3 バケット (標準)
   ↓
 Databricks UC External Location
@@ -206,13 +206,13 @@ Delta Sharing (Volume Sharing)
 Databricks 受信者
 ```
 
-**SnapMirror → S3 → UC パスの本番設計:**
+**DataSync → S3 → UC パスの本番設計:**
 
 これは FSx for ONTAP + Databricks の**完全にサポートされた本番対応パス**です。Unity Catalog の完全なガバナンス、Delta Lake ACID、Mosaic AI、Feature Store が全て利用可能です。
 
 | コンポーネント | 設計判断 | 根拠 |
 |------------|---------|------|
-| 同期メカニズム | SnapMirror to S3（推奨）または DataSync | SnapMirror: ONTAP ネイティブ、増分、分単位 RPO。DataSync: AWS ネイティブ、スケジュール |
+| 同期メカニズム | AWS DataSync（検証済み） | FSx for ONTAP NFS から S3 バケットへのスケジュール同期。増分転送をサポート。 |
 | S3 バケット設計 | `s3://fsxn-lakehouse-<env>/raw/`, `/bronze/`, `/silver/`, `/gold/` | メダリオンアーキテクチャによる段階的精製 |
 | UC カタログ構造 | `fsxn_lakehouse.raw.*`, `fsxn_lakehouse.curated.*` | Raw 取り込みとガバナンス付き消費を分離 |
 | Delta Table 設計 | Managed Tables（UC がライフサイクル制御） | OPTIMIZE, VACUUM, Time Travel, Z-ORDER が有効 |
@@ -223,20 +223,20 @@ Databricks 受信者
 
 **エンドツーエンドデータ鮮度モデル:**
 
-| 同期パターン | SnapMirror RPO | Auto Loader 検出 | UC テーブル反映 | 合計ラグ |
+| 同期パターン | DataSync スケジュール | Auto Loader 検出 | UC テーブル反映 | 合計ラグ |
 |---|---|---|---|---|
-| SnapMirror (5分) + Auto Loader (5分ポーリング) | 5分 | 5分 | <1分 | **最大約10分** |
-| SnapMirror (1分) + Auto Loader (1分ポーリング) | 1分 | 1分 | <1分 | **最大約2-3分** |
+| DataSync (5分スケジュール) + Auto Loader (5分ポーリング) | 5分 | 5分 | <1分 | **最大約10分** |
+| DataSync (1分スケジュール) + Auto Loader (1分ポーリング) | 1分 | 1分 | <1分 | **最大約2-3分** |
 | FPolicy → Lambda → S3 + Auto Loader (File Notification) | リアルタイム | 秒（SQS） | <1分 | **約30秒** |
 | DataSync (時間スケジュール) + Auto Loader (5分ポーリング) | 60分 | 5分 | <1分 | **最大約65分** |
 
-> **製造業ユースケース向け**: 「工場の画像データが Databricks で見えるまで何分かかるか？」— SnapMirror 5分スケジュール + Auto Loader 5分ポーリングで「10分以内」。準リアルタイム要件（<1分）には FPolicy → Lambda → S3 パスを使用。
+> **製造業ユースケース向け**: 「工場の画像データが Databricks で見えるまで何分かかるか？」— DataSync 5分スケジュール + Auto Loader 5分ポーリングで「10分以内」。準リアルタイム要件（<1分）には FPolicy → Lambda → S3 パスを使用。
 
-**代表的なコスト概算（SnapMirror → S3 → UC パス）:**
+**代表的なコスト概算（DataSync → S3 → UC パス）:**
 
 | コンポーネント | 1 TB データセット | 10 TB データセット | 備考 |
 |------------|---|---|---|
-| SnapMirror to S3 | FSx スループットに含まれる | 含まれる | 追加コストなし（プロビジョニング済みスループットを使用） |
+| DataSync 転送 | 約$0.04/GB（初回）、以降増分 | 約$0.40/GB 初回、以降増分 | 転送 GB あたり課金; 増分同期は変更分のみ転送 |
 | S3 Standard ストレージ | 約$23/月 | 約$230/月 | FSx for ONTAP データの同期コピーを保存 |
 | Auto Loader (Jobs コンピュート) | 約$5-10/月 | 約$15-30/月 | 1日数分のジョブクラスター |
 | Delta Table オーバーヘッド | 約$2-5/月 | 約$10-20/月 | メタデータ、トランザクションログ、バージョン |
@@ -244,9 +244,9 @@ Databricks 受信者
 
 > これは「Databricks プラットフォームの全機能」（ACID、Time Travel、Mosaic AI、ガバナンス）のコストです。ゼロコピーパス（Athena、Snowflake External Table）はストレージ追加コスト $0 ですが、これらの機能は利用できません。
 
-> **Databricks 顧客への重要な洞察**: SnapMirror → S3 → UC パスは回避策ではなく、Databricks サポートが確認した**推奨本番アーキテクチャ**（2026年5月）です。ゼロコピーパスでは得られない機能を提供します: ACID トランザクション、Time Travel、MERGE、OPTIMIZE、完全な Mosaic AI、エンタープライズガバナンス。トレードオフはデータ重複と同期レイテンシです。
+> **Databricks 顧客への重要な洞察**: DataSync → S3 → UC パスは回避策ではなく、Databricks サポートが確認した**推奨本番アーキテクチャ**（2026年5月）です。ゼロコピーパスでは得られない機能を提供します: ACID トランザクション、Time Travel、MERGE、OPTIMIZE、完全な Mosaic AI、エンタープライズガバナンス。トレードオフはデータ重複と同期レイテンシです。
 
-> **このパターンでの ONTAP の価値**: SnapMirror は ONTAP ネイティブの増分レプリケーションを S3 に提供 — 大規模な継続的同期では DataSync より効率的。変更ブロックのみが転送され、帯域幅とコストを削減。FabricPool と組み合わせることで、FSx for ONTAP 上のコールドデータは自動的に S3 に階層化（NFS/SMB ユーザーには透過的）、ストレージコストをさらに削減。
+> **このパターンでの ONTAP の価値**: FabricPool により FSx for ONTAP 上のコールドデータは自動的に S3 に階層化（NFS/SMB ユーザーには透過的）、ストレージコストを削減。Snapshot により DataSync 転送のポイントインタイム整合性を確保 — Snapshot から同期することでデータの一貫したビューを保証。
 
 **現在動作するもの（S3 コピーあり）:**
 
@@ -467,7 +467,7 @@ FROM read_files(
 
 | 方法 | FSx for ONTAP S3 AP 直接？ | S3 同期あり？ | 備考 |
 |------|:---:|:---:|---|
-| UC Volume (External) | ❌ ブロック中 | ✅ 動作 | DataSync/SnapMirror → S3 → External Volume が必要 |
+| UC Volume (External) | ❌ ブロック中 | ✅ 動作 | DataSync → S3 → External Volume が必要 |
 | UC Volume (Managed) | N/A | ✅ 動作 | Managed Volume にファイルをコピー |
 | Delta Table (binaryFile) | ❌ ブロック中 | ✅ 動作 | 同期済み Volume から読み取り、Delta Table に書き込み |
 | メタデータのみテーブル | ✅ 可能 (Pattern A) | ✅ 動作 | FSx for ONTAP S3 AP で ListObjectsV2 → メタデータテーブル |
@@ -810,7 +810,7 @@ Delta Sharing
 - OSS サーバーが S3 AP パスの署名付き URL を生成できる必要あり（S3 AP アクセス権限付き IAM ロールが必要）
 - これは Databricks サポート対象パスではない — Unity Catalog を完全にバイパス
 
-**検討すべき場面**: 「FSx for ONTAP 上の既存 Parquet ファイルをデータ移動なしで外部消費者に公開する」要件があり、かつガバナンス/ACID 要件が最小限の場合のみ。ガバナンスが必要な本番ワークロードには、SnapMirror → S3 → UC パスを使用してください。
+**検討すべき場面**: 「FSx for ONTAP 上の既存 Parquet ファイルをデータ移動なしで外部消費者に公開する」要件があり、かつガバナンス/ACID 要件が最小限の場合のみ。ガバナンスが必要な本番ワークロードには、DataSync → S3 → UC パスを使用してください。
 
 > **検証ステータス**: このアプローチは FSx for ONTAP S3 Access Points に対して**未検証**です。Pattern A PoC 検証の一環として検証予定の理論的代替案として記載しています。主な未知数: OSS サーバーが FSx for ONTAP S3 AP パスの有効な署名付き URL を生成できるか、ListObjectsV2 レイテンシが共有プロトコルのファイル検出に影響するか。
 
@@ -819,7 +819,7 @@ Delta Sharing
 ## 次のステップ
 
 1. **Pattern A PoC を開始**: FSx for ONTAP S3 AP で ListObjectsV2 を呼び出す Lambda 関数をデプロイし、メタデータを S3 上の Delta Table に書き込み、Delta Sharing で公開
-2. **Databricks への即時アクセス**: SnapMirror → S3 → UC External Location を設定して完全ガバナンスを実現（[README 設定ガイド](../../README.md#quick-start)）
+2. **Databricks への即時アクセス**: DataSync → S3 → UC External Location を設定して完全ガバナンスを実現（[README 設定ガイド](../../README.md#quick-start)）
 3. **Databricks 機能ギャップを追跡**: UC エンジニアリングの FSx for ONTAP S3 AP ネイティブサポートへの回答を監視（2026年5月報告済み、タイムラインなし）
 
 ---

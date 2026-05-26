@@ -26,7 +26,7 @@ For FSx for ONTAP integration with Databricks, Delta Sharing provides a practica
 
 | Your situation | Recommended action | Pattern |
 |---|---|---|
-| **Databricks customer needing governed analytics on NAS data** | SnapMirror/DataSync → S3 → UC External Location → Delta Tables | SnapMirror path (fully supported) |
+| **Databricks customer needing governed analytics on NAS data** | DataSync → S3 → UC External Location → Delta Tables | DataSync path (validated) |
 | **Need to share file metadata with Databricks users** | Lambda + ListObjectsV2 → Delta Table → Delta Sharing | Pattern A |
 | **Need AI/RAG on NAS documents in Databricks** | Textract/Bedrock → Delta Table → Delta Sharing | Pattern B |
 | **Need to browse raw files (images/videos/PDFs) in Databricks** | DataSync → S3 → UC External Volume → Volume Sharing | Pattern C (with S3 sync) |
@@ -197,7 +197,7 @@ Databricks recipient (read_files, ai_query, ai_parse_document)
 **Current reality (requires S3 copy):**
 ```
 FSx for ONTAP
-  ↓ DataSync / SnapMirror
+  ↓ DataSync
 Amazon S3 bucket (standard)
   ↓
 Databricks UC External Location
@@ -209,13 +209,13 @@ Delta Sharing (Volume Sharing)
 Databricks recipient
 ```
 
-**Production design for SnapMirror → S3 → UC path:**
+**Production design for DataSync → S3 → UC path:**
 
 This is the **fully supported, production-ready path** for Databricks + FSx for ONTAP today. It provides full Unity Catalog governance, Delta Lake ACID, Mosaic AI, and Feature Store capabilities.
 
 | Component | Design Decision | Rationale |
 |-----------|----------------|-----------|
-| Sync mechanism | SnapMirror to S3 (preferred) or DataSync | SnapMirror: ONTAP-native, incremental, minute-level RPO. DataSync: AWS-native, scheduled |
+| Sync mechanism | AWS DataSync (validated) | Scheduled sync from FSx for ONTAP NFS to S3 bucket. Supports incremental transfer. |
 | S3 bucket design | `s3://fsxn-lakehouse-<env>/raw/`, `/bronze/`, `/silver/`, `/gold/` | Medallion architecture for progressive refinement |
 | UC Catalog structure | `fsxn_lakehouse.raw.*`, `fsxn_lakehouse.curated.*` | Separate raw ingestion from governed consumption |
 | Delta Table design | Managed Tables (UC controls lifecycle) | Enables OPTIMIZE, VACUUM, Time Travel, Z-ORDER |
@@ -226,20 +226,20 @@ This is the **fully supported, production-ready path** for Databricks + FSx for 
 
 **End-to-end data freshness model:**
 
-| Sync Pattern | SnapMirror RPO | Auto Loader Detection | UC Table Available | Total Lag |
+| Sync Pattern | DataSync Schedule | Auto Loader Detection | UC Table Available | Total Lag |
 |---|---|---|---|---|
-| SnapMirror (5 min) + Auto Loader (5 min poll) | 5 min | 5 min | <1 min | **~10 min max** |
-| SnapMirror (1 min) + Auto Loader (1 min poll) | 1 min | 1 min | <1 min | **~2-3 min max** |
+| DataSync (5 min schedule) + Auto Loader (5 min poll) | 5 min | 5 min | <1 min | **~10 min max** |
+| DataSync (1 min schedule) + Auto Loader (1 min poll) | 1 min | 1 min | <1 min | **~2-3 min max** |
 | FPolicy → Lambda → S3 + Auto Loader (File Notification) | Real-time | Seconds (SQS) | <1 min | **~30 sec** |
 | DataSync (hourly schedule) + Auto Loader (5 min poll) | 60 min | 5 min | <1 min | **~65 min max** |
 
-> **For manufacturing use cases**: "How long until factory floor images appear in Databricks?" — With SnapMirror 5-min schedule + Auto Loader 5-min polling, the answer is "within 10 minutes." For near-real-time requirements (<1 min), use FPolicy → Lambda → S3 path.
+> **For manufacturing use cases**: "How long until factory floor images appear in Databricks?" — With DataSync 5-min schedule + Auto Loader 5-min polling, the answer is "within 10 minutes." For near-real-time requirements (<1 min), use FPolicy → Lambda → S3 path.
 
-**Representative cost estimate (SnapMirror → S3 → UC path):**
+**Representative cost estimate (DataSync → S3 → UC path):**
 
 | Component | 1 TB dataset | 10 TB dataset | Notes |
 |-----------|---|---|---|
-| SnapMirror to S3 | Included in FSx throughput | Included | No additional cost (uses provisioned throughput) |
+| DataSync transfer | ~$0.04/GB (first copy), incremental after | ~$0.40/GB first, incremental | Pay-per-GB transferred; incremental syncs transfer only changes |
 | S3 Standard storage | ~$23/month | ~$230/month | Stores synced copy of FSx for ONTAP data |
 | Auto Loader (Jobs compute) | ~$5-10/month | ~$15-30/month | Few minutes/day of job cluster |
 | Delta Table overhead | ~$2-5/month | ~$10-20/month | Metadata, transaction logs, versions |
@@ -247,9 +247,9 @@ This is the **fully supported, production-ready path** for Databricks + FSx for 
 
 > This is the cost of "full Databricks platform capabilities" (ACID, Time Travel, Mosaic AI, governance). Compare with zero-copy paths (Athena, Snowflake External Table) which add $0 storage cost but lack these capabilities.
 
-> **Key insight for Databricks customers**: The SnapMirror → S3 → UC path is not a workaround — it is the **recommended production architecture** confirmed by Databricks Support (May 2026). It provides capabilities that zero-copy paths cannot: ACID transactions, Time Travel, MERGE, OPTIMIZE, full Mosaic AI, and enterprise governance. The trade-off is data duplication and sync latency.
+> **Key insight for Databricks customers**: The DataSync → S3 → UC path is not a workaround — it is the **recommended production architecture** confirmed by Databricks Support (May 2026). It provides capabilities that zero-copy paths cannot: ACID transactions, Time Travel, MERGE, OPTIMIZE, full Mosaic AI, and enterprise governance. The trade-off is data duplication and sync latency.
 
-> **ONTAP value in this pattern**: SnapMirror provides ONTAP-native incremental replication to S3 — more efficient than DataSync for large-scale continuous sync. Only changed blocks are transferred, reducing bandwidth and cost. Combined with FabricPool, cold data on FSx for ONTAP is automatically tiered to S3 (transparent to NFS/SMB users), further reducing storage costs.
+> **ONTAP value in this pattern**: FabricPool automatically tiers cold data on FSx for ONTAP to S3 (transparent to NFS/SMB users), reducing storage costs. Snapshots provide point-in-time consistency for DataSync transfers — sync from a Snapshot to ensure a consistent view of the data.
 
 **What works today (with S3 copy):**
 
@@ -470,7 +470,7 @@ FROM read_files(
 
 | Method | FSx for ONTAP S3 AP directly? | With S3 sync? | Notes |
 |--------|:---:|:---:|---|
-| UC Volume (External) | ❌ Blocked | ✅ Works | Requires DataSync/SnapMirror → S3 → External Volume |
+| UC Volume (External) | ❌ Blocked | ✅ Works | Requires DataSync → S3 → External Volume |
 | UC Volume (Managed) | N/A | ✅ Works | Copy files to Managed Volume |
 | Delta Table (binaryFile) | ❌ Blocked | ✅ Works | Read from synced Volume, write to Delta Table |
 | Metadata-only table | ✅ Possible (Pattern A) | ✅ Works | ListObjectsV2 on FSx for ONTAP S3 AP → metadata table |
@@ -811,7 +811,7 @@ The [OSS Delta Sharing server](https://github.com/delta-io/delta-sharing) suppor
 - The OSS server must be able to generate presigned URLs for the S3 AP paths (requires IAM role with S3 AP access)
 - This is NOT a Databricks-supported path — it bypasses Unity Catalog entirely
 
-**When to consider**: Only when the requirement is "expose existing Parquet files on FSx for ONTAP to external consumers without any data movement" AND governance/ACID requirements are minimal. For production workloads requiring governance, use the SnapMirror → S3 → UC path instead.
+**When to consider**: Only when the requirement is "expose existing Parquet files on FSx for ONTAP to external consumers without any data movement" AND governance/ACID requirements are minimal. For production workloads requiring governance, use the DataSync → S3 → UC path instead.
 
 > **Verification status**: This approach has NOT been validated against FSx for ONTAP S3 Access Points. It is documented as a theoretical alternative pending Pattern A PoC validation. Key unknowns: whether the OSS server can generate valid presigned URLs for FSx for ONTAP S3 AP paths, and whether ListObjectsV2 latency impacts the sharing protocol's file discovery.
 
@@ -820,7 +820,7 @@ The [OSS Delta Sharing server](https://github.com/delta-io/delta-sharing) suppor
 ## Next Steps
 
 1. **Start Pattern A PoC**: Deploy a Lambda function that calls ListObjectsV2 on your FSx for ONTAP S3 AP, writes metadata to a Delta Table on S3, and exposes it via Delta Sharing
-2. **For immediate Databricks access**: Set up SnapMirror → S3 → UC External Location for full governance ([README Configuration Guide](../../README.md#quick-start))
+2. **For immediate Databricks access**: Set up DataSync → S3 → UC External Location for full governance ([README Configuration Guide](../../README.md#quick-start))
 3. **Track Databricks feature gap**: Monitor UC engineering response for native FSx for ONTAP S3 AP support (reported May 2026, no timeline)
 
 ---
