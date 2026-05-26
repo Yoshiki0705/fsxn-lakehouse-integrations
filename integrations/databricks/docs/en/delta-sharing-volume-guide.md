@@ -251,6 +251,8 @@ This is the **fully supported, production-ready path** for Databricks + FSx for 
 
 > **ONTAP value in this pattern**: FabricPool automatically tiers cold data on FSx for ONTAP to S3 (transparent to NFS/SMB users), reducing storage costs. Snapshots provide point-in-time consistency for DataSync transfers — sync from a Snapshot to ensure a consistent view of the data.
 
+> **Note on SnapMirror S3**: NetApp ONTAP documentation describes SnapMirror S3 (ONTAP S3 bucket → AWS S3 replication) as available from ONTAP 9.10.1+. However, **this feature is disabled on FSx for ONTAP** (verified May 2026, ONTAP 9.17.1P6). The `snapmirror object-store` CLI commands and `/api/cloud/targets` REST API are blocked as a managed service restriction. AWS DataSync remains the only validated sync path. Feature request submitted to AWS.
+
 **What works today (with S3 copy):**
 
 ```sql
