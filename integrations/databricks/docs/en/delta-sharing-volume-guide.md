@@ -249,6 +249,160 @@ FROM read_files(
 
 ---
 
+## Unstructured Data: How Raw Files Appear in Unity Catalog
+
+### The Key Question: Can images, videos, and PDFs be used "as-is"?
+
+**Yes — through UC Volumes.** Unity Catalog Volumes store files in their original format. Files are NOT converted to Parquet or Delta. A JPEG remains a JPEG, a PDF remains a PDF.
+
+Reference: [What are Unity Catalog volumes?](https://docs.databricks.com/aws/en/volumes/managed-vs-external) — "Volumes govern non-tabular data of any format, including structured, semi-structured, or unstructured."
+
+### Supported Unstructured File Formats in UC Volumes
+
+| Category | File Formats | AI Processing Available | Use Case |
+|----------|---|---|---|
+| **Images** | JPEG, PNG, GIF, BMP, TIFF, WebP, SVG, HEIC, RAW (CR2, NEF, ARW) | `ai_query()` (vision), `ai_parse_document()` | Image classification, quality inspection, OCR |
+| **Documents** | PDF, DOCX, DOC, XLSX, XLS, PPTX, PPT, ODT, ODS, ODP, RTF, TXT, MD | `ai_parse_document()`, `ai_query()` | Text extraction, summarization, RAG |
+| **Video** | MP4, MOV, AVI, MKV, WebM, FLV, WMV, MPEG, 3GP | Custom UDF (frame extraction) | Video analytics, scene detection |
+| **Audio** | WAV, MP3, FLAC, AAC, OGG, WMA, M4A, AIFF | Custom UDF (transcription) | Speech-to-text, speaker diarization |
+| **CAD/Engineering** | DWG, DXF, STEP, STL, IGES, OBJ, FBX, GLTF | Custom UDF | Manufacturing, 3D analysis |
+| **Medical/Scientific** | DICOM, NIfTI, HDF5, FITS, NetCDF | Custom UDF | Medical imaging, scientific data |
+| **Geospatial** | GeoTIFF, Shapefile (.shp), GeoJSON, KML, GPX, LAS/LAZ (LiDAR) | Custom UDF | Mapping, terrain analysis |
+| **Archives** | ZIP, TAR, GZ, 7Z, RAR, BZIP2 | Extract → process contents | Batch processing |
+| **Logs/Config** | JSON, YAML, XML, CSV, TSV, LOG, INI, TOML | `read_files()` directly | Log analysis, config management |
+| **Code/Scripts** | PY, JS, TS, Java, C, CPP, SQL, SH, Notebook (.ipynb) | `ai_query()` for code analysis | Code review, documentation |
+| **Email** | EML, MSG, MBOX, PST | Custom UDF | E-discovery, compliance |
+| **Fonts/Design** | TTF, OTF, WOFF, PSD, AI, INDD, SKETCH, FIG | Custom UDF | Asset management |
+
+### Three Ways Unstructured Data Appears in Databricks
+
+#### Method 1: UC Volume (files remain in original format)
+
+```
+Unity Catalog
+  └── Catalog: enterprise_data
+       └── Schema: raw_media
+            └── Volume: fsxn_files (External Volume on S3)
+                 ├── images/
+                 │    ├── product_photo_001.jpg     ← Original JPEG (2.3 MB)
+                 │    ├── xray_scan_042.dicom       ← Original DICOM (15 MB)
+                 │    └── floor_plan.dwg            ← Original CAD (8 MB)
+                 ├── videos/
+                 │    ├── security_cam_2026-05-26.mp4  ← Original MP4 (1.2 GB)
+                 │    └── training_session.webm     ← Original WebM (450 MB)
+                 ├── documents/
+                 │    ├── contract_v3.pdf           ← Original PDF (340 KB)
+                 │    ├── financial_report.xlsx     ← Original Excel (2.1 MB)
+                 │    └── meeting_notes.docx        ← Original Word (89 KB)
+                 ├── audio/
+                 │    ├── customer_call_001.wav     ← Original WAV (45 MB)
+                 │    └── podcast_ep12.mp3          ← Original MP3 (62 MB)
+                 └── scientific/
+                      ├── brain_mri.nii.gz          ← Original NIfTI (120 MB)
+                      └── sensor_data.hdf5          ← Original HDF5 (3.4 GB)
+```
+
+**What UC sees**: File paths, sizes, modification times. Files are governed by Volume-level permissions.
+
+**What users can do**:
+```sql
+-- List all files
+SELECT * FROM DIRECTORY('/Volumes/enterprise_data/raw_media/fsxn_files/');
+
+-- Read file content as binary
+SELECT path, content FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/documents/',
+  format => 'binaryFile'
+);
+
+-- AI analysis on images (vision model)
+SELECT path,
+  ai_query('databricks-llama-4-maverick',
+    'Describe this image in detail:', files => content) AS description
+FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/images/',
+  format => 'binaryFile',
+  fileNamePattern => '*.{jpg,jpeg,png}')
+WHERE _metadata.file_size < 10000000;
+
+-- Parse PDF documents
+SELECT path,
+  ai_parse_document(content, map('version', '2.0')) AS parsed
+FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/documents/',
+  format => 'binaryFile',
+  fileNamePattern => '*.pdf');
+```
+
+Reference: [Work with unstructured data in volumes](https://docs.databricks.com/aws/en/volumes/unstructured-data-tutorial)
+
+#### Method 2: Delta Table with binaryFile (file content embedded in Parquet)
+
+```sql
+CREATE TABLE image_embeddings AS
+SELECT
+  path,
+  _metadata.file_name,
+  _metadata.file_size,
+  _metadata.file_modification_time,
+  content  -- Original file bytes stored as BINARY column in Parquet
+FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/images/',
+  format => 'binaryFile'
+);
+```
+
+**What happens to the original file**:
+- The file's binary content is **copied into a Parquet file** as a BINARY column
+- The original file still exists in the Volume (not deleted)
+- The Delta Table contains a **copy** of the bytes, not a reference
+- File is no longer in its original format inside the table — it's a byte array in Parquet
+
+**When to use**: When you need ACID, Time Travel, or Delta Sharing on the file content itself.
+
+#### Method 3: Metadata-only table (file stays in original location)
+
+```sql
+CREATE TABLE file_catalog AS
+SELECT
+  path,
+  _metadata.file_name AS file_name,
+  _metadata.file_size AS size_bytes,
+  _metadata.file_modification_time AS last_modified,
+  SPLIT_PART(_metadata.file_name, '.', -1) AS extension
+FROM read_files(
+  '/Volumes/enterprise_data/raw_media/fsxn_files/',
+  format => 'binaryFile'
+);
+```
+
+**What happens to the original file**: Nothing — it stays exactly where it is. The table only contains metadata (path, size, timestamp). To access the actual file content, you use the `path` column to read from the Volume.
+
+### Comparison: What Happens to the Original File?
+
+| Method | Original file format preserved? | Where does the file live? | UC governance level | Delta Sharing compatible? |
+|--------|:---:|---|---|---|
+| **UC Volume** | ✅ Yes (JPEG stays JPEG) | Volume storage (S3 bucket) | Volume-level (READ/WRITE VOLUME) | ✅ Volume Sharing |
+| **Delta Table (binaryFile)** | ❌ No (bytes in Parquet) | Delta Table (Parquet files) | Table-level (SELECT, column masks) | ✅ Table Sharing |
+| **Metadata-only table** | ✅ Yes (file untouched) | Original location (Volume/Stage) | Table-level (metadata) + Volume-level (file access) | ⚠️ Metadata only shared |
+
+### FSx for ONTAP S3 AP: Current Status for Each Method
+
+| Method | FSx for ONTAP S3 AP directly? | With S3 sync? | Notes |
+|--------|:---:|:---:|---|
+| UC Volume (External) | ❌ Blocked | ✅ Works | Requires DataSync/SnapMirror → S3 → External Volume |
+| UC Volume (Managed) | N/A | ✅ Works | Copy files to Managed Volume |
+| Delta Table (binaryFile) | ❌ Blocked | ✅ Works | Read from synced Volume, write to Delta Table |
+| Metadata-only table | ✅ Possible (Pattern A) | ✅ Works | ListObjectsV2 on FSx for ONTAP S3 AP → metadata table |
+
+### Key Takeaway
+
+**UC Volumes are the "zero-transformation" path for unstructured data** — files remain in their original format, governed by UC, and accessible via SQL (`read_files`), Python (`dbutils.fs`), and AI functions (`ai_query`, `ai_parse_document`).
+
+The blocker for FSx for ONTAP is not the file format — it's that **UC cannot register FSx for ONTAP S3 AP as a storage location**. Once that is resolved (Databricks feature development), files on FSx for ONTAP could be accessed directly through UC Volumes without any format conversion.
+
+---
+
 ## Provider vs Recipient: Role Clarification
 
 | Role | Databricks as Provider | Databricks as Recipient |
