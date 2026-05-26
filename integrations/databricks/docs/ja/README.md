@@ -39,7 +39,7 @@ Databricks サポート（2026 年 5 月）により以下が確認されまし�
 4. CREATE TABLE および書き込み操作は S3 AP パスでサポートされていない — セッションポリシージェネレーターのプラットフォーム制限
 5. 機能ギャップとして UC エンジニアリングチームに報告済み — エンジニアリングタイムラインは未定
 
-**推奨される暫定パス**: FSx ONTAP から標準 S3 バケットにデータを同期（DataSync または SnapMirror）し、その S3 バケットを UC External Location として登録。
+**推奨される暫定パス**: FSx ONTAP から標準 S3 バケットにデータを同期（DataSync）し、その S3 バケットを UC External Location として登録。
 
 UC ガバナンスなしの読み取り専用分析には、AWS ネイティブサービス（Athena、EMR Serverless、DuckDB Lambda）または Snowflake を FSx S3 AP 上で直接使用。
 
@@ -126,7 +126,7 @@ Auto Loader は External Location が必要（FSx S3 AP 上で現在ブロック
 | **SnapMirror to S3** | ONTAP ネイティブの S3 バケットへのレプリケーション | 分 | ONTAP 側 | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
 | **Instance Profile + boto3 (PoC)** | Databricks ドライバーからの直接 S3 AP 読み取り | リアルタイム | ❌ UC なし | ガバナンスをバイパス |
 
-> **SnapMirror to S3 の注意**: SnapMirror S3 ターゲットのオブジェクトメタデータは NFS ファイルメタデータと異なります。分析エンジンの取り込みパスとして使用する前に、スキーマ互換性とファイル命名規則を検証してください。
+> **SnapMirror to S3 の注意**: SnapMirror to S3 はこの統合パターンの同期メカニズムとして**未検証**です。SnapMirror S3 ターゲットのオブジェクトメタデータは NFS ファイルメタデータと異なる可能性があります。**検証済みの同期メカニズムとして AWS DataSync を使用してください。** SnapMirror to S3 は検証待ちの ONTAP ネイティブ代替手段として記載しています。
 
 **推奨本番パターン:**
 ```
