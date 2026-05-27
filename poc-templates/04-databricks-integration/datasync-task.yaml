@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: FSx for ONTAP → S3 DataSync Task for Databricks UC Integration
+
+Parameters:
+  SvmArn:
+    Type: String
+    Description: FSx for ONTAP SVM ARN
+  SubdirectoryPath:
+    Type: String
+    Default: /vol1/data/
+    Description: NFS subdirectory to sync
+  TargetBucket:
+    Type: String
+    Description: Target S3 bucket name
+  TargetPrefix:
+    Type: String
+    Default: fsxn-sync/
+    Description: S3 prefix for synced data
+  SecurityGroupId:
+    Type: String
+    Description: Security group allowing DataSync access to FSx for ONTAP
+  ScheduleExpression:
+    Type: String
+    Default: rate(5 minutes)
+    Description: Sync schedule (rate or cron expression)
+
+Resources:
+  DataSyncS3Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-datasync-s3-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: datasync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3WriteAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketLocation
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                Resource: !Sub 'arn:aws:s3:::${TargetBucket}'
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:DeleteObject
+                  - s3:GetObject
+                  - s3:ListMultipartUploadParts
+                  - s3:PutObject
+                  - s3:GetObjectTagging
+                  - s3:PutObjectTagging
+                Resource: !Sub 'arn:aws:s3:::${TargetBucket}/*'
+
+  SourceLocation:
+    Type: AWS::DataSync::LocationFSxONTAP
+    Properties:
+      StorageVirtualMachineArn: !Ref SvmArn
+      Subdirectory: !Ref SubdirectoryPath
+      Protocol:
+        NFS: {}
+      SecurityGroupArns:
+        - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/${SecurityGroupId}'
+
+  DestinationLocation:
+    Type: AWS::DataSync::LocationS3
+    Properties:
+      S3BucketArn: !Sub 'arn:aws:s3:::${TargetBucket}'
+      Subdirectory: !Sub '/${TargetPrefix}'
+      S3Config:
+        BucketAccessRoleArn: !GetAtt DataSyncS3Role.Arn
+
+  SyncTask:
+    Type: AWS::DataSync::Task
+    Properties:
+      Name: !Sub '${AWS::StackName}-sync-task'
+      SourceLocationArn: !Ref SourceLocation
+      DestinationLocationArn: !Ref DestinationLocation
+      Schedule:
+        ScheduleExpression: !Ref ScheduleExpression
+      Options:
+        VerifyMode: ONLY_FILES_TRANSFERRED
+        OverwriteMode: ALWAYS
+        Atime: BEST_EFFORT
+        Mtime: PRESERVE
+        PreserveDeletedFiles: REMOVE
+        TransferMode: CHANGED
+
+Outputs:
+  TaskArn:
+    Value: !Ref SyncTask
+    Description: DataSync task ARN
+  SourceLocationArn:
+    Value: !Ref SourceLocation
+  DestinationLocationArn:
+    Value: !Ref DestinationLocation
+  ManualExecuteCommand:
+    Value: !Sub |
+      aws datasync start-task-execution --task-arn ${SyncTask}
