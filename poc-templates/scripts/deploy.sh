@@ -4,7 +4,7 @@ set -euo pipefail
 # FSx for ONTAP S3 Access Points — PoC Quick Deploy
 # Usage: ./deploy.sh --region <region>
 
-REGION="${1:-ap-northeast-1}"
+REGION="ap-northeast-1"
 STACK_NAME="fsxn-lakehouse-poc"
 
 echo "╔══════════════════════════════════════════════════════════════╗"
