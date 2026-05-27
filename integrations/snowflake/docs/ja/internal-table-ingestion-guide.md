@@ -384,6 +384,32 @@ WHERE RELATIVE_PATH LIKE '%.png' OR RELATIVE_PATH LIKE '%.jpg';
 1. **最初の External Table を作成**: [設定ガイド](../../README.md#configuration-guide)に従い、ステージに `AWS_ACCESS_POINT_ARN` を設定して External Table を作成
 2. **RAG / Cortex Search 向け**: External Table ソースに `TARGET_LAG = '1 hour'` の Dynamic Table を設定し、Cortex Search Service を作成
 3. **イベント駆動取り込み向け**: FPolicy → Lambda → Snowpipe REST API をデプロイ（[Snowpipe 統合ガイド](snowpipe-integration.md)）
+4. **マルチプラットフォーム共有 (Iceberg) 向け**: Snowflake Managed Iceberg Table を使用して、curated dataset を顧客所有の S3 上にオープン Iceberg 形式で書き込み — Databricks、Athena、EMR、Trino から追加コピーなしでアクセス可能
+
+---
+
+## 将来像: Managed Iceberg によるオープンフォーマットブリッジ
+
+Snowflake [Managed Iceberg Tables](https://docs.snowflake.com/en/user-guide/tables-iceberg) は、顧客所有の S3 ストレージにオープン Apache Iceberg 形式でデータを書き込みます。これによりマルチプラットフォームアーキテクチャが実現します:
+
+```
+FSx for ONTAP (Source of Truth)
+  ↓ S3 AP (ゼロコピー読み取り) or DataSync (S3 に同期)
+Snowflake Managed Iceberg Table (curated, governed)
+  ↓ 顧客所有 S3 上のオープン Iceberg 形式
+  ├── Databricks UC (Iceberg 読み取り)
+  ├── AWS Athena / Glue (Glue Catalog 経由で Iceberg 読み取り)
+  ├── EMR Spark (Iceberg 読み書き)
+  └── Trino (Iceberg 読み取り)
+```
+
+**主要メリット**:
+- **ベンダーロックインなし**: データはオープン Iceberg 形式、顧客が所有
+- **Snowflake がライフサイクル管理**: OPTIMIZE、Time Travel、ガバナンスタグ — プロプライエタリ形式なし
+- **マルチエンジンアクセス**: 同じ curated dataset を全 Iceberg 互換エンジンから読み取り可能
+- **ONTAP が Source of Truth のまま**: 高価値な curated subset のみ Iceberg に昇格
+
+> **注意**: このパターンは Iceberg 書き込みパスに標準 S3 が必要です（FSx for ONTAP S3 AP 直接ではない）。DataSync を使用して FSx for ONTAP から S3 に関連サブセットを同期し、Snowflake で Iceberg テーブルとして管理してください。
 
 ---
 
