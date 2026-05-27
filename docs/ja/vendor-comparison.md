@@ -29,9 +29,13 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **認証**: Cross-account IAM Role + External ID
 - **ネットワーク**: VPC network origin（推奨）
 - **データ形式**: Delta Lake, Iceberg, Parquet, CSV, JSON, ORC
-- **非構造化データ**: `binaryFile` フォーマットで画像/動画読み取り可能
-- **ONTAP 活用**: FlexClone（dev/test）、Snapshot（Time Travel 補完）
-- **制限**: UC セッションポリシーが S3 AP 上のテーブル作成とサブディレクトリ一覧をブロック。推奨パス: DataSync → S3 → UC。
+- **非構造化データ**: UC Volumes + `read_files()` + `ai_query()`（画像/ドキュメントに LLM）+ `ai_parse_document()`（OCR）
+- **AI 機能**: Mosaic AI（ML トレーニング、Feature Store、Model Registry）、`ai_query`（ファイルに LLM）、`ai_parse_document`（OCR）、Vector Search（RAG）、MLflow 実験追跡
+- **ガバナンス**: Unity Catalog — テーブル/カラム Grants、Row Filters、Column Masks、UC Tags、自動リネージ（カラムレベル）、監査ログ（システムテーブル）、Lakehouse Monitoring（データ品質 + ドリフト）
+- **Data Sharing**: Delta Sharing — オープンプロトコル、Snowflake/Pandas/Spark/Power BI から Databricks アカウントなしで読み取り可能
+- **ONTAP 活用**: FlexClone（dev/test）、Snapshot（Delta Time Travel 補完）、FabricPool（コールドデータ階層化）
+- **独自の強み**: 自動データリネージ（カラムレベル）、ML モデルガバナンス（MLflow + Model Registry）、Lakehouse Monitoring、Iceberg REST Catalog（外部エンジンから UC テーブルへのアクセス）
+- **制限**: UC セッションポリシーが FSx S3 AP 上のテーブル作成とサブディレクトリ一覧を直接ブロック。**推奨パス: DataSync → S3 → UC**（フルガバナンス、フル AI、フルリネージ）
 
 ### Snowflake
 
