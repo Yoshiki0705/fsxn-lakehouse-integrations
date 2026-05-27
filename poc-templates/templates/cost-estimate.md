@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](ja/cost-estimate.md)
+
 # PoC Cost Estimate Calculator
 
 ## Instructions
