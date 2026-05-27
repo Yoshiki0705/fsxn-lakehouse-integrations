@@ -60,7 +60,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 | **Delta Lake (OSS)** | ✅ 読み取り検証済み（delta-rs） | ❌ 非サポート（501 Not Implemented） | ✅ DataSync → S3 → UC | Part 7 検証済み |
 | **Apache Hudi** | ⚠️ 未テスト | ❌ 非サポート（atomic rename なし） | ✅ 標準 S3 パス | Part 7 検証済み |
 | **Trino / Starburst** | ✅ 読み取り検証済み（5M 行、1.5秒） | ❌（同じ制限） | N/A | Part 0 検証済み |
-| **Dremio** | 🔲 計画中 | 🔲 計画中 | N/A | 未テスト |
+| **Dremio** | 🔲 計画中 | 🔲 計画中 | N/A | 📋 NetApp/Dremio ジョイントソリューション（独自検証未実施） |
 
 > **主要な発見（Part 7）**: 3つのトランザクショナルテーブルフォーマット（Delta, Iceberg, Hudi）は全て FSx S3 AP への書き込みに失敗。根本原因は S3 API の基本的な制限 — conditional writes なし（`If-None-Match` → 501）、atomic rename なし。既存テーブルの読み取りは理論的に可能だが、Delta read のみ検証済み。
 
@@ -97,7 +97,12 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **認証**: IAM Role / Access Key
 - **カタログ**: Nessie (Git-like catalog) / Arctic
 - **特徴**: Iceberg ネイティブ、リフレクション（高速化）
-- **ステータス**: 🔲 計画中 — 検証には Dremio インスタンスが必要
+- **ステータス**: 📋 **NetApp/Dremio ジョイントソリューション存在** — このリポジトリでの独自検証は未実施
+- **NetApp パートナーシップ**: Dremio と NetApp が NetApp INSIGHT 2024（2024年9月）で Hybrid Iceberg Lakehouse ジョイントソリューションを発表。ONTAP S3、NAS、StorageGRID ソースをカバーする完全なデプロイメントガイドが [docs.netapp.com](https://docs.netapp.com/us-en/netapp-solutions/data-analytics/dremio-lakehouse-introduction.html) に存在。
+- **FSx for ONTAP 統合**: NetApp ブログ（2025年1月）で Dremio Cloud + FSx for ONTAP S3 Access Points を NAS データ上の AI-ready 分析のジョイントソリューションとして紹介（[netapp.com](https://www.netapp.com/blog/ai-insights-ontap-s3-access-points-dremio/)）
+- **主要機能**: Iceberg ネイティブクエリエンジン、リフレクション（マテリアライズド高速化）、セマンティックレイヤー、data-as-code（Nessie Git-like バージョニング）
+- **Iceberg 相互運用性**: Dremio が書き込む Iceberg テーブルは Snowflake（External Iceberg Table）、Databricks（UC Iceberg）、Athena（Glue Catalog）、EMR、Trino から読み取り可能
+- **このリポジトリで未検証の理由**: Dremio Cloud またはセルフマネージド Dremio インスタンスが必要。NetApp/Dremio ジョイントソリューションドキュメントがリファレンスアーキテクチャを提供。将来のフェーズで独自検証を追加する可能性あり。
 
 ---
 
