@@ -85,59 +85,106 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ---
 
-## Tier 3: クラウドネイティブ分析
+## Tier 3: クラウドネイティブ分析 (AWS)
 
 | サービス | 統合方式 | ユースケース | ステータス |
 |---------|---------|-------------|----------|
-| **AWS Athena** | S3 AP 直接クエリ | サーバーレス SQL | ✅ セキュリティ検証済み |
-| **AWS Glue** | S3 AP Crawler / ETL Job | データカタログ + ETL | ✅ 機能検証済み |
-| **AWS Lake Formation** | S3 AP 登録 | ガバナンス・権限管理 | 🚧 計画中 |
-| **Amazon Redshift Spectrum** | External Schema on S3 AP | DWH + Data Lake 統合 | 🚧 計画中 |
-| **Amazon EMR (Spark)** | S3A Connector → S3 AP | 大規模バッチ処理 | 🚧 計画中 |
-| **Google BigQuery Omni** | S3 Connection | クロスクラウド分析 | 📋 調査中 |
-| **Microsoft Fabric / Synapse** | S3 Shortcut / External Table | Microsoft エコシステム統合 | 📋 調査中 |
+| **AWS Athena** | Glue Catalog 経由 S3 AP 直接クエリ | サーバーレス SQL | ✅ セキュリティ検証済み |
+| **AWS Glue** | S3 AP Crawler / ETL Job | データカタログ + ETL + 書き戻し | ✅ 機能検証済み |
+| **AWS Lake Formation** | Glue Catalog テーブルへのガバナンス | 細粒度アクセス制御（テーブル/カラム/行/タグ） | ✅ 検証済み（カラム、行フィルタ、LF-Tag） |
+| **Amazon Redshift Spectrum** | Glue Catalog 上の External Schema | DWH + Data Lake フェデレーテッドクエリ | ✅ 機能検証済み |
+| **Amazon EMR Serverless** | EMRFS (`s3://`) 直接アクセス | Spark ETL + 書き戻し | ✅ 機能検証済み |
+| **Amazon Bedrock KB** | S3 AP をデータソースとして使用 | RAG / ドキュメント検索 | ✅ AWS ドキュメント記載パス |
+| **DuckDB Lambda** | httpfs 拡張 + path-style | 軽量サーバーレス分析 | ✅ 機能検証済み |
 
 ### AWS Athena
 
 - **認証**: IAM Role（サービスロール）
 - **ネットワーク**: Internet network origin **必須**
-- **特徴**: サーバーレス、従量課金（スキャンデータ量）
-- **非構造化データ**: メタデータクエリのみ（ファイルパス、サイズ）
+- **特徴**: サーバーレス、従量課金（$5/TB スキャン）、Glue Catalog 統合
+- **AI 統合**: Athena + Bedrock KB（同じ FSx データで RAG）、Athena + SageMaker（ML 推論 UDF）
+- **ガバナンス**: Lake Formation（テーブル/カラム/行/タグ）— Athena と Redshift Spectrum に同じ権限が自動適用
+- **書き戻し**: ✅ CTAS で FSx S3 AP に Parquet 書き戻し（検証済み、3.7秒）
+- **独自の強み**: ゼロインフラ、全 AWS エンジンと Glue Catalog 共有、Lake Formation ガバナンス自動適用
+- **ベンチマーク**: 54.8 MB/s ピーク（5M 行を 2.2秒）
 - **参考**: [AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-query-data-with-athena.html)
 
 ### AWS Glue
 
 - **認証**: Glue サービスロール
 - **ネットワーク**: Internet network origin **必須**
-- **特徴**: Crawler（スキーマ発見）、ETL Job（PySpark/Python Shell/Ray）
-- **非構造化データ**: Crawler でファイルメタデータ収集、ETL で変換処理
+- **特徴**: Crawler（スキーマ発見）、ETL Job（PySpark/Python Shell/Ray）、Data Quality
+- **AI 統合**: Glue + Bedrock（AI 駆動変換）、Glue Data Quality（自動バリデーション）
+- **ガバナンス**: Glue Data Catalog が Lake Formation の基盤 — 全権限はここで定義
+- **書き戻し**: ✅ ETL 書き戻し（検証済み、10K 行メダリオンパイプライン 64秒）
+- **独自の強み**: スキーマ発見（Crawler）、ビジュアル ETL（Studio）、サーバーレス Spark、Data Quality ルール
 - **参考**: [AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html)
+
+### AWS Lake Formation
+
+- **認証**: Lake Formation admin + プリンシパルごとの grants
+- **ネットワーク**: N/A（ガバナンスレイヤー、クエリエンジンではない）
+- **特徴**: テーブル/カラムレベル grants、Row Filters（Data Cells Filter）、LF-Tags（タグベースアクセス制御）、クロスアカウント共有
+- **AI 統合**: Bedrock KB、SageMaker、EMR ML ワークロードがアクセスするデータをガバナンス
+- **ガバナンス**: ✅ **最強の AWS ネイティブガバナンス** — 細粒度（カラム/行/タグ）、マルチエンジン（Athena + Redshift + EMR + Glue が同じ権限を共有）、データ移動なし
+- **独自の強み**: 単一のガバナンス定義が全 AWS 分析エンジンに同時適用。エンジンごとの設定不要。データコピーなしのクロスアカウントテーブル共有。
+- **検証済み機能（2026年5月）**: カラムレベル権限（特定カラム拒否）、Row Filter（式によるフィルタ）、LF-Tag（sensitivity 分類 + タグベース grants）
 
 ### Amazon Redshift Spectrum
 
-- **認証**: Redshift IAM Role
+- **認証**: S3 AP 権限付き Redshift IAM Role
 - **ネットワーク**: Internet network origin **必須**
-- **特徴**: DWH + Data Lake フェデレーテッドクエリ
-- **非構造化データ**: 非対応（構造化データのみ）
-- **参考**: [AWS re:Post](https://repost.aws/articles/AR7E4oxFvtR5GgajAQT7X1xQ)
+- **特徴**: DWH + Data Lake フェデレーテッドクエリ、マテリアライズドビュー、ストアドプロシージャ
+- **AI 統合**: Redshift ML（CREATE MODEL）、SageMaker エンドポイントへのフェデレーテッドクエリ
+- **ガバナンス**: Lake Formation（Athena と同じ権限 — 一度設定すれば全エンジンに適用）
+- **書き戻し**: ❌（クエリ結果は Redshift に残る; 書き戻しには EMR を使用）
+- **独自の強み**: NAS データとローカル DWH テーブルの JOIN、外部データ上のマテリアライズドビュー、Athena と同じ Glue Catalog
+- **ベンチマーク**: 5M 行を 4.3秒（Serverless 8 RPU）
 
-### Amazon EMR (Spark)
+### Amazon EMR Serverless (Spark)
 
-- **認証**: Instance Profile / IAM Role
-- **ネットワーク**: VPC network origin 可能
-- **特徴**: 大規模バッチ、Spark/Hive/Presto
-- **非構造化データ**: `binaryFile` フォーマット、画像処理ライブラリ
+- **認証**: 実行ロール（IAM）
+- **ネットワーク**: Internet network origin（EMRFS が S3 AP をネイティブ処理）
+- **特徴**: フル Spark SQL、UDF、ウィンドウ関数、MLlib、分散処理
+- **AI 統合**: Spark MLlib、SageMaker Spark コネクタ、S3 上の Iceberg テーブル作成
+- **ガバナンス**: IAM ベース（出力のガバナンス読み取りには Lake Formation と組み合わせ）
+- **書き戻し**: ✅ **最強の書き戻しパス** — FSx S3 AP にフラット Parquet（検証済み、16秒 ETL 合計）
+- **独自の強み**: セッションポリシー問題なし（直接 IAM）、フル Spark パワー、FSx への書き戻し、S3 上の Iceberg テーブル作成
+- **ベンチマーク**: 10K 行 読み取り+変換+書き込み 16秒、$0.05/ジョブ
+- **重要**: `s3://`（EMRFS）を使用。`s3a://` は AP エイリアスをパースできない
 
-### Google BigQuery Omni
+### Amazon Bedrock Knowledge Bases
 
-- **認証**: S3 Connection（IAM Role）
+- **認証**: Bedrock サービスロール（S3 AP 権限付き）
 - **ネットワーク**: Internet network origin
-- **特徴**: クロスクラウド分析、BigLake テーブル
-- **非構造化データ**: Object Table で画像/動画メタデータ管理
+- **特徴**: RAG ドキュメント取り込み、ベクトル embedding、権限認識型検索
+- **AI 統合**: ✅ **ネイティブ RAG パス** — FSx S3 AP からドキュメント取り込み、embedding 作成、ガードレール付きセマンティック検索
+- **ガバナンス**: Bedrock ガードレール（トピックフィルタリング、PII 検出、ハルシネーション低減）、IAM モデルアクセスポリシー
+- **独自の強み**: ゼロコピー RAG（COPY INTO なしで FSx S3 AP から直接読み取り）、権限認識型検索、マルチステップ推論の Bedrock エージェント
+- **参考**: [AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)
 
-### Microsoft Fabric / Synapse
+### DuckDB Lambda
 
-- **認証**: S3 Shortcut（Access Key / IAM Role）
+- **認証**: Lambda 実行ロール（IAM）
+- **ネットワーク**: Internet network origin（VPC 不要）
+- **特徴**: インプロセス SQL、サブ秒ウォームクエリ、arm64（Graviton2）
+- **AI 統合**: 最小限（SQL のみ; AI には Bedrock と組み合わせ）
+- **ガバナンス**: IAM + S3 AP ポリシーのみ（テーブルレベルガバナンスなし）
+- **書き戻し**: ✅ COPY TO Parquet（検証済み、304ms）
+- **独自の強み**: 最安パス（$0.00001/クエリ）、ゼロアイドルコスト、サブ秒ウォームレイテンシ（452ms）
+- **ベンチマーク**: 10K 行 452ms（ウォーム）、5M 行 779ms
+
+### AWS ネイティブ固有の価値提案
+
+| 優位性 | 詳細 |
+|--------|------|
+| **セッションポリシー問題なし** | 全 AWS サービスが直接 IAM を使用 — S3 AP ARN 形式をブロックする中間セッションポリシーなし |
+| **Glue Catalog 共有** | Athena、Redshift Spectrum、EMR、Glue が同じカタログを共有。一度登録すれば全エンジンからクエリ可能 |
+| **Lake Formation マルチエンジン** | 単一のガバナンス定義が全エンジンに同時適用。プラットフォームごとの設定不要 |
+| **ゼロコピー RAG** | Bedrock KB が FSx S3 AP から直接読み取り — COPY INTO なし、ステージングなし、RAG のためのデータ移動なし |
+| **サーバーレスファースト** | Athena、Glue、EMR Serverless、Lambda — スタック全体でゼロアイドルコスト |
+| **書き戻し検証済み** | EMR、Athena CTAS、DuckDB が FSx S3 AP にフラット Parquet を書き戻し可能（Snowflake/Databricks は不可） |
+| **S3 上の Iceberg** | EMR Spark が標準 S3 に Iceberg テーブル作成 → Glue Catalog に登録 → Athena/Redshift/Snowflake/Databricks からクエリ可能 |
 - **ネットワーク**: Internet network origin
 - **特徴**: OneLake 統合、Power BI 連携
 - **非構造化データ**: OneLake Shortcut 経由でファイルアクセス
