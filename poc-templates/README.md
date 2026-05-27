@@ -1,6 +1,6 @@
 # PoC Templates — FSx for ONTAP S3 Access Points × Lakehouse
 
-🌐 [日本語](README-ja.md) | **English**
+🌐 **English** | [日本語](README-ja.md)
 
 ## 30-Minute Quick Start
 

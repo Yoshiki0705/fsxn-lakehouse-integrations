@@ -1,0 +1,130 @@
+# PoC テンプレート — FSx for ONTAP S3 Access Points × Lakehouse
+
+🌐 [English](README.md) | **日本語**
+
+## 30分クイックスタート
+
+基盤インフラをデプロイし、30分で最初のクエリを実行:
+
+```bash
+# 1. デプロイ (10分)
+./scripts/deploy.sh --region ap-northeast-1
+
+# 2. サンプルデータアップロード (2分)
+./scripts/upload-sample-data.sh
+
+# 3. 接続検証 (1分)
+./scripts/validate.sh
+
+# 4. 最初の Athena クエリ実行 (2分)
+./02-athena-quickstart/run-first-query.sh
+```
+
+**結果**: Athena が S3 Access Point 経由で FSx for ONTAP データをクエリ — データコピーゼロ。
+
+---
+
+## エンジンを選択
+
+| 顧客のプラットフォーム | モジュール | 最初のクエリまでの時間 | PoC コスト (1日) |
+|---|---|---|---|
+| AWS ネイティブ (Athena) | [02-athena-quickstart](02-athena-quickstart/) | 15分 | ~$0.05 |
+| Snowflake | [03-snowflake-integration](03-snowflake-integration/) | 30分 | ~$5 |
+| Databricks | [04-databricks-integration](04-databricks-integration/) | 1時間 | ~$10 |
+| EMR Spark (ETL) | [05-emr-spark-etl](05-emr-spark-etl/) | 20分 | ~$0.50 |
+| DuckDB Lambda (最安) | [06-duckdb-lambda](06-duckdb-lambda/) | 10分 | ~$0.01 |
+| エンタープライズガバナンス | [07-governance](07-governance/) | 30分 | $0 (Lake Formation) |
+
+---
+
+## リポジトリ構造
+
+```
+poc-templates/
+├── README.md / README-ja.md          # このファイル
+├── 01-base-infrastructure/           # CloudFormation: FSx + S3 AP + IAM
+├── 02-athena-quickstart/             # 最速の検証パス
+├── 03-snowflake-integration/         # Snowflake External Table + Cortex AI
+├── 04-databricks-integration/        # DataSync → S3 → UC
+├── 05-emr-spark-etl/                 # EMR Serverless 書き戻し
+├── 06-duckdb-lambda/                 # 最安パス
+├── 07-governance/                    # Lake Formation 細粒度制御
+├── templates/                        # パートナー向けテンプレート
+│   ├── discovery-questions.md        # 初回ミーティング質問集
+│   ├── poc-proposal.md               # PoC 提案書
+│   ├── success-criteria.md           # Go/No-Go チェックリスト
+│   ├── cost-estimate.md              # コスト計算シート
+│   ├── regulated-workload-checklist.md # 規制ワークロードチェックリスト
+│   └── post-poc-report.md            # 結果レポートテンプレート
+├── sample-data/                      # サンプルデータセット
+└── scripts/                          # デプロイ・検証スクリプト
+```
+
+---
+
+## 前提条件
+
+- FSx for ONTAP (ONTAP 9.17.1+) を持つ AWS アカウント
+- AWS CLI v2 設定済み
+- Python 3.12+（サンプルデータ生成用）
+- (オプション) Snowflake アカウント（モジュール 03 用）
+- (オプション) Databricks ワークスペース（モジュール 04 用）
+
+---
+
+## PoC 成功基準
+
+### 最小成功 (30分)
+- [ ] S3 Access Point が `AVAILABLE`
+- [ ] `ListObjectsV2` がサンプルデータファイルを返す
+- [ ] Athena クエリが正しい結果を返す
+- [ ] 同じファイルへの NFS/SMB アクセスが引き続き動作
+
+### 運用成功 (1日)
+- [ ] 選択したエンジンが FSx データを正常にクエリ
+- [ ] IAM と S3 AP ポリシーが最小権限にスコープ
+- [ ] クエリレイテンシとコストを測定
+- [ ] クエリ中の FSx スループット影響を測定
+- [ ] Go/No-Go 判断を文書化
+
+### AI/ガバナンス成功 (2日)
+- [ ] AI 関数が FSx データ上で動作（Cortex AI または Bedrock KB）
+- [ ] ガバナンス制御を適用（Lake Formation または Snowflake Tags）
+- [ ] データ共有をデモ（必要な場合）
+- [ ] 規制ワークロードチェックリスト完了（該当する場合）
+
+---
+
+## コスト見積もり
+
+| コンポーネント | 1日 PoC | 1週間 PoC | 備考 |
+|------------|---------|---------|------|
+| FSx for ONTAP (既存) | $0 | $0 | 既存ファイルシステムを使用 |
+| S3 Access Point | $0 | $0 | 追加料金なし |
+| Athena クエリ | ~$0.05 | ~$0.25 | $5/TB スキャン |
+| EMR Serverless | ~$0.50 | ~$2.50 | ジョブ単位課金 |
+| Snowflake (XS warehouse) | ~$5 | ~$25 | クレジットベース |
+| Databricks (DataSync + compute) | ~$10 | ~$50 | 同期 + DBU |
+| Lake Formation | $0 | $0 | 追加料金なし |
+| **合計 (AWS ネイティブのみ)** | **~$0.55** | **~$2.75** | Athena + EMR |
+| **合計 (Snowflake 含む)** | **~$5.55** | **~$27.75** | Snowflake クレジット追加 |
+
+---
+
+## パートナー向け
+
+[templates/](templates/) に顧客向け資料があります:
+- **初回ミーティング**: [discovery-questions.md](templates/discovery-questions.md)
+- **提案書**: [poc-proposal.md](templates/poc-proposal.md)
+- **コスト根拠**: [cost-estimate.md](templates/cost-estimate.md)
+- **成功基準**: [success-criteria.md](templates/success-criteria.md)
+- **規制ワークロード**: [regulated-workload-checklist.md](templates/regulated-workload-checklist.md)
+- **最終レポート**: [post-poc-report.md](templates/post-poc-report.md)
+
+---
+
+## 関連
+
+- [メイン README](../README.md) — プロジェクト概要と互換性マトリクス
+- [ブログシリーズ](../README.md#blog-series--ブログシリーズ) — 詳細な検証記事 (Part 0-7)
+- [検証パック](../verification-pack/) — 検証からのエビデンスレコード
