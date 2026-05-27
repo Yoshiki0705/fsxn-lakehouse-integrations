@@ -53,36 +53,52 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ---
 
-## Tier 2: Open Table Formats
+## Tier 2: Open Table Formats & Distributed SQL
 
-| Format/Engine | Integration Method | Use Case | Status |
-|--------------|-------------------|----------|--------|
-| **Apache Iceberg** | S3 Catalog + S3 AP | Vendor-neutral table format | 🚧 Planned |
-| **Delta Lake (OSS)** | S3 Storage Layer | Spark/Databricks compatible | 🚧 Planned |
-| **Apache Hudi** | S3 Storage Layer | CDC, incremental processing | 🚧 Planned |
-| **Dremio** | S3 Source / Nessie Catalog | Iceberg-native Lakehouse | 🚧 Planned |
-| **Starburst / Trino** | S3 Connector / Hive Metastore | Distributed SQL federation | 🚧 Planned |
+| Format/Engine | Read from FSx S3 AP | Write to FSx S3 AP | Write to S3 (via sync) | Status |
+|--------------|:---:|:---:|:---:|--------|
+| **Apache Iceberg** | ⚠️ Experimental (pre-existing tables) | ❌ Not Supported (NullPointerException) | ✅ EMR Spark → S3 | Part 7 verified |
+| **Delta Lake (OSS)** | ✅ Read Verified (delta-rs) | ❌ Not Supported (501 Not Implemented) | ✅ DataSync → S3 → UC | Part 7 verified |
+| **Apache Hudi** | ⚠️ Not tested | ❌ Not Supported (no atomic rename) | ✅ Standard S3 path | Part 7 verified |
+| **Trino / Starburst** | ✅ Read Verified (5M rows, 1.5s) | ❌ (same limitations) | N/A | Part 0 verified |
+| **Dremio** | 🔲 Planned | 🔲 Planned | N/A | Not yet tested |
+
+> **Key finding (Part 7)**: All three transactional table formats (Delta, Iceberg, Hudi) fail to WRITE on FSx S3 AP due to fundamental S3 API limitations — no conditional writes (`If-None-Match` → 501), no atomic rename. READ of pre-existing tables is theoretically possible but only Delta read has been verified.
 
 ### Apache Iceberg
 
-- **Auth**: IAM Role (engine-dependent)
-- **Catalog**: REST Catalog, Glue Catalog, Hive Metastore
-- **Features**: Vendor-neutral, schema evolution, partition evolution
-- **Unstructured**: File management via metadata tables
+- **Read**: Pre-existing Iceberg tables (metadata in Glue Catalog, data files on FSx S3 AP) are theoretically readable via GetObject. Not fully validated.
+- **Write**: ❌ S3FileIO cannot handle AP alias for metadata write/verify (NullPointerException during commit). Conditional writes not supported.
+- **Working alternative**: EMR Spark writes Iceberg to standard S3 → register in Glue Catalog → query from Athena/Redshift/Snowflake/Databricks. FSx S3 AP serves as read-only source data.
+- **Snowflake path**: FSx S3 AP → External Stage → COPY INTO → Snowflake Managed Iceberg Table (open format on customer S3, confirmed May 2026)
+- **Catalog options**: Glue Catalog (AWS-native), Snowflake Managed Iceberg (Snowflake-native), Databricks UC Iceberg REST Catalog (Databricks-native)
+
+### Delta Lake (OSS)
+
+- **Read**: ✅ Verified with delta-rs (Rust). Spark Delta reader also works for pre-existing tables.
+- **Write**: ❌ Delta commit protocol requires `If-None-Match` conditional write for `_delta_log/` — FSx S3 AP returns 501 Not Implemented.
+- **Working alternative**: DataSync → S3 → Delta Table (Databricks UC or OSS Spark). FSx S3 AP as read-only source.
+- **Databricks path**: DataSync → S3 → UC Managed Delta Table (full governance, lineage, Time Travel)
+
+### Apache Hudi
+
+- **Read**: Not tested (theoretically possible for pre-existing tables via GetObject).
+- **Write**: ❌ Hudi timeline commit requires atomic rename (`.inflight` → `.commit`). S3 has no rename operation.
+- **Working alternative**: Standard S3 bucket for Hudi write path. FSx S3 AP as read-only source.
+
+### Trino / Starburst
+
+- **Read**: ✅ Verified — Trino 481 + Glue Catalog + `hive.s3.path-style-access=true` + explicit `hive.s3.endpoint`. 5M rows in 1.5s.
+- **Write**: Not tested (same S3 AP limitations apply for transactional writes).
+- **Configuration**: Requires `hive.s3.path-style-access=true` and explicit `hive.s3.endpoint` to resolve S3 AP aliases. Same pattern as DuckDB.
+- **Catalog**: Glue Catalog (shared with Athena, Redshift, EMR)
 
 ### Dremio
 
 - **Auth**: IAM Role / Access Key
 - **Catalog**: Nessie (Git-like catalog) / Arctic
 - **Features**: Iceberg-native, reflections (acceleration)
-- **Unstructured**: Metadata cataloging only
-
-### Starburst / Trino
-
-- **Auth**: IAM Role / Instance Profile
-- **Catalog**: Hive Metastore / Glue Catalog
-- **Features**: Distributed SQL, federated queries, many connectors
-- **Unstructured**: File metadata queryable
+- **Status**: 🔲 Planned — requires Dremio instance for validation
 
 ---
 
