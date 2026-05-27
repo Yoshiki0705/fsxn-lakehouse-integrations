@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](ja/success-criteria.md)
+
 # PoC Success Criteria & Go/No-Go Framework
 
 ## How to Use

@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](ja/poc-proposal.md)
+
 # PoC Proposal: FSx for ONTAP S3 Access Points × Analytics
 
 ## For: [Customer Name]
