@@ -260,6 +260,23 @@ fsxn-lakehouse-integrations/
 
 ---
 
+## Blog Series / ブログシリーズ
+
+**"FSx for ONTAP S3 Access Points × Lakehouse Deep Dive"** — A 7-part validation series on dev.to:
+
+| Part | Platform | URL |
+|:---:|----------|-----|
+| 0 | Series Overview — What Works, What Doesn't, and Why | [dev.to](https://dev.to/aws-builders/fsx-for-ontap-s3-access-points-x-lakehouse-what-works-what-doesnt-and-why-1jo3) |
+| 1 | Athena — Query NAS Data In Place | [dev.to](https://dev.to/aws-builders/query-nas-data-in-place-with-athena-and-fsx-for-ontap-s3-access-points-3lhh) |
+| 2 | Databricks — A Layer-by-Layer Validation of Observed Boundaries | [dev.to](https://dev.to/aws-builders/databricks-and-fsx-for-ontap-s3-access-points-a-layer-by-layer-validation-of-observed-boundaries-p4d) |
+| 3 | Snowflake — From 'Access Denied' to Working External Tables | [dev.to](https://dev.to/aws-builders/snowflake-and-fsx-for-ontap-s3-access-points-from-access-denied-to-working-external-tables-9k8) |
+| 4 | DuckDB Lambda — Serverless Analytics for $0.00001/Query | [dev.to](https://dev.to/aws-builders/serverless-analytics-on-nas-data-for-000001query-duckdb-lambda-x-fsx-for-ontap-2o5o) |
+| 5 | EMR Spark — Read-Write ETL on NAS Data | [dev.to](https://dev.to/aws-builders/read-write-etl-on-nas-data-with-emr-serverless-spark-no-cluster-no-copy-hgm) |
+| 6 | Redshift Spectrum + Lake Formation — Enterprise Governance | [dev.to](https://dev.to/aws-builders/redshift-spectrum-lake-formation-enterprise-governance-on-nas-data-2pik) |
+| 7 | Table Format Boundaries — Why Delta/Iceberg/Hudi Can't Write | [dev.to](https://dev.to/aws-builders/why-delta-iceberg-and-hudi-cant-write-to-fsx-s3-access-points-and-what-works-instead-5be3) |
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
