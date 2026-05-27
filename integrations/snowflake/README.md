@@ -36,10 +36,13 @@
 | AI text processing (OCR, summarize, translate) | ✅ | Cortex functions on External Table — no copy needed |
 | AI Vision (image analysis) | ✅ | COPY FILES to internal stage → TO_FILE workaround |
 | AI RAG / Semantic Search (Cortex Search) | ✅ | External Table → COPY INTO → Cortex Search Service (198ms query) |
-| Real-time auto-ingest (Snowpipe) | ❌ | Use scheduled REFRESH or FPolicy + Lambda |
-| Iceberg write-back | ❌ | Use native S3 for transactional writes |
+| Automated enrichment (Dynamic Table) | ✅ | External Table → Dynamic Table (TARGET_LAG = '1 hour', FULL refresh) — confirmed May 2026 |
+| Share curated data with partners | ✅ | External Table or Dynamic Table → Snowflake Data Sharing |
+| Open format for multi-engine access | ✅ | COPY INTO → Managed Iceberg Table → Databricks/Athena can read — confirmed May 2026 |
+| Real-time auto-ingest (Snowpipe) | ❌ | Use Task + ALTER EXTERNAL TABLE REFRESH or FPolicy + Lambda |
+| Iceberg write-back on FSx S3 AP | ❌ | Use native S3 for transactional writes |
 
-> Choose Snowflake when governed external tables, tags, Directory Tables, AI/ML on NAS data, or Snowpark integration are required. Choose Athena when lightweight AWS-native serverless SQL over NAS data is sufficient.
+> Choose Snowflake when governed external tables, AI functions, data sharing, or multi-engine Iceberg interoperability are required. Choose Athena when lightweight AWS-native serverless SQL over NAS data is sufficient.
 
 ### Partner Conversation Script
 
