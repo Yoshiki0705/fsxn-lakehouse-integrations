@@ -12,12 +12,35 @@ Snowflake External Tables on FSx for ONTAP S3 AP provide **governed zero-copy re
 
 This creates a **dual management challenge**: data lives on FSx for ONTAP (source of truth) and must be copied into Snowflake internal tables for full platform functionality.
 
+### The AI-Ready Data Product Journey
+
+The progression from raw NAS files to AI-ready data products in Snowflake follows a clear path:
+
+```
+FSx for ONTAP (raw files)
+  ↓ S3 Access Point + AWS_ACCESS_POINT_ARN
+External Table (zero-copy governed read)
+  ↓ Cortex AI text functions work here (summarize, translate, sentiment)
+  ↓
+Dynamic Table (TARGET_LAG = '1 hour')
+  ↓ Automated transformation + enrichment
+  ↓ Cortex AI in SELECT clause (GA since Sep 2025)
+  ↓
+Cortex Search Service (semantic search / RAG)
+  ↓ AI-ready data product
+  ↓
+Data Sharing / Data Product (governed distribution)
+```
+
+**Key insight**: You don't need to COPY INTO everything. Start with External Table for immediate AI value (Cortex text functions work on zero-copy data), then selectively promote high-value subsets to Dynamic Tables for Cortex Search and full platform capabilities.
+
 ### Key Principles
 
 1. **External Table = zero-copy governed read** — no data movement, but limited functionality
 2. **Internal Table = full Snowflake functionality** — requires COPY INTO (data duplication)
-3. **The bridge is COPY INTO** — transforms external stage files into queryable internal tables
-4. **Sync is the challenge** — FSx for ONTAP S3 AP does not support S3 Event Notifications, so change detection requires polling or FPolicy
+3. **Dynamic Table = the recommended bridge** — declarative, auto-managed, Cortex AI-native
+4. **The goal is not "load everything"** — it's "create AI-ready data products from the most valuable subset"
+5. **Sync is the challenge** — FSx for ONTAP S3 AP does not support S3 Event Notifications, so change detection requires polling or FPolicy
 
 ---
 
@@ -322,6 +345,19 @@ These operations work directly on FSx for ONTAP S3 AP External Tables — no dat
 | Time Travel / point-in-time recovery | COPY INTO internal table | Full copy |
 | High-performance queries (clustering) | COPY INTO internal table | Full copy |
 | CDC / Streams | COPY INTO internal table | Full copy |
+
+---
+
+## Industry Use Case Examples
+
+| Industry | Data on FSx for ONTAP | Zero-copy path (External Table) | AI-ready path (Dynamic Table → Cortex) |
+|----------|---|---|---|
+| **Manufacturing** | Sensor logs, inspection images, quality reports | Ad-hoc quality queries, governance tags on sensitive data | Cortex Search for "find similar defects", sentiment on operator notes |
+| **Financial services** | Contract PDFs, transaction logs, regulatory filings | Compliance queries, row access policies by department | Cortex Search for contract clause retrieval, SUMMARIZE for audit prep |
+| **Healthcare** | De-identified research data, imaging metadata | Research queries with column masking on PII | PARSE_DOCUMENT for clinical notes, Cortex Search for literature review |
+| **Retail** | POS data, customer feedback, product catalogs | Sales analytics, governance tags by region | SENTIMENT on customer reviews, TRANSLATE for global markets |
+
+> **Partner positioning**: "Start with External Table for immediate governed analytics (zero cost, zero data movement). When the customer sees value, promote high-value subsets to Dynamic Tables for Cortex AI. This is not a migration — it's progressive AI-ready data product creation."
 
 ---
 

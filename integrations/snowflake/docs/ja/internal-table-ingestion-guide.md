@@ -12,12 +12,35 @@ FSx for ONTAP S3 AP 上の Snowflake External Table は**ガバナンス付き�
 
 これにより**二重管理の課題**が生じます：データは FSx for ONTAP（Source of Truth）に存在し、プラットフォームの全機能を利用するには Snowflake 内部テーブルにコピーする必要があります。
 
+### AI-Ready データプロダクトへのジャーニー
+
+Raw NAS ファイルから Snowflake での AI-ready データプロダクトへの進化は明確なパスに従います:
+
+```
+FSx for ONTAP (Raw ファイル)
+  ↓ S3 Access Point + AWS_ACCESS_POINT_ARN
+External Table (ゼロコピーのガバナンス付き読み取り)
+  ↓ Cortex AI テキスト関数はここで動作（summarize, translate, sentiment）
+  ↓
+Dynamic Table (TARGET_LAG = '1 hour')
+  ↓ 自動変換 + エンリッチメント
+  ↓ SELECT 句で Cortex AI（2025年9月 GA）
+  ↓
+Cortex Search Service (セマンティック検索 / RAG)
+  ↓ AI-ready データプロダクト
+  ↓
+Data Sharing / Data Product (ガバナンス付き配布)
+```
+
+**重要な知見**: すべてを COPY INTO する必要はありません。まず External Table で即座に AI 価値を得て（Cortex テキスト関数はゼロコピーデータで動作）、次に高価値なサブセットを選択的に Dynamic Table に昇格させ、Cortex Search とプラットフォーム全機能を活用します。
+
 ### 基本原則
 
 1. **External Table = ゼロコピーのガバナンス付き読み取り** — データ移動なし、ただし機能制限あり
 2. **Internal Table = Snowflake の全機能** — COPY INTO が必要（データ重複）
-3. **ブリッジは COPY INTO** — 外部ステージファイルをクエリ可能な内部テーブルに変換
-4. **同期が課題** — FSx for ONTAP S3 AP は S3 Event Notifications をサポートしないため、変更検知にはポーリングまたは FPolicy が必要
+3. **Dynamic Table = 推奨されるブリッジ** — 宣言的、自動管理、Cortex AI ネイティブ
+4. **目標は「すべてをロード」ではない** — 「最も価値のあるサブセットから AI-ready データプロダクトを作る」こと
+5. **同期が課題** — FSx for ONTAP S3 AP は S3 Event Notifications をサポートしないため、変更検知にはポーリングまたは FPolicy が必要
 
 ---
 
@@ -324,6 +347,17 @@ WHERE RELATIVE_PATH LIKE '%.png' OR RELATIVE_PATH LIKE '%.jpg';
 | CDC / Streams | COPY INTO 内部テーブル | 全量コピー |
 
 ---
+
+## 業界ユースケース例
+
+| 業界 | FSx for ONTAP 上のデータ | ゼロコピーパス（External Table） | AI-ready パス（Dynamic Table → Cortex） |
+|------|---|---|---|
+| **製造業** | センサーログ、検査画像、品質レポート | アドホック品質クエリ、機密データへのガバナンスタグ | Cortex Search で「類似欠陥を検索」、オペレーターノートの感情分析 |
+| **金融サービス** | 契約書 PDF、取引ログ、規制提出書類 | コンプライアンスクエリ、部門別 Row Access Policy | Cortex Search で契約条項検索、監査準備の SUMMARIZE |
+| **ヘルスケア** | 匿名化研究データ、画像メタデータ | PII カラムマスキング付き研究クエリ | 臨床ノートの PARSE_DOCUMENT、文献レビューの Cortex Search |
+| **小売** | POS データ、顧客フィードバック、商品カタログ | 売上分析、リージョン別ガバナンスタグ | 顧客レビューの SENTIMENT、グローバル市場向け TRANSLATE |
+
+> **パートナー向けポジショニング**: 「まず External Table で即座にガバナンス付き分析を開始（コストゼロ、データ移動ゼロ）。顧客が価値を実感したら、高価値サブセットを Dynamic Table に昇格させて Cortex AI を活用。これはマイグレーションではなく、段階的な AI-ready データプロダクト化です。」
 
 ## コスト考慮事項
 
