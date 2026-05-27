@@ -61,7 +61,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 | **Delta Lake (OSS)** | ✅ Read Verified (delta-rs) | ❌ Not Supported (501 Not Implemented) | ✅ DataSync → S3 → UC | Part 7 verified |
 | **Apache Hudi** | ⚠️ Not tested | ❌ Not Supported (no atomic rename) | ✅ Standard S3 path | Part 7 verified |
 | **Trino / Starburst** | ✅ Read Verified (5M rows, 1.5s) | ❌ (same limitations) | N/A | Part 0 verified |
-| **Dremio** | 🔲 Planned | 🔲 Planned | N/A | Not yet tested |
+| **Dremio** | 🔲 Planned | 🔲 Planned | N/A | 📋 NetApp/Dremio joint solution (not independently validated) |
 
 > **Key finding (Part 7)**: All three transactional table formats (Delta, Iceberg, Hudi) fail to WRITE on FSx S3 AP due to fundamental S3 API limitations — no conditional writes (`If-None-Match` → 501), no atomic rename. READ of pre-existing tables is theoretically possible but only Delta read has been verified.
 
@@ -98,7 +98,12 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Auth**: IAM Role / Access Key
 - **Catalog**: Nessie (Git-like catalog) / Arctic
 - **Features**: Iceberg-native, reflections (acceleration)
-- **Status**: 🔲 Planned — requires Dremio instance for validation
+- **Status**: 📋 **NetApp/Dremio joint solution exists** — independent validation in this repo not yet performed
+- **NetApp Partnership**: Dremio and NetApp announced a joint Hybrid Iceberg Lakehouse solution at NetApp INSIGHT 2024 (Sep 2024). Full deployment guide available at [docs.netapp.com](https://docs.netapp.com/us-en/netapp-solutions/data-analytics/dremio-lakehouse-introduction.html) covering ONTAP S3, NAS, and StorageGRID sources.
+- **FSx for ONTAP integration**: NetApp blog (Jan 2025) documents Dremio Cloud + FSx for ONTAP S3 Access Points as a joint solution for AI-ready analytics on NAS data ([netapp.com](https://www.netapp.com/blog/ai-insights-ontap-s3-access-points-dremio/))
+- **Key capabilities**: Iceberg-native query engine, reflections (materialized acceleration), semantic layer, data-as-code (Nessie Git-like versioning)
+- **Iceberg interoperability**: Dremio writes Iceberg tables that are readable by Snowflake (External Iceberg Table), Databricks (UC Iceberg), Athena (Glue Catalog), EMR, Trino
+- **Why not yet validated in this repo**: Requires Dremio Cloud or self-managed Dremio instance. The NetApp/Dremio joint solution documentation provides the reference architecture. This repo may add independent validation in a future phase.
 
 ---
 
