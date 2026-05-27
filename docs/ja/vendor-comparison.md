@@ -21,8 +21,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 | ベンダー | 統合方式 | ユースケース | ステータス |
 |---------|---------|-------------|----------|
-| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSx for ONTAP, ML Feature Store | ⚠️ ブロック（セッションポリシー） |
-| **Snowflake** | External Stage / External Table / Iceberg Table | データ共有、ELT パイプライン | ⚠️ ブロック（セッションポリシー） |
+| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSx for ONTAP, ML Feature Store | ⚠️ ブロック（セッションポリシー — UC テーブル作成失敗） |
+| **Snowflake** | External Stage + `AWS_ACCESS_POINT_ARN` / External Table | ガバナンス付き分析、Cortex AI、Data Sharing、Managed Iceberg | ✅ 検証済み（2026年5月） |
 
 ### Databricks
 
@@ -31,15 +31,20 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **データ形式**: Delta Lake, Iceberg, Parquet, CSV, JSON, ORC
 - **非構造化データ**: `binaryFile` フォーマットで画像/動画読み取り可能
 - **ONTAP 活用**: FlexClone（dev/test）、Snapshot（Time Travel 補完）
+- **制限**: UC セッションポリシーが S3 AP 上のテーブル作成とサブディレクトリ一覧をブロック。推奨パス: DataSync → S3 → UC。
 
 ### Snowflake
 
 - **認証**: Storage Integration + IAM Role
 - **ネットワーク**: Internet network origin（PrivateLink オプション）
 - **データ形式**: Parquet, CSV, JSON, Avro, ORC, Iceberg
-- **非構造化データ**: Directory Table + Pre-signed URL（AWS ドキュメントでは「非サポート」と記載されているが動作確認済み）
-- **ONTAP 活用**: Snapshot（Time Travel 超過分）、FlexClone（テスト環境）
-- **既知の制限**: S3 AP 操作の高レイテンシ（ステージ/LIST に 30秒〜5分以上）
+- **非構造化データ**: Directory Table + Pre-signed URL + Cortex AI（PARSE_DOCUMENT で OCR、ステージング経由でマルチモーダル Vision）
+- **AI 機能**: FSx データ上で 8/10 Cortex AI 関数検証済み（SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE, EXTRACT_ANSWER, PARSE_DOCUMENT, Cortex Search 198ms, Vision AI ステージング経由）
+- **ガバナンス**: Object Tags, Row Access Policy, Column Masking, Data Sharing — External Table 上で全て検証済み
+- **高度なパターン**: Dynamic Table（確認済み、FULL refresh、最小 60秒 TARGET_LAG）、Managed Iceberg Table（確認済み、顧客 S3 上のオープン形式）
+- **ONTAP 活用**: Snapshot（Time Travel 超過分）、FlexClone（テスト環境）、マルチプロトコル（NFS/SMB/S3 同一データ）
+- **Data Sharing**: Snowflake Data Sharing 経由でパートナー/サプライヤーへのガバナンス付き配布（External Table 共有可能）
+- **既知の制限**: AUTO_REFRESH 利用不可（S3 Event Notifications なし）; Task + ALTER EXTERNAL TABLE REFRESH を使用
 
 ---
 

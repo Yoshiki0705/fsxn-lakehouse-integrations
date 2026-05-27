@@ -274,22 +274,43 @@ s3.put_object(Bucket=bucket, Key="thumbnails/photo001_thumb.jpg", Body=buf.getva
 CREATE OR REPLACE STAGE MEDIA_STAGE
   STORAGE_INTEGRATION = fsxn_storage_integration
   URL = 's3://<S3AccessPointAlias>/media/'
+  AWS_ACCESS_POINT_ARN = 'arn:aws:s3:<region>:<account>:accesspoint/<ap-name>'
   DIRECTORY = (ENABLE = TRUE AUTO_REFRESH = FALSE);
 
 -- ファイル一覧の取得
 SELECT * FROM DIRECTORY(@MEDIA_STAGE);
 
 -- Pre-signed URL の生成（外部アプリケーション用）
--- NOTE: AWS ドキュメントでは Presign は「非サポート」と記載されていますが、
--- テストにより FSx for ONTAP S3 AP で GET_PRESIGNED_URL が動作することを確認しています。
 SELECT GET_PRESIGNED_URL(@MEDIA_STAGE, 'images/photo001.jpg', 3600);
+
+-- OCR: ドキュメント/画像からテキスト抽出（コピー不要）
+SELECT SNOWFLAKE.CORTEX.PARSE_DOCUMENT(
+  @MEDIA_STAGE, 'documents/invoice.png', {'mode': 'OCR'}
+) AS extracted_text;
+
+-- AI 要約（コピー不要）
+SELECT SNOWFLAKE.CORTEX.SUMMARIZE(content)
+FROM fsxn_documents_ext_table;
+
+-- Vision AI（内部ステージへの COPY FILES が必要）
+COPY FILES INTO @internal_stage FROM @MEDIA_STAGE/images/;
+SELECT SNOWFLAKE.CORTEX.COMPLETE('pixtral-large',
+  'この画像を説明してください:', TO_FILE(@internal_stage, RELATIVE_PATH)
+) FROM DIRECTORY(@internal_stage) WHERE RELATIVE_PATH LIKE '%.jpg';
 ```
 
+**機能（2026年5月検証済み）:**
+- ✅ Directory Table でファイルメタデータ管理（パス、サイズ、日付）
+- ✅ GET_PRESIGNED_URL / BUILD_SCOPED_FILE_URL でファイルアクセス
+- ✅ PARSE_DOCUMENT (OCR) — FSx S3 AP 上の画像/PDF からテキスト直接抽出
+- ✅ Cortex AI テキスト関数（SUMMARIZE, TRANSLATE, SENTIMENT）— External Table データ上で動作
+- ✅ Vision AI（マルチモーダル COMPLETE）— 内部ステージへの COPY FILES が必要
+- ✅ Cortex Search (RAG) — COPY INTO 内部テーブルが必要（198ms クエリレイテンシ）
+
 **制約:**
-- Snowflake は非構造化データを直接クエリできない
-- Directory Table でメタデータ管理
-- **Pre-signed URL は FSx for ONTAP S3 AP で動作する**（AWS ドキュメントでは「非サポート」と記載されているが、実際には動作確認済み）
-- Snowpark で Python UDF を使った画像処理は可能
+- AUTO_REFRESH 利用不可（Task + ALTER STAGE REFRESH を使用）
+- Vision AI / TO_FILE は内部ステージへの COPY FILES が必要（データが Snowflake ストレージに移動）
+- Cortex Search は COPY INTO が必要（データが内部テーブルに存在する必要あり）
 
 ### Dremio + 非構造化データ
 

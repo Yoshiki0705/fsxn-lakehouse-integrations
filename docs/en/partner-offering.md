@@ -265,7 +265,7 @@ Discovery → Assessment → PoC → Production → Managed Operations
 | **FSx S3 AP (this solution)** | No | None | Hours | Unified (dual-layer) | Yes (Bedrock) | Existing NAS data, read-heavy analytics, AI on documents |
 | **Native S3 + DataSync** | Yes (full copy) | None | Days (initial sync) | Separate (S3 vs NAS) | Yes | Write-heavy Lakehouse, Delta/Iceberg managed tables |
 | **Native S3 + ETL pipeline** | Yes (transformed) | None | Days-weeks | Separate | Yes | Complex transformations, medallion architecture on S3 |
-| **Snowflake External Stage on S3** | Yes (to S3 first) | None | Days | Snowflake-managed | Limited | Snowflake-centric organizations |
+| **Snowflake External Stage on FSx S3 AP** | No (zero-copy read) | None | Hours | Snowflake-managed (Tags, Row Policy, Masking) | Yes (Cortex AI, Cortex Search) | Snowflake customers needing governed AI on NAS data. COPY INTO → Managed Iceberg for open format sharing. |
 | **Databricks on native S3** | Yes (to S3 first) | None | Days | Unity Catalog on S3 | Yes | Databricks-centric, Delta write-heavy |
 | **NetApp BlueXP tiering** | Partial (cold tier) | Minimal | N/A (not analytics) | ONTAP-managed | No | Cost optimization, not analytics |
 | **On-premises analytics** | No | None | Weeks (setup) | On-prem tools | Limited | Air-gapped environments |
