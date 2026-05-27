@@ -154,7 +154,47 @@ FSx for ONTAP Volume (NFS/SMB)
 
 ### Databricks + 非構造化データ
 
-> ⚠️ **検証結果 (2026-05-17)**: Unity Catalog の session policy が FSx for ONTAP S3 Access Point の
+> **推奨パス（2026年5月確認）**: DataSync → S3 → UC External Volume が本番推奨アーキテクチャです。UC Volume 上のファイルに対して `ai_query()`、`ai_parse_document()`、`read_files()` が利用可能で、フルガバナンス（Volume 権限、リネージ、監査）が適用されます。
+
+#### アプローチ 0: DataSync → S3 → UC Volume（✅ 推奨 — フルガバナンス + AI）
+
+```sql
+-- UC Volume 上のファイルに AI 分析（DataSync で S3 に同期後）
+-- 画像に LLM Vision を適用
+SELECT path,
+  ai_query('databricks-llama-4-maverick',
+    'この画像を詳細に説明してください:', files => content) AS description
+FROM read_files(
+  '/Volumes/catalog/schema/fsxn_media/images/',
+  format => 'binaryFile',
+  fileNamePattern => '*.{jpg,png}')
+WHERE _metadata.file_size < 10000000;
+
+-- PDF ドキュメントの OCR パース
+SELECT path,
+  ai_parse_document(content, map('version', '2.0')) AS parsed_text
+FROM read_files(
+  '/Volumes/catalog/schema/fsxn_media/documents/',
+  format => 'binaryFile',
+  fileNamePattern => '*.pdf');
+```
+
+**機能（DataSync → S3 → UC Volume 経由）:**
+- ✅ `read_files()` で任意ファイル形式（画像、PDF、音声、動画）
+- ✅ `ai_query()` — 画像に LLM Vision、ドキュメントにテキスト分析
+- ✅ `ai_parse_document()` — PDF/画像の OCR
+- ✅ UC Volume ガバナンス（GRANT READ VOLUME / WRITE VOLUME）
+- ✅ Volume Sharing（Delta Sharing 経由で外部組織とファイル共有）
+- ✅ Vector Search で RAG（ドキュメント embedding → セマンティック検索）
+- ✅ 自動リネージ追跡（ファイル → テーブル → モデル）
+
+**制約:**
+- DataSync → S3 → UC External Volume が必要（FSx S3 AP から UC に直接アクセス不可）
+- 同期レイテンシ: 5-10分（DataSync スケジュール + Auto Loader 検出）
+
+---
+
+> ⚠️ **以下は FSx S3 AP 直接アクセスの検証結果（参考）**: Unity Catalog の session policy が FSx for ONTAP S3 Access Point の
 > ARN 形式 (`arn:aws:s3:<region>:<account>:accesspoint/<name>`) を認識しないため、
 > S3 AP 経由の直接アクセスは現時点でブロックされています。以下に回避策を含む全アプローチを記載します。
 

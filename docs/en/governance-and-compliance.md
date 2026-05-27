@@ -375,21 +375,56 @@ Snowflake provides a complementary governance layer for FSx for ONTAP data acces
 
 **Snowflake governance applies to External Tables on FSx S3 AP** — no COPY INTO required for governance features (Tags, Row Policy, Masking, Sharing, Access History). Only Cortex Search and Vision AI require data to be in internal tables.
 
-### Comparison: AWS-Native vs Snowflake Governance for FSx S3 AP Data
+### Comparison: AWS-Native vs Snowflake vs Databricks Governance for FSx S3 AP Data
 
-| Aspect | AWS-Native (Lake Formation) | Snowflake (External Table) |
-|--------|---|---|
-| Table/column permissions | ✅ Lake Formation grants | ✅ Object Tags + Column Masking |
-| Row-level filtering | ✅ Data Cells Filter | ✅ Row Access Policy |
-| Tag-based access control | ✅ LF-Tags | ✅ Object Tags + Tag-based masking |
-| Audit trail | ✅ CloudTrail + LF audit | ✅ Access History + query logs |
-| Cross-account sharing | ✅ LF cross-account grants | ✅ Snowflake Data Sharing (simpler) |
-| AI governance | ✅ Bedrock guardrails | ✅ Cortex AI controls + Cross-Region settings |
-| Setup complexity | Medium (LF admin + grants) | Low (built-in to Snowflake platform) |
-| Engines covered | Athena, Redshift, EMR, Glue | Snowflake only |
-| Data movement required | None (governance on same data) | None for governance; COPY INTO for Cortex Search |
+| Aspect | AWS-Native (Lake Formation) | Snowflake (External Table) | Databricks (Unity Catalog via DataSync → S3) |
+|--------|---|---|---|
+| Table/column permissions | ✅ Lake Formation grants | ✅ Object Tags + Column Masking | ✅ UC Grants + Column Masks |
+| Row-level filtering | ✅ Data Cells Filter | ✅ Row Access Policy | ✅ Row Filters |
+| Tag-based access control | ✅ LF-Tags | ✅ Object Tags + Tag-based masking | ✅ UC Tags + Tag-based policies |
+| Audit trail | ✅ CloudTrail + LF audit | ✅ Access History + query logs | ✅ System Tables (audit logs) |
+| Cross-account/org sharing | ✅ LF cross-account grants | ✅ Snowflake Data Sharing (simpler) | ✅ Delta Sharing (open protocol) |
+| AI governance | ✅ Bedrock guardrails | ✅ Cortex AI controls + Cross-Region settings | ✅ Mosaic AI guardrails + Model Registry |
+| Data lineage | ❌ Not built-in | ❌ Not built-in | ✅ Automatic (UC lineage graph) |
+| Setup complexity | Medium (LF admin + grants) | Low (built-in to Snowflake platform) | Medium (DataSync + UC setup) |
+| Engines covered | Athena, Redshift, EMR, Glue | Snowflake only | Databricks (Spark, SQL, ML) |
+| Data movement required | None (governance on same data) | None for governance; COPY INTO for Cortex Search | **Yes — DataSync → S3 required** (UC cannot access FSx S3 AP directly) |
+| FSx S3 AP direct access | ✅ | ✅ (with `AWS_ACCESS_POINT_ARN`) | ❌ (UC table creation blocked; DataSync path required) |
 
-> **Recommendation for regulated workloads**: Use **Lake Formation** when governance must apply across multiple AWS-native engines (Athena + Redshift + EMR). Use **Snowflake governance** when the primary analytics platform is Snowflake and you need integrated AI + governance + data sharing in one platform. Both can coexist — the same FSx for ONTAP data can be governed by Lake Formation for AWS-native access AND by Snowflake for Snowflake access simultaneously.
+### Databricks Unity Catalog Governance (via DataSync → S3)
+
+Databricks Unity Catalog provides enterprise governance for FSx for ONTAP data **after syncing to S3 via DataSync**. While UC cannot directly access FSx S3 AP (session policy limitation confirmed May 2026), the DataSync → S3 → UC path provides full governance capabilities:
+
+| Capability | How It Works | Governance Value |
+|---|---|---|
+| **Table/Column Grants** | `GRANT SELECT ON TABLE ... TO group` | Fine-grained access control per principal |
+| **Row Filters** | `ALTER TABLE ... SET ROW FILTER function` | Row-level security based on user context |
+| **Column Masks** | `ALTER TABLE ... ALTER COLUMN ... SET MASK function` | Dynamic column masking per role |
+| **UC Tags** | `ALTER TABLE ... SET TAGS ('sensitivity' = 'pii')` | Data classification and discovery |
+| **Automatic Lineage** | Built-in lineage graph (table → table, column → column) | Impact analysis, compliance tracing |
+| **Audit Logs** | `system.access.audit` system table | Who accessed what, when, from where |
+| **Delta Sharing** | Open protocol — share with any Delta Sharing-compatible client | Cross-org sharing without data copy (Snowflake, Pandas, Spark can read) |
+| **Mosaic AI Governance** | Model Registry, Feature Store, AI guardrails | ML model lifecycle governance |
+| **Lakehouse Monitoring** | Data quality metrics, drift detection | Proactive data quality governance |
+
+**Key constraint**: All Databricks UC governance requires data to be in S3 (not FSx S3 AP directly). The recommended architecture:
+
+```
+FSx for ONTAP (source of truth)
+  ↓ DataSync (incremental sync, 5-min schedule)
+Amazon S3 bucket (synced copy)
+  ↓ Auto Loader (incremental ingestion)
+Unity Catalog Managed Table (full governance)
+  ↓
+  ├── Row Filters + Column Masks (fine-grained access)
+  ├── Automatic Lineage (impact analysis)
+  ├── Mosaic AI (ML training, Feature Store)
+  └── Delta Sharing (cross-org distribution)
+```
+
+> **Trade-off**: Databricks provides the richest governance feature set (especially automatic lineage and ML governance), but requires data duplication via DataSync. Snowflake and Lake Formation can govern FSx S3 AP data without copying. Choose based on whether lineage/ML governance or zero-copy access is the higher priority.
+
+> **Recommendation for regulated workloads**: Use **Lake Formation** when governance must apply across multiple AWS-native engines (Athena + Redshift + EMR). Use **Snowflake governance** when the primary platform is Snowflake and you need integrated AI + governance + data sharing without data movement. Use **Databricks UC** when automatic lineage, ML governance (Mosaic AI, Feature Store), or Delta Sharing (open protocol) are required — accepting the DataSync sync latency and storage duplication as trade-offs. All three can coexist on the same FSx for ONTAP source data.
 
 ### Data Handling for AI/RAG
 

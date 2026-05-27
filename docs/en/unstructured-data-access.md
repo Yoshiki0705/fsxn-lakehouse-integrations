@@ -154,23 +154,58 @@ Camera → NFS → FSx for ONTAP Volume → S3 AP → Rekognition Video (analysi
 
 ### Databricks + Unstructured Data
 
+> **Note**: Databricks UC cannot directly access FSx S3 AP for governed file operations. The recommended path is DataSync → S3 → UC External Volume. The examples below show capabilities available on synced data.
+
 ```python
-# Read image files in Databricks notebook
+# Read image files via UC Volume (after DataSync → S3 → UC External Volume)
 from pyspark.sql.functions import *
 
-# Read image binaries via S3 AP
+# Read file binaries from UC Volume
 images_df = spark.read.format("binaryFile") \
     .option("pathGlobFilter", "*.jpg") \
-    .load(f"s3://{S3_AP_ALIAS}/images/")
+    .load("/Volumes/catalog/schema/fsxn_media/images/")
 
 # Extract image metadata
 images_df.select("path", "length", "modificationTime").show()
 ```
 
+```sql
+-- AI: Analyze images with LLM vision (on UC Volume files)
+SELECT path,
+  ai_query('databricks-llama-4-maverick',
+    'Describe this image in detail:', files => content) AS description
+FROM read_files(
+  '/Volumes/catalog/schema/fsxn_media/images/',
+  format => 'binaryFile',
+  fileNamePattern => '*.{jpg,png}')
+WHERE _metadata.file_size < 10000000;
+
+-- AI: Parse PDF documents with OCR
+SELECT path,
+  ai_parse_document(content, map('version', '2.0')) AS parsed_text
+FROM read_files(
+  '/Volumes/catalog/schema/fsxn_media/documents/',
+  format => 'binaryFile',
+  fileNamePattern => '*.pdf');
+
+-- AI: Semantic search via Vector Search (after embedding)
+-- Requires: Delta Table with embeddings → Vector Search Index
+```
+
+**Capabilities (via DataSync → S3 → UC Volume):**
+- ✅ `read_files()` for any file format (images, PDFs, audio, video)
+- ✅ `ai_query()` — LLM vision on images, text analysis on documents
+- ✅ `ai_parse_document()` — OCR for PDFs and images
+- ✅ UC Volume governance (GRANT READ VOLUME / WRITE VOLUME)
+- ✅ Volume Sharing via Delta Sharing (share files with external orgs)
+- ✅ Vector Search for RAG (embed documents → semantic search)
+- ✅ Automatic lineage tracking (file → table → model)
+
 **Constraints:**
-- Readable via `binaryFile` format
+- Requires DataSync → S3 → UC External Volume (cannot access FSx S3 AP directly from UC)
 - Large files (>100MB) retrieved via Multipart Download
-- Image processing libraries available in Databricks ML Runtime
+- Image/video processing libraries available in Databricks ML Runtime
+- Sync latency: 5-10 minutes (DataSync schedule + Auto Loader detection)
 
 ### Snowflake + Unstructured Data
 
