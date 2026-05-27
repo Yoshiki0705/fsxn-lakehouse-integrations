@@ -324,7 +324,10 @@ FROM read_files(
 | **ガバナンス** | Delta Sharing + UC | Delta Sharing + UC | UC Volume ACL |
 | **AI/ML 対応度** | カタログのみ | 完全（embedding, RAG） | 完全（read_files + ai_query） |
 | **リアルタイム鮮度** | ポーリングベース | パイプライン依存 | ほぼリアルタイム（サポート時） |
+| **Snowflake 連携** | ✅ 同じ curated Iceberg を S3 上で共有可能 | ✅ Open format で共有可能 | ❌ UC Volume は Databricks 専用 |
 | **最適用途** | ファイル発見、監査 | RAG、検索、分析 | 直接ファイル処理 |
+
+> **Open Table Format を共有データレイヤーとして活用**: Pattern A と B は S3 上に Delta/Parquet テーブルを生成します。これらのテーブルは Snowflake External Iceberg Table や AWS Glue Data Catalog テーブルとしても登録可能で、追加コピーなしに複数エンジンから同じ curated dataset にアクセスできます。これがベンダーロックインを回避しつつ、各プラットフォームのガバナンスと AI 機能を維持する「共通データ面」です。
 
 ---
 

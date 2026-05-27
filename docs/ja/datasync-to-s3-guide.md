@@ -6,9 +6,14 @@
 
 ## このガイドが必要な場面
 
+DataSync は、消費プラットフォームが標準 S3 ストレージを要求する場合に、**エンタープライズファイルデータから AI-ready データプロダクトへのブリッジ**です:
+
 - Databricks Unity Catalog が標準 S3 バケットのデータを要求する場合（FSx for ONTAP S3 AP は UC 非サポート）
 - Delta Lake / Iceberg / Hudi テーブルフォーマット書き込みに標準 S3 が必要な場合（FSx for ONTAP S3 AP は conditional writes 非サポート）
-- FSx for ONTAP データのガバナンス付きコピーを S3 に配置して下流で消費する場合
+- AUTO_REFRESH / Snowpipe が必要な場合（S3 Event Notifications が FSx for ONTAP S3 AP で利用不可）
+- FSx for ONTAP データのガバナンス付きコピーを S3 に配置して下流の AI/ML 消費に使用する場合
+
+> **設計原則**: DataSync は「回避策」ではなく、NAS ファイルデータをプラットフォームが消費可能なデータセットに変換するマネージドな増分同期メカニズムです。目標はすべてをコピーすることではなく、下流プラットフォームが AI-ready データプロダクトに必要とする **curated subset** を同期することです。
 
 ## アーキテクチャ
 
@@ -154,6 +159,35 @@ DataSync がデータを S3 に同期した後、テーブルフォーマット�
 df = spark.read.parquet("s3://<BUCKET>/fsxn-sync/sensor-data/")
 df.write.format("delta").mode("overwrite").save("s3://<BUCKET>/delta-tables/sensors/")
 ```
+
+## Snowflake との統合
+
+DataSync → S3 は、標準 S3 バケットを必要とする Snowflake パターンも有効にします:
+
+```sql
+-- オプション 1: 同期済み S3 バケット上の Snowflake External Table（S3 からのゼロコピー）
+CREATE OR REPLACE EXTERNAL TABLE sensor_data_ext
+  WITH LOCATION = @s3_synced_stage/sensor-data/
+  FILE_FORMAT = (TYPE = PARQUET)
+  AUTO_REFRESH = TRUE;  -- 標準 S3 では S3 Event Notifications が動作
+
+-- オプション 2: Snowflake 全機能向け COPY INTO（Cortex Search, Time Travel, DML）
+COPY INTO sensor_data
+  FROM @s3_synced_stage/sensor-data/
+  FILE_FORMAT = (TYPE = PARQUET)
+  MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
+```
+
+**DataSync → S3 → Snowflake vs FSx for ONTAP S3 AP → Snowflake 直接の使い分け:**
+
+| シナリオ | 推奨パス | 理由 |
+|----------|---------|------|
+| 読み取り専用分析、Cortex AI テキスト関数 | FSx for ONTAP S3 AP → External Table（直接） | ゼロコピー、同期不要 |
+| AUTO_REFRESH / Snowpipe が必要 | DataSync → S3 → External Table | S3 Event Notifications が必要 |
+| Cortex Search / RAG | DataSync → S3 → COPY INTO → Cortex Search | 内部テーブルが必要 |
+| マルチモーダル AI (Vision) | DataSync → S3 → COPY FILES → 内部ステージ | TO_FILE に内部ステージが必要 |
+
+> **重要な知見**: ほとんどの Snowflake 分析ユースケースでは、**FSx for ONTAP S3 AP 直接パス**（`AWS_ACCESS_POINT_ARN` 使用）で十分であり、同期コストを完全に排除できます。DataSync → S3 は S3 Event Notifications や内部テーブルを必要とする機能がある場合にのみ使用してください。
 
 ## なぜ SnapMirror S3 ではないのか？
 

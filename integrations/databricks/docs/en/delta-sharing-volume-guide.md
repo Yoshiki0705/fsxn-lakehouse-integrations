@@ -327,7 +327,10 @@ FROM read_files(
 | **Governance** | Delta Sharing + UC | Delta Sharing + UC | UC Volume ACL |
 | **AI/ML readiness** | Catalog only | Full (embeddings, RAG) | Full (read_files + ai_query) |
 | **Real-time freshness** | Polling-based | Pipeline-dependent | Near real-time (if supported) |
+| **Snowflake co-access** | ✅ Same curated Iceberg on S3 | ✅ Shared via open format | ❌ UC Volume is Databricks-only |
 | **Best for** | File discovery, audit | RAG, search, analytics | Direct file processing |
+
+> **Open Table Format as shared data layer**: Patterns A and B produce Delta/Parquet tables on S3. These same tables can be registered as Snowflake External Iceberg Tables or AWS Glue Data Catalog tables — enabling multi-engine access to the same curated dataset without additional copies. This is the "common data surface" that avoids vendor lock-in while preserving each platform's governance and AI capabilities.
 
 ---
 
