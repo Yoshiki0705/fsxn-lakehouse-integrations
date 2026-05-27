@@ -187,6 +187,8 @@ AS
 
 最適用途: External Table ソースからの継続的変換パイプライン。**最も Snowflake ネイティブなアプローチ** — 宣言的、自動管理、SELECT 句で Cortex AI 関数をサポート（2025年9月 GA）。
 
+> **サポート確認済み（2026年5月、Case #01359983）**: External Table ソースの Dynamic Table は `REFRESH_MODE = FULL` でサポート。最小 `TARGET_LAG` は 60 秒。External Table は change tracking 非対応のため増分リフレッシュは利用不可。
+
 ```sql
 -- Dynamic Table: External Table から読み取り、内部として実体化
 CREATE OR REPLACE DYNAMIC TABLE sensor_enriched
@@ -207,6 +209,23 @@ AS
 参照: [Dynamic Tables](https://docs.snowflake.com/en/user-guide/dynamic-tables-intro)
 
 > **注意**: Dynamic Table は External Table をソースとして使用可能（全量リフレッシュモード）。増分リフレッシュには変更追跡が必要で、External Table では利用不可。
+
+> **重要**: FSx for ONTAP S3 AP は AUTO_REFRESH をサポートしないため、Dynamic Table が新ファイルを認識する前に External Table メタデータを手動リフレッシュする必要があります。Task で自動化してください:
+> ```sql
+> -- External Table メタデータを5分ごとにリフレッシュする Task
+> CREATE OR REPLACE TASK refresh_fsxn_external_table
+>   WAREHOUSE = COMPUTE_WH
+>   SCHEDULE = '5 MINUTE'
+> AS
+>   ALTER EXTERNAL TABLE sensor_external_table REFRESH;
+> ```
+> Dynamic Table は次のリフレッシュサイクル（TARGET_LAG に基づく）で新データを取得します。
+
+> **TARGET_LAG サイジングガイダンス（Snowflake サポート確認済み）**:
+> - **60 秒**（最小）: 小規模データまたはクリティカルアラート向けのみ。毎回 External Table 全体を再読み込み。
+> - **5 分**: 準リアルタイム監視。中規模データ（GB レベル）で許容可能なコスト。
+> - **1 時間**（推奨開始点）: バッチ分析、日次レポート。大規模データでコスト効率的。
+> - **1 日**: Cortex Search Service ソース、週次レポート。最低コスト。
 
 > **Dynamic Table が COPY INTO + Task より推奨される理由**:
 > - **宣言的**: TARGET_LAG（例: '1 hour'）を定義すれば Snowflake がリフレッシュスケジュールを自動管理
@@ -389,6 +408,8 @@ WHERE RELATIVE_PATH LIKE '%.png' OR RELATIVE_PATH LIKE '%.jpg';
 ---
 
 ## 将来像: Managed Iceberg によるオープンフォーマットブリッジ
+
+> **サポート確認済み（2026年5月）**: External Stage（`AWS_ACCESS_POINT_ARN` 付き）から Snowflake Managed Iceberg Table への COPY INTO はサポートされています。これにより FSx for ONTAP → S3 AP → Snowflake Managed Iceberg パイプラインが検証されました。
 
 Snowflake [Managed Iceberg Tables](https://docs.snowflake.com/en/user-guide/tables-iceberg) は、顧客所有の S3 ストレージにオープン Apache Iceberg 形式でデータを書き込みます。これによりマルチプラットフォームアーキテクチャが実現します:
 
