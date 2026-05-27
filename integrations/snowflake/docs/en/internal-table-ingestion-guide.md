@@ -187,6 +187,8 @@ Reference: [Snowpipe REST API](https://docs.snowflake.com/en/user-guide/data-loa
 
 Best for: Continuous transformation pipeline from external table source. **This is the most Snowflake-native approach** — declarative, auto-managed, and supports Cortex AI functions in the SELECT clause (GA since September 2025).
 
+> **Support Confirmed (May 2026, Case #01359983)**: Dynamic Tables with External Table source are supported with `REFRESH_MODE = FULL`. Minimum `TARGET_LAG` is 60 seconds. Incremental refresh is not available because External Tables do not support change tracking.
+
 ```sql
 -- Dynamic Table reads from External Table, materializes as internal
 CREATE OR REPLACE DYNAMIC TABLE sensor_enriched
@@ -207,6 +209,23 @@ AS
 Reference: [Dynamic Tables](https://docs.snowflake.com/en/user-guide/dynamic-tables-intro)
 
 > **Note**: Dynamic Tables can use external tables as source (full refresh mode). Incremental refresh requires change tracking, which is not available on external tables.
+
+> **Important**: Since FSx for ONTAP S3 AP does not support AUTO_REFRESH, you must manually refresh the External Table metadata before the Dynamic Table can see new files. Use a Task to automate this:
+> ```sql
+> -- Task to refresh External Table metadata every 5 minutes
+> CREATE OR REPLACE TASK refresh_fsxn_external_table
+>   WAREHOUSE = COMPUTE_WH
+>   SCHEDULE = '5 MINUTE'
+> AS
+>   ALTER EXTERNAL TABLE sensor_external_table REFRESH;
+> ```
+> The Dynamic Table will then pick up new data on its next refresh cycle (based on TARGET_LAG).
+
+> **TARGET_LAG sizing guidance (confirmed by Snowflake Support)**:
+> - **60 seconds** (minimum): Only for small datasets or critical alerting. Each refresh re-reads the entire External Table.
+> - **5 minutes**: Near-real-time monitoring. Acceptable cost for medium datasets (GB-level).
+> - **1 hour** (recommended starting point): Batch analytics, daily reporting. Cost-efficient for large datasets.
+> - **1 day**: Cortex Search Service source, weekly reporting. Lowest cost.
 
 > **Why Dynamic Table is recommended over COPY INTO + Task**:
 > - **Declarative**: Define TARGET_LAG (e.g., '1 hour') and Snowflake manages the refresh schedule automatically
@@ -391,6 +410,8 @@ These operations work directly on FSx for ONTAP S3 AP External Tables — no dat
 ---
 
 ## Future: Managed Iceberg as the Open Format Bridge
+
+> **Support Confirmed (May 2026)**: COPY INTO from External Stage (with `AWS_ACCESS_POINT_ARN`) to Snowflake Managed Iceberg Table is supported. This validates the FSx for ONTAP → S3 AP → Snowflake Managed Iceberg pipeline.
 
 Snowflake [Managed Iceberg Tables](https://docs.snowflake.com/en/user-guide/tables-iceberg) write data in open Apache Iceberg format to customer-owned S3 storage. This enables a multi-platform architecture:
 
