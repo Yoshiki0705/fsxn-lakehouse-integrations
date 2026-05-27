@@ -129,6 +129,8 @@ FSx for ONTAP ──S3 AP──▶ COPY INTO ──▶ Snowflake 内部テーブ
 - Snowflake ネイティブ機能（Streams, Tasks, Dynamic Tables）が必要
 - COPY INTO 実行間のデータ鮮度の遅延を許容できる
 
+> **サポート確認済み（2026年5月）**: External Stage（`AWS_ACCESS_POINT_ARN` 付き）から Managed Iceberg Table への COPY INTO がサポートされています。Dynamic Table は External Table をソースとして REFRESH_MODE = FULL で動作（最小 TARGET_LAG 60秒）。これにより FSx for ONTAP → Snowflake Managed Iceberg → Databricks/Athena/EMR からの読み取りが可能になります。
+
 **制限事項:**
 - データが重複（FSx + Snowflake ストレージコスト）
 - データ鮮度は COPY INTO 頻度に依存
@@ -157,11 +159,17 @@ Q: データは FSx for ONTAP に残す必要がある？
 │         Q: 画像に対する Vision AI が必要？
 │         ├── YES → Vision AI 用のみ COPY FILES で内部ステージへ
 │         └── NO → External Table で十分（テキスト AI は直接動作）
+│                   Q: 自動エンリッチメントが必要？
+│                   ├── YES → Dynamic Table (TARGET_LAG = '1 hour', FULL refresh)
+│                   └── NO → External Table のまま使用
 │
 └── NO → COPY INTO で内部テーブル
-          Q: リアルタイムの鮮度が必要？
-          ├── YES → Snowpipe（S3 バケットの場合）またはスケジュール COPY INTO（FSx S3 AP の場合）
-          └── NO → バッチ COPY INTO をスケジュール実行
+          Q: マルチエンジンアクセス（Databricks/Athena）が必要？
+          ├── YES → Managed Iceberg Table（オープン形式で S3 に書き込み）
+          └── NO → 標準内部テーブル
+                    Q: パートナー/サプライヤーとデータ共有が必要？
+                    ├── YES → Snowflake Data Sharing（ガバナンス付き配布）
+                    └── NO → 内部テーブルのまま使用
 ```
 
 ### コスト比較
