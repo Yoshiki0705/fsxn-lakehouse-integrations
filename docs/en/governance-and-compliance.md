@@ -351,7 +351,45 @@ Technical safety and organizational assurance are distinct concerns. Regulated i
 
 ## Generative AI / RAG Governance
 
-When using FSx S3 AP as a data source for generative AI (e.g., Amazon Bedrock Knowledge Bases), additional governance considerations apply.
+When using FSx S3 AP as a data source for generative AI (e.g., Amazon Bedrock Knowledge Bases, Snowflake Cortex Search), additional governance considerations apply.
+
+### Platform-Specific RAG Governance
+
+| Platform | RAG Path | Data Movement | Governance Model | Best For |
+|----------|----------|---------------|-----------------|----------|
+| **Amazon Bedrock KB** | FSx S3 AP → Bedrock KB → OpenSearch (embeddings) | Embeddings created in customer account | IAM + Bedrock guardrails + human review | AWS-native, permission-aware retrieval |
+| **Snowflake Cortex Search** | FSx S3 AP → External Table → COPY INTO → Cortex Search Service | Data copied to Snowflake storage | Snowflake RBAC + Tags + Row Access Policy | Snowflake-native, governed analytics + RAG |
+
+### Snowflake Governance on FSx for ONTAP Data
+
+Snowflake provides a complementary governance layer for FSx for ONTAP data accessed via S3 Access Points:
+
+| Capability | How It Works | Governance Value |
+|---|---|---|
+| **Object Tagging** | `ALTER TABLE ext_table SET TAG sensitivity = 'confidential'` | Data classification at table/column level |
+| **Row Access Policy** | Policy function filters rows based on user role/context | Row-level security without data duplication |
+| **Dynamic Data Masking** | Column masking policy hides sensitive values for unauthorized roles | Column-level protection on External Table |
+| **Access History** | `SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY` tracks all queries | Query-level audit trail (who queried what, when) |
+| **Data Sharing Governance** | Share External Tables with Row Access Policy applied | Governed distribution to partners/suppliers |
+| **Cortex AI Guardrails** | Cross-Region Inference controls, model access policies | AI processing boundary control |
+
+**Snowflake governance applies to External Tables on FSx S3 AP** — no COPY INTO required for governance features (Tags, Row Policy, Masking, Sharing, Access History). Only Cortex Search and Vision AI require data to be in internal tables.
+
+### Comparison: AWS-Native vs Snowflake Governance for FSx S3 AP Data
+
+| Aspect | AWS-Native (Lake Formation) | Snowflake (External Table) |
+|--------|---|---|
+| Table/column permissions | ✅ Lake Formation grants | ✅ Object Tags + Column Masking |
+| Row-level filtering | ✅ Data Cells Filter | ✅ Row Access Policy |
+| Tag-based access control | ✅ LF-Tags | ✅ Object Tags + Tag-based masking |
+| Audit trail | ✅ CloudTrail + LF audit | ✅ Access History + query logs |
+| Cross-account sharing | ✅ LF cross-account grants | ✅ Snowflake Data Sharing (simpler) |
+| AI governance | ✅ Bedrock guardrails | ✅ Cortex AI controls + Cross-Region settings |
+| Setup complexity | Medium (LF admin + grants) | Low (built-in to Snowflake platform) |
+| Engines covered | Athena, Redshift, EMR, Glue | Snowflake only |
+| Data movement required | None (governance on same data) | None for governance; COPY INTO for Cortex Search |
+
+> **Recommendation for regulated workloads**: Use **Lake Formation** when governance must apply across multiple AWS-native engines (Athena + Redshift + EMR). Use **Snowflake governance** when the primary analytics platform is Snowflake and you need integrated AI + governance + data sharing in one platform. Both can coexist — the same FSx for ONTAP data can be governed by Lake Formation for AWS-native access AND by Snowflake for Snowflake access simultaneously.
 
 ### Data Handling for AI/RAG
 

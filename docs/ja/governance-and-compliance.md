@@ -351,7 +351,45 @@ Components:
 
 ## 生成 AI / RAG ガバナンス
 
-FSx S3 AP を生成 AI のデータソースとして使用する場合（例：Amazon Bedrock Knowledge Bases）、追加のガバナンス考慮事項が適用されます。
+FSx S3 AP を生成 AI のデータソースとして使用する場合（例：Amazon Bedrock Knowledge Bases、Snowflake Cortex Search）、追加のガバナンス考慮事項が適用されます。
+
+### プラットフォーム別 RAG ガバナンス
+
+| プラットフォーム | RAG パス | データ移動 | ガバナンスモデル | 最適用途 |
+|----------|----------|---------|------------|----------|
+| **Amazon Bedrock KB** | FSx S3 AP → Bedrock KB → OpenSearch（embedding） | 顧客アカウント内に embedding 作成 | IAM + Bedrock ガードレール + 人間レビュー | AWS ネイティブ、権限認識型検索 |
+| **Snowflake Cortex Search** | FSx S3 AP → External Table → COPY INTO → Cortex Search Service | Snowflake ストレージにデータコピー | Snowflake RBAC + Tags + Row Access Policy | Snowflake ネイティブ、ガバナンス付き分析 + RAG |
+
+### Snowflake ガバナンス（FSx for ONTAP データ上）
+
+Snowflake は S3 Access Points 経由でアクセスする FSx for ONTAP データに対して補完的なガバナンスレイヤーを提供します:
+
+| 機能 | 動作 | ガバナンス価値 |
+|------|------|-------------|
+| **Object Tagging** | `ALTER TABLE ext_table SET TAG sensitivity = 'confidential'` | テーブル/カラムレベルのデータ分類 |
+| **Row Access Policy** | ユーザーロール/コンテキストに基づく行フィルタリング | データ重複なしの行レベルセキュリティ |
+| **Dynamic Data Masking** | 非認可ロールに対するカラムマスキングポリシー | External Table 上のカラムレベル保護 |
+| **Access History** | `SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY` で全クエリ追跡 | クエリレベルの監査証跡 |
+| **Data Sharing ガバナンス** | Row Access Policy 適用済み External Table の共有 | パートナー/サプライヤーへのガバナンス付き配布 |
+| **Cortex AI ガードレール** | Cross-Region Inference 制御、モデルアクセスポリシー | AI 処理境界の制御 |
+
+**Snowflake ガバナンスは FSx S3 AP 上の External Table に適用可能** — ガバナンス機能（Tags, Row Policy, Masking, Sharing, Access History）に COPY INTO は不要。Cortex Search と Vision AI のみ内部テーブルへのデータ配置が必要。
+
+### 比較: AWS ネイティブ vs Snowflake ガバナンス
+
+| 観点 | AWS ネイティブ（Lake Formation） | Snowflake（External Table） |
+|------|---|---|
+| テーブル/カラム権限 | ✅ Lake Formation grants | ✅ Object Tags + Column Masking |
+| 行レベルフィルタリング | ✅ Data Cells Filter | ✅ Row Access Policy |
+| タグベースアクセス制御 | ✅ LF-Tags | ✅ Object Tags + タグベースマスキング |
+| 監査証跡 | ✅ CloudTrail + LF audit | ✅ Access History + クエリログ |
+| クロスアカウント共有 | ✅ LF クロスアカウント grants | ✅ Snowflake Data Sharing（よりシンプル） |
+| AI ガバナンス | ✅ Bedrock ガードレール | ✅ Cortex AI 制御 + Cross-Region 設定 |
+| セットアップ複雑度 | 中（LF admin + grants） | 低（Snowflake プラットフォーム組み込み） |
+| カバーするエンジン | Athena, Redshift, EMR, Glue | Snowflake のみ |
+| データ移動必要性 | なし（同一データ上のガバナンス） | ガバナンスにはなし; Cortex Search には COPY INTO |
+
+> **規制ワークロード向け推奨**: 複数の AWS ネイティブエンジン（Athena + Redshift + EMR）にガバナンスを適用する場合は **Lake Formation** を使用。主要分析プラットフォームが Snowflake で、AI + ガバナンス + データ共有を一つのプラットフォームで統合する場合は **Snowflake ガバナンス** を使用。両者は共存可能 — 同じ FSx for ONTAP データに対して、AWS ネイティブアクセスには Lake Formation、Snowflake アクセスには Snowflake ガバナンスを同時に適用できます。
 
 ### AI/RAG のデータ取り扱い
 
