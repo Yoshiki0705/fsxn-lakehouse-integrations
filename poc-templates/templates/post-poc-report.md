@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](ja/post-poc-report.md)
+
 # Post-PoC Report
 
 ## Customer: [Name]

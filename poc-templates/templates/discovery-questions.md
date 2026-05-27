@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](ja/discovery-questions.md)
+
 # Discovery Questions — First Customer Meeting
 
 ## Purpose

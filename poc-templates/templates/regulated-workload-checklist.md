@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](ja/regulated-workload-checklist.md)
+
 # Regulated Workload Checklist
 
 ## Purpose
