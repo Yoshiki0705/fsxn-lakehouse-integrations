@@ -52,36 +52,52 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ---
 
-## Tier 2: オープンテーブルフォーマット
+## Tier 2: オープンテーブルフォーマット & 分散 SQL
 
-| フォーマット/エンジン | 統合方式 | ユースケース | ステータス |
-|-------------------|---------|-------------|----------|
-| **Apache Iceberg** | S3 Catalog + S3 AP | ベンダー中立テーブルフォーマット | 🚧 計画中 |
-| **Delta Lake (OSS)** | S3 Storage Layer | Spark/Databricks 互換 | 🚧 計画中 |
-| **Apache Hudi** | S3 Storage Layer | CDC・増分処理 | 🚧 計画中 |
-| **Dremio** | S3 Source / Nessie Catalog | Iceberg ネイティブ Lakehouse | 🚧 計画中 |
-| **Starburst / Trino** | S3 Connector / Hive Metastore | 分散 SQL フェデレーション | 🚧 計画中 |
+| フォーマット/エンジン | FSx S3 AP からの読み取り | FSx S3 AP への書き込み | S3 への書き込み（同期経由） | ステータス |
+|-------------------|:---:|:---:|:---:|--------|
+| **Apache Iceberg** | ⚠️ 実験的（既存テーブル） | ❌ 非サポート（NullPointerException） | ✅ EMR Spark → S3 | Part 7 検証済み |
+| **Delta Lake (OSS)** | ✅ 読み取り検証済み（delta-rs） | ❌ 非サポート（501 Not Implemented） | ✅ DataSync → S3 → UC | Part 7 検証済み |
+| **Apache Hudi** | ⚠️ 未テスト | ❌ 非サポート（atomic rename なし） | ✅ 標準 S3 パス | Part 7 検証済み |
+| **Trino / Starburst** | ✅ 読み取り検証済み（5M 行、1.5秒） | ❌（同じ制限） | N/A | Part 0 検証済み |
+| **Dremio** | 🔲 計画中 | 🔲 計画中 | N/A | 未テスト |
+
+> **主要な発見（Part 7）**: 3つのトランザクショナルテーブルフォーマット（Delta, Iceberg, Hudi）は全て FSx S3 AP への書き込みに失敗。根本原因は S3 API の基本的な制限 — conditional writes なし（`If-None-Match` → 501）、atomic rename なし。既存テーブルの読み取りは理論的に可能だが、Delta read のみ検証済み。
 
 ### Apache Iceberg
 
-- **認証**: IAM Role（エンジン依存）
-- **カタログ**: REST Catalog, Glue Catalog, Hive Metastore
-- **特徴**: ベンダー中立、スキーマ進化、パーティション進化
-- **非構造化データ**: メタデータテーブルでファイル管理可能
+- **読み取り**: 既存 Iceberg テーブル（Glue Catalog にメタデータ、FSx S3 AP にデータファイル）は GetObject 経由で理論的に読み取り可能。完全な検証は未実施。
+- **書き込み**: ❌ S3FileIO が AP エイリアスでのメタデータ書き込み/検証を処理できない（コミット時に NullPointerException）。Conditional writes 非サポート。
+- **動作する代替パス**: EMR Spark が標準 S3 に Iceberg を書き込み → Glue Catalog に登録 → Athena/Redshift/Snowflake/Databricks からクエリ。FSx S3 AP は読み取り専用ソースデータとして機能。
+- **Snowflake パス**: FSx S3 AP → External Stage → COPY INTO → Snowflake Managed Iceberg Table（顧客 S3 上のオープン形式、2026年5月確認済み）
+- **カタログオプション**: Glue Catalog（AWS ネイティブ）、Snowflake Managed Iceberg（Snowflake ネイティブ）、Databricks UC Iceberg REST Catalog（Databricks ネイティブ）
+
+### Delta Lake (OSS)
+
+- **読み取り**: ✅ delta-rs（Rust）で検証済み。Spark Delta reader も既存テーブルで動作。
+- **書き込み**: ❌ Delta コミットプロトコルが `_delta_log/` に `If-None-Match` conditional write を要求 — FSx S3 AP は 501 Not Implemented を返す。
+- **動作する代替パス**: DataSync → S3 → Delta Table（Databricks UC または OSS Spark）。FSx S3 AP は読み取り専用ソース。
+- **Databricks パス**: DataSync → S3 → UC Managed Delta Table（フルガバナンス、リネージ、Time Travel）
+
+### Apache Hudi
+
+- **読み取り**: 未テスト（既存テーブルの GetObject 経由読み取りは理論的に可能）。
+- **書き込み**: ❌ Hudi タイムラインコミットが atomic rename（`.inflight` → `.commit`）を要求。S3 に rename 操作なし。
+- **動作する代替パス**: 標準 S3 バケットで Hudi 書き込みパス。FSx S3 AP は読み取り専用ソース。
+
+### Trino / Starburst
+
+- **読み取り**: ✅ 検証済み — Trino 481 + Glue Catalog + `hive.s3.path-style-access=true` + 明示的 `hive.s3.endpoint`。5M 行を 1.5秒。
+- **書き込み**: 未テスト（トランザクショナル書き込みには同じ S3 AP 制限が適用）。
+- **設定**: S3 AP エイリアス解決に `hive.s3.path-style-access=true` と明示的 `hive.s3.endpoint` が必要。DuckDB と同じパターン。
+- **カタログ**: Glue Catalog（Athena、Redshift、EMR と共有）
 
 ### Dremio
 
 - **認証**: IAM Role / Access Key
 - **カタログ**: Nessie (Git-like catalog) / Arctic
 - **特徴**: Iceberg ネイティブ、リフレクション（高速化）
-- **非構造化データ**: メタデータカタログ化のみ
-
-### Starburst / Trino
-
-- **認証**: IAM Role / Instance Profile
-- **カタログ**: Hive Metastore / Glue Catalog
-- **特徴**: 分散 SQL、フェデレーテッドクエリ、多数のコネクタ
-- **非構造化データ**: ファイルメタデータクエリ可能
+- **ステータス**: 🔲 計画中 — 検証には Dremio インスタンスが必要
 
 ---
 
