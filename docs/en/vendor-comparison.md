@@ -30,9 +30,13 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Auth**: Cross-account IAM Role + External ID
 - **Network**: VPC network origin (recommended)
 - **Formats**: Delta Lake, Iceberg, Parquet, CSV, JSON, ORC
-- **Unstructured**: `binaryFile` format for image/video reading
-- **ONTAP Value**: FlexClone (dev/test), Snapshot (complements Time Travel)
-- **Limitation**: UC session policy blocks table creation and subdirectory listing on S3 AP. Recommended path: DataSync → S3 → UC.
+- **Unstructured**: UC Volumes + `read_files()` + `ai_query()` (LLM on images/docs) + `ai_parse_document()` (OCR)
+- **AI Capabilities**: Mosaic AI (ML training, Feature Store, Model Registry), `ai_query` (LLM on files), `ai_parse_document` (OCR), Vector Search (RAG), MLflow experiment tracking
+- **Governance**: Unity Catalog — Table/Column Grants, Row Filters, Column Masks, UC Tags, Automatic Lineage (column-level), Audit Logs (system tables), Lakehouse Monitoring (data quality + drift)
+- **Data Sharing**: Delta Sharing — open protocol, readable by Snowflake, Pandas, Spark, Power BI without Databricks account
+- **ONTAP Value**: FlexClone (dev/test), Snapshot (complements Delta Time Travel), FabricPool (cold data tiering)
+- **Unique strengths**: Automatic data lineage (column-level), ML model governance (MLflow + Model Registry), Lakehouse Monitoring, Iceberg REST Catalog (external engine access to UC tables)
+- **Limitation**: UC session policy blocks table creation and subdirectory listing on FSx S3 AP directly. **Recommended path: DataSync → S3 → UC** (full governance, full AI, full lineage)
 
 ### Snowflake
 

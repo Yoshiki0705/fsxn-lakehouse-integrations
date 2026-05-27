@@ -375,21 +375,56 @@ Snowflake は S3 Access Points 経由でアクセスする FSx for ONTAP デー�
 
 **Snowflake ガバナンスは FSx S3 AP 上の External Table に適用可能** — ガバナンス機能（Tags, Row Policy, Masking, Sharing, Access History）に COPY INTO は不要。Cortex Search と Vision AI のみ内部テーブルへのデータ配置が必要。
 
-### 比較: AWS ネイティブ vs Snowflake ガバナンス
+### 比較: AWS ネイティブ vs Snowflake vs Databricks ガバナンス
 
-| 観点 | AWS ネイティブ（Lake Formation） | Snowflake（External Table） |
-|------|---|---|
-| テーブル/カラム権限 | ✅ Lake Formation grants | ✅ Object Tags + Column Masking |
-| 行レベルフィルタリング | ✅ Data Cells Filter | ✅ Row Access Policy |
-| タグベースアクセス制御 | ✅ LF-Tags | ✅ Object Tags + タグベースマスキング |
-| 監査証跡 | ✅ CloudTrail + LF audit | ✅ Access History + クエリログ |
-| クロスアカウント共有 | ✅ LF クロスアカウント grants | ✅ Snowflake Data Sharing（よりシンプル） |
-| AI ガバナンス | ✅ Bedrock ガードレール | ✅ Cortex AI 制御 + Cross-Region 設定 |
-| セットアップ複雑度 | 中（LF admin + grants） | 低（Snowflake プラットフォーム組み込み） |
-| カバーするエンジン | Athena, Redshift, EMR, Glue | Snowflake のみ |
-| データ移動必要性 | なし（同一データ上のガバナンス） | ガバナンスにはなし; Cortex Search には COPY INTO |
+| 観点 | AWS ネイティブ（Lake Formation） | Snowflake（External Table） | Databricks（Unity Catalog、DataSync → S3 経由） |
+|------|---|---|---|
+| テーブル/カラム権限 | ✅ Lake Formation grants | ✅ Object Tags + Column Masking | ✅ UC Grants + Column Masks |
+| 行レベルフィルタリング | ✅ Data Cells Filter | ✅ Row Access Policy | ✅ Row Filters |
+| タグベースアクセス制御 | ✅ LF-Tags | ✅ Object Tags + タグベースマスキング | ✅ UC Tags + タグベースポリシー |
+| 監査証跡 | ✅ CloudTrail + LF audit | ✅ Access History + クエリログ | ✅ System Tables（監査ログ） |
+| クロスアカウント/組織共有 | ✅ LF クロスアカウント grants | ✅ Snowflake Data Sharing（よりシンプル） | ✅ Delta Sharing（オープンプロトコル） |
+| AI ガバナンス | ✅ Bedrock ガードレール | ✅ Cortex AI 制御 + Cross-Region 設定 | ✅ Mosaic AI ガードレール + Model Registry |
+| データリネージ | ❌ 組み込みなし | ❌ 組み込みなし | ✅ 自動（UC リネージグラフ） |
+| セットアップ複雑度 | 中（LF admin + grants） | 低（Snowflake プラットフォーム組み込み） | 中（DataSync + UC セットアップ） |
+| カバーするエンジン | Athena, Redshift, EMR, Glue | Snowflake のみ | Databricks（Spark, SQL, ML） |
+| データ移動必要性 | なし（同一データ上のガバナンス） | ガバナンスにはなし; Cortex Search には COPY INTO | **あり — DataSync → S3 が必要**（UC は FSx S3 AP に直接アクセス不可） |
+| FSx S3 AP 直接アクセス | ✅ | ✅（`AWS_ACCESS_POINT_ARN` 使用） | ❌（UC テーブル作成ブロック; DataSync パスが必要） |
 
-> **規制ワークロード向け推奨**: 複数の AWS ネイティブエンジン（Athena + Redshift + EMR）にガバナンスを適用する場合は **Lake Formation** を使用。主要分析プラットフォームが Snowflake で、AI + ガバナンス + データ共有を一つのプラットフォームで統合する場合は **Snowflake ガバナンス** を使用。両者は共存可能 — 同じ FSx for ONTAP データに対して、AWS ネイティブアクセスには Lake Formation、Snowflake アクセスには Snowflake ガバナンスを同時に適用できます。
+### Databricks Unity Catalog ガバナンス（DataSync → S3 経由）
+
+Databricks Unity Catalog は **DataSync で S3 に同期した後**、FSx for ONTAP データに対してエンタープライズガバナンスを提供します。UC は FSx S3 AP に直接アクセスできません（セッションポリシー制限、2026年5月確認）が、DataSync → S3 → UC パスで全ガバナンス機能が利用可能です:
+
+| 機能 | 動作 | ガバナンス価値 |
+|------|------|-------------|
+| **テーブル/カラム Grants** | `GRANT SELECT ON TABLE ... TO group` | プリンシパルごとの細粒度アクセス制御 |
+| **Row Filters** | `ALTER TABLE ... SET ROW FILTER function` | ユーザーコンテキストに基づく行レベルセキュリティ |
+| **Column Masks** | `ALTER TABLE ... ALTER COLUMN ... SET MASK function` | ロールごとの動的カラムマスキング |
+| **UC Tags** | `ALTER TABLE ... SET TAGS ('sensitivity' = 'pii')` | データ分類と発見性 |
+| **自動リネージ** | 組み込みリネージグラフ（テーブル→テーブル、カラム→カラム） | 影響分析、コンプライアンストレーシング |
+| **監査ログ** | `system.access.audit` システムテーブル | 誰が何にいつどこからアクセスしたか |
+| **Delta Sharing** | オープンプロトコル — Delta Sharing 互換クライアントと共有 | データコピーなしのクロス組織共有（Snowflake, Pandas, Spark が読み取り可能） |
+| **Mosaic AI ガバナンス** | Model Registry, Feature Store, AI ガードレール | ML モデルライフサイクルガバナンス |
+| **Lakehouse Monitoring** | データ品質メトリクス、ドリフト検出 | プロアクティブなデータ品質ガバナンス |
+
+**重要な制約**: 全ての Databricks UC ガバナンスはデータが S3 にある必要があります（FSx S3 AP 直接ではない）。推奨アーキテクチャ:
+
+```
+FSx for ONTAP (Source of Truth)
+  ↓ DataSync（増分同期、5分スケジュール）
+Amazon S3 バケット（同期コピー）
+  ↓ Auto Loader（増分取り込み）
+Unity Catalog Managed Table（フルガバナンス）
+  ↓
+  ├── Row Filters + Column Masks（細粒度アクセス）
+  ├── 自動リネージ（影響分析）
+  ├── Mosaic AI（ML トレーニング、Feature Store）
+  └── Delta Sharing（クロス組織配布）
+```
+
+> **トレードオフ**: Databricks は最も豊富なガバナンス機能セット（特に自動リネージと ML ガバナンス）を提供しますが、DataSync によるデータ重複が必要です。Snowflake と Lake Formation はコピーなしで FSx S3 AP データをガバナンスできます。リネージ/ML ガバナンスとゼロコピーアクセスのどちらが優先かで選択してください。
+
+> **規制ワークロード向け推奨**: 複数の AWS ネイティブエンジン（Athena + Redshift + EMR）にガバナンスを適用する場合は **Lake Formation** を使用。主要プラットフォームが Snowflake で、データ移動なしに AI + ガバナンス + データ共有を統合する場合は **Snowflake ガバナンス** を使用。自動リネージ、ML ガバナンス（Mosaic AI, Feature Store）、または Delta Sharing（オープンプロトコル）が必要な場合は **Databricks UC** を使用 — DataSync 同期レイテンシとストレージ重複をトレードオフとして受け入れる。3つすべてが同じ FSx for ONTAP ソースデータ上で共存可能です。
 
 ### AI/RAG のデータ取り扱い
 
