@@ -386,6 +386,32 @@ These operations work directly on FSx for ONTAP S3 AP External Tables — no dat
 1. **Create your first External Table**: Follow the [Configuration Guide](../../README.md#configuration-guide) — set `AWS_ACCESS_POINT_ARN` on your stage and create an External Table
 2. **For RAG / Cortex Search**: Set up a Dynamic Table with `TARGET_LAG = '1 hour'` on your External Table source, then create a Cortex Search Service
 3. **For event-driven ingestion**: Deploy FPolicy → Lambda → Snowpipe REST API ([Snowpipe Integration Guide](snowpipe-integration.md))
+4. **For multi-platform sharing (Iceberg)**: Use Snowflake Managed Iceberg Tables to write curated datasets in open Iceberg format to customer-owned S3 — accessible by Databricks, Athena, EMR, and Trino without additional copies
+
+---
+
+## Future: Managed Iceberg as the Open Format Bridge
+
+Snowflake [Managed Iceberg Tables](https://docs.snowflake.com/en/user-guide/tables-iceberg) write data in open Apache Iceberg format to customer-owned S3 storage. This enables a multi-platform architecture:
+
+```
+FSx for ONTAP (source of truth)
+  ↓ S3 AP (zero-copy read) or DataSync (sync to S3)
+Snowflake Managed Iceberg Table (curated, governed)
+  ↓ Open Iceberg format on customer-owned S3
+  ├── Databricks UC (read Iceberg)
+  ├── AWS Athena / Glue (read Iceberg via Glue Catalog)
+  ├── EMR Spark (read/write Iceberg)
+  └── Trino (read Iceberg)
+```
+
+**Key benefits**:
+- **No vendor lock-in**: Data is in open Iceberg format, owned by the customer
+- **Snowflake manages lifecycle**: OPTIMIZE, Time Travel, governance tags — without proprietary format
+- **Multi-engine access**: Same curated dataset readable by all Iceberg-compatible engines
+- **ONTAP remains source of truth**: Only high-value curated subsets are promoted to Iceberg
+
+> **Note**: This pattern requires data to be on standard S3 (not FSx for ONTAP S3 AP directly) for the Iceberg write path. Use DataSync to sync relevant subsets from FSx for ONTAP to S3, then manage as Iceberg tables in Snowflake.
 
 ---
 

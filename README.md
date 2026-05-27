@@ -125,6 +125,31 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 >
 > **AI-Ready Data progression**: Discovery → Profiling → Curation → Governance → AI Application. The fastest path to AI value is often Snowflake External Table + Cortex AI (zero-copy, governed, AI functions available immediately on existing NAS data).
 
+### Why FSx for ONTAP, Not Just S3?
+
+| Consideration | S3 only | FSx for ONTAP + S3 AP |
+|---|---|---|
+| Existing NFS/SMB workloads | Must migrate or maintain dual paths | No change — existing apps continue on NFS/SMB |
+| Storage efficiency | No dedup/compression | ONTAP dedup + compression (1.5-2x typical) |
+| Point-in-time recovery | S3 Versioning (per-object, costly at scale) | ONTAP Snapshot (volume-level, instant, space-efficient) |
+| Dev/test data provisioning | Full copy required | FlexClone (instant zero-copy clone) |
+| Multi-protocol access | S3 only | NFS + SMB + S3 on same data simultaneously |
+| Application changes needed | Yes (rewrite to S3 SDK) | No (NFS/SMB unchanged, S3 AP is additive) |
+
+### Open Table Format: Multi-Platform Bridge
+
+For customers using both Snowflake and Databricks, curated datasets can be shared via open Iceberg format:
+
+```
+FSx for ONTAP (source) → S3 AP / DataSync → S3 → Snowflake Managed Iceberg Table
+                                                          ↓
+                                                Same Iceberg on S3
+                                                          ↓
+                                    Databricks UC / Athena / EMR (read Iceberg)
+```
+
+No vendor lock-in. Data owned by customer. Each platform applies its own governance.
+
 ---
 
 ## Use Cases / ユースケース
