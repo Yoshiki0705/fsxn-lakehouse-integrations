@@ -179,6 +179,7 @@ images_df.select("path", "length", "modificationTime").show()
 CREATE OR REPLACE STAGE MEDIA_STAGE
   STORAGE_INTEGRATION = fsxn_storage_integration
   URL = 's3://<S3AccessPointAlias>/media/'
+  AWS_ACCESS_POINT_ARN = 'arn:aws:s3:<region>:<account>:accesspoint/<ap-name>'
   DIRECTORY = (ENABLE = TRUE AUTO_REFRESH = FALSE);
 
 -- List files
@@ -188,11 +189,35 @@ SELECT * FROM DIRECTORY(@MEDIA_STAGE);
 -- NOTE: AWS docs state Presign is "Not supported", but testing confirms
 -- GET_PRESIGNED_URL works with FSx for ONTAP S3 AP in practice.
 SELECT GET_PRESIGNED_URL(@MEDIA_STAGE, 'images/photo001.jpg', 3600);
+
+-- OCR: Extract text from documents/images directly (no copy needed)
+SELECT SNOWFLAKE.CORTEX.PARSE_DOCUMENT(
+  @MEDIA_STAGE, 'documents/invoice.png', {'mode': 'OCR'}
+) AS extracted_text;
+
+-- AI Summarization on document text (no copy needed)
+SELECT SNOWFLAKE.CORTEX.SUMMARIZE(content)
+FROM fsxn_documents_ext_table;
+
+-- Vision AI (requires COPY FILES to internal stage)
+COPY FILES INTO @internal_stage FROM @MEDIA_STAGE/images/;
+SELECT SNOWFLAKE.CORTEX.COMPLETE('pixtral-large',
+  'Describe this image:', TO_FILE(@internal_stage, RELATIVE_PATH)
+) FROM DIRECTORY(@internal_stage) WHERE RELATIVE_PATH LIKE '%.jpg';
 ```
 
+**Capabilities (verified May 2026):**
+- ✅ Directory Table for file metadata management (path, size, date)
+- ✅ GET_PRESIGNED_URL / BUILD_SCOPED_FILE_URL for file access
+- ✅ PARSE_DOCUMENT (OCR) — extract text from images/PDFs directly on FSx S3 AP
+- ✅ Cortex AI text functions (SUMMARIZE, TRANSLATE, SENTIMENT) — work on External Table data
+- ✅ Vision AI (multimodal COMPLETE) — requires COPY FILES to internal stage
+- ✅ Cortex Search (RAG) — requires COPY INTO internal table (198ms query latency)
+
 **Constraints:**
-- Snowflake cannot directly query unstructured data content
-- Directory Table for metadata management
+- AUTO_REFRESH not available (use Task + ALTER STAGE REFRESH)
+- Vision AI / TO_FILE requires COPY FILES to internal stage (data moves to Snowflake storage)
+- Cortex Search requires COPY INTO (data must be in internal table)
 - **Pre-signed URLs work with FSx for ONTAP S3 AP** (despite AWS docs stating "Not supported")
 - Snowpark Python UDFs can process images
 

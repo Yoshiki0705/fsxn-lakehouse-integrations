@@ -22,8 +22,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 | Vendor | Integration Method | Use Case | Status |
 |--------|-------------------|----------|--------|
-| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSx for ONTAP, ML Feature Store | ⚠️ Blocked (session policy) |
-| **Snowflake** | External Stage / External Table / Iceberg Table | Data sharing, ELT pipelines | ⚠️ Blocked (session policy) |
+| **Databricks** | Unity Catalog External Location / S3 External Table | Delta Lake on FSx for ONTAP, ML Feature Store | ⚠️ Blocked (session policy — UC table creation fails) |
+| **Snowflake** | External Stage + `AWS_ACCESS_POINT_ARN` / External Table | Governed analytics, Cortex AI, Data Sharing, Managed Iceberg | ✅ Verified (May 2026) |
 
 ### Databricks
 
@@ -32,15 +32,20 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Formats**: Delta Lake, Iceberg, Parquet, CSV, JSON, ORC
 - **Unstructured**: `binaryFile` format for image/video reading
 - **ONTAP Value**: FlexClone (dev/test), Snapshot (complements Time Travel)
+- **Limitation**: UC session policy blocks table creation and subdirectory listing on S3 AP. Recommended path: DataSync → S3 → UC.
 
 ### Snowflake
 
 - **Auth**: Storage Integration + IAM Role
 - **Network**: Internet network origin (PrivateLink optional)
 - **Formats**: Parquet, CSV, JSON, Avro, ORC, Iceberg
-- **Unstructured**: Directory Table + Pre-signed URLs (works despite AWS docs saying "Not supported")
-- **ONTAP Value**: Snapshot (beyond Time Travel retention), FlexClone (test env)
-- **Known Limitation**: High latency on S3 AP operations (30s-5min+ for stage/list)
+- **Unstructured**: Directory Table + Pre-signed URLs + Cortex AI (PARSE_DOCUMENT for OCR, multimodal vision via staging)
+- **AI Capabilities**: 8/10 Cortex AI functions verified on FSx data (SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE, EXTRACT_ANSWER, PARSE_DOCUMENT, Cortex Search 198ms, Vision AI via staging)
+- **Governance**: Object Tags, Row Access Policy, Column Masking, Data Sharing — all verified on External Table
+- **Advanced Patterns**: Dynamic Table (confirmed, FULL refresh, min 60s TARGET_LAG), Managed Iceberg Table (confirmed, open format on customer S3)
+- **ONTAP Value**: Snapshot (beyond Time Travel retention), FlexClone (test env), multi-protocol (NFS/SMB/S3 on same data)
+- **Data Sharing**: Governed distribution to partners/suppliers via Snowflake Data Sharing (External Table shareable)
+- **Known Limitation**: AUTO_REFRESH not available (no S3 Event Notifications); use Task + ALTER EXTERNAL TABLE REFRESH
 
 ---
 
@@ -207,11 +212,13 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 ### Structured Data Analytics
 
 ```
-High-frequency queries + governance → Databricks (Unity Catalog)
-Data sharing + SQL-centric → Snowflake
+High-frequency queries + governance → Databricks (Unity Catalog) — requires DataSync → S3
+AI on NAS data (summarize, RAG, sentiment) → Snowflake (External Table + Cortex AI)
+Data sharing + SQL-centric + governance → Snowflake (External Table + Tags + Data Sharing)
 Serverless + low cost → Athena
 ETL pipelines → Glue
 DWH integration → Redshift Spectrum
+Open format interoperability → Snowflake Managed Iceberg Table (readable by all engines)
 ```
 
 ### Unstructured Data Processing
