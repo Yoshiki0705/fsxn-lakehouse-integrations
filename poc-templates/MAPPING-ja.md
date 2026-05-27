@@ -69,3 +69,59 @@ results:
 conclusion: |
   <所見のサマリー>
 ```
+
+---
+
+## 再現ガイド: PoC セットアップ → デモ実行
+
+### デモガイドのデモを再現する方法
+
+デモガイド（`integrations/*/docs/` 内）は設定済み環境を前提としています。PoC テンプレートがそのセットアップを提供します。
+
+#### Snowflake AI デモガイドの再現
+
+| Step | 実行内容 | 場所 |
+|:---:|---|---|
+| 1 | サンプルデータ生成 | `poc-templates/sample-data/generate-sensor-data.py` |
+| 2 | FSx S3 AP にアップロード | `aws s3 cp sensor_data.parquet s3://<AP_ALIAS>/sensor-data/` |
+| 3 | Storage Integration 作成 | `poc-templates/03-snowflake-integration/01-storage-integration.sql` |
+| 4 | IAM trust policy 更新 | `03-snowflake-integration/README-ja.md` の Step 2 参照 |
+| 5 | Stage + External Table 作成 | `poc-templates/03-snowflake-integration/02-stage-and-table.sql` |
+| 6 | **AI デモ実行** | `poc-templates/03-snowflake-integration/03-cortex-ai-demo.sql` または [AI デモガイド](../integrations/snowflake/docs/ja/ai-demo-guide.md) |
+
+**オブジェクト名の対応**（PoC テンプレート → デモガイド）:
+- `@fsxn_poc_stage` → `@fsxn_stage`
+- `fsxn_poc_sensor_ext` → `fsxn_sensor_ext_table`
+- `fsxn_poc_integration` → `fsxn_verification_integration`
+
+> **ヒント**: 最初からデモガイドと同じ名前を使用すれば、後でリネーム不要。
+
+#### Athena デモの再現
+
+| Step | 実行内容 | 場所 |
+|:---:|---|---|
+| 1 | S3 AP 接続確認 | `poc-templates/scripts/validate.sh --ap-alias <ALIAS>` |
+| 2 | サンプルデータ生成 + アップロード | `generate-sensor-data.py` + `aws s3 cp` |
+| 3 | Glue テーブル作成 | `poc-templates/02-athena-quickstart/sample-queries.sql` (Steps 1-2) |
+| 4 | **クエリ実行** | `poc-templates/02-athena-quickstart/sample-queries.sql` (Steps 3-7) |
+| 5 | ガバナンス追加 | `poc-templates/07-governance/lakeformation-setup.sh` |
+
+#### EMR Spark デモの再現
+
+| Step | 実行内容 | 場所 |
+|:---:|---|---|
+| 1 | サンプルデータを FSx S3 AP にアップロード | Athena Step 2 と同じ |
+| 2 | spark-job.py を通常の S3 にアップロード | `aws s3 cp poc-templates/05-emr-spark-etl/spark-job.py s3://<BUCKET>/scripts/` |
+| 3 | EMR Serverless アプリ作成 | `poc-templates/05-emr-spark-etl/README-ja.md` 参照 |
+| 4 | **ジョブ送信** | `aws emr-serverless start-job-run ...` |
+| 5 | 書き戻し確認 | `aws s3api list-objects-v2 --bucket <AP_ALIAS> --prefix gold/` |
+
+#### DuckDB Lambda デモの再現
+
+| Step | 実行内容 | 場所 |
+|:---:|---|---|
+| 1 | Lambda レイヤービルド | `poc-templates/06-duckdb-lambda/README-ja.md` Step 1 |
+| 2 | CloudFormation デプロイ | `poc-templates/06-duckdb-lambda/template.yaml` |
+| 3 | **Lambda 呼び出し** | `aws lambda invoke --function-name fsxn-duckdb-query --payload '{"query":"..."}' response.json` |
+
+> **本番実装リファレンス**: メトリクスとエラーハンドリング付きの本番グレードハンドラーは [integrations/duckdb/lambda/handler.py](../integrations/duckdb/lambda/handler.py) を参照

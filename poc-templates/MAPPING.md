@@ -92,3 +92,59 @@ results:
 conclusion: |
   <summary of findings>
 ```
+
+---
+
+## Reproduction Guide: PoC Setup → Demo Execution
+
+### How to reproduce demos from the Demo Guides
+
+The Demo Guides (in `integrations/*/docs/`) assume a pre-configured environment. The PoC Templates provide that setup. Here's the connection:
+
+#### Snowflake AI Demo Guide Reproduction
+
+| Step | What to do | Where |
+|:---:|---|---|
+| 1 | Generate sample data | `poc-templates/sample-data/generate-sensor-data.py` |
+| 2 | Upload to FSx S3 AP | `aws s3 cp sensor_data.parquet s3://<AP_ALIAS>/sensor-data/` |
+| 3 | Create Storage Integration | `poc-templates/03-snowflake-integration/01-storage-integration.sql` |
+| 4 | Update IAM trust policy | See Step 2 in `03-snowflake-integration/README.md` |
+| 5 | Create Stage + External Table | `poc-templates/03-snowflake-integration/02-stage-and-table.sql` |
+| 6 | **Run AI demos** | `poc-templates/03-snowflake-integration/03-cortex-ai-demo.sql` OR [AI Demo Guide](../integrations/snowflake/docs/en/ai-demo-guide.md) |
+
+**Object name mapping** (PoC Template → Demo Guide):
+- `@fsxn_poc_stage` → `@fsxn_stage`
+- `fsxn_poc_sensor_ext` → `fsxn_sensor_ext_table`
+- `fsxn_poc_integration` → `fsxn_verification_integration`
+
+> **Tip**: Use the same names as the Demo Guide from the start to avoid renaming later.
+
+#### Athena Demo Reproduction
+
+| Step | What to do | Where |
+|:---:|---|---|
+| 1 | Validate S3 AP connectivity | `poc-templates/scripts/validate.sh --ap-alias <ALIAS>` |
+| 2 | Generate + upload sample data | `poc-templates/sample-data/generate-sensor-data.py` + `aws s3 cp` |
+| 3 | Create Glue table | `poc-templates/02-athena-quickstart/sample-queries.sql` (Steps 1-2) |
+| 4 | **Run queries** | `poc-templates/02-athena-quickstart/sample-queries.sql` (Steps 3-7) |
+| 5 | Add governance | `poc-templates/07-governance/lakeformation-setup.sh` |
+
+#### EMR Spark Demo Reproduction
+
+| Step | What to do | Where |
+|:---:|---|---|
+| 1 | Upload sample data to FSx S3 AP | Same as Athena Step 2 |
+| 2 | Upload spark-job.py to regular S3 | `aws s3 cp poc-templates/05-emr-spark-etl/spark-job.py s3://<BUCKET>/scripts/` |
+| 3 | Create EMR Serverless app | See `poc-templates/05-emr-spark-etl/README.md` |
+| 4 | **Submit job** | `aws emr-serverless start-job-run ...` |
+| 5 | Verify write-back | `aws s3api list-objects-v2 --bucket <AP_ALIAS> --prefix gold/` |
+
+#### DuckDB Lambda Demo Reproduction
+
+| Step | What to do | Where |
+|:---:|---|---|
+| 1 | Build Lambda layer | `poc-templates/06-duckdb-lambda/README.md` Step 1 |
+| 2 | Deploy CloudFormation | `poc-templates/06-duckdb-lambda/template.yaml` |
+| 3 | **Invoke Lambda** | `aws lambda invoke --function-name fsxn-duckdb-query --payload '{"query":"..."}' response.json` |
+
+> **Full implementation reference**: For production-grade handler with metrics and error handling, see [integrations/duckdb/lambda/handler.py](../integrations/duckdb/lambda/handler.py)
