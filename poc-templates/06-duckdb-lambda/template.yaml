@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: FSx for ONTAP S3 AP — DuckDB Lambda PoC
+
+Parameters:
+  S3ApAlias:
+    Type: String
+    Description: FSx for ONTAP S3 Access Point alias (ending in -ext-s3alias)
+  S3ApArn:
+    Type: String
+    Description: S3 Access Point ARN (arn:aws:s3:region:account:accesspoint/name)
+  LayerS3Bucket:
+    Type: String
+    Description: S3 bucket containing the DuckDB Lambda layer zip
+  LayerS3Key:
+    Type: String
+    Default: layers/duckdb-layer.zip
+    Description: S3 key for the DuckDB layer zip
+
+Resources:
+  DuckDBLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: duckdb-httpfs
+      Description: DuckDB with httpfs extension for S3 AP access
+      Content:
+        S3Bucket: !Ref LayerS3Bucket
+        S3Key: !Ref LayerS3Key
+      CompatibleRuntimes:
+        - python3.12
+      CompatibleArchitectures:
+        - arm64
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3APAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:PutObject
+                Resource:
+                  - !Ref S3ApArn
+                  - !Sub '${S3ApArn}/object/*'
+
+  DuckDBFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: fsxn-duckdb-query
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      Code:
+        ZipFile: |
+          # Placeholder — deploy actual handler.py via S3 or inline
+          # See poc-templates/06-duckdb-lambda/handler.py
+          def lambda_handler(event, context):
+              return {"statusCode": 200, "body": "Deploy handler.py"}
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Architectures:
+        - arm64
+      MemorySize: 1024
+      Timeout: 30
+      Layers:
+        - !Ref DuckDBLayer
+      Environment:
+        Variables:
+          S3_ACCESS_POINT_ALIAS: !Ref S3ApAlias
+          AWS_REGION_NAME: !Ref 'AWS::Region'
+
+Outputs:
+  FunctionName:
+    Value: !Ref DuckDBFunction
+  FunctionArn:
+    Value: !GetAtt DuckDBFunction.Arn
+  InvokeCommand:
+    Value: !Sub |
+      aws lambda invoke --function-name ${DuckDBFunction} \
+        --payload '{"query":"SELECT COUNT(*) FROM read_parquet('"'"'s3://${S3ApAlias}/sensor-data/sensor_data.parquet'"'"')"}' \
+        response.json
