@@ -6,9 +6,14 @@
 
 ## When You Need This
 
+DataSync is the **bridge from enterprise file data to AI-ready data products** when the consuming platform requires standard S3 storage:
+
 - Databricks Unity Catalog requires data in standard S3 buckets (FSx for ONTAP S3 AP not supported by UC)
 - Delta Lake / Iceberg / Hudi table format writes require standard S3 (conditional writes not supported on FSx for ONTAP S3 AP)
-- You need a governed copy of FSx for ONTAP data in S3 for downstream consumption
+- You need AUTO_REFRESH / Snowpipe (S3 Event Notifications not available on FSx for ONTAP S3 AP)
+- You need a governed copy of FSx for ONTAP data in S3 for downstream AI/ML consumption
+
+> **Design principle**: DataSync is not a "workaround" — it's a managed, incremental sync mechanism that turns NAS file data into platform-consumable datasets. The goal is not to copy everything, but to sync the **curated subset** that downstream platforms need for AI-ready data products.
 
 ## Architecture
 
@@ -154,6 +159,35 @@ After DataSync syncs data to S3, table format writes work normally:
 df = spark.read.parquet("s3://<BUCKET>/fsxn-sync/sensor-data/")
 df.write.format("delta").mode("overwrite").save("s3://<BUCKET>/delta-tables/sensors/")
 ```
+
+## Integration with Snowflake
+
+DataSync → S3 also enables Snowflake patterns that require standard S3 buckets:
+
+```sql
+-- Option 1: Snowflake External Table on synced S3 bucket (zero-copy from S3)
+CREATE OR REPLACE EXTERNAL TABLE sensor_data_ext
+  WITH LOCATION = @s3_synced_stage/sensor-data/
+  FILE_FORMAT = (TYPE = PARQUET)
+  AUTO_REFRESH = TRUE;  -- S3 Event Notifications work on standard S3
+
+-- Option 2: COPY INTO for full Snowflake features (Cortex Search, Time Travel, DML)
+COPY INTO sensor_data
+  FROM @s3_synced_stage/sensor-data/
+  FILE_FORMAT = (TYPE = PARQUET)
+  MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
+```
+
+**When to use DataSync → S3 → Snowflake vs FSx for ONTAP S3 AP → Snowflake directly:**
+
+| Scenario | Recommended path | Reason |
+|----------|-----------------|--------|
+| Read-only analytics, Cortex AI text functions | FSx for ONTAP S3 AP → External Table (direct) | Zero-copy, no sync needed |
+| AUTO_REFRESH / Snowpipe needed | DataSync → S3 → External Table | S3 Event Notifications required |
+| Cortex Search / RAG | DataSync → S3 → COPY INTO → Cortex Search | Internal table required |
+| Multimodal AI (vision) | DataSync → S3 → COPY FILES → internal stage | TO_FILE requires internal stage |
+
+> **Key insight**: For most Snowflake analytics use cases, the **direct FSx for ONTAP S3 AP path** (with `AWS_ACCESS_POINT_ARN`) is sufficient and eliminates sync cost entirely. Use DataSync → S3 only when you need features that require S3 Event Notifications or internal tables.
 
 ## Why Not SnapMirror S3?
 
