@@ -72,7 +72,8 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **Databricks** | Delta Lake | Write/MERGE/Compaction | ❌ Not Supported | — | Delta commit protocol requires rename; S3A rename emulation (copy+delete) may fail without conditional writes |
 | **Snowflake** | Parquet/CSV | Read (External Stage) | ✅ Verified | External Stage with AP alias, storage integration IAM role | — |
 | **Snowflake** | Iceberg | Read (External Catalog) | ⚠️ Experimental | Snowflake Iceberg Tables with external catalog | Metadata pointer reading works. Write not applicable (Snowflake External Stage is read-only). |
-| **Snowflake** | Any | Write | ❌ Not Supported | — | Snowflake External Stages are read-only by design |
+| **Snowflake** | Iceberg | Write (Managed Iceberg Table) | ✅ Confirmed (May 2026) | COPY INTO from FSx S3 AP External Stage → Managed Iceberg Table on customer S3 | Data written in open Iceberg format. Readable by Databricks/Athena/EMR. Dynamic Table source also confirmed (FULL refresh, min 60s TARGET_LAG). |
+| **Snowflake** | Any | Write (to FSx S3 AP) | ❌ Not Supported | — | Snowflake External Stages are read-only by design. Write path is COPY INTO → Snowflake-managed storage (internal table or Managed Iceberg on S3). |
 | **Redshift Spectrum** | Parquet/CSV | Read-only | ✅ Verified | External schema via Glue Catalog, IAM role with AP permissions | Same pattern as Athena. Query results stay in Redshift. |
 | **Amazon Bedrock** | Documents (PDF, TXT, etc.) | Read (Knowledge Base) | ✅ Verified | Bedrock Knowledge Base with S3 data source pointing to AP | For RAG applications; documents indexed for retrieval |
 
