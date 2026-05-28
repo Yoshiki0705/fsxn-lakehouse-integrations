@@ -390,6 +390,7 @@ Snowflake は S3 Access Points 経由でアクセスする FSx for ONTAP デー�
 | カバーするエンジン | Athena, Redshift, EMR, Glue | Snowflake のみ | Databricks（Spark, SQL, ML） |
 | データ移動必要性 | なし（同一データ上のガバナンス） | ガバナンスにはなし; Cortex Search には COPY INTO | **あり — DataSync → S3 が必要**（UC は FSx S3 AP に直接アクセス不可） |
 | FSx S3 AP 直接アクセス | ✅ | ✅（`AWS_ACCESS_POINT_ARN` 使用） | ❌（UC テーブル作成ブロック; DataSync パスが必要） |
+| 外部エンジンでのガバナンス適用 | ✅（Athena, Redshift, EMR 全てガバナンス適用） | N/A（Snowflake 専用プラットフォーム） | ❌ **UC Row Filters/Column Masks は外部エンジンで適用されない**（Athena/EMR が Iceberg REST Catalog 経由でアクセスすると UC ガバナンスをバイパス） |
 
 ### Databricks Unity Catalog ガバナンス（DataSync → S3 経由）
 
@@ -421,6 +422,28 @@ Unity Catalog Managed Table（フルガバナンス）
   ├── Mosaic AI（ML トレーニング、Feature Store）
   └── Delta Sharing（クロス組織配布）
 ```
+
+#### UC Iceberg REST Catalog — 外部エンジンアクセスの制約
+
+> **Databricks サポート確認（2026年5月）**: 外部エンジン（Athena、EMR Spark、Trino）が Iceberg REST Catalog 経由で UC 管理テーブルにアクセスする場合:
+
+| 観点 | 動作 | 影響 |
+|------|------|------|
+| **データアクセス** | 外部エンジンは S3 データファイルに**直接アクセス** — UC はデータをプロキシしない | 外部エンジンの IAM ロールに基盤データファイルへの S3 読み取り権限が必要 |
+| **Row Filters** | ❌ 外部エンジンでは**適用されない** | 行レベルセキュリティは Databricks コンピュート（Spark/Photon）内でのみ適用 |
+| **Column Masks** | ❌ 外部エンジンでは**適用されない** | カラムマスキングは Databricks コンピュート内でのみ適用 |
+| **UC Grants** | メタデータアクセスは UC が制御 | 外部エンジンはテーブルを発見できるが、データレイヤーでガバナンスは適用されない |
+
+**アーキテクチャへの影響**: UC 管理データに外部エンジン（Athena、EMR）からアクセスする際にガバナンスを適用する必要がある場合、同じ S3 データに対して **Lake Formation を追加で設定する必要がある**。UC ガバナンスと Lake Formation ガバナンスは独立して動作 — UC は Databricks アクセスを、Lake Formation は AWS ネイティブエンジンアクセスをガバナンスする。
+
+```
+UC 管理 Delta/Iceberg テーブル（S3 上）
+  ├── Databricks アクセス → UC Row Filters + Column Masks（適用される）
+  └── Athena/EMR アクセス（Iceberg REST Catalog 経由）→ UC ガバナンス適用されない
+       └── 外部エンジンアクセスのガバナンスには Lake Formation を使用する必要あり
+```
+
+> **規制ワークロード向け**: UC ガバナンスが非 Databricks エンジンからのアクセス時にデータを自動的に保護すると想定しないこと。コンプライアンスが Athena や EMR クエリに行/カラムレベルのアクセス制御を要求する場合、UC とは独立して同じ基盤 S3 データに Lake Formation 権限を設定すること。
 
 > **トレードオフ**: Databricks は最も豊富なガバナンス機能セット（特に自動リネージと ML ガバナンス）を提供しますが、DataSync によるデータ重複が必要です。Snowflake と Lake Formation はコピーなしで FSx S3 AP データをガバナンスできます。リネージ/ML ガバナンスとゼロコピーアクセスのどちらが優先かで選択してください。
 
