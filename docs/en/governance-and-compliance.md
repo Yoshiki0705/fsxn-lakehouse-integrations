@@ -390,6 +390,7 @@ Snowflake provides a complementary governance layer for FSx for ONTAP data acces
 | Engines covered | Athena, Redshift, EMR, Glue | Snowflake only | Databricks (Spark, SQL, ML) |
 | Data movement required | None (governance on same data) | None for governance; COPY INTO for Cortex Search | **Yes — DataSync → S3 required** (UC cannot access FSx S3 AP directly) |
 | FSx S3 AP direct access | ✅ | ✅ (with `AWS_ACCESS_POINT_ARN`) | ❌ (UC table creation blocked; DataSync path required) |
+| Governance enforced on external engines | ✅ (Athena, Redshift, EMR all governed) | N/A (Snowflake-only platform) | ❌ **UC Row Filters/Column Masks NOT enforced on external engines** (Athena/EMR via Iceberg REST Catalog bypass UC governance) |
 
 ### Databricks Unity Catalog Governance (via DataSync → S3)
 
@@ -421,6 +422,28 @@ Unity Catalog Managed Table (full governance)
   ├── Mosaic AI (ML training, Feature Store)
   └── Delta Sharing (cross-org distribution)
 ```
+
+#### UC Iceberg REST Catalog — External Engine Access Constraints
+
+> **Databricks Support Confirmation (May 2026)**: When external engines (Athena, EMR Spark, Trino) access UC-managed tables via the Iceberg REST Catalog:
+
+| Aspect | Behavior | Implication |
+|--------|----------|-------------|
+| **Data access** | External engine reads S3 data files **directly** — UC does not proxy data | External engine's IAM role must have S3 read permissions on underlying data files |
+| **Row Filters** | ❌ **NOT enforced** for external engines | Row-level security only applies within Databricks compute (Spark/Photon) |
+| **Column Masks** | ❌ **NOT enforced** for external engines | Column masking only applies within Databricks compute |
+| **UC Grants** | Metadata access controlled by UC | External engine can discover tables but governance is not enforced at data layer |
+
+**Architecture implication**: If you need governance enforced on external engines (Athena, EMR) accessing UC-managed data, you must **additionally configure Lake Formation** on the same S3 data. UC governance and Lake Formation governance operate independently — UC governs Databricks access, Lake Formation governs AWS-native engine access.
+
+```
+UC-managed Delta/Iceberg table on S3
+  ├── Databricks access → UC Row Filters + Column Masks (enforced)
+  └── Athena/EMR access (via Iceberg REST Catalog) → UC governance NOT enforced
+       └── Must use Lake Formation for governance on external engine access
+```
+
+> **For regulated workloads**: Do not assume that UC governance automatically protects data when accessed from non-Databricks engines. If compliance requires row/column-level access control on Athena or EMR queries, configure Lake Formation permissions on the same underlying S3 data independently of UC.
 
 > **Trade-off**: Databricks provides the richest governance feature set (especially automatic lineage and ML governance), but requires data duplication via DataSync. Snowflake and Lake Formation can govern FSx S3 AP data without copying. Choose based on whether lineage/ML governance or zero-copy access is the higher priority.
 
