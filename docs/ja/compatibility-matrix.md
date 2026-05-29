@@ -74,7 +74,7 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **Databricks** | Delta Lake | Write/MERGE/Compaction | ❌ 非サポート | — | Delta コミットプロトコルに rename が必要。S3A rename エミュレーション（copy+delete）は条件付き書き込みなしで失敗する可能性 |
 | **Snowflake** | Parquet/CSV | 読み取り（External Stage） | ✅ 検証済み | AP エイリアス付き External Stage、ストレージ統合 IAM ロール | — |
 | **Snowflake** | Iceberg | 読み取り（External Catalog） | ⚠️ 実験的 | 外部カタログ付き Snowflake Iceberg Tables | メタデータポインタの読み取りは動作 |
-| **Snowflake** | Iceberg | 書き込み（Managed Iceberg Table） | ✅ 確認済み（2026年5月） | FSx S3 AP External Stage から COPY INTO → 顧客 S3 上の Managed Iceberg Table | オープン Iceberg 形式で書き込み。Databricks/Athena/EMR から読み取り可能。Dynamic Table ソースも確認済み（FULL refresh、最小 60秒 TARGET_LAG）。 |
+| **Snowflake** | Iceberg | 書き込み（Managed Iceberg Table） | ✅ 確認済み（2026年5月） | FSx S3 AP External Stage から COPY INTO → 顧客 S3 上の Managed Iceberg Table | オープン Iceberg 形式で書き込み。Horizon Iceberg REST Catalog 経由で Databricks/Athena/EMR から読み取り可能。Dynamic Table ソースも確認済み（FULL refresh、最小 60秒 TARGET_LAG）。**COPY INTO 64日間重複排除確認済み** — 標準テーブルと同じ動作。Task + COPY INTO パターンは本番利用可能。Horizon Catalog が外部エンジンアクセスにガバナンス（Row Access Policy, Masking）を強制。 |
 | **Snowflake** | 全て | 書き込み（FSx S3 AP へ） | ❌ 非サポート | — | Snowflake External Stage は設計上読み取り専用。書き込みパスは COPY INTO → Snowflake マネージドストレージ（内部テーブルまたは S3 上の Managed Iceberg）。 |
 | **Redshift Spectrum** | Parquet/CSV | 読み取り専用 | 🔲 計画中 | Glue Catalog 経由の External Schema、AP 権限付き IAM ロール | 動作見込み（Athena と同じパターン） |
 | **Amazon Bedrock** | ドキュメント（PDF、TXT 等） | 読み取り（Knowledge Base） | ✅ 検証済み | AP を指す S3 データソース付き Bedrock Knowledge Base | RAG アプリケーション用。ドキュメントが検索用にインデックス化 |
@@ -143,6 +143,10 @@ FSx S3 Access Points 上の分析ワークロードを計画する際：
 | Bedrock Knowledge Base + ドキュメント読み取り | 機能検証済み | AWS 公式チュートリアルが RAG インジェストを検証 |
 | Databricks + Parquet 読み取り | API 検証済み | External Location の登録と読み取りを確認 |
 | Snowflake + Parquet 読み取り | API 検証済み | External Stage の作成とクエリを確認 |
+| Snowflake + TO_FILE（S3 AP ステージ） | **ブロック** | `TO_FILE` が SQL コンパイル時に S3 AP ステージを拒否（`BUILD_SCOPED_FILE_URL`/`PARSE_DOCUMENT` とは異なる検証パス）。エンジニアリングリクエスト提出済み（Case #01359474, 2026年5月）。ワークアラウンド: `COPY FILES` → 内部ステージ → `TO_FILE`。 |
+| Snowflake + BUILD_SCOPED_FILE_URL（S3 AP ステージ） | **機能検証済み** | FSx S3 AP External Stage で正常動作。 |
+| Snowflake + PARSE_DOCUMENT（S3 AP ステージ） | **機能検証済み** | FSx S3 AP External Stage で正常動作。 |
+| Snowflake + Managed Iceberg Table（S3 AP Stage から COPY INTO） | **機能検証済み** | FSx S3 AP External Stage → Managed Iceberg Table への COPY INTO 確認。64日間重複排除動作。Horizon REST Catalog が外部エンジンにガバナンス強制付きで公開。 |
 | Delta Lake 書き込み（全プラットフォーム） | 非サポート | 基本的な制約（アトミック rename なし） |
 
 ---
