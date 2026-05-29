@@ -75,7 +75,7 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **Databricks** | Delta Lake | Write/MERGE/Compaction | ❌ Not Supported | — | Delta commit protocol requires rename; S3A rename emulation (copy+delete) may fail without conditional writes |
 | **Snowflake** | Parquet/CSV | Read (External Stage) | ✅ Verified | External Stage with AP alias, storage integration IAM role | — |
 | **Snowflake** | Iceberg | Read (External Catalog) | ⚠️ Experimental | Snowflake Iceberg Tables with external catalog | Metadata pointer reading works. Write not applicable (Snowflake External Stage is read-only). |
-| **Snowflake** | Iceberg | Write (Managed Iceberg Table) | ✅ Confirmed (May 2026) | COPY INTO from FSx S3 AP External Stage → Managed Iceberg Table on customer S3 | Data written in open Iceberg format. Readable by Databricks/Athena/EMR. Dynamic Table source also confirmed (FULL refresh, min 60s TARGET_LAG). |
+| **Snowflake** | Iceberg | Write (Managed Iceberg Table) | ✅ Confirmed (May 2026) | COPY INTO from FSx S3 AP External Stage → Managed Iceberg Table on customer S3 | Data written in open Iceberg format. Readable by Databricks/Athena/EMR via Horizon Iceberg REST Catalog. Dynamic Table source also confirmed (FULL refresh, min 60s TARGET_LAG). **COPY INTO 64-day deduplication confirmed** — same behavior as standard tables. Task + COPY INTO pattern is production-ready. Horizon Catalog enforces governance (Row Access Policies, Masking) on external engine access. |
 | **Snowflake** | Any | Write (to FSx S3 AP) | ❌ Not Supported | — | Snowflake External Stages are read-only by design. Write path is COPY INTO → Snowflake-managed storage (internal table or Managed Iceberg on S3). |
 | **Redshift Spectrum** | Parquet/CSV | Read-only | ✅ Verified | External schema via Glue Catalog, IAM role with AP permissions | Same pattern as Athena. Query results stay in Redshift. |
 | **Amazon Bedrock** | Documents (PDF, TXT, etc.) | Read (Knowledge Base) | ✅ Verified | Bedrock Knowledge Base with S3 data source pointing to AP | For RAG applications; documents indexed for retrieval |
@@ -174,6 +174,10 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | Bedrock Knowledge Base + Document Read | Functional Verified | Per AWS official tutorial. |
 | Snowflake + External Stage (LIST) | **API Verified** | LIST @stage succeeds (files visible). |
 | Snowflake + External Stage (GetObject) | **Blocked** | Session policy does not recognize S3 AP ARN format. Support case 01357726 filed. |
+| Snowflake + TO_FILE on S3 AP Stage | **Blocked** | `TO_FILE` rejects S3 AP-backed stage at SQL compilation time (different validation path from `BUILD_SCOPED_FILE_URL`/`PARSE_DOCUMENT` which succeed). Engineering request filed (Case #01359474, May 2026). Workaround: `COPY FILES` to internal stage → `TO_FILE` on internal stage. |
+| Snowflake + BUILD_SCOPED_FILE_URL on S3 AP Stage | **Functional Verified** | Works correctly on FSx S3 AP external stage. |
+| Snowflake + PARSE_DOCUMENT on S3 AP Stage | **Functional Verified** | Works correctly on FSx S3 AP external stage. |
+| Snowflake + Managed Iceberg Table (COPY INTO from S3 AP Stage) | **Functional Verified** | COPY INTO from FSx S3 AP External Stage → Managed Iceberg Table confirmed. 64-day deduplication works. Horizon REST Catalog exposes to external engines with governance enforcement. |
 | Databricks + Unity Catalog | **Blocked** | Session policy blocks all S3 AP operations. Support case filed with Databricks. |
 | Snowflake + Parquet Read | API Verified | External Stage creation and query confirmed |
 | Delta Lake Write (any platform) | Not Supported | Fundamental constraint (no atomic rename) |

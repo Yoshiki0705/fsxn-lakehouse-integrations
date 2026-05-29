@@ -375,6 +375,46 @@ Snowflake は S3 Access Points 経由でアクセスする FSx for ONTAP デー�
 
 **Snowflake ガバナンスは FSx S3 AP 上の External Table に適用可能** — ガバナンス機能（Tags, Row Policy, Masking, Sharing, Access History）に COPY INTO は不要。Cortex Search と Vision AI のみ内部テーブルへのデータ配置が必要。
 
+### Snowflake Horizon Iceberg REST Catalog — 外部エンジンへのガバナンス適用（2026年5月確認）
+
+> **Snowflake サポート確認（Case #01359983, 2026年5月）**: Snowflake Horizon Catalog は外部エンジンアクセスに対してもガバナンスポリシーを強制する — Databricks Unity Catalog との重要な差別化ポイント。
+
+| 観点 | Snowflake Horizon Catalog | Databricks Unity Catalog |
+|------|--------------------------|--------------------------|
+| **外部エンジンへの Row Access Policy** | ✅ **強制** — vended credentials 発行前にポリシー評価 | ❌ 外部エンジンでは強制されない |
+| **外部エンジンへの Dynamic Data Masking** | ✅ **強制** — カタログレイヤーでマスキング適用 | ❌ 外部エンジンでは強制されない |
+| **外部エンジンへの RBAC** | ✅ **強制** — ロールベースアクセス制御を評価 | ✅ メタデータアクセスは制御 |
+| **データアクセスモデル** | ポリシー評価によりスコープされた vended credentials | ポリシー強制なしの vended credentials |
+| **エディション要件** | 全エディション（Standard, Enterprise, Business Critical） | 全エディション |
+| **課金** | 100万APIコールあたり0.5クレジット（課金開始: 2026年下半期） | プラットフォーム費用に含む |
+| **対応外部エンジン** | Apache Spark, Trino（Databricks UC 統合: 「未発表」） | Athena, EMR, Trino, Spark |
+
+**Horizon Catalog の外部エンジン向けガバナンスの仕組み:**
+
+```
+外部エンジン（Spark/Trino）
+  │
+  │ 1. Horizon Iceberg REST Catalog API に認証
+  │    （Snowflake ユーザー認証情報を使用）
+  ▼
+Snowflake Horizon Catalog
+  │
+  │ 2. RBAC + Row Access Policy + Masking Policy を評価
+  │    （認証ユーザーのコンテキストに基づく）
+  ▼
+  │ 3. Iceberg メタデータ + スコープされた一時認証情報を返却
+  │    （認証情報はポリシーで許可されたデータに限定）
+  ▼
+外部エンジンが S3 データファイルを直接読み取り
+  （Snowflake はデータ転送パスに介在しない）
+```
+
+**規制ワークロードへのアーキテクチャ上の意味:**
+- **Snowflake Horizon パス**: 単一のガバナンスレイヤーで内部 Snowflake クエリと外部エンジンアクセスの両方をカバー。追加の Lake Formation 設定不要。
+- **Databricks UC パス**: 外部エンジンアクセスには別途 Lake Formation をガバナンスレイヤーとして設定する必要あり（UC ガバナンスは Databricks コンピュート内でのみ適用）。
+
+**参照**: [Snowflake Horizon Iceberg REST Catalog — External Engine Access](https://docs.snowflake.com/en/user-guide/tables-iceberg-access-using-external-query-engine-snowflake-horizon)（Step 5: Configure data protection policies）
+
 ### 比較: AWS ネイティブ vs Snowflake vs Databricks ガバナンス
 
 | 観点 | AWS ネイティブ（Lake Formation） | Snowflake（External Table） | Databricks（Unity Catalog、DataSync → S3 経由） |
@@ -390,7 +430,7 @@ Snowflake は S3 Access Points 経由でアクセスする FSx for ONTAP デー�
 | カバーするエンジン | Athena, Redshift, EMR, Glue | Snowflake のみ | Databricks（Spark, SQL, ML） |
 | データ移動必要性 | なし（同一データ上のガバナンス） | ガバナンスにはなし; Cortex Search には COPY INTO | **あり — DataSync → S3 が必要**（UC は FSx S3 AP に直接アクセス不可） |
 | FSx S3 AP 直接アクセス | ✅ | ✅（`AWS_ACCESS_POINT_ARN` 使用） | ❌（UC テーブル作成ブロック; DataSync パスが必要） |
-| 外部エンジンでのガバナンス適用 | ✅（Athena, Redshift, EMR 全てガバナンス適用） | N/A（Snowflake 専用プラットフォーム） | ❌ **UC Row Filters/Column Masks は外部エンジンで適用されない**（Athena/EMR が Iceberg REST Catalog 経由でアクセスすると UC ガバナンスをバイパス） |
+| 外部エンジンでのガバナンス適用 | ✅（Athena, Redshift, EMR 全てガバナンス適用） | ✅ **Horizon Catalog が外部エンジンに Row Access Policy + Masking を強制**（2026年5月確認） | ❌ **UC Row Filters/Column Masks は外部エンジンで適用されない**（Athena/EMR が Iceberg REST Catalog 経由でアクセスすると UC ガバナンスをバイパス） |
 
 ### Databricks Unity Catalog ガバナンス（DataSync → S3 経由）
 

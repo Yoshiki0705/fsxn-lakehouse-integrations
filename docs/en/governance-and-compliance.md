@@ -375,6 +375,46 @@ Snowflake provides a complementary governance layer for FSx for ONTAP data acces
 
 **Snowflake governance applies to External Tables on FSx S3 AP** — no COPY INTO required for governance features (Tags, Row Policy, Masking, Sharing, Access History). Only Cortex Search and Vision AI require data to be in internal tables.
 
+### Snowflake Horizon Iceberg REST Catalog — Governance on External Engines (Confirmed May 2026)
+
+> **Snowflake Support Confirmation (Case #01359983, May 2026)**: Snowflake Horizon Catalog enforces governance policies on external engine access — a critical differentiator from Databricks Unity Catalog.
+
+| Aspect | Snowflake Horizon Catalog | Databricks Unity Catalog |
+|--------|--------------------------|--------------------------|
+| **Row Access Policies on external engines** | ✅ **Enforced** — policies evaluated before vended credentials are issued | ❌ NOT enforced on external engines |
+| **Dynamic Data Masking on external engines** | ✅ **Enforced** — masking applied at catalog layer | ❌ NOT enforced on external engines |
+| **RBAC on external engines** | ✅ **Enforced** — role-based access control evaluated | ✅ Metadata access controlled |
+| **Data access model** | Vended credentials scoped by policy evaluation | Vended credentials without policy enforcement |
+| **Edition requirement** | All editions (Standard, Enterprise, Business Critical) | All editions |
+| **Billing** | 0.5 credits per million API calls (billing starts H2 2026) | Included in platform cost |
+| **Supported external engines** | Apache Spark, Trino (Databricks UC integration: "Not announced") | Athena, EMR, Trino, Spark |
+
+**How Horizon Catalog governance works for external engines:**
+
+```
+External Engine (Spark/Trino)
+  │
+  │ 1. Authenticate to Horizon Iceberg REST Catalog API
+  │    (using Snowflake user credentials)
+  ▼
+Snowflake Horizon Catalog
+  │
+  │ 2. Evaluate RBAC + Row Access Policies + Masking Policies
+  │    against authenticated user's context
+  ▼
+  │ 3. Return Iceberg metadata + scoped temporary credentials
+  │    (credentials are limited to policy-permitted data)
+  ▼
+External Engine reads S3 data files directly
+  (Snowflake is NOT in the data path for file reads)
+```
+
+**Architecture implication for regulated workloads:**
+- **Snowflake Horizon path**: Single governance layer covers both internal Snowflake queries AND external engine access. No additional Lake Formation setup needed.
+- **Databricks UC path**: Requires Lake Formation as a separate governance layer for external engine access (UC governance only applies within Databricks compute).
+
+**Reference**: [Snowflake Horizon Iceberg REST Catalog — External Engine Access](https://docs.snowflake.com/en/user-guide/tables-iceberg-access-using-external-query-engine-snowflake-horizon) (Step 5: Configure data protection policies)
+
 ### Comparison: AWS-Native vs Snowflake vs Databricks Governance for FSx S3 AP Data
 
 | Aspect | AWS-Native (Lake Formation) | Snowflake (External Table) | Databricks (Unity Catalog via DataSync → S3) |
@@ -390,7 +430,7 @@ Snowflake provides a complementary governance layer for FSx for ONTAP data acces
 | Engines covered | Athena, Redshift, EMR, Glue | Snowflake only | Databricks (Spark, SQL, ML) |
 | Data movement required | None (governance on same data) | None for governance; COPY INTO for Cortex Search | **Yes — DataSync → S3 required** (UC cannot access FSx S3 AP directly) |
 | FSx S3 AP direct access | ✅ | ✅ (with `AWS_ACCESS_POINT_ARN`) | ❌ (UC table creation blocked; DataSync path required) |
-| Governance enforced on external engines | ✅ (Athena, Redshift, EMR all governed) | N/A (Snowflake-only platform) | ❌ **UC Row Filters/Column Masks NOT enforced on external engines** (Athena/EMR via Iceberg REST Catalog bypass UC governance) |
+| Governance enforced on external engines | ✅ (Athena, Redshift, EMR all governed) | ✅ **Horizon Catalog enforces Row Access Policies + Masking on external engines** (confirmed May 2026) | ❌ **UC Row Filters/Column Masks NOT enforced on external engines** (Athena/EMR via Iceberg REST Catalog bypass UC governance) |
 
 ### Databricks Unity Catalog Governance (via DataSync → S3)
 
