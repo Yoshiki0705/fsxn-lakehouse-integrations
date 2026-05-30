@@ -181,7 +181,7 @@ Problems:
 | **Databricks SA** | UC Volumes + Delta Sharing. Mosaic AI for automated tagging. FSx for ONTAP as strategic cost solution. Future: Lakehouse Federation may enable virtual access to FSx S3 AP data. |
 | **AWS Iceberg SA** | FSx for ONTAP S3 AP + Lake Formation eliminates S3 copies + provides all-engine governance. Bedrock KB direct FSx S3 AP access is AWS-native advantage. Glue Catalog + Iceberg format is also a viable Open Table Format option. |
 | **Storage Specialist** | ONTAP dedup is the root-cause fix. Most effective for identical file copies (versions, department copies). Limited effect on "similar" files (dedup operates at block level). |
-| **Partner SA** | BlueXP + DataSync → FSx migration is established (10TB / Direct Connect 1Gbps ≈ 22 hours). FlexCache S3 AP is a game-changer for hybrid. |
+| **Partner SA** | [NetApp Console](https://console.netapp.com/) + DataSync → FSx migration is established (10TB / Direct Connect 1Gbps ≈ 22 hours). FlexCache S3 AP is a game-changer for hybrid. |
 | **Public Sector SA** | Data sovereignty may require Option C (on-prem ONTAP + SnapMirror). Medical images (DICOM) and surveillance footage may be PII/PHI — anonymization pipeline needed. |
 | **Outcome SA** | Customer goal: "cost reduction + governed cross-org sharing." Phased adoption (Phase 1→2→3) minimizes investment risk. Success KPIs: storage cost reduction, data discovery time, share-request-to-access time. Industry examples: Manufacturing (design document reuse), Finance (contract compliance search), Healthcare (DICOM research sharing). |
 
