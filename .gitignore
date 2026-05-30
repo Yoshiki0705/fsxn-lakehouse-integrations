@@ -1,5 +1,5 @@
 # =============================================================================
-# FSxN Lakehouse Integrations - .gitignore
+# FSx for ONTAP Lakehouse Integrations - .gitignore
 # =============================================================================
 # Design Policy:
 #   - INCLUDE: CloudFormation templates, Terraform configs, scripts, docs, notebooks
