@@ -1,4 +1,4 @@
-# Zero-Copy Media Governance: Eliminating S3 Duplication with FSx for ONTAP + Databricks UC
+# Zero-Copy Unstructured Data Governance: Eliminating S3 Duplication with FSx for ONTAP
 
 🌐 [日本語](../ja/zero-copy-media-governance.md) | English
 
@@ -7,7 +7,28 @@
 | # | Challenge | Root Cause |
 |---|-----------|-----------|
 | 1 | S3 storage costs growing continuously; want to eliminate duplicate data | Generic file server → DataSync (file-level diff) → S3 full copy creates redundant storage |
-| 2 | Need tag-based access control for images/videos across organizations on Databricks | No governance layer on flat S3 copies; Databricks is the decided platform |
+| 2 | Need tag-based access control for unstructured data (images, videos, PDFs, CAD, logs, audio) across organizations | No governance layer on flat S3 copies |
+
+### Target Data
+
+| Category | Examples | Typical Size | AI/Analytics Use |
+|----------|----------|-------------|-----------------|
+| Images | Product photos, medical imaging (DICOM), satellite, blueprints | 1-100MB/file | Vision AI, quality inspection, object detection |
+| Videos | Surveillance, manufacturing lines, training materials | 100MB-10GB/file | Anomaly detection, behavior analysis |
+| Documents | PDF, Word, design specs, contracts, manuals | 1-50MB/file | RAG, summarization, search, compliance |
+| CAD/3D | AutoCAD, SolidWorks, point clouds | 10MB-1GB/file | Digital twin, simulation |
+| Logs/Sensors | IoT sensor data, application logs | Variable | Predictive maintenance, anomaly detection |
+| Audio | Call center recordings, meeting recordings | 10-100MB/file | Transcription, sentiment analysis |
+
+### Existing Environment Assumptions
+
+Customers already operate one of the following data platforms and want to leverage accumulated assets, expertise, and team skills:
+
+| Existing Platform | Context | Section |
+|-------------------|---------|---------|
+| **Databricks** | UC, Delta Lake, MLflow pipeline assets | [Databricks Path](#databricks-path) |
+| **Snowflake** | Cortex AI, Data Sharing, Horizon Catalog expertise | [Snowflake Path](#snowflake-path) |
+| **AWS Native** | Athena, Glue, Bedrock, Lake Formation-centric | [AWS Native Path](#aws-native-path) |
 
 ### Current Architecture (Problem State)
 
@@ -16,276 +37,144 @@ On-premises Generic File Server (NAS/Windows)
   ↓ DataSync (file-level diff — full file retransfer on any change)
 Amazon S3 (full copy, no deduplication)
   ↓
-Databricks UC / Other services
+Data Platform (Databricks / Snowflake / AWS Native)
 
 Problems:
 - No deduplication on either file server or S3
 - DataSync file-diff: 1-byte change → entire file retransferred
 - S3 cost grows linearly with data volume
-- No governance on media assets
+- No governance on unstructured data assets
 ```
 
 ---
 
-## Solution Options
+## Storage Optimization (All Platforms)
 
 ### Option A: S3 Optimization Only (Minimal Change)
 
-```
-Generic File Server (unchanged)
-  ↓ DataSync (file-level diff)
-S3 bucket
-  ├── S3 Intelligent-Tiering (auto-tiering)
-  ├── S3 Lifecycle Policy (delete old versions)
-  └── UC External Volume (governance)
-```
-
-| Pros | Cons |
-|------|------|
-| No infrastructure change | No deduplication possible |
-| Quick to implement | DataSync bandwidth inefficiency remains |
-| | Storage cost reduction limited (tiering only) |
-
 **Cost reduction**: 20-40% (tiering only, no dedup)
-
----
 
 ### Option B: FSx for ONTAP Migration (Recommended)
 
-**Replace S3 copies with FSx for ONTAP as the single cloud copy with inline deduplication.**
-
-```
-Generic File Server
-  ↓ DataSync (one-time migration)
-FSx for ONTAP (single cloud copy)
-  │ ← Inline deduplication + compression (automatic)
-  │ ← Snapshot (point-in-time recovery)
-  │ ← FabricPool (auto-tier cold data to S3 at $0.0125/GB)
-  │
-  ↓ S3 Access Point (multiple APs for different consumers)
-  ├── AP-1: Databricks (Instance Profile + boto3)
-  ├── AP-2: Bedrock Knowledge Base
-  └── AP-3: Other services
-
-S3 full copy = ELIMINATED
-DataSync ongoing sync = ELIMINATED (or minimal for new files)
-```
-
-**Cost comparison (10TB media assets)**:
-
-| Item | Current (Generic FS + S3) | Option B (FSx for ONTAP) |
-|------|--------------------------|--------------------------|
-| On-prem storage | Generic FS: 10TB | Eliminated (cloud migration) |
-| S3 storage | 10TB × $0.023/GB = **$230/mo** | $0 (no S3 copy needed) |
-| FSx for ONTAP | — | 10TB → 5TB (dedup) × $0.08/GB = **$400/mo** |
-| FabricPool (cold 80%) | — | 4TB → S3 IA = **$50/mo** |
-| DataSync transfer | Monthly diff cost | Eliminated |
-| **Total storage** | $230 + on-prem ops | **$450/mo** (no on-prem ops) |
-
-**Net effect**: When on-prem operational costs (hardware, power, rack, personnel) are included, FSx for ONTAP typically achieves lower TCO.
-
-**ONTAP deduplication effectiveness**:
-
-| Data Type | Typical Dedup Rate | 10TB → Effective |
-|-----------|-------------------|-----------------|
-| Images (many similar) | 20-40% | 6-8TB |
-| Videos (low duplication) | 5-15% | 8.5-9.5TB |
-| Documents (many versions) | 40-70% | 3-6TB |
-| Mixed workload | 30-50% | 5-7TB |
-
----
+**Cost reduction**: 50-70% (dedup + FabricPool + S3 copy elimination)
 
 ### Option C: On-prem ONTAP + SnapMirror (Hybrid)
 
-**Replace generic file server with on-prem ONTAP, use SnapMirror for block-level sync.**
-
-```
-On-prem ONTAP (replaces generic file server)
-  │ ← Inline deduplication + compression
-  │ ← Snapshot
-  │
-  ↓ SnapMirror (block-level diff = maximum bandwidth efficiency)
-FSx for ONTAP (cloud replica)
-  ↓ S3 Access Point
-  ├── Databricks
-  └── Other services
-
-DataSync (file-level diff) = ELIMINATED
-S3 full copy = ELIMINATED
-```
-
-**DataSync vs SnapMirror bandwidth efficiency**:
-
-| Aspect | DataSync (file diff) | SnapMirror (block diff) |
-|--------|---------------------|------------------------|
-| Diff detection | File timestamp/size comparison | Block-level change tracking |
-| 1-byte change in 10GB file | **10GB retransferred** | **4KB transferred** |
-| Bandwidth efficiency | Low | **2,500x more efficient** |
-| Network compression | None | Built-in |
-| Encryption | TLS | TLS + SnapMirror encryption |
-
----
+**Bandwidth**: 2,500x more efficient than DataSync (block-level diff)
 
 ### Option D: FlexCache S3 Access Points (Future Roadmap)
 
-> **Status**: FlexCache S3 Access Points support is expected to be available soon. This option represents the future-state architecture.
+> **Status**: FlexCache S3 AP support expected soon (public timeline TBD, based on roadmap information).
 
-**FlexCache enables on-prem ONTAP to serve as a read cache for FSx for ONTAP data, with S3 AP providing the analytics access layer.**
+**Cost reduction**: 80% vs current (cache-only storage)
 
-```
-On-prem ONTAP (source of truth)
-  ↓ SnapMirror
-FSx for ONTAP (cloud replica)
-  ↓ FlexCache S3 Access Point (NEW — coming soon)
-  │
-  │ FlexCache provides:
-  │ - Read caching of hot data at edge/on-prem
-  │ - S3 AP access to cached data without full replication
-  │ - Reduced WAN bandwidth (only cache misses traverse WAN)
-  │
-  ↓ S3 Access Point (on FlexCache volume)
-  ├── Databricks (low-latency access to hot data)
-  ├── Bedrock KB
-  └── Other services
+**Cost comparison (10TB unstructured data)**:
 
-Benefits over current architecture:
-- Hot data cached locally → sub-millisecond read latency
-- Cold data fetched on-demand → no full replication needed
-- S3 AP on FlexCache → analytics engines access cached data directly
-- Deduplication preserved across cache and origin
-```
+| Item | Current (S3 copy) | Option B | Option D (Future) |
+|------|-----------------|----------|-----------------|
+| Monthly storage | $230 | $450 (post-dedup) | $180 (cache only) |
+| On-prem ops | Yes | None | None |
+| **Reduction vs current** | — | 50% (TCO) | **80%** |
 
-**FlexCache S3 AP vs Full Replication**:
+### Phased Adoption Roadmap
 
-| Aspect | Full Replication (SnapMirror) | FlexCache S3 AP |
-|--------|------------------------------|-----------------|
-| Storage required | Full copy at destination | Cache size only (10-30% of origin) |
-| Initial sync time | Hours-days (full dataset) | Minutes (cache warms on access) |
-| Bandwidth | Block-level diff (efficient) | On-demand fetch (most efficient) |
-| Read latency (hot) | Local disk speed | Local disk speed (cached) |
-| Read latency (cold) | Local disk speed | WAN RTT (cache miss) |
-| Write support | Full read-write | Read-only (write-back to origin) |
-| S3 AP access | ✅ (on FSx volume) | ✅ (on FlexCache volume — coming soon) |
-| Cost | Full storage at both sites | Cache storage only |
-
-**Architecture with FlexCache S3 AP**:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  On-premises                                                 │
-│  ┌──────────────────┐                                       │
-│  │ ONTAP (Source)    │                                       │
-│  │ 10TB media assets │                                       │
-│  │ Dedup: 5TB actual │                                       │
-│  └────────┬─────────┘                                       │
-│           │ SnapMirror (block diff)                          │
-└───────────┼─────────────────────────────────────────────────┘
-            │ Direct Connect / VPN
-┌───────────┼─────────────────────────────────────────────────┐
-│  AWS      ▼                                                 │
-│  ┌──────────────────┐     ┌──────────────────────┐          │
-│  │ FSx for ONTAP    │     │ FlexCache Volume     │          │
-│  │ (Full replica)   │────▶│ (2TB cache, hot data)│          │
-│  │ 5TB (dedup)      │     │ S3 AP enabled        │          │
-│  └──────────────────┘     └──────────┬───────────┘          │
-│                                      │                      │
-│                           ┌──────────▼───────────┐          │
-│                           │ S3 Access Point      │          │
-│                           │ (on FlexCache)       │          │
-│                           └──────────┬───────────┘          │
-│                                      │                      │
-│                    ┌─────────────────┼─────────────────┐    │
-│                    │                 │                 │    │
-│              ┌─────▼──────┐   ┌──────▼──────┐  ┌──────▼──┐  │
-│              │ Databricks │   │ Bedrock KB  │  │ Athena  │  │
-│              │ UC Volume  │   │             │  │         │  │
-│              └────────────┘   └─────────────┘  └─────────┘  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Cost projection (FlexCache S3 AP)**:
-
-| Item | Full Replication | FlexCache S3 AP |
-|------|-----------------|-----------------|
-| FSx storage | 5TB × $0.08 = $400/mo | 2TB cache × $0.08 = $160/mo |
-| FabricPool | $50/mo | $20/mo |
-| **Total** | **$450/mo** | **$180/mo** |
-| **Savings vs current S3 copy** | 50% | **80%** |
+| Phase | Timeline | Action | Effect |
+|-------|----------|--------|--------|
+| **Phase 1** | Immediate (1-2 weeks) | S3 Intelligent-Tiering + Lifecycle | 20-40% cost reduction |
+| **Phase 2** | 1-3 months | FSx for ONTAP + eliminate S3 copies | 50%+ cost reduction |
+| **Phase 3** | After FlexCache S3 AP GA | Migrate to FlexCache S3 AP | 80% cost reduction |
 
 ---
 
-## Databricks Governance for Media Assets (All Options)
+## Databricks Path
 
-### UC Volume + Metadata Table + Tag-based Access Control + Delta Sharing
+**Context**: Leverage existing Databricks environment assets — UC, Delta Lake, MLflow pipelines, team skills.
 
-```sql
--- 1. External Volume (backed by S3 or FSx S3 AP via DataSync subset)
-CREATE EXTERNAL VOLUME media_assets
-  LOCATION 's3://company-media-bucket/assets/';
+### Governance: UC Volume + Tag-based Row Filter + Delta Sharing
 
--- 2. Metadata catalog table
-CREATE TABLE media_catalog (
-  asset_id STRING GENERATED ALWAYS AS IDENTITY,
-  volume_path STRING,
-  media_type STRING,            -- 'image/jpeg', 'video/mp4'
-  department STRING,
-  project STRING,
-  classification STRING,        -- 'public', 'internal', 'confidential'
-  tags MAP<STRING, STRING>,
-  file_size_bytes BIGINT,
-  checksum STRING,              -- For duplicate detection
-  source_path STRING,
-  synced_at TIMESTAMP
-);
+### AI Path: Mosaic AI (Vision), Vector Search (RAG), Model Serving (Whisper)
 
--- 3. UC Tags
-ALTER TABLE media_catalog SET TAGS ('data_domain' = 'media_assets');
+### Constraints
+- UC Volume requires S3 backend (cannot register FSx S3 AP directly)
+- UC Row Filter / Column Mask NOT enforced on external engines
+- Lake Formation required for external engine governance
 
--- 4. Tag-based Row Filter
-CREATE FUNCTION media_access_filter(department STRING, classification STRING)
-RETURN
-  IS_ACCOUNT_GROUP_MEMBER('media_admin')
-  OR (department = current_user_attribute('department')
-      AND classification IN ('public', 'internal'))
-  OR (IS_ACCOUNT_GROUP_MEMBER(concat(department, '_confidential'))
-      AND classification = 'confidential');
+---
 
-ALTER TABLE media_catalog SET ROW FILTER media_access_filter
-  ON (department, classification);
+## Snowflake Path
 
--- 5. Delta Sharing (cross-organization)
-CREATE SHARE media_partner_share;
-ALTER SHARE media_partner_share ADD TABLE media_catalog;
+**Context**: Leverage existing Snowflake environment — Cortex AI, Data Sharing, Horizon Catalog expertise.
 
--- 6. Duplicate detection
-SELECT checksum, COUNT(*) as copies,
-       SUM(file_size_bytes) as wasted_bytes
-FROM media_catalog
-GROUP BY checksum HAVING COUNT(*) > 1;
-```
+### Governance: External Table + Row Access Policy + Masking + Secure Data Sharing
+
+### AI Path: Cortex Search (RAG), Cortex AI Vision, PARSE_DOCUMENT
+
+### Key Differentiator
+- **Horizon Iceberg REST Catalog enforces governance on external engines** (Row Access Policy + Masking)
+- All editions supported (billing starts H2 2026)
+- Zero-copy Data Sharing (no data duplication for recipients)
+
+### Constraints
+- TO_FILE fails on FSx S3 AP stages (engineering investigation in progress)
+- Cortex Search / Vision AI requires COPY INTO to internal tables
+- AUTO_REFRESH not supported (Task + ALTER STAGE REFRESH workaround)
+
+---
+
+## AWS Native Path
+
+**Context**: Leverage existing AWS-native environment — Athena, Glue, Bedrock, Lake Formation.
+
+### Governance: Lake Formation LF-Tags + Cross-account grants
+
+### AI Path: Bedrock KB (RAG), Textract, Transcribe, SageMaker
+
+### Key Differentiator
+- **FSx S3 AP direct access** from Athena and Bedrock (no S3 copy needed)
+- **Lake Formation enforces governance across all engines** (Athena, Redshift, EMR)
+- Bedrock Knowledge Base can use FSx S3 AP as direct data source
+
+### Constraints
+- Athena cannot access VPC-origin APs (Internet-origin required)
+- No built-in data lineage (must build separately)
+- Bedrock KB: unstructured auto-index only (structured queries via Athena)
+
+---
+
+## Platform Comparison
+
+| Aspect | Databricks | Snowflake | AWS Native |
+|--------|-----------|-----------|------------|
+| **FSx S3 AP direct access** | ❌ (UC session policy) | ⚠️ (LIST only) | ✅ (Athena, Bedrock) |
+| **Governance model** | UC Tags + Row Filter | Row Access Policy + Masking | Lake Formation LF-Tags |
+| **Governance on external engines** | ❌ | ✅ (Horizon Catalog) | ✅ (Lake Formation) |
+| **Cross-org sharing** | Delta Sharing (open protocol) | Secure Data Sharing (zero-copy) | LF Cross-account + RAM |
+| **Unstructured AI** | Mosaic AI, Vector Search | Cortex AI, Cortex Search | Bedrock, Textract, Transcribe |
+| **Deduplication** | None (S3-dependent) | None (S3-dependent) | None (S3-dependent) |
+| **With FSx for ONTAP** | ✅ (Option B/C/D) | ✅ (Option B/C/D) | ✅ (Option B/C/D) |
 
 ---
 
 ## Recommendation Matrix
 
-| Priority | Recommended Option | Rationale |
-|----------|-------------------|-----------|
-| **Fastest cost reduction** | Option B (FSx for ONTAP) | Inline dedup eliminates 30-50% storage; S3 copy eliminated |
-| **Maximum bandwidth efficiency** | Option C (SnapMirror) | Block-level diff = 2500x more efficient than DataSync |
-| **Future-optimal (lowest cost)** | Option D (FlexCache S3 AP) | Cache-only storage = 80% cost reduction vs current |
-| **Minimal change** | Option A (S3 optimization) | Tiering only, limited savings |
-| **Databricks governance** | UC Volume + Tags + Delta Sharing | All options; independent of storage choice |
+| Priority | Recommendation | Rationale |
+|----------|---------------|-----------|
+| **Fastest cost reduction** | Phase 1 (S3 Tiering) + Phase 2 (FSx for ONTAP) | Immediate + root-cause fix |
+| **Maximum bandwidth efficiency** | Option C (SnapMirror) | Block-level diff = 2,500x DataSync |
+| **Future-optimal (lowest cost)** | Option D (FlexCache S3 AP) | Cache-only = 80% reduction |
+| **Multi-engine governance** | Snowflake Horizon or Lake Formation | Enforce governance on external engines |
+| **Cross-org sharing** | Delta Sharing (broad compatibility) or Snowflake Sharing (zero-copy) | Choose based on requirements |
 
 ---
 
-## Persona Perspectives Summary
+## Persona Summary
 
 | Persona | Key Recommendation |
 |---------|-------------------|
-| **Snowflake PMM** | Consider Snowflake Horizon for governance enforcement on external engines. Even with Databricks decided, Horizon can govern the same data for other consumers. |
-| **Databricks SA** | UC Volumes + Delta Sharing is the correct path. For S3 cost, recommend S3 Intelligent-Tiering as immediate action, FSx for ONTAP as strategic solution. |
-| **AWS Iceberg SA** | FSx for ONTAP S3 AP eliminates the need for S3 copies entirely. FlexCache S3 AP (roadmap) will further reduce costs by 60%+. |
-| **Storage Specialist** | ONTAP deduplication is the only way to achieve true storage efficiency. S3 has no native dedup. Moving to FSx for ONTAP is the root-cause fix. |
-| **Partner SA** | NetApp BlueXP provides unified management. DataSync → FSx migration is well-supported. FlexCache S3 AP will be a game-changer for hybrid architectures. |
-| **Public Sector SA** | Data sovereignty requirements may mandate on-prem ONTAP + SnapMirror (Option C). FlexCache S3 AP enables cloud analytics without full data replication. |
-| **Outcome SA** | Customer's real goal is "cost reduction + governed sharing." FlexCache S3 AP (roadmap) achieves both with minimal data movement. |
+| **Snowflake PMM** | Horizon Catalog enforces governance on external engines. Cortex Search + Data Sharing is the fastest path to AI-Ready unstructured data. |
+| **Databricks SA** | UC Volumes + Delta Sharing. Mosaic AI for automated tagging. FSx for ONTAP as strategic cost solution. |
+| **AWS Iceberg SA** | FSx for ONTAP S3 AP + Lake Formation eliminates S3 copies + provides all-engine governance. Bedrock KB direct FSx S3 AP access is AWS-native advantage. |
+| **Storage Specialist** | ONTAP dedup is the root-cause fix. Most effective for identical file copies (versions, department copies). Limited effect on "similar" files (dedup operates at block level). |
+| **Partner SA** | BlueXP + DataSync → FSx migration is established. FlexCache S3 AP is a game-changer for hybrid. |
+| **Public Sector SA** | Data sovereignty may require Option C (on-prem ONTAP + SnapMirror). Medical images (DICOM) and surveillance footage may be PII/PHI — anonymization pipeline needed. |
+| **Outcome SA** | Customer goal: "cost reduction + governed cross-org sharing." Phased adoption (Phase 1→2→3) minimizes investment risk. Success KPIs: storage cost reduction, data discovery time, share-request-to-access time. |

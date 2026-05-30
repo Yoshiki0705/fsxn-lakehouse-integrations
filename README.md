@@ -256,7 +256,7 @@ fsxn-lakehouse-integrations/
 | Compatibility Matrix | [互換性マトリクス](docs/ja/compatibility-matrix.md) | [Compatibility Matrix](docs/en/compatibility-matrix.md) |
 | Recovery Semantics | [リカバリセマンティクス](docs/ja/recovery-semantics.md) | [Recovery Semantics](docs/en/recovery-semantics.md) |
 | Governance & Compliance | [ガバナンスとコンプライアンス](docs/ja/governance-and-compliance.md) | [Governance & Compliance](docs/en/governance-and-compliance.md) |
-| Zero-Copy Media Governance | [ゼロコピー メディアガバナンス](docs/ja/zero-copy-media-governance.md) | [Zero-Copy Media Governance](docs/en/zero-copy-media-governance.md) |
+| Zero-Copy Unstructured Data Governance | [ゼロコピー非構造化データガバナンス](docs/ja/zero-copy-media-governance.md) | [Zero-Copy Unstructured Data Governance](docs/en/zero-copy-media-governance.md) |
 | KPI & Validation | [KPI と PoC 検証](docs/ja/kpi-and-validation.md) | [KPI & Validation](docs/en/kpi-and-validation.md) |
 
 ---
