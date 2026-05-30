@@ -265,7 +265,7 @@ Discovery → Assessment → PoC → Production → Managed Operations
 | **Native S3 + ETL パイプライン** | あり（変換済み） | なし | 数日〜数週間 | 分離 | あり | 複雑な変換、S3 上のメダリオンアーキテクチャ |
 | **Snowflake External Stage on FSx S3 AP** | なし（ゼロコピー読み取り） | なし | 数時間 | Snowflake 管理（Tags, Row Policy, Masking） | あり（Cortex AI, Cortex Search） | NAS データ上のガバナンス付き AI が必要な Snowflake 顧客。COPY INTO → Managed Iceberg でオープン形式共有。 |
 | **Databricks on native S3** | あり（先に S3 へ） | なし | 数日 | Unity Catalog on S3 | あり | Databricks 中心、Delta 書き込み中心 |
-| **NetApp BlueXP tiering** | 部分的（コールドティア） | 最小限 | N/A（分析用途ではない） | ONTAP 管理 | なし | コスト最適化、分析用途ではない |
+| **NetApp Console tiering** | 部分的（コールドティア） | 最小限 | N/A（分析用途ではない） | ONTAP 管理 | なし | コスト最適化、分析用途ではない |
 | **オンプレミス分析** | なし | なし | 数週間（セットアップ） | オンプレミスツール | 限定的 | エアギャップ環境 |
 
 ### 判断フレームワーク

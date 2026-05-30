@@ -384,7 +384,7 @@ WHERE asset_type = 'document'
 | **Databricks SA（倉光さん）** | UC Volumes + Delta Sharing が正解。Mosaic AI で非構造化データのタグ自動付与を実現。S3 コスト削減には FSx for ONTAP を戦略的に推奨。将来的には Lakehouse Federation で FSx S3 AP 上のデータを仮想的に参照するパスも検討対象。 |
 | **AWS Iceberg SA（疋田さん）** | FSx for ONTAP S3 AP + Lake Formation で S3 コピー廃止 + 全エンジンガバナンス。Bedrock KB が FSx S3 AP を直接参照できるのは AWS ネイティブの強み。Glue Catalog + Iceberg 形式での保存パスも Open Table Format の選択肢として有効。 |
 | **Storage Specialist** | ONTAP 重複排除が根本解決。同一ファイルの複数コピー（バージョン違い、部門別コピー）に対して最も効果的。画像/動画の「類似ファイル」間の dedup 効果は限定的（同一ブロックがある場合のみ）。 |
-| **Partner SA** | NetApp BlueXP + DataSync → FSx マイグレーションが確立されたパス（10TB / Direct Connect 1Gbps で約22時間）。FlexCache S3 AP はハイブリッド環境のゲームチェンジャー。 |
+| **Partner SA** | NetApp Console + DataSync → FSx マイグレーションが確立されたパス（10TB / Direct Connect 1Gbps で約22時間）。FlexCache S3 AP はハイブリッド環境のゲームチェンジャー。 |
 | **Public Sector SA** | データ主権要件では Option C（オンプレ ONTAP + SnapMirror）が必須。医療画像(DICOM)や監視映像は PII/PHI に該当する可能性があり、匿名化パイプラインの検討が必要。 |
 | **Outcome SA** | 顧客のゴールは「コスト削減 + ガバナンス付き組織横断活用」。段階的導入（Phase 1→2→3）で投資リスクを最小化しながら成果を積み上げる。成功指標: ストレージコスト削減率、データ発見時間、共有リクエスト→利用開始時間。業界別例: 製造（設計図面の全社再利用）、金融（契約書のコンプライアンス検索）、医療（DICOM の研究部門共有）。 |
 

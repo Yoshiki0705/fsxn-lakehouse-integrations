@@ -51,7 +51,7 @@ flexclone:
   tested: false
   note: |
     FlexClone requires ONTAP CLI/REST API access (not available via AWS FSx API).
-    Would need SSH to FSx management endpoint or NetApp BlueXP.
+    Would need SSH to FSx management endpoint or NetApp Console.
     Expected behavior: instant clone creation (copy-on-write, near-zero space).
 
 # Multi-Protocol Access
