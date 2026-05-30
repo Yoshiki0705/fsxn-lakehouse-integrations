@@ -275,7 +275,7 @@ GRANT SELECT ON TABLE asset_catalog TO SHARE partner_share;
 ### 制約事項
 
 - TO_FILE は FSx S3 AP ステージで SQL コンパイル時エラー（エンジニアリング調査中）
-- Cortex Search / Vision AI は内部テーブルへの COPY INTO が必要
+- Vision AI（TO_FILE 経由）のみ内部ステージへの COPY FILES が必要。Cortex AI 関数（COMPLETE, SUMMARIZE）と Cortex Search は Managed Iceberg Table で直接動作（内部テーブル不要）
 - AUTO_REFRESH 非対応（Task + ALTER STAGE REFRESH で代替）
 
 ---

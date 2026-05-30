@@ -373,7 +373,21 @@ Snowflake は S3 Access Points 経由でアクセスする FSx for ONTAP デー�
 | **Data Sharing ガバナンス** | Row Access Policy 適用済み External Table の共有 | パートナー/サプライヤーへのガバナンス付き配布 |
 | **Cortex AI ガードレール** | Cross-Region Inference 制御、モデルアクセスポリシー | AI 処理境界の制御 |
 
-**Snowflake ガバナンスは FSx S3 AP 上の External Table に適用可能** — ガバナンス機能（Tags, Row Policy, Masking, Sharing, Access History）に COPY INTO は不要。Cortex Search と Vision AI のみ内部テーブルへのデータ配置が必要。
+**Snowflake ガバナンスは FSx S3 AP 上の External Table に適用可能** — ガバナンス機能（Tags, Row Policy, Masking, Sharing, Access History）に COPY INTO は不要。Cortex AI 関数（COMPLETE, SUMMARIZE, EXTRACT_ANSWER）および Cortex Search も Managed Iceberg Table で直接動作し、内部テーブルへのデータ配置は不要（2026年5月確認）。Vision AI の TO_FILE のみ FSx S3 AP ステージでは COPY FILES ワークアラウンドが必要。
+
+### Snowflake 外部エンジンアクセスの監査（2026年5月確認）
+
+Horizon Iceberg REST Catalog 経由の外部エンジンアクセスは `SNOWFLAKE.ACCOUNT_USAGE.STORAGE_REQUEST_HISTORY` で追跡される。HTTP オペレーション（Class 1: PUT/COPY/POST/LIST, Class 2: GET/SELECT）がタイムウィンドウごとのカウント付きで記録される。注意: 外部エンジンは Snowflake クエリエンジンを通らないため、QUERY_HISTORY には記録されない。
+
+### Snowflake Open Catalog (Polaris) vs Horizon REST Catalog
+
+| パス | ユースケース | メタデータ所有者 | ガバナンス強制 |
+|------|-----------|---------------|-------------|
+| **Horizon REST Catalog**（推奨） | Snowflake が primary writer | Snowflake | ✅ Row Access Policy + Masking 強制 |
+| **Open Catalog (Polaris)** | 専用カタログレイヤーが必要 | Open Catalog | Snowflake から同期（Open Catalog では read-only） |
+| **Externally managed Iceberg** | 外部エンジンが primary writer | Glue/外部 | Snowflake は External Iceberg Table として読み取り（read-only） |
+
+参照: [Snowflake Open Catalog Sync](https://docs.snowflake.com/en/user-guide/tables-iceberg-open-catalog-sync)
 
 ### Snowflake Horizon Iceberg REST Catalog — 外部エンジンへのガバナンス適用（2026年5月確認）
 
