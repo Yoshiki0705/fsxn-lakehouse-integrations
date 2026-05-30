@@ -373,7 +373,21 @@ Snowflake provides a complementary governance layer for FSx for ONTAP data acces
 | **Data Sharing Governance** | Share External Tables with Row Access Policy applied | Governed distribution to partners/suppliers |
 | **Cortex AI Guardrails** | Cross-Region Inference controls, model access policies | AI processing boundary control |
 
-**Snowflake governance applies to External Tables on FSx S3 AP** — no COPY INTO required for governance features (Tags, Row Policy, Masking, Sharing, Access History). Only Cortex Search and Vision AI require data to be in internal tables.
+**Snowflake governance applies to External Tables on FSx S3 AP** — no COPY INTO required for governance features (Tags, Row Policy, Masking, Sharing, Access History). Cortex AI functions (COMPLETE, SUMMARIZE, EXTRACT_ANSWER) and Cortex Search also work directly on Managed Iceberg Tables without requiring data in internal tables (confirmed May 2026). Only Vision AI with TO_FILE on FSx S3 AP stages requires the COPY FILES workaround.
+
+### Snowflake Audit for External Engine Access (Confirmed May 2026)
+
+External engine access via Horizon Iceberg REST Catalog is tracked through `SNOWFLAKE.ACCOUNT_USAGE.STORAGE_REQUEST_HISTORY`, which records HTTP operations (Class 1: PUT/COPY/POST/LIST, Class 2: GET/SELECT) with counts per time window. Note: these accesses do NOT appear in QUERY_HISTORY since external engines bypass the Snowflake query engine.
+
+### Snowflake Open Catalog (Polaris) vs Horizon REST Catalog
+
+| Path | Use Case | Metadata Owner | Governance Enforcement |
+|------|----------|---------------|----------------------|
+| **Horizon REST Catalog** (recommended) | Snowflake is primary writer | Snowflake | ✅ Row Access Policy + Masking enforced |
+| **Open Catalog (Polaris)** | Dedicated catalog layer needed | Open Catalog | Sync from Snowflake (read-only in Open Catalog) |
+| **Externally managed Iceberg** | External engine is primary writer | Glue/external | Snowflake reads as External Iceberg Table (read-only) |
+
+Reference: [Snowflake Open Catalog Sync](https://docs.snowflake.com/en/user-guide/tables-iceberg-open-catalog-sync)
 
 ### Snowflake Horizon Iceberg REST Catalog — Governance on External Engines (Confirmed May 2026)
 

@@ -122,7 +122,7 @@ Problems:
 
 ### Constraints
 - TO_FILE fails on FSx S3 AP stages (engineering investigation in progress)
-- Cortex Search / Vision AI requires COPY INTO to internal tables
+- Only Vision AI (via TO_FILE) requires COPY FILES to internal stage. Cortex AI functions (COMPLETE, SUMMARIZE) and Cortex Search work directly on Managed Iceberg Tables (no internal table needed)
 - AUTO_REFRESH not supported (Task + ALTER STAGE REFRESH workaround)
 
 ---
