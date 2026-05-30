@@ -64,7 +64,13 @@ Problems:
 
 ### Option D: FlexCache S3 Access Points (Future Roadmap)
 
-> **Status**: FlexCache S3 AP support expected soon (public timeline TBD, based on roadmap information).
+> **Status**: FlexCache S3 AP support on FSx for ONTAP is expected soon (FSx availability timeline TBD).
+>
+> **Rationale**: NetApp ONTAP 9.18.1 officially supports S3 protocol access to FlexCache volumes (`-is-s3-enabled` option). This capability is already available on on-premises ONTAP, and FSx for ONTAP deployment builds on this technically established foundation.
+>
+> **References**:
+> - [ONTAP 9.18.1 What's New](https://docs.netapp.com/us-en/ontap/release-notes/whats-new-9181.html)
+> - [Create an ONTAP S3 NAS bucket on FlexCache volumes](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/create-nas-bucket-task.html) — "All nodes in the cluster must be running ONTAP 9.18.1 or later"
 
 **Cost reduction**: 80% vs current (cache-only storage)
 

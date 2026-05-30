@@ -111,7 +111,13 @@ FSx for ONTAP（クラウドレプリカ）
 
 ### Option D: FlexCache S3 Access Points（将来ロードマップ）
 
-> **ステータス**: FlexCache ボリュームへの S3 Access Points サポートがまもなく利用可能になる見込み（公開時期未定、ロードマップ情報に基づく）。
+> **ステータス**: FlexCache ボリュームへの S3 Access Points サポートは、FSx for ONTAP ではまもなく利用可能になる見込みです（FSx での提供時期未定）。
+>
+> **根拠**: NetApp ONTAP 9.18.1 で FlexCache ボリュームへの S3 プロトコルアクセスが正式サポートされました（`-is-s3-enabled` オプション）。オンプレミス ONTAP では既にこの機能が利用可能であり、FSx for ONTAP への展開は技術的に確立された基盤の上に構築されます。
+>
+> **参照**:
+> - [ONTAP 9.18.1 What's New](https://docs.netapp.com/us-en/ontap/release-notes/whats-new-9181.html)
+> - [Create an ONTAP S3 NAS bucket on FlexCache volumes](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/create-nas-bucket-task.html) — "All nodes in the cluster must be running ONTAP 9.18.1 or later"
 
 ```
 FSx for ONTAP（オリジン）
