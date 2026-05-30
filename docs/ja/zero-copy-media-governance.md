@@ -380,10 +380,32 @@ WHERE asset_type = 'document'
 
 | ペルソナ | 主要推奨 |
 |---------|---------|
-| **Snowflake PMM（高橋さん）** | Horizon Catalog で外部エンジンへのガバナンス強制が可能。非構造化データの AI-Ready 化には Cortex Search + Data Sharing が最短パス。Databricks 環境でも Horizon 経由で Snowflake ガバナンスを適用できる。 |
-| **Databricks SA（倉光さん）** | UC Volumes + Delta Sharing が正解。Mosaic AI で非構造化データのタグ自動付与を実現。S3 コスト削減には FSx for ONTAP を戦略的に推奨。 |
-| **AWS Iceberg SA（疋田さん）** | FSx for ONTAP S3 AP + Lake Formation で S3 コピー廃止 + 全エンジンガバナンス。Bedrock KB が FSx S3 AP を直接参照できるのは AWS ネイティブの強み。 |
+| **Snowflake PMM（高橋さん）** | Horizon Catalog で外部エンジンへのガバナンス強制が可能。非構造化データの AI-Ready 化には Cortex Search + Data Sharing が最短パス。Databricks 環境でも Horizon 経由で Snowflake ガバナンスを適用できる。Managed Iceberg Table → Horizon REST Catalog で Databricks/Spark からも読み取り可能（閉じた世界ではない）。 |
+| **Databricks SA（倉光さん）** | UC Volumes + Delta Sharing が正解。Mosaic AI で非構造化データのタグ自動付与を実現。S3 コスト削減には FSx for ONTAP を戦略的に推奨。将来的には Lakehouse Federation で FSx S3 AP 上のデータを仮想的に参照するパスも検討対象。 |
+| **AWS Iceberg SA（疋田さん）** | FSx for ONTAP S3 AP + Lake Formation で S3 コピー廃止 + 全エンジンガバナンス。Bedrock KB が FSx S3 AP を直接参照できるのは AWS ネイティブの強み。Glue Catalog + Iceberg 形式での保存パスも Open Table Format の選択肢として有効。 |
 | **Storage Specialist** | ONTAP 重複排除が根本解決。同一ファイルの複数コピー（バージョン違い、部門別コピー）に対して最も効果的。画像/動画の「類似ファイル」間の dedup 効果は限定的（同一ブロックがある場合のみ）。 |
-| **Partner SA** | NetApp BlueXP + DataSync → FSx マイグレーションが確立されたパス。FlexCache S3 AP はハイブリッド環境のゲームチェンジャー。 |
+| **Partner SA** | NetApp BlueXP + DataSync → FSx マイグレーションが確立されたパス（10TB / Direct Connect 1Gbps で約22時間）。FlexCache S3 AP はハイブリッド環境のゲームチェンジャー。 |
 | **Public Sector SA** | データ主権要件では Option C（オンプレ ONTAP + SnapMirror）が必須。医療画像(DICOM)や監視映像は PII/PHI に該当する可能性があり、匿名化パイプラインの検討が必要。 |
-| **Outcome SA** | 顧客のゴールは「コスト削減 + ガバナンス付き組織横断活用」。段階的導入（Phase 1→2→3）で投資リスクを最小化しながら成果を積み上げる。成功指標: ストレージコスト削減率、データ発見時間、共有リクエスト→利用開始時間。 |
+| **Outcome SA** | 顧客のゴールは「コスト削減 + ガバナンス付き組織横断活用」。段階的導入（Phase 1→2→3）で投資リスクを最小化しながら成果を積み上げる。成功指標: ストレージコスト削減率、データ発見時間、共有リクエスト→利用開始時間。業界別例: 製造（設計図面の全社再利用）、金融（契約書のコンプライアンス検索）、医療（DICOM の研究部門共有）。 |
+
+---
+
+## 運用監視・セキュリティ監視
+
+本ドキュメントで提案するアーキテクチャの運用監視（Observability）およびセキュリティ監視（SIEM）については、以下の別プロジェクトで詳細に扱っています:
+
+| 領域 | リポジトリ | 内容 |
+|------|-----------|------|
+| **Observability** | [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations) | FSx for ONTAP の監査ログを Datadog、Splunk、Grafana、Elastic 等に連携。S3 AP 経由の Lambda パイプライン。 |
+| **SLO / アラート** | [FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns) | SLO Observability パターン、FPolicy イベント駆動パイプライン、容量ガードレール。 |
+
+### 本アーキテクチャで監視すべき主要メトリクス
+
+| メトリクス | 監視対象 | アラート条件例 |
+|-----------|---------|--------------|
+| DataSync / SnapMirror 同期遅延 | 同期パイプライン | lag > 1時間 |
+| FSx S3 AP レイテンシー | S3 API 応答時間 | p99 > 5秒 |
+| FlexCache ヒット率 | キャッシュ効率 | hit rate < 80% |
+| ストレージ使用量 / dedup 率 | コスト最適化 | 使用率 > 85% |
+| アクセス拒否イベント | セキュリティ | AccessDenied > 10回/10分 |
+| 非構造化データアクセスパターン | DLP / 異常検知 | 通常の 10倍以上のダウンロード |

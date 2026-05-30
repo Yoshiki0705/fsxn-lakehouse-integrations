@@ -177,10 +177,32 @@ Problems:
 
 | Persona | Key Recommendation |
 |---------|-------------------|
-| **Snowflake PMM** | Horizon Catalog enforces governance on external engines. Cortex Search + Data Sharing is the fastest path to AI-Ready unstructured data. |
-| **Databricks SA** | UC Volumes + Delta Sharing. Mosaic AI for automated tagging. FSx for ONTAP as strategic cost solution. |
-| **AWS Iceberg SA** | FSx for ONTAP S3 AP + Lake Formation eliminates S3 copies + provides all-engine governance. Bedrock KB direct FSx S3 AP access is AWS-native advantage. |
+| **Snowflake PMM** | Horizon Catalog enforces governance on external engines. Cortex Search + Data Sharing is the fastest path to AI-Ready unstructured data. Managed Iceberg Table → Horizon REST Catalog enables Databricks/Spark to read the same data (not a closed ecosystem). |
+| **Databricks SA** | UC Volumes + Delta Sharing. Mosaic AI for automated tagging. FSx for ONTAP as strategic cost solution. Future: Lakehouse Federation may enable virtual access to FSx S3 AP data. |
+| **AWS Iceberg SA** | FSx for ONTAP S3 AP + Lake Formation eliminates S3 copies + provides all-engine governance. Bedrock KB direct FSx S3 AP access is AWS-native advantage. Glue Catalog + Iceberg format is also a viable Open Table Format option. |
 | **Storage Specialist** | ONTAP dedup is the root-cause fix. Most effective for identical file copies (versions, department copies). Limited effect on "similar" files (dedup operates at block level). |
-| **Partner SA** | BlueXP + DataSync → FSx migration is established. FlexCache S3 AP is a game-changer for hybrid. |
+| **Partner SA** | BlueXP + DataSync → FSx migration is established (10TB / Direct Connect 1Gbps ≈ 22 hours). FlexCache S3 AP is a game-changer for hybrid. |
 | **Public Sector SA** | Data sovereignty may require Option C (on-prem ONTAP + SnapMirror). Medical images (DICOM) and surveillance footage may be PII/PHI — anonymization pipeline needed. |
-| **Outcome SA** | Customer goal: "cost reduction + governed cross-org sharing." Phased adoption (Phase 1→2→3) minimizes investment risk. Success KPIs: storage cost reduction, data discovery time, share-request-to-access time. |
+| **Outcome SA** | Customer goal: "cost reduction + governed cross-org sharing." Phased adoption (Phase 1→2→3) minimizes investment risk. Success KPIs: storage cost reduction, data discovery time, share-request-to-access time. Industry examples: Manufacturing (design document reuse), Finance (contract compliance search), Healthcare (DICOM research sharing). |
+
+---
+
+## Operational Monitoring & Security
+
+For Observability and Security Monitoring (SIEM) of the architectures proposed in this document, refer to the following dedicated projects:
+
+| Area | Repository | Content |
+|------|-----------|---------|
+| **Observability** | [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations) | Ship FSx for ONTAP audit logs to Datadog, Splunk, Grafana, Elastic via S3 AP + Lambda pipeline. |
+| **SLO / Alerts** | [FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns) | SLO Observability patterns, FPolicy event-driven pipeline, capacity guardrails. |
+
+### Key Metrics to Monitor
+
+| Metric | Target | Alert Condition Example |
+|--------|--------|------------------------|
+| DataSync / SnapMirror sync lag | Sync pipeline | lag > 1 hour |
+| FSx S3 AP latency | S3 API response time | p99 > 5s |
+| FlexCache hit rate | Cache efficiency | hit rate < 80% |
+| Storage utilization / dedup ratio | Cost optimization | utilization > 85% |
+| Access denied events | Security | AccessDenied > 10/10min |
+| Unstructured data access patterns | DLP / Anomaly detection | 10x normal download volume |
