@@ -118,6 +118,15 @@ poc-templates/
 - **提案書**: [poc-proposal.md](templates/poc-proposal.md)
 - **コスト根拠**: [cost-estimate.md](templates/cost-estimate.md)
 - **成功基準**: [success-criteria.md](templates/success-criteria.md)
+
+---
+
+## 関連ドキュメント
+
+- **PoC ↔ ドキュメントマッピング**: [MAPPING-ja.md](MAPPING-ja.md) — 各モジュールと詳細ガイド・ブログ・検証エビデンスの対応表
+- **ゼロコピー非構造化データガバナンス**: [docs/ja/zero-copy-media-governance.md](../docs/ja/zero-copy-media-governance.md) — S3 コスト削減 + マルチプラットフォームガバナンス + FlexCache S3 AP ロードマップ
+- **互換性マトリクス**: [docs/ja/compatibility-matrix.md](../docs/ja/compatibility-matrix.md) — どのエンジンでどの操作が動作するか
+- **運用監視**: [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations) — 監査ログ連携（Datadog, Splunk, Grafana, Elastic 等）
 - **規制ワークロード**: [regulated-workload-checklist.md](templates/regulated-workload-checklist.md)
 - **最終レポート**: [post-poc-report.md](templates/post-poc-report.md)
 

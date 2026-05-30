@@ -33,6 +33,8 @@
 | リージョン設計 | [docs/ja/region-design-guide.md](../docs/ja/region-design-guide.md) | 同一リージョン要件 |
 | ネットワーキング | [docs/en/fsxn-s3ap-networking.md](../docs/en/fsxn-s3ap-networking.md) | VPC/Internet origin、DNS/AD 問題 |
 | リカバリセマンティクス | [docs/ja/recovery-semantics.md](../docs/ja/recovery-semantics.md) | Snapshot + テーブルフォーマットリカバリ |
+| ゼロコピー非構造化データガバナンス | [docs/ja/zero-copy-media-governance.md](../docs/ja/zero-copy-media-governance.md) | S3 重複排除 + マルチプラットフォーム活用 + FlexCache S3 AP ロードマップ |
+| KPI と PoC 検証 | [docs/ja/kpi-and-validation.md](../docs/ja/kpi-and-validation.md) | PoC 成功基準と検証メトリクス |
 
 ---
 

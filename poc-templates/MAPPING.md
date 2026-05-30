@@ -33,6 +33,8 @@ This file maps each PoC template module to the corresponding detailed documentat
 | Region Design | [docs/en/region-design-guide.md](../docs/en/region-design-guide.md) | Same-region requirement |
 | Networking | [docs/en/fsxn-s3ap-networking.md](../docs/en/fsxn-s3ap-networking.md) | VPC/Internet origin, DNS/AD issues |
 | Recovery Semantics | [docs/en/recovery-semantics.md](../docs/en/recovery-semantics.md) | Snapshot + table format recovery |
+| Zero-Copy Unstructured Data Governance | [docs/en/zero-copy-media-governance.md](../docs/en/zero-copy-media-governance.md) | S3 dedup + multi-platform governance + FlexCache S3 AP roadmap |
+| KPI & Validation | [docs/en/kpi-and-validation.md](../docs/en/kpi-and-validation.md) | PoC success criteria and validation metrics |
 
 ---
 
