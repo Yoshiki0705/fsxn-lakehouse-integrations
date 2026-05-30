@@ -12,7 +12,7 @@
 ## 概要
 
 Amazon Redshift Spectrum を使用して FSx for ONTAP のデータを直接クエリします。
-Glue Data Catalog と S3 Access Points を使用。DWH ローカルテーブルと外部 FSxN データのフェデレーテッドクエリが可能。
+Glue Data Catalog と S3 Access Points を使用。DWH ローカルテーブルと外部 FSx for ONTAP データのフェデレーテッドクエリが可能。
 
 ## アーキテクチャ
 
@@ -29,7 +29,7 @@ Redshift Serverless (DWH)
 ## 主なポイント
 
 - **Athena と同じパターン**: Internet-origin S3 AP + Glue Catalog
-- **フェデレーテッドクエリ**: ローカル Redshift テーブルと外部 FSxN データを JOIN
+- **フェデレーテッドクエリ**: ローカル Redshift テーブルと外部 FSx for ONTAP データを JOIN
 - **述語プッシュダウン**: Spectrum がフィルターを S3 レイヤーにプッシュ（スキャンデータ削減）
 - **セッションポリシー問題なし**: AWS ネイティブサービス、直接 IAM ロール
 
