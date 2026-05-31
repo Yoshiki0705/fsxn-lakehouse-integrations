@@ -35,14 +35,14 @@ This guide walks through a complete PoC deployment of the Iceberg Metadata Catal
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Amazon S3 > Table buckets > Create table bucket              │
+│ Amazon S3 > Table buckets > Create table bucket             │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  Table bucket name: [fsxn-metadata-catalog          ]       │
 │                                                             │
 │  AWS Region:        [Asia Pacific (Tokyo) ▼         ]       │
 │                                                             │
-│                    [Create table bucket]                     │
+│                    [Create table bucket]                    │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -67,7 +67,7 @@ LIMIT 10;
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ Amazon Athena > Query editor                                            │
 ├─────────────────────────────────────────────────────────────────────────┤
-│ Workgroup: [primary ▼]  Data source: [AwsDataCatalog ▼]                │
+│ Workgroup: [primary ▼]  Data source: [AwsDataCatalog ▼]                 │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  1 │ SELECT file_name, file_type, file_size, enrichment_status          │
@@ -77,7 +77,7 @@ LIMIT 10;
 │                                                                         │
 │                              [▶ Run]                                    │
 ├─────────────────────────────────────────────────────────────────────────┤
-│ Results (10 rows, Run time: 1.35 sec, Data scanned: 1.19 KB)           │
+│ Results (10 rows, Run time: 1.35 sec, Data scanned: 1.19 KB)            │
 ├──────────────────────────────┬──────────────────────┬──────────┬────────┤
 │ file_name                    │ file_type            │file_size │status  │
 ├──────────────────────────────┼──────────────────────┼──────────┼────────┤
@@ -104,13 +104,13 @@ LIMIT 10;
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ AWS Lake Formation > Data permissions > Grant                            │
+│ AWS Lake Formation > Data permissions > Grant                           │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  Principals                                                             │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ IAM users and roles: [your-user-name ▼]                         │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │ IAM users and roles: [your-user-name ▼]                         │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
 │                                                                         │
 │  LF-Tags or catalog resources                                           │
 │  ○ Resources matched by LF-Tags                                         │
@@ -123,7 +123,7 @@ LIMIT 10;
 │  Table permissions                                                      │
 │  ☑ Select    ☑ Describe    ☐ Alter    ☐ Drop    ☐ Insert                │
 │                                                                         │
-│                              [Grant]                                     │
+│                              [Grant]                                    │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
