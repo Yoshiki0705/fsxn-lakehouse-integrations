@@ -6,6 +6,16 @@
 
 本ドキュメントは、FSx for ONTAP に格納された非構造化データに対して **Apache Iceberg をメタデータカタログとして活用する**アーキテクチャパターンを定義する。生ファイルをデータ基盤に移動するのではなく、実データは ONTAP 上に残し（重複排除・マルチプロトコルアクセス・Snapshot の恩恵を維持）、メタデータ（ファイルパス、タグ、AI 分類結果、ベクトル embedding）をマネージド Iceberg テーブルで管理し、あらゆる分析エンジンからアクセス可能にする。
 
+### 本アーキテクチャが解決する課題
+
+| # | 課題 | 本アーキテクチャによる解決 |
+|---|------|------------------------|
+| 1 | 非構造化データが「どこに何があるか分からない」 | Iceberg メタデータテーブルで全ファイルをカタログ化。SQL/自然言語で即座に検索可能 |
+| 2 | データ共有に「コピーして渡す」しかない | Iceberg REST endpoint + ガバナンスポリシーで即時共有。データ移動なし |
+| 3 | AI/ML で活用したいが手動でファイルを探して処理している | FPolicy → Step Functions で自動パイプライン。新規ファイルを自動分類・embedding 生成 |
+| 4 | S3 コピーのストレージコストが増え続ける | 実データは FSx for ONTAP に残し（重複排除 50-70%）、メタデータのみ S3 Tables に格納 |
+| 5 | 非構造化データにガバナンスが適用されていない | Lake Formation LF-Tags / Horizon Row Access Policy でメタデータ + 実データの両方を制御 |
+
 **主要テクノロジー**:
 - **Amazon S3 Tables** — フルマネージド Apache Iceberg テーブル。自動コンパクション、3x クエリ性能、Iceberg REST endpoint 提供
 - **FSx for ONTAP S3 Access Points** — ONTAP ボリュームへの S3 互換アクセス（AI/分析の読み取りパス）
@@ -16,21 +26,21 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  HOT: メタデータ層 (Apache Iceberg on S3 Tables)                     │
-│  - ファイルパス、タグ、分類、embedding                               │
-│  - 高速 SQL クエリ (Athena, Redshift, EMR)                           │
-│  - ベクトル類似検索 (OpenSearch)                                      │
-│  - Iceberg REST endpoint 経由のクロスプラットフォームアクセス         │
-│  - Lake Formation / Horizon Catalog によるガバナンス                  │
+│  HOT: メタデータ層 (Apache Iceberg on S3 Tables)                      │
+│  - ファイルパス、タグ、分類、embedding                                   │
+│  - 高速 SQL クエリ (Athena, Redshift, EMR)                            │
+│  - ベクトル類似検索 (OpenSearch)                                       │
+│  - Iceberg REST endpoint 経由のクロスプラットフォームアクセス              │
+│  - Lake Formation / Horizon Catalog によるガバナンス                   │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │ file_path 参照
 ┌──────────────────────────────▼──────────────────────────────────────┐
 │  COLD: データ層 (FSx for ONTAP)                                      │
-│  - 実ファイル: PDF、画像、CAD、動画、音声、ログ                      │
-│  - 重複排除 (50-70% ストレージ削減)                                  │
-│  - マルチプロトコル: NFS/SMB (既存ワークフロー) + S3 AP (AI/分析)    │
-│  - Snapshot: バッチ AI 処理の一貫性あるポイントインタイム             │
-│  - FabricPool: 低コストストレージへの自動階層化                       │
+│  - 実ファイル: PDF、画像、CAD、動画、音声、ログ                           │
+│  - 重複排除 (50-70% ストレージ削減)                                     │
+│  - マルチプロトコル: NFS/SMB (既存ワークフロー) + S3 AP (AI/分析)         │
+│  - Snapshot: バッチ AI 処理の一貫性あるポイントインタイム                  │
+│  - FabricPool: 低コストストレージへの自動階層化                          │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -51,69 +61,69 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    ガバナンス層                                       │
-│                                                                      │
-│  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────────┐  │
-│  │Lake Formation│  │Snowflake Horizon │  │Databricks Unity      │  │
-│  │LF-Tags       │  │Row Access Policy │  │Catalog (External)    │  │
-│  │列/行制御     │  │動的マスキング    │  │                      │  │
-│  └──────────────┘  └──────────────────┘  └──────────────────────┘  │
+│                           ガバナンス層                                │
+│                                                                     │
+│  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────────┐   │
+│  │Lake Formation│  │Snowflake Horizon │  │Databricks Unity      │   │
+│  │LF-Tags       │  │Row Access Policy │  │Catalog (External)    │   │
+│  │列/行制御      │  │動的マスキング       │  │                      │   │
+│  └──────────────┘  └──────────────────┘  └──────────────────────┘   │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────────┐
 │              メタデータ層 (Apache Iceberg)                            │
-│                                                                      │
+│                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ S3 Tables (table bucket) — プライマリメタデータストア          │   │
-│  │                                                               │   │
-│  │ スキーマ:                                                     │   │
-│  │   file_id, file_path, file_name, file_type, file_size         │   │
-│  │   created_at, modified_at, source_volume, access_point_arn    │   │
-│  │   tags (map), classification, confidence_score                │   │
-│  │   embedding_vector (binary), summary                          │   │
-│  │   sensitivity_level, has_pii, anonymized_path                 │   │
-│  │                                                               │   │
-│  │ アクセス: Iceberg REST endpoint → Databricks, Snowflake, Spark│   │
-│  │ ガバナンス: SageMaker Lakehouse + Lake Formation              │   │
+│  │ S3 Tables (table bucket) — プライマリメタデータストア             │   │
+│  │                                                              │   │
+│  │ スキーマ:                                                      │   │
+│  │   file_id, file_path, file_name, file_type, file_size        │   │
+│  │   created_at, modified_at, source_volume, access_point_arn   │   │
+│  │   tags (map), classification, confidence_score               │   │
+│  │   embedding_vector (binary), summary                         │   │
+│  │   sensitivity_level, has_pii, anonymized_path                │   │
+│  │                                                              │   │
+│  │ アクセス: Iceberg REST endpoint → Databricks, Snowflake, Spark │   │
+│  │ ガバナンス: SageMaker Lakehouse + Lake Formation               │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────────┐
-│              イベント & 処理層                                        │
-│                                                                      │
+│                      イベント & 処理層                                │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │ リアルタイムパス: FPolicy → Fargate → SQS → Lambda           │    │
-│  │   (ファイル作成/変更/削除 → 5分以内にメタデータ同期)          │    │
+│  │ リアルタイムパス: FPolicy → Fargate → SQS → Lambda             │    │
+│  │   (ファイル作成/変更/削除 → 5分以内にメタデータ同期)               │    │
 │  └─────────────────────────────────────────────────────────────┘    │
-│                                                                      │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │ AI エンリッチメント: Step Functions → Bedrock/Cortex/Mosaic   │    │
-│  │   (分類、embedding、要約、PII 検出)                           │    │
+│  │ AI エンリッチメント: Step Functions → Bedrock/Cortex/Mosaic    │    │
+│  │   (分類、embedding、要約、PII 検出)                            │    │
 │  └─────────────────────────────────────────────────────────────┘    │
-│                                                                      │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │ バッチパス (代替): DataSync → S3 → S3 Metadata               │    │
-│  │   (S3 オブジェクトメタデータから自動 Iceberg テーブル生成)    │    │
+│  │ バッチパス (代替): DataSync → S3 → S3 Metadata                │    │
+│  │   (S3 オブジェクトメタデータから自動 Iceberg テーブル生成)         │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────────┐
-│              ストレージ層                                             │
-│                                                                      │
+│                         ストレージ層                                  │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │ FSx for ONTAP                                                │    │
-│  │   • S3 Access Point → AI/分析の読み取りアクセス              │    │
-│  │   • NFS/SMB → 既存ワークフロー (CAD ツール、エディタ)       │    │
-│  │   • 重複排除 + 圧縮 (50-70% 削減)                           │    │
-│  │   • Snapshot → バッチ処理の一貫性あるポイントインタイム      │    │
-│  │   • FPolicy → リアルタイムファイルイベント検知               │    │
-│  │   • FabricPool → コールドデータの自動階層化                  │    │
+│  │ FSx for ONTAP                                               │    │
+│  │   • S3 Access Point → AI/分析の読み取りアクセス                 │    │
+│  │   • NFS/SMB → 既存ワークフロー (CAD ツール、エディタ)             │    │
+│  │   • 重複排除 + 圧縮 (50-70% 削減)                              │    │
+│  │   • Snapshot → バッチ処理の一貫性あるポイントインタイム.           │    │
+│  │   • FPolicy → リアルタイムファイルイベント検知                    │    │
+│  │   • FabricPool → コールドデータの自動階層化                     │    │
 │  └─────────────────────────────────────────────────────────────┘    │
-│                                                                      │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │ オンプレミス ONTAP (オプション)                               │    │
-│  │   • SnapMirror → FSx for ONTAP (ブロックレベルレプリケーション)│   │
-│  │   • FlexCache S3 AP (将来: ONTAP 9.18.1 オンプレ対応済み)   │    │
+│  │ オンプレミス ONTAP (オプション)                                 │    │
+│  │   • SnapMirror → FSx for ONTAP (ブロックレベルレプリケーション).  │   │
+│  │   • FlexCache S3 AP (将来: ONTAP 9.18.1 オンプレ対応済み)       │   │
 │  └─────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -176,6 +186,31 @@ S3 Tables ──Iceberg REST endpoint──→ Databricks External Catalog
 
 **ガバナンスモデル**: Unity Catalog External Catalog + Lake Formation 補完（クロスエンジン適用）。
 
+**将来展望 — Lakehouse Federation**: Databricks の Lakehouse Federation が S3 Tables の Iceberg REST endpoint をネイティブサポートすれば、メタデータクエリと実データアクセスの両方を Databricks ワークスペース内で完結できる可能性がある。Unity Catalog 2.0 の Iceberg ネイティブ対応（2025年発表）もこの方向を加速する。
+
+**Mosaic AI エンリッチメントパイプライン例**:
+```python
+# Databricks ノートブックでの AI エンリッチメント
+from databricks.sdk import WorkspaceClient
+import mlflow
+
+# S3 Tables メタデータから pending レコードを取得
+pending_files = spark.sql("""
+  SELECT file_id, file_path, file_type
+  FROM iceberg_catalog.metadata.unstructured_files
+  WHERE enrichment_status = 'pending'
+  LIMIT 100
+""")
+
+# Mosaic AI Foundation Model で分類
+for row in pending_files.collect():
+    result = mlflow.deployments.predict(
+        endpoint="databricks-meta-llama-3-70b-instruct",
+        inputs={"prompt": f"Classify this file: {row.file_name}"}
+    )
+    # 結果を S3 Tables に書き戻し
+```
+
 ### Snowflake パス (Horizon Catalog + Cortex AI)
 
 **最適な対象**: Snowflake への既存投資がある組織（Cortex AI、Data Sharing、Horizon）。
@@ -200,6 +235,51 @@ FSx for ONTAP ──S3 AP Stage──→ COPY INTO → Managed Iceberg Table
 **現在の制約**: TO_FILE が S3 AP ステージで失敗（エンジニアリング調査中）。回避策: COPY FILES で内部ステージに転送後 Vision AI 処理。
 
 **ガバナンスモデル**: Horizon Catalog Row Access Policy + Dynamic Masking。Snowflake 内部と外部エンジンの両方に適用。
+
+**Cortex AI エンリッチメントパイプライン例**:
+```sql
+-- FSx S3 AP Stage からドキュメントを処理し、メタデータを生成
+-- Step 1: COPY FILES で内部ステージに転送 (TO_FILE 制約回避)
+COPY FILES INTO @internal_processing_stage
+  FROM @fsxn_ap_stage/new_documents/
+  PATTERN = '.*\.pdf';
+
+-- Step 2: PARSE_DOCUMENT でテキスト抽出 (S3 AP Stage で直接動作)
+SELECT
+  file_name,
+  SNOWFLAKE.CORTEX.PARSE_DOCUMENT(
+    @fsxn_ap_stage, relative_path, {'mode': 'LAYOUT'}
+  ):content AS extracted_text
+FROM DIRECTORY(@fsxn_ap_stage)
+WHERE relative_path LIKE '%.pdf';
+
+-- Step 3: Cortex COMPLETE で分類・要約
+SELECT
+  file_path,
+  SNOWFLAKE.CORTEX.COMPLETE('claude-sonnet-4-5',
+    'Classify this document into one of: contract, invoice, report, manual. '
+    || 'Also provide a 2-sentence summary. Document: ' || extracted_text
+  ) AS ai_result
+FROM extracted_documents;
+
+-- Step 4: 結果を Managed Iceberg Table に INSERT
+INSERT INTO managed_iceberg_metadata (file_id, classification, summary, enriched_at)
+SELECT file_id, parsed_classification, parsed_summary, CURRENT_TIMESTAMP()
+FROM ai_results;
+```
+
+**Horizon Catalog による外部エンジンガバナンス適用例**:
+```sql
+-- Row Access Policy: 部門ベースのアクセス制御
+CREATE OR REPLACE ROW ACCESS POLICY department_filter AS (department STRING)
+  RETURNS BOOLEAN ->
+    CURRENT_ROLE() IN ('ADMIN_ROLE')
+    OR department = CURRENT_SESSION_CONTEXT('department');
+
+-- Managed Iceberg Table に適用 → 外部エンジン (Spark, Databricks) にも自動適用
+ALTER TABLE managed_iceberg_metadata
+  ADD ROW ACCESS POLICY department_filter ON (department_tag);
+```
 
 ---
 
@@ -308,6 +388,50 @@ Embedding により**類似検索**が可能: 「このファイルに似たフ�
 | S3 フルコピー + S3 Metadata | $230 (S3) + $15 (Metadata) | 分 | Lake Formation |
 | カスタム DynamoDB カタログ | $50-200 | 秒 | カスタム IAM |
 
+> **Outcome SA 注記**: 上記コストは直接コストのみ。本アーキテクチャの真の ROI は「データ発見時間の短縮」「共有リードタイムの削減」「AI 自動化による人件費削減」を含めて評価すべき。10人のデータサイエンティストが週5時間をデータ探索に費やしている場合、年間 $150K+ の人件費削減が見込める。
+
+### TCO 比較 (3年間、10TB、100K ファイル)
+
+| 項目 | 現状 (S3 コピー + 手動) | 本アーキテクチャ |
+|------|----------------------|----------------|
+| ストレージ (S3 + FSx) | $8,280 (S3) + $16,200 (FSx) | $0 (S3 不要) + $16,200 (FSx) |
+| メタデータ管理 | $0 (なし) | $540 (S3 Tables 3年) |
+| AI 処理 | $0 (手動) | $3,600-18,000 (Bedrock) |
+| 人件費 (データ探索) | $450,000 (10人×5h/週×3年) | $45,000 (90% 削減) |
+| **3年 TCO** | **$474,480** | **$65,340-$79,740** |
+| **削減率** | — | **83-86%** |
+
+> **ベンチマーク注記**: 上記の人件費削減率 (90%) は仮定値であり、実際の効果は組織のデータ利用パターンに依存する。PoC で実測した「データ発見時間」の Before/After を用いて顧客固有の ROI を算出すること。
+
+---
+
+## 運用モニタリング
+
+### パイプライン健全性ダッシュボード
+
+| メトリクス | ソース | アラート条件 | 対応 |
+|----------|--------|-----------|------|
+| FPolicy イベント処理数/分 | CloudWatch (Lambda) | 0 が 10分以上継続 | FPolicy Server / SQS 確認 |
+| メタデータ同期レイテンシ (p99) | CloudWatch (Lambda Duration) | > 30秒 | Lambda メモリ/タイムアウト調整 |
+| DLQ メッセージ数 | CloudWatch (SQS) | > 0 | DLQ メッセージ内容確認、リドライブ |
+| AI エンリッチメント pending 数 | Athena クエリ (S3 Tables) | > 1000 | Step Functions 並列度調整 |
+| リコンシリエーション gap 数 | CloudWatch (Step Functions) | > 100 | FPolicy イベントロス調査 |
+| Bedrock スロットリング | CloudWatch (Bedrock) | ThrottlingException > 0 | リクエストレート調整、バックオフ |
+| S3 AP AccessDenied | CloudTrail | > 10/10分 | IAM/AP ポリシー確認 |
+
+### NetApp Console 統合
+
+[NetApp Console](https://console.netapp.com/) から以下のストレージ層メトリクスを監視し、メタデータカタログの健全性と合わせて確認:
+
+| メトリクス | 確認ポイント | メタデータカタログとの関連 |
+|----------|-----------|----------------------|
+| ボリューム使用率 | 85% 超でアラート | 新規ファイル追加が停止 → メタデータ同期も停止 |
+| 重複排除率 | 期待値との乖離 | 重複ファイルの特定 → メタデータで可視化 |
+| FabricPool 階層化率 | コールドデータ比率 | AI 処理対象ファイルのアクセスレイテンシに影響 |
+| Snapshot 使用量 | 予期しない増加 | AI バッチ処理用 Snapshot の削除忘れ |
+
+詳細なオブザーバビリティパイプラインは [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations) を参照。
+
 ---
 
 ## 成功 KPI
@@ -337,6 +461,8 @@ Embedding により**類似検索**が可能: 「このファイルに似たフ�
 ---
 
 ## データ主権、暗号化、監査保持期間
+
+> **Public Sector SA 注記**: 規制産業では「データがどこにあるか」「誰がアクセスしたか」「いつ削除されたか」の3点が常に説明可能でなければならない。本アーキテクチャは、メタデータと実データの両方が同一リージョンに留まり、全アクセスが CloudTrail + Lake Formation ログで追跡可能な設計となっている。ただし、本ドキュメントはガバナンスガイダンスであり、法的/コンプライアンス判断を代替するものではない。規制要件の最終判断は法務・コンプライアンス部門に確認すること。
 
 ### データ主権
 
@@ -373,6 +499,20 @@ Embedding により**類似検索**が可能: 「このファイルに似たフ�
 ---
 
 ## ONTAP Snapshot と FlexClone の AI 処理活用
+
+> **Storage Specialist 注記**: ONTAP の重複排除はブロックレベル（4KB）で動作する。同一ファイルの部門コピー（例: 設計図面を5部門が保持）では最大 80% の削減が期待できる。一方、「類似だが異なる」ファイル（例: バージョン違いの PDF）では効果は限定的（10-30%）。本アーキテクチャでは、メタデータカタログにより「どのファイルが同一か」を可視化し、不要なコピーの削除判断を支援する。
+
+### 重複排除効果の目安
+
+| データパターン | 重複排除率 | 例 |
+|-------------|----------|---|
+| 同一ファイルの部門コピー | 70-80% | 設計図面を5部門が保持 → 実質1コピー |
+| バージョン管理されたドキュメント | 30-50% | 契約書 v1, v2, v3 → 共通ブロック共有 |
+| 画像/動画（ユニーク） | 5-15% | 製品写真、監視映像 → ヘッダー/メタデータ部分のみ |
+| ログ/センサーデータ | 20-40% | 繰り返しパターンのあるテキストデータ |
+| 圧縮済みファイル (ZIP, MP4) | 0-5% | 既に圧縮済みのためブロック重複が少ない |
+
+> **注意**: 上記は一般的な目安であり、実際の効果はデータの特性に依存する。PoC での実測を推奨。`volume efficiency show` コマンドで実際の削減率を確認可能。
 
 ### パターン: Snapshot ベースのバッチ AI 処理
 
