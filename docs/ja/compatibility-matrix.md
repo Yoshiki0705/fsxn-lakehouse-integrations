@@ -124,6 +124,42 @@ FSx S3 Access Points 上の分析ワークロードを計画する際：
 
 ---
 
+## S3 Tables Iceberg REST Endpoint — クロスプラットフォームアクセス状況
+
+> 2026-05-31 検証。S3 Tables (2024年12月 GA) はマネージド Iceberg REST Catalog エンドポイントを提供する。以下は各プラットフォームから S3 Tables メタデータをクエリする実際のテスト結果。
+
+| プラットフォーム | アクセス方式 | 状態 | エラー / 備考 | 回避策 |
+|---------------|-----------|------|-------------|--------|
+| **Amazon Athena** | Glue Federated Catalog (`s3tablescatalog`) | ✅ 検証済み | サブ2秒クエリ、Lake Formation ガバナンス適用 | — (ネイティブサポート) |
+| **Amazon EMR Spark** | Iceberg REST Catalog (spark-defaults.conf) | ✅ 想定動作 | PyIceberg と同じ REST endpoint | `spark.sql.catalog.s3tables` を設定 |
+| **AWS Glue ETL** | Iceberg REST Catalog | ✅ 想定動作 | EMR と同じメカニズム | ジョブパラメータでカタログ設定 |
+| **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE iceberg_rest` | ❌ 未サポート | `CONNECTION_TYPE_NOT_SUPPORTED` — iceberg_rest がサポートタイプに含まれない | Spark クラスターで手動カタログ設定 |
+| **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE GLUE` | ❌ 非該当 | GLUE タイプは host/httpPath/PAT が必要 (Databricks-to-Databricks 用) | — |
+| **Databricks Spark クラスター** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ 想定動作 | 未テスト; 技術的には EMR と同じ | クラスター設定で `spark.sql.catalog.s3tables` を設定 |
+| **Snowflake** | External Iceberg Table (`CATALOG = 'ICEBERG_REST'`) | ❌ 未サポート | S3 Tables REST endpoint はサポートされるカタログタイプではない | COPY INTO → Managed Iceberg Table |
+| **Snowflake** | External Volume (直接 S3 読み取り) | ✅ 検証済み | External Volume `s3tables_metadata_vol` 作成成功 | Managed Iceberg Table にはカラムスキーマ指定が必要 |
+| **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ 想定動作 | 設計ドキュメント記載のパス: エクスポート → Stage → COPY INTO | 本番対応パターン |
+| **Redshift Spectrum** | Glue Federated Catalog | ✅ 想定動作 | Athena と同じ (Glue Catalog バックエンド) | — |
+| **DuckDB** | PyIceberg REST Catalog | ✅ 検証済み | Lambda で使用した同じ PyIceberg SDK | Python 直接アクセス |
+
+### 主要な発見事項
+
+1. **Athena が唯一の「ゼロ設定」SQL アクセスパス** — Glue Federated Catalog 経由で S3 Tables に直接クエリ可能
+2. **Spark ベースエンジン** (EMR, Glue ETL, Databricks クラスター) は Iceberg REST Catalog 設定でアクセス可能
+3. **Databricks SQL Warehouse** は `iceberg_rest` Connection タイプを未サポート（機能リクエスト提出済み）
+4. **Snowflake** は既存の S3 Tables Iceberg テーブルを直接読み取り不可; データ取り込みには COPY INTO が必要
+5. **Lake Formation 列レベル制御** は S3 Tables フェデレーテッドカタログで未サポート（テーブルレベルのみ）
+
+### 提出済み機能リクエスト
+
+| ベンダー | リクエスト内容 | 状態 | ケース参照 |
+|---------|-------------|------|----------|
+| Databricks | `iceberg_rest` を CONNECTION TYPE としてサポート追加 | 提出済み (2026年5月) | サポートケース保留中 |
+| Snowflake | S3 Tables Iceberg REST endpoint を External Catalog ソースとしてサポート | 提出済み (2026年5月) | サポートケース保留中 |
+| AWS | S3 Tables フェデレーテッドカタログで Lake Formation 列レベル権限対応 | 特定済み (2026年5月) | 提出予定 |
+
+---
+
 ## 検証レベルの定義
 
 | レベル | 定義 | テスト内容 | 本番環境への信頼度 |
