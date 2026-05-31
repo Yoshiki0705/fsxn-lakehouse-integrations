@@ -297,7 +297,20 @@ test_S1_snowflake_external_iceberg:
   conclusion: |
     External Volume successfully created pointing to S3 Tables internal bucket.
     IAM role (fsxn-snowflake-verification-role) already has s3tables:* and s3:GetObject
-    permissions. Next step is creating the Iceberg Table with the metadata location.
+    permissions.
+    
+    FINDING: Snowflake cannot directly read S3 Tables Iceberg tables as External Iceberg Tables.
+    - CATALOG = 'SNOWFLAKE' requires column schema (creates new managed table, not reads existing)
+    - S3 Tables Iceberg REST endpoint is not a supported catalog type in Snowflake
+    
+    Correct Snowflake path (as documented in architecture):
+    1. Export S3 Tables data as Parquet (or use PyIceberg to read → write to S3)
+    2. Create Snowflake External Stage pointing to the exported data
+    3. COPY INTO Snowflake Managed Iceberg Table
+    4. Apply Horizon Catalog governance (Row Access Policy, Masking)
+    
+    This confirms the architecture document's design: Snowflake path uses
+    COPY INTO for data ingestion, not direct Iceberg REST catalog federation.
 
 # =============================================================================
 # Updated Summary
