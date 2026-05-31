@@ -315,6 +315,29 @@ ALTER TABLE managed_iceberg_metadata
 
 **推奨**: FPolicy パイプラインをプライマリパスとして使用（S3 コピーコストを排除）。DataSync + S3 Metadata は S3 コピーが他の理由で既に必要な場合（例: Bedrock KB データソース、クロスリージョンアクセス）の補完パスとして使用。
 
+> **AWS Iceberg SA 注記**: FPolicy パイプラインで S3 Tables に書き込む際、PyIceberg SDK の `append` 操作を使用する。Iceberg format-version=2 では Row-level Deletes（Position Delete Files）がサポートされており、ファイル削除時の soft delete を効率的に実装できる。ただし、S3 Tables の自動コンパクションが Position Delete Files を定期的にマージするため、読み取り性能への影響は最小限に抑えられる。
+
+> **Partner SA 注記**: FPolicy パイプラインと DataSync パスは排他ではなく**併用可能**。例えば、FPolicy でリアルタイムメタデータ同期を行いつつ、DataSync で Bedrock KB 用の S3 コピーを維持する構成が現実的。この場合、S3 Metadata テーブルと S3 Tables メタデータテーブルを Athena で JOIN することで、両方のメタデータソースを統合クエリできる。
+
+### ハイブリッド構成例: FPolicy + DataSync 併用
+
+```
+FSx for ONTAP
+  ├── FPolicy → SQS → Lambda → S3 Tables (リアルタイムメタデータ)
+  │                                  ↓
+  │                          Athena / Databricks / Snowflake
+  │
+  └── DataSync (日次) → S3 General Purpose Bucket
+                              ├── S3 Metadata (自動 Iceberg)
+                              ├── Bedrock KB (RAG データソース)
+                              └── クロスリージョン DR コピー
+```
+
+**使い分けの判断基準**:
+- メタデータ検索のみ必要 → FPolicy パイプラインのみ（S3 コピー不要）
+- Bedrock KB で RAG も必要 → FPolicy + DataSync 併用
+- DR 要件あり → DataSync でクロスリージョン S3 コピー + S3 Metadata
+
 ---
 
 ## AI エンリッチメントパイプライン
@@ -339,6 +362,42 @@ ALTER TABLE managed_iceberg_metadata
 - 動画: 連結シーン説明から
 
 Embedding により**類似検索**が可能: 「このファイルに似たファイルを探す」— OpenSearch Serverless の kNN 検索、または Iceberg embedding カラムのブルートフォーススキャン。
+
+### モデル選択ガイダンス
+
+> **AWS Iceberg SA 注記**: embedding モデルの選択はコストと精度のトレードオフ。以下の判断基準を参考にすること。
+
+| 用途 | 推奨モデル | 次元数 | コスト/1K tokens | 精度 |
+|------|----------|--------|----------------|------|
+| 汎用テキスト検索 | Amazon Titan Embeddings V2 | 1024 | $0.00002 | 高 |
+| 高精度セマンティック検索 | Cohere Embed v3 | 1024 | $0.0001 | 最高 |
+| 多言語対応 (日英混在) | Amazon Titan Embeddings V2 (multilingual) | 1024 | $0.00002 | 高 |
+| 画像+テキスト統合 | Amazon Titan Multimodal Embeddings | 1024 | $0.0008/image | 中-高 |
+
+**推奨**: 日英混在環境では Amazon Titan Embeddings V2 (multilingual) から開始。精度が不足する場合は Cohere Embed v3 に切り替え。embedding 次元数は 1024 を標準とし、ストレージ効率と検索精度のバランスを取る。
+
+### エラーハンドリングとリトライ戦略
+
+```
+AI エンリッチメント失敗時のフロー:
+
+1. Bedrock ThrottlingException
+   → exponential backoff (1s, 2s, 4s, 8s, max 30s)
+   → 3回リトライ後: enrichment_status = "failed", retry_count++
+   → CloudWatch Alarm → 並列度を下げる
+
+2. ファイル読み取り失敗 (S3 AP AccessDenied / Timeout)
+   → enrichment_status = "failed", error_reason = "access_denied"
+   → 次回リコンシリエーションで再試行
+
+3. AI 処理結果が低品質 (confidence < 0.3)
+   → enrichment_status = "low_confidence"
+   → 人間レビューキューに追加 (SNS → 管理者通知)
+
+4. Lambda タイムアウト (大ファイル: >100MB)
+   → ECS Fargate タスクにフォールバック (タイムアウトなし)
+   → 動画/大容量 CAD ファイルはデフォルトで Fargate パス
+```
 
 ### PII 検出と匿名化
 
@@ -680,6 +739,18 @@ AI ベースの PII 検出は 100% 正確ではない。偽陰性（PII 見逃�
 
 ## 制約と制限事項
 
+### アンチパターン（避けるべき設計）
+
+| アンチパターン | なぜ問題か | 正しいアプローチ |
+|-------------|----------|--------------|
+| FSx S3 AP に直接 Iceberg テーブルを書き込む | conditional writes 未サポートで commit 失敗 | メタデータは S3 Tables に、実データは FSx に分離 |
+| 全ファイルを S3 にコピーしてから S3 Metadata を使う | 本アーキテクチャの「S3 コピー排除」の価値を否定 | FPolicy パイプラインでメタデータのみ同期 |
+| embedding を DynamoDB に格納する | kNN 検索が非効率、Iceberg エコシステムと分断 | S3 Tables の BINARY カラム or OpenSearch Serverless |
+| 全ファイルを AI 処理する（フィルタなし） | コスト爆発（100K ファイル × $0.05 = $5,000/回） | 新規/変更ファイルのみ処理、file_type でフィルタ |
+| メタデータテーブルに実データ（バイナリ）を格納 | テーブルサイズ爆発、クエリ性能劣化 | file_path 参照のみ格納、実データは FSx に残す |
+| 単一の巨大 Lambda で全処理を実行 | タイムアウト、デバッグ困難、リトライ粒度が粗い | Step Functions で処理を分割、ファイルタイプ別 Lambda |
+| ガバナンスなしでメタデータを公開 | 機密ファイルのパスが漏洩 → 実データへの不正アクセス | Lake Formation / Horizon で列/行レベル制御を必ず適用 |
+
 | 制約 | 影響 | 緩和策 |
 |------|------|--------|
 | FSx S3 AP: conditional writes 未サポート | FSx S3 AP に直接 Iceberg テーブルを書き込めない | メタデータは S3 Tables に格納（FSx ではなく）; 生ファイルは FSx に格納 |
@@ -720,12 +791,53 @@ AI ベースの PII 検出は 100% 正確ではない。偽陰性（PII 見逃�
 
 ## 次のステップ
 
+### クイックスタート: 最小構成で価値を実証 (1週間)
+
+> **Outcome SA 注記**: 全機能を一度に構築するのではなく、最小構成で「データ発見時間の短縮」を実証し、ステークホルダーの合意を得てから拡張する段階的アプローチを推奨。
+
+**Week 1 の目標**: FSx for ONTAP 上の既存ファイル 1000 件のメタデータを S3 Tables に登録し、Athena で検索可能にする。
+
+```bash
+# Step 1: S3 Tables テーブルバケット作成 (5分)
+aws s3tables create-table-bucket \
+  --name fsxn-metadata-catalog \
+  --region ap-northeast-1
+
+# Step 2: 既存ファイルのメタデータ抽出スクリプト実行 (30分)
+python scripts/initial-metadata-scan.py \
+  --access-point-alias <AP_ALIAS> \
+  --table-bucket fsxn-metadata-catalog \
+  --max-files 1000
+
+# Step 3: Athena でクエリ確認 (5分)
+# "2025年以降に作成された PDF ファイルを全て表示"
+SELECT file_name, file_path, created_at, file_size
+FROM metadata_catalog.unstructured_files
+WHERE file_type = 'application/pdf'
+  AND created_at >= TIMESTAMP '2025-01-01'
+ORDER BY created_at DESC;
+```
+
+**Week 1 の成功基準**: 「特定のファイルを探す」作業が数日→数秒に短縮されることを実証。
+
+### フルデプロイメントロードマップ
+
 1. **Phase 1**: S3 Tables テーブルバケット + Iceberg スキーマのデプロイ (1週間)
 2. **Phase 2**: FPolicy → SQS → Lambda メタデータ同期パイプライン構築 (1-2週間)
 3. **Phase 3**: AI エンリッチメント Step Functions ワークフロー実装 (2-3週間)
 4. **Phase 4**: クロスプラットフォームアクセス設定 (Databricks, Snowflake, EMR) (1-2週間)
 5. **Phase 5**: 検索・発見機能構築 (SQL + ベクトル) (1-2週間)
 6. **Phase 6**: 匿名化パイプライン実装 (1-2週間)
+
+### 各 Phase の Go/No-Go 判断基準
+
+| Phase | Go 条件 | No-Go 時の対応 |
+|-------|---------|--------------|
+| Phase 1 → 2 | Athena クエリが 3秒以内に返る | S3 Tables リージョン未対応 → Glue Catalog フォールバック |
+| Phase 2 → 3 | FPolicy イベントが 5分以内に S3 Tables に反映 | FPolicy Server 不安定 → DataSync バッチパスに切り替え |
+| Phase 3 → 4 | AI 分類の precision > 0.7 | モデル精度不足 → プロンプト調整 or モデル変更 |
+| Phase 4 → 5 | 2+ プラットフォームからメタデータクエリ成功 | Session policy 問題 → Lambda API Gateway 経由に変更 |
+| Phase 5 → 6 | 類似検索で関連ファイルが top-5 に含まれる | embedding 品質不足 → モデル変更 or チャンク戦略見直し |
 
 詳細な実装計画は [タスク一覧](../../.kiro/specs/iceberg-unstructured-metadata-catalog/tasks.md) を参照。
 
