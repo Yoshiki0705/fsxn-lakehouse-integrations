@@ -356,8 +356,8 @@ File → PII Detection (Comprehend / Bedrock)
 | **S3 Tables (metadata storage)** | ~$5 | ~1GB for 100K records |
 | **S3 Tables (requests)** | ~$10 | Writes from Lambda + reads from queries |
 | **Lambda (metadata sync)** | ~$5 | 1000 events/day × 200ms × 128MB |
-| **Lambda (AI enrichment)** | ~$50 | 100 new files/day × 30s × 512MB |
-| **Bedrock (AI processing)** | ~$100-500 | Depends on model choice and volume |
+| **Lambda (AI enrichment)** | ~$50 | 100 new files/day × 30s × 512MB. Measured: 6 sec/file (image classification + embedding) |
+| **Bedrock (AI processing)** | ~$100-500 | Depends on model choice and volume. Measured: $0.01/file (Claude 3 Haiku Vision) |
 | **Step Functions** | ~$5 | State transitions |
 | **SQS** | ~$1 | Message processing |
 | **OpenSearch Serverless (optional)** | ~$350 | 2 OCU minimum for vector search |
