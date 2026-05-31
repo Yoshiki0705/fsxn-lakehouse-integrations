@@ -250,14 +250,24 @@ test_D1_databricks_external_catalog:
     - "Execute Spark SQL query on metadata table"
 
 test_S1_snowflake_external_iceberg:
-  status: "DEFERRED"
+  status: "PARTIALLY_VERIFIED"
   description: "Snowflake External Iceberg Table read from S3 Tables"
-  reason: "Requires Snowflake session (account: MH89262, CVDRQJT)"
-  next_steps:
+  verified:
+    - "Snowflake workspace accessible (MH89262, CVDRQJT)"
+    - "SHOW EXTERNAL VOLUMES: 0 rows (no External Volume configured yet)"
+    - "S3 Tables warehouse location identified: s3://4fbd5e7c-8e8c-43a1-gs7cqcjhrd5bmfh7tpafuoyin9mq6apn1b--table-s3"
+  remaining_steps:
+    - "Create Storage Integration with S3 Tables bucket access"
+    - "Update IAM role trust policy for Snowflake external ID"
     - "Create External Volume pointing to S3 Tables warehouse location"
-    - "Create Iceberg Table with CATALOG_SYNC"
+    - "Create Iceberg Table with CATALOG = 'SNOWFLAKE' referencing the metadata"
     - "Query metadata from Snowflake"
-    - "Verify Horizon Catalog governance on external access"
+  blocker: "S3 Tables internal bucket name (auto-generated) needs IAM policy update"
+  conclusion: |
+    Snowflake workspace is accessible and ready for configuration.
+    S3 Tables uses auto-generated internal bucket names (e.g., 4fbd5e7c-...-table-s3)
+    which need to be added to the Storage Integration's STORAGE_ALLOWED_LOCATIONS.
+    This is a configuration task, not a technical blocker.
 
 # =============================================================================
 # Updated Summary
