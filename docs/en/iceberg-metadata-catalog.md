@@ -6,6 +6,16 @@
 
 This document defines an architecture pattern that uses **Apache Iceberg as a metadata catalog** for unstructured data stored on FSx for ONTAP. Rather than moving raw files into a data platform, we keep the actual data on ONTAP (preserving deduplication, multi-protocol access, and Snapshot capabilities) while managing metadata — file paths, tags, AI-generated classifications, and vector embeddings — in managed Iceberg tables accessible from any analytics engine.
 
+### Problems This Architecture Solves
+
+| # | Problem | Solution |
+|---|---------|----------|
+| 1 | Unstructured data is undiscoverable ("where is what?") | Iceberg metadata table catalogs all files. Instant SQL/natural language search |
+| 2 | Sharing requires "copy and hand over" | Iceberg REST endpoint + governance policies enable instant sharing without data movement |
+| 3 | AI/ML usage requires manual file selection and processing | FPolicy → Step Functions automates classification and embedding generation for new files |
+| 4 | S3 copy storage costs keep growing | Raw data stays on FSx for ONTAP (50-70% dedup); only metadata in S3 Tables |
+| 5 | No governance on unstructured data | Lake Formation LF-Tags / Horizon Row Access Policy controls both metadata and raw data access |
+
 **Key Technologies**:
 - **Amazon S3 Tables** — Fully managed Apache Iceberg tables with automatic compaction, 3x query performance, Iceberg REST endpoint
 - **FSx for ONTAP S3 Access Points** — S3-compatible access to ONTAP volumes (read path for AI/analytics)
@@ -15,23 +25,23 @@ This document defines an architecture pattern that uses **Apache Iceberg as a me
 ## Core Concept: Hot Metadata × Cold Data Separation
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────┐
 │  HOT: Metadata Layer (Apache Iceberg on S3 Tables)                   │
 │  - File path, tags, classification, embeddings                       │
 │  - Fast SQL queries (Athena, Redshift, EMR)                          │
 │  - Vector similarity search (OpenSearch)                             │
 │  - Cross-platform access via Iceberg REST endpoint                   │
 │  - Governed by Lake Formation / Horizon Catalog                      │
-└──────────────────────────────┬──────────────────────────────────────┘
+└──────────────────────────────┬───────────────────────────────────────┘
                                │ file_path reference
-┌──────────────────────────────▼──────────────────────────────────────┐
+┌──────────────────────────────▼───────────────────────────────────────┐
 │  COLD: Data Layer (FSx for ONTAP)                                    │
 │  - Actual files: PDF, images, CAD, video, audio, logs                │
 │  - Deduplication (50-70% storage reduction)                          │
-│  - Multi-protocol: NFS/SMB (existing workflows) + S3 AP (AI/analytics)│
+│  - Multi-protocol: NFS/SMB (existing workflows)+ S3 AP (AI/analytics)│
 │  - Snapshot: consistent point-in-time for batch AI processing        │
 │  - FabricPool: automatic tiering to lower-cost storage               │
-└─────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 **Why this separation?**
@@ -51,68 +61,68 @@ This document defines an architecture pattern that uses **Apache Iceberg as a me
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    Governance Layer                                   │
-│                                                                      │
-│  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────────┐  │
-│  │Lake Formation│  │Snowflake Horizon │  │Databricks Unity      │  │
-│  │LF-Tags       │  │Row Access Policy │  │Catalog (External)    │  │
-│  │Column/Row    │  │Dynamic Masking   │  │                      │  │
-│  └──────────────┘  └──────────────────┘  └──────────────────────┘  │
+│                    Governance Layer                                 │
+│                                                                     │
+│  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────────┐   │
+│  │Lake Formation│  │Snowflake Horizon │  │Databricks Unity      │   │ 
+│  │LF-Tags       │  │Row Access Policy │  │Catalog (External)    │   │
+│  │Column/Row    │  │Dynamic Masking   │  │                      │   │
+│  └──────────────┘  └──────────────────┘  └──────────────────────┘   │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────────┐
-│              Metadata Layer (Apache Iceberg)                          │
-│                                                                      │
+│              Metadata Layer (Apache Iceberg)                        │
+│                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ S3 Tables (table bucket) — Primary Metadata Store             │   │
-│  │                                                               │   │
-│  │ Schema:                                                       │   │
-│  │   file_id, file_path, file_name, file_type, file_size         │   │
-│  │   created_at, modified_at, source_volume, access_point_arn    │   │
-│  │   tags (map), classification, confidence_score                │   │
-│  │   embedding_vector (binary), summary                          │   │
-│  │   sensitivity_level, has_pii, anonymized_path                 │   │
-│  │                                                               │   │
-│  │ Access: Iceberg REST endpoint → Databricks, Snowflake, Spark  │   │
-│  │ Governance: SageMaker Lakehouse + Lake Formation              │   │
+│  │ S3 Tables (table bucket) — Primary Metadata Store            │   │
+│  │                                                              │   │
+│  │ Schema:                                                      │   │
+│  │   file_id, file_path, file_name, file_type, file_size        │   │
+│  │   created_at, modified_at, source_volume, access_point_arn   │   │
+│  │   tags (map), classification, confidence_score               │   │
+│  │   embedding_vector (binary), summary                         │   │
+│  │   sensitivity_level, has_pii, anonymized_path                │   │
+│  │                                                              │   │
+│  │ Access: Iceberg REST endpoint → Databricks, Snowflake, Spark │   │
+│  │ Governance: SageMaker Lakehouse + Lake Formation             │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────────┐
-│              Event & Processing Layer                                 │
-│                                                                      │
+│              Event & Processing Layer                               │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │ Real-time Path: FPolicy → Fargate → SQS → Lambda            │    │
-│  │   (file create/modify/delete → metadata sync within 5 min)   │    │
+│  │   (file create/modify/delete → metadata sync within 5 min)  │    │
 │  └─────────────────────────────────────────────────────────────┘    │
-│                                                                      │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │ AI Enrichment: Step Functions → Bedrock/Cortex/Mosaic AI     │    │
-│  │   (classification, embedding, summarization, PII detection)  │    │
+│  │ AI Enrichment: Step Functions → Bedrock/Cortex/Mosaic AI    │    │
+│  │   (classification, embedding, summarization, PII detection) │    │
 │  └─────────────────────────────────────────────────────────────┘    │
-│                                                                      │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │ Batch Path (Alternative): DataSync → S3 → S3 Metadata       │    │
-│  │   (automatic Iceberg table from S3 object metadata)          │    │
+│  │   (automatic Iceberg table from S3 object metadata)         │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────────┐
-│              Storage Layer                                            │
-│                                                                      │
+│              Storage Layer                                          │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │ FSx for ONTAP                                                │    │
-│  │   • S3 Access Point → AI/Analytics read access               │    │
-│  │   • NFS/SMB → Existing workflows (CAD tools, editors)        │    │
-│  │   • Deduplication + Compression (50-70% savings)             │    │
-│  │   • Snapshot → Consistent batch processing input             │    │
-│  │   • FPolicy → Real-time file event detection                 │    │
-│  │   • FabricPool → Automatic cold data tiering                 │    │
+│  │ FSx for ONTAP                                               │    │
+│  │   • S3 Access Point → AI/Analytics read access              │    │
+│  │   • NFS/SMB → Existing workflows (CAD tools, editors)       │    │
+│  │   • Deduplication + Compression (50-70% savings)            │    │
+│  │   • Snapshot → Consistent batch processing input            │    │
+│  │   • FPolicy → Real-time file event detection                │    │
+│  │   • FabricPool → Automatic cold data tiering                │    │
 │  └─────────────────────────────────────────────────────────────┘    │
-│                                                                      │
+│                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │ On-premises ONTAP (optional)                                  │    │
-│  │   • SnapMirror → FSx for ONTAP (block-level replication)     │    │
+│  │ On-premises ONTAP (optional)                                │    │
+│  │   • SnapMirror → FSx for ONTAP (block-level replication)    │    │
 │  │   • FlexCache S3 AP (future: ONTAP 9.18.1 on-prem ready)    │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
@@ -175,6 +185,8 @@ S3 Tables ──Iceberg REST endpoint──→ Databricks External Catalog
 **Vector Search integration**: For Databricks-first organizations, embeddings can be synced from S3 Tables to Mosaic AI Vector Search Index for native Databricks similarity search. This provides tighter integration with Databricks notebooks and Model Serving compared to OpenSearch Serverless.
 
 **Governance model**: Unity Catalog External Catalog + Lake Formation supplement for cross-engine enforcement.
+
+**Future outlook — Lakehouse Federation**: Once Databricks Lakehouse Federation natively supports S3 Tables Iceberg REST endpoint, both metadata queries and raw data access can be completed within the Databricks workspace. Unity Catalog 2.0's native Iceberg support (announced 2025) accelerates this direction.
 
 ### Snowflake Path (Horizon Catalog + Cortex AI)
 
@@ -308,6 +320,50 @@ File → PII Detection (Comprehend / Bedrock)
 | S3 full copy + S3 Metadata | $230 (S3) + $15 (Metadata) | Minutes | Lake Formation |
 | Custom DynamoDB catalog | $50-200 | Seconds | Custom IAM |
 
+> **Outcome SA note**: Above costs are direct costs only. The true ROI of this architecture includes "data discovery time reduction," "sharing lead time elimination," and "AI automation labor savings." If 10 data scientists spend 5 hours/week on data exploration, annual labor savings of $150K+ are achievable.
+
+### TCO Comparison (3-year, 10TB, 100K files)
+
+| Item | Current (S3 copy + manual) | This Architecture |
+|------|--------------------------|-------------------|
+| Storage (S3 + FSx) | $8,280 (S3) + $16,200 (FSx) | $0 (no S3 needed) + $16,200 (FSx) |
+| Metadata management | $0 (none) | $540 (S3 Tables, 3 years) |
+| AI processing | $0 (manual) | $3,600-18,000 (Bedrock) |
+| Labor (data exploration) | $450,000 (10 people × 5h/week × 3 years) | $45,000 (90% reduction) |
+| **3-year TCO** | **$474,480** | **$65,340-$79,740** |
+| **Reduction** | — | **83-86%** |
+
+> **Benchmark caveat**: The 90% labor reduction is an assumption. Actual effectiveness depends on organizational data usage patterns. Use PoC-measured "data discovery time" Before/After to calculate customer-specific ROI.
+
+---
+
+## Operational Monitoring
+
+### Pipeline Health Dashboard
+
+| Metric | Source | Alert Condition | Action |
+|--------|--------|----------------|--------|
+| FPolicy events processed/min | CloudWatch (Lambda) | 0 for >10 minutes | Check FPolicy Server / SQS |
+| Metadata sync latency (p99) | CloudWatch (Lambda Duration) | > 30 seconds | Adjust Lambda memory/timeout |
+| DLQ message count | CloudWatch (SQS) | > 0 | Inspect DLQ messages, redrive |
+| AI enrichment pending count | Athena query (S3 Tables) | > 1000 | Adjust Step Functions parallelism |
+| Reconciliation gap count | CloudWatch (Step Functions) | > 100 | Investigate FPolicy event loss |
+| Bedrock throttling | CloudWatch (Bedrock) | ThrottlingException > 0 | Adjust request rate, add backoff |
+| S3 AP AccessDenied | CloudTrail | > 10/10min | Review IAM/AP policy |
+
+### NetApp Console Integration
+
+Monitor the following storage-layer metrics from [NetApp Console](https://console.netapp.com/) alongside metadata catalog health:
+
+| Metric | Check Point | Metadata Catalog Relevance |
+|--------|------------|---------------------------|
+| Volume utilization | Alert at >85% | New file additions stop → metadata sync also stops |
+| Deduplication ratio | Deviation from expected | Identify duplicate files → visualize in metadata |
+| FabricPool tiering ratio | Cold data percentage | Affects access latency for AI processing target files |
+| Snapshot usage | Unexpected growth | Forgotten AI batch processing Snapshots |
+
+For detailed observability pipelines, see [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations).
+
 ---
 
 ## Success KPIs
@@ -337,6 +393,8 @@ File → PII Detection (Comprehend / Bedrock)
 ---
 
 ## Data Sovereignty, Encryption, and Audit Retention
+
+> **Public Sector SA note**: In regulated industries, "where data resides," "who accessed it," and "when it was deleted" must always be explainable. This architecture ensures both metadata and raw data remain in the same region, with all access tracked via CloudTrail + Lake Formation logs. However, this document provides governance guidance only and does not substitute for legal/compliance judgment. Final regulatory determinations should be confirmed with legal and compliance teams.
 
 ### Data Sovereignty
 
@@ -373,6 +431,20 @@ File → PII Detection (Comprehend / Bedrock)
 ---
 
 ## ONTAP Snapshot and FlexClone for AI Processing
+
+> **Storage Specialist note**: ONTAP deduplication operates at the block level (4KB). Identical file copies across departments (e.g., design drawings held by 5 departments) can achieve up to 80% reduction. However, "similar but different" files (e.g., PDF version differences) show limited effect (10-30%). This architecture's metadata catalog makes "which files are identical" visible, supporting decisions to eliminate unnecessary copies.
+
+### Deduplication Effectiveness Guide
+
+| Data Pattern | Dedup Ratio | Example |
+|-------------|------------|---------|
+| Identical file copies across departments | 70-80% | Design drawings held by 5 departments → effectively 1 copy |
+| Version-managed documents | 30-50% | Contract v1, v2, v3 → shared common blocks |
+| Unique images/video | 5-15% | Product photos, surveillance footage → header/metadata only |
+| Log/sensor data | 20-40% | Text data with repeating patterns |
+| Pre-compressed files (ZIP, MP4) | 0-5% | Already compressed, few block duplicates |
+
+> **Note**: Above figures are general guidelines; actual effectiveness depends on data characteristics. PoC measurement recommended. Use `volume efficiency show` command to verify actual reduction ratios.
 
 ### Pattern: Snapshot-based Batch AI Processing
 
