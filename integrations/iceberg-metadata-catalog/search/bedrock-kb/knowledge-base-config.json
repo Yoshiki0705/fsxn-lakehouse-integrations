@@ -1,0 +1,75 @@
+{
+  "_comment": "Bedrock Knowledge Base configuration for metadata-driven natural language search",
+  "_description": "This KB indexes the metadata table summaries for natural language queries like 'Find all invoices from Q1 2025 with amount > $10,000'",
+
+  "knowledgeBase": {
+    "name": "fsxn-metadata-catalog-kb",
+    "description": "Natural language search over FSx for ONTAP unstructured file metadata. Indexes AI-generated summaries, classifications, and file attributes.",
+    "roleArn": "arn:aws:iam::178625946981:role/bedrock-kb-metadata-role",
+
+    "knowledgeBaseConfiguration": {
+      "type": "VECTOR",
+      "vectorKnowledgeBaseConfiguration": {
+        "embeddingModelArn": "arn:aws:bedrock:ap-northeast-1::foundation-model/amazon.titan-embed-text-v2:0",
+        "embeddingModelConfiguration": {
+          "bedrockEmbeddingModelConfiguration": {
+            "dimensions": 1024
+          }
+        }
+      }
+    },
+
+    "storageConfiguration": {
+      "type": "OPENSEARCH_SERVERLESS",
+      "opensearchServerlessConfiguration": {
+        "collectionArn": "arn:aws:aoss:ap-northeast-1:178625946981:collection/<COLLECTION_ID>",
+        "vectorIndexName": "fsxn-metadata-kb-index",
+        "fieldMapping": {
+          "vectorField": "embedding",
+          "textField": "text",
+          "metadataField": "metadata"
+        }
+      }
+    }
+  },
+
+  "dataSource": {
+    "_comment": "Data source: Export metadata summaries as documents for KB ingestion",
+    "name": "metadata-summaries",
+    "description": "AI-generated summaries from the Iceberg metadata table, exported as text documents",
+    "dataSourceConfiguration": {
+      "type": "S3",
+      "s3Configuration": {
+        "bucketArn": "arn:aws:s3:::fsxn-metadata-kb-documents",
+        "inclusionPrefixes": ["summaries/"]
+      }
+    },
+    "vectorIngestionConfiguration": {
+      "chunkingConfiguration": {
+        "chunkingStrategy": "FIXED_SIZE",
+        "fixedSizeChunkingConfiguration": {
+          "maxTokens": 300,
+          "overlapPercentage": 20
+        }
+      }
+    }
+  },
+
+  "_usage_notes": {
+    "setup_steps": [
+      "1. Create OpenSearch Serverless collection (vector search type)",
+      "2. Create IAM role with bedrock:* and aoss:* permissions",
+      "3. Export metadata summaries to S3 (use export-summaries.py)",
+      "4. Create Knowledge Base via AWS Console or API",
+      "5. Sync data source",
+      "6. Test with natural language queries"
+    ],
+    "query_examples": [
+      "Find all engineering drawings related to pump design from 2025",
+      "Show me contracts with amounts over $100,000",
+      "What medical images do we have from the radiology department?",
+      "List all PDF reports classified as specifications"
+    ],
+    "integration_with_agents": "Use Bedrock Agents to combine KB search with file access via FSx S3 AP. Agent can: (1) search metadata via KB, (2) retrieve file via S3 AP, (3) process with Bedrock Claude."
+  }
+}
