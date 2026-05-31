@@ -57,6 +57,9 @@ FSx for ONTAP (実ファイル: PDF、画像、CAD、動画)
 | リアルタイム同期 (FPolicy → SQS → Lambda → S3 Tables) | ✅ 検証済み | 処理2秒、DLQ = 0 |
 | AI 画像分類 (Bedrock Vision) | ✅ 検証済み | "Invoice" を confidence 0.9 で分類 |
 | ベクトル embedding 生成 (Titan V2) | ✅ 検証済み | 1024次元、正規化済み |
+| ベクトル類似検索 (OpenSearch NextGen) | ✅ 検証済み | kNN スコア 0.71、scale-to-zero |
+| PII 検出 (Comprehend) | ✅ 検証済み | 7/7 エンティティ検出 (NAME, EMAIL, PHONE, ADDRESS, SSN, CREDIT_CARD, DATE_TIME) |
+| ドキュメント匿名化 (墨消し) | ✅ 検証済み | 全 PII を [REDACTED] に置換 |
 | ファイル削除時の soft delete | ✅ 検証済み | is_deleted=true、監査証跡保持 |
 | Lake Formation アクセス制御 | ✅ 検証済み | 権限なしアクセスを正しくブロック |
 | CloudTrail 監査ログ | ✅ 検証済み | 全クエリがユーザー ID 付きで記録 |
@@ -69,13 +72,17 @@ FSx for ONTAP (実ファイル: PDF、画像、CAD、動画)
 |-------------|-------------------------------|
 | S3 Tables (メタデータストレージ) | ~$5 |
 | Lambda (イベント同期 + AI) | ~$55 |
-| Bedrock (AI 分類 + embedding) | ~$100-500 |
+| Bedrock (AI 分類 + embedding) | ~$100-500 (実測: $0.01/ファイル) |
+| OpenSearch Serverless NextGen | **アイドル時 $0** + アクティブ時 $0.24/OCU-hour |
 | SQS + Step Functions | ~$6 |
-| **合計 (ベクトル検索なし)** | **~$170-570** |
+| Comprehend (PII 検出) | ~$5 (AI 処理に含む) |
+| **合計** | **~$170-570** (アクティブ時)、**~$0** (アイドル時) |
 | FSx for ONTAP (既存、変更なし) | — |
 | S3 コピー (排除) | **-$230 削減** |
 
-**実質効果**: 排除した S3 コピーのコスト以下で、AI 搭載メタデータカタログを運用可能。
+**実質効果**: ベクトル検索と PII 匿名化を含む AI 搭載メタデータカタログを、排除した S3 コピーのコスト以下で運用可能。Scale-to-zero により PoC/開発環境はアイドル時 $0。
+
+**PoC デプロイ時間**: 全 6 Phase を 1 日で検証完了。
 
 ## 既知の制約
 

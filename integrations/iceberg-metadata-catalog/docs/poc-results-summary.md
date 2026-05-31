@@ -57,6 +57,9 @@ FSx for ONTAP (actual files: PDF, images, CAD, video)
 | Real-time sync (FPolicy → SQS → Lambda → S3 Tables) | ✅ Verified | 2 sec processing, DLQ = 0 |
 | AI image classification (Bedrock Vision) | ✅ Verified | "Invoice" classified at 0.9 confidence |
 | Vector embedding generation (Titan V2) | ✅ Verified | 1024-dim, normalized |
+| Vector similarity search (OpenSearch NextGen) | ✅ Verified | kNN score 0.71, scale-to-zero |
+| PII detection (Comprehend) | ✅ Verified | 7/7 entities detected (NAME, EMAIL, PHONE, ADDRESS, SSN, CREDIT_CARD, DATE_TIME) |
+| Document anonymization (redaction) | ✅ Verified | All PII replaced with [REDACTED] |
 | Soft delete on file removal | ✅ Verified | is_deleted=true, audit trail preserved |
 | Lake Formation access control | ✅ Verified | Unauthorized access correctly blocked |
 | CloudTrail audit logging | ✅ Verified | All queries logged with user identity |
@@ -69,13 +72,17 @@ FSx for ONTAP (actual files: PDF, images, CAD, video)
 |-----------|-------------------------------|
 | S3 Tables (metadata storage) | ~$5 |
 | Lambda (event sync + AI) | ~$55 |
-| Bedrock (AI classification + embedding) | ~$100-500 |
+| Bedrock (AI classification + embedding) | ~$100-500 ($0.01/file measured) |
+| OpenSearch Serverless NextGen | **$0 idle** + $0.24/OCU-hour active |
 | SQS + Step Functions | ~$6 |
-| **Total (without vector search)** | **~$170-570** |
+| Comprehend (PII detection) | ~$5 (included in AI processing) |
+| **Total** | **~$170-570** (active), **~$0** (idle) |
 | FSx for ONTAP (existing, no change) | — |
 | S3 copy (eliminated) | **-$230 saved** |
 
-**Net effect**: AI-powered metadata catalog for less than the cost of the S3 copy it eliminates.
+**Net effect**: AI-powered metadata catalog with vector search and PII anonymization for less than the cost of the S3 copy it eliminates. Scale-to-zero means PoC/dev environments cost $0 when idle.
+
+**PoC deployment time**: All 6 phases verified in a single day.
 
 ## Known Limitations
 

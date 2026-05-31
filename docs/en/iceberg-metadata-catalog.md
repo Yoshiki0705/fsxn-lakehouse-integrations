@@ -360,11 +360,11 @@ File → PII Detection (Comprehend / Bedrock)
 | **Bedrock (AI processing)** | ~$100-500 | Depends on model choice and volume. Measured: $0.01/file (Claude 3 Haiku Vision) |
 | **Step Functions** | ~$5 | State transitions |
 | **SQS** | ~$1 | Message processing |
-| **OpenSearch Serverless (optional)** | ~$350 | 2 OCU minimum for vector search |
+| **OpenSearch Serverless (optional)** | **$0 (idle)** | NextGen scale-to-zero (GA May 2026). Active: $0.24/OCU-hour. PoC/dev environments cost $0 when idle |
 | **FSx for ONTAP (existing)** | — | Already provisioned for primary storage |
 | | | |
 | **Total (without vector search)** | **~$175-575/month** | |
-| **Total (with vector search)** | **~$525-925/month** | |
+| **Total (with vector search)** | **~$175-575/month (active)** | NextGen scale-to-zero: no additional idle cost for vector search |
 
 ### Cost comparison vs alternatives
 
