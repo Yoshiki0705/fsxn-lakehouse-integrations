@@ -91,8 +91,8 @@ FSx for ONTAP (実ファイル: PDF、画像、CAD、動画)
 | 制約 | 影響 | 回避策 | 状態 |
 |------|------|--------|------|
 | Databricks SQL Warehouse が S3 Tables を直接クエリ不可 | Spark クラスターまたは Athena が必要 | Spark クラスター設定 or Athena | 機能リクエスト提出済み |
-| Snowflake が S3 Tables を External Iceberg として読み取り不可 | COPY INTO が必要 | COPY INTO → Managed Iceberg | Case #01364260 提出済み |
-| Lake Formation 列レベル制御がフェデレーテッドカタログで未サポート | 特定カラムを非表示にできない | Athena View | AWS ケース提出済み |
+| Snowflake が S3 Tables を External Iceberg として読み取り不可 | COPY INTO が必要 | COPY INTO → Managed Iceberg | 機能リクエスト提出済み |
+| Lake Formation 列レベル制御が S3 Tables フェデレーテッドカタログで未サポート | 特定カラムを非表示にできない | Athena View | AWS ケース提出済み |
 | Lambda 並行書き込みで Iceberg commit conflict | 一部書き込みがリトライ | reserved_concurrency=1 | 設計推奨 |
 
 ## 次のステップ (顧客判断ポイント)
