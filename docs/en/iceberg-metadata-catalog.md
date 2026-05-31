@@ -247,9 +247,9 @@ FSx for ONTAP ──S3 AP Stage──→ COPY INTO → Managed Iceberg Table
 
 **Recommendation**: Use FPolicy pipeline as primary path (eliminates S3 copy cost). Use DataSync + S3 Metadata as supplementary path when S3 copy is already required for other reasons (e.g., Bedrock KB data source, cross-region access).
 
-> **AWS Iceberg SA note**: When writing to S3 Tables via the FPolicy pipeline, use PyIceberg SDK's `append` operation. Iceberg format-version=2 supports Row-level Deletes (Position Delete Files), enabling efficient soft delete implementation for file deletions. S3 Tables' automatic compaction periodically merges Position Delete Files, minimizing read performance impact.
+> **Iceberg implementation note**: When writing to S3 Tables via the FPolicy pipeline, use PyIceberg SDK's `append` operation. Iceberg format-version=2 supports Row-level Deletes (Position Delete Files), enabling efficient soft delete implementation for file deletions. S3 Tables' automatic compaction periodically merges Position Delete Files, minimizing read performance impact.
 
-> **Partner SA note**: FPolicy pipeline and DataSync path are **not mutually exclusive** — they can be combined. For example, use FPolicy for real-time metadata sync while maintaining DataSync for Bedrock KB S3 copies. In this case, JOIN the S3 Metadata table with the S3 Tables metadata table in Athena for unified queries across both metadata sources.
+> **Hybrid architecture note**: FPolicy pipeline and DataSync path are **not mutually exclusive** — they can be combined. For example, use FPolicy for real-time metadata sync while maintaining DataSync for Bedrock KB S3 copies. In this case, JOIN the S3 Metadata table with the S3 Tables metadata table in Athena for unified queries across both metadata sources.
 
 ### Hybrid Architecture: FPolicy + DataSync Combined
 
@@ -375,7 +375,7 @@ File → PII Detection (Comprehend / Bedrock)
 | S3 full copy + S3 Metadata | $230 (S3) + $15 (Metadata) | Minutes | Lake Formation |
 | Custom DynamoDB catalog | $50-200 | Seconds | Custom IAM |
 
-> **Outcome SA note**: Above costs are direct costs only. The true ROI of this architecture includes "data discovery time reduction," "sharing lead time elimination," and "AI automation labor savings." If 10 data scientists spend 5 hours/week on data exploration, annual labor savings of $150K+ are achievable.
+> **Cost evaluation note**: Above costs are direct costs only. The true ROI of this architecture includes "data discovery time reduction," "sharing lead time elimination," and "AI automation labor savings." If 10 data scientists spend 5 hours/week on data exploration, annual labor savings of $150K+ are achievable.
 
 ### TCO Comparison (3-year, 10TB, 100K files)
 
@@ -449,7 +449,7 @@ For detailed observability pipelines, see [fsxn-observability-integrations](http
 
 ## Data Sovereignty, Encryption, and Audit Retention
 
-> **Public Sector SA note**: In regulated industries, "where data resides," "who accessed it," and "when it was deleted" must always be explainable. This architecture ensures both metadata and raw data remain in the same region, with all access tracked via CloudTrail + Lake Formation logs. However, this document provides governance guidance only and does not substitute for legal/compliance judgment. Final regulatory determinations should be confirmed with legal and compliance teams.
+> **Regulatory compliance note**: In regulated industries, "where data resides," "who accessed it," and "when it was deleted" must always be explainable. This architecture ensures both metadata and raw data remain in the same region, with all access tracked via CloudTrail + Lake Formation logs. However, this document provides governance guidance only and does not substitute for legal/compliance judgment. Final regulatory determinations should be confirmed with legal and compliance teams.
 
 ### Data Sovereignty
 
@@ -487,7 +487,7 @@ For detailed observability pipelines, see [fsxn-observability-integrations](http
 
 ## ONTAP Snapshot and FlexClone for AI Processing
 
-> **Storage Specialist note**: ONTAP deduplication operates at the block level (4KB). Identical file copies across departments (e.g., design drawings held by 5 departments) can achieve up to 80% reduction. However, "similar but different" files (e.g., PDF version differences) show limited effect (10-30%). This architecture's metadata catalog makes "which files are identical" visible, supporting decisions to eliminate unnecessary copies.
+> **Storage efficiency note**: ONTAP deduplication operates at the block level (4KB). Identical file copies across departments (e.g., design drawings held by 5 departments) can achieve up to 80% reduction. However, "similar but different" files (e.g., PDF version differences) show limited effect (10-30%). This architecture's metadata catalog makes "which files are identical" visible, supporting decisions to eliminate unnecessary copies.
 
 ### Deduplication Effectiveness Guide
 
@@ -703,17 +703,17 @@ See [Compatibility Matrix](compatibility-matrix.md) for detailed platform × for
 
 ---
 
-## Persona Review Summary
+## Design Considerations
 
-| Persona | Key Recommendation | Incorporated |
-|---------|-------------------|-------------|
-| **AWS Iceberg SA** | S3 Tables as primary metadata store; Iceberg REST for cross-platform. S3 Metadata as supplementary path. | ✅ DD-1, Architecture |
-| **Databricks SA** | External Catalog via Iceberg REST; Mosaic AI for enrichment; Vector Search for discovery. Session policy workaround documented. | ✅ Databricks Path, Constraints |
-| **Snowflake PMM** | Horizon Catalog for external engine governance; Cortex AI pipeline; STORAGE_REQUEST_HISTORY audit. | ✅ Snowflake Path, Governance |
-| **Storage Specialist** | Hot metadata × cold data separation; ONTAP dedup value; Snapshot for batch consistency. | ✅ Core Concept, Architecture |
-| **Partner SA** | FPolicy pipeline leverages existing infrastructure; FlexCache S3 AP future path; DataSync alternative. | ✅ Event Detection, Architecture |
-| **Public Sector SA** | PII detection + anonymization pipeline; data clean room pattern; audit trail requirements. | ✅ AI Enrichment, Security |
-| **Outcome SA** | Customer value reframing (search, share, AI, cost); success KPIs; phased adoption. | ✅ Executive Summary, Cost |
+| Aspect | Recommendation | Reflected In |
+|--------|---------------|-------------|
+| **Open Table Format selection** | S3 Tables as primary metadata store. Iceberg REST endpoint enables engine-agnostic access. S3 Metadata as supplementary batch path. | Architecture, Decision Matrix |
+| **Multi-engine access** | External Catalog configuration via Iceberg REST endpoint. Platform session policy constraints documented with workarounds. | Platform Paths, Constraints |
+| **Cross-engine governance** | Horizon Catalog / Lake Formation enforce governance on external engines. Row Access Policy / LF-Tags for consistent cross-platform access control. | Governance Layer, Snowflake Path |
+| **Storage efficiency** | Hot metadata × cold data separation design. Maximize ONTAP deduplication benefits while keeping metadata layer at minimal cost. | Core Concept, Cost Estimation |
+| **Event-driven design** | FPolicy pipeline leverages existing infrastructure for real-time detection. DataSync + S3 Metadata as batch alternative. Hybrid combination supported. | Event Detection, Hybrid Architecture |
+| **Regulatory compliance** | PII detection + anonymization pipeline. Data clean room pattern. Audit retention periods specified per regulation. Data sovereignty (same-region guarantee). | AI Enrichment, Data Sovereignty |
+| **Business value demonstration** | Incremental adoption (Quick Start → full deployment). Quantified success KPIs. Go/No-Go criteria minimize investment risk. | Success KPIs, Next Steps |
 
 ---
 
@@ -721,7 +721,7 @@ See [Compatibility Matrix](compatibility-matrix.md) for detailed platform × for
 
 ### Quick Start: Minimal Viable Deployment (1 week)
 
-> **Outcome SA note**: Rather than building all features at once, demonstrate "data discovery time reduction" with a minimal configuration to gain stakeholder buy-in, then expand incrementally.
+> **Incremental adoption note**: Rather than building all features at once, demonstrate "data discovery time reduction" with a minimal configuration to gain stakeholder buy-in, then expand incrementally.
 
 **Week 1 goal**: Register metadata for 1000 existing files on FSx for ONTAP into S3 Tables and make them searchable via Athena.
 
