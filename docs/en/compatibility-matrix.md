@@ -183,7 +183,7 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | Vendor | Request | Status | Case Reference |
 |--------|---------|--------|---------------|
 | Databricks | Add `iceberg_rest` as supported CONNECTION TYPE | Filed (May 2026) | Support case pending |
-| Snowflake | Support S3 Tables Iceberg REST endpoint as External Catalog source | Filed (May 2026) | Support case pending |
+| Snowflake | Support S3 Tables Iceberg REST endpoint as External Catalog source | Filed (May 2026) | Case #01364260 |
 | AWS | Lake Formation column-level permissions on S3 Tables federated catalog | Identified (May 2026) | To be filed |
 
 ---
