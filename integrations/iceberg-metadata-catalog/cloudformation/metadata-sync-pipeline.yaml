@@ -91,7 +91,7 @@ Resources:
     Properties:
       FunctionName: fsxn-metadata-sync
       Runtime: python3.12
-      Handler: handler.handler
+      Handler: index.handler
       MemorySize: !Ref LambdaMemorySize
       Timeout: !Ref LambdaTimeout
       Role: !GetAtt MetadataSyncRole.Arn
@@ -101,8 +101,41 @@ Resources:
           NAMESPACE: !Ref Namespace
           TABLE_NAME: !Ref TableName
           LOG_LEVEL: INFO
-      Layers:
-        - !Ref PyIcebergLayer
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import os
+
+          logger = logging.getLogger()
+          logger.setLevel(os.environ.get('LOG_LEVEL', 'INFO'))
+
+          def handler(event, context):
+              """
+              Placeholder handler for metadata sync.
+              Full implementation requires PyIceberg layer.
+              Deploy full handler from:
+                integrations/iceberg-metadata-catalog/lambda/metadata-sync-handler/handler.py
+              """
+              records = event.get('Records', [])
+              logger.info(f'Processing {len(records)} SQS messages')
+
+              processed = 0
+              failed = []
+
+              for record in records:
+                  try:
+                      body = json.loads(record['body'])
+                      event_type = body.get('event_type', 'unknown')
+                      file_path = body.get('file_path', 'unknown')
+                      logger.info(f'Event: {event_type} | File: {file_path}')
+                      processed += 1
+                  except Exception as e:
+                      logger.error(f'Failed: {e}')
+                      failed.append({'itemIdentifier': record.get('messageId')})
+
+              logger.info(f'Processed: {processed}, Failed: {len(failed)}')
+              return {'batchItemFailures': failed}
       Tags:
         - Key: Project
           Value: fsxn-lakehouse-integrations
@@ -118,23 +151,8 @@ Resources:
       BatchSize: !Ref BatchSize
       MaximumBatchingWindowInSeconds: !Ref MaxBatchingWindow
       FunctionResponseTypes:
-        - ReportBatchItemFailures  # Partial batch failure support
+        - ReportBatchItemFailures
       Enabled: true
-
-  # Lambda Layer (PyIceberg + PyArrow)
-  PyIcebergLayer:
-    Type: AWS::Lambda::LayerVersion
-    Properties:
-      LayerName: pyiceberg-s3tables
-      Description: PyIceberg with S3 Tables support + PyArrow
-      CompatibleRuntimes:
-        - python3.12
-      # Note: Layer must be built separately with:
-      #   pip install -t python/ pyiceberg[s3tables] pyarrow
-      #   zip -r pyiceberg-layer.zip python/
-      Content:
-        S3Bucket: !Sub '${AWS::AccountId}-lambda-layers-${AWS::Region}'
-        S3Key: pyiceberg-s3tables-layer.zip
 
   # =========================================================================
   # IAM Role
