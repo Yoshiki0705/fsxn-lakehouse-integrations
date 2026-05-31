@@ -450,6 +450,91 @@ aws glue delete-catalog --name s3tablescatalog --region ap-northeast-1
 
 ## Next Steps After PoC
 
+### Production Recommended Settings (Derived from Test Results)
+
+The following settings are derived from Phase 1+2 test results for production environments:
+
+```yaml
+# Lambda configuration
+reserved_concurrency: 1       # Prevents Iceberg commit conflicts (critical)
+memory_size: 512              # Required for PyIceberg + PyArrow
+timeout: 120                  # Sufficient for S3 Tables writes
+
+# SQS configuration
+batch_size: 10                # Process 10 messages per Lambda invocation
+max_batching_window: 30       # Accumulate messages for 30s before batch
+visibility_timeout: 300       # 5x Lambda timeout
+max_receive_count: 3          # Retries before DLQ
+
+# Athena query (with deduplication — always use in production)
+# Iceberg append-only may create duplicate records for same file_id
+# Use ROW_NUMBER() to get latest record only
+SELECT * FROM (
+  SELECT *,
+    ROW_NUMBER() OVER (PARTITION BY file_id ORDER BY modified_at DESC) as rn
+  FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
+) WHERE rn = 1 AND is_deleted = false;
+```
+
+**Key constraints**:
+| Constraint | Impact | Workaround |
+|-----------|--------|-----------|
+| Concurrent Lambda = commit conflict | Some writes fail during bursts → retry | `reserved_concurrency: 1` |
+| Append-only = duplicate records | Query results may contain duplicates | `ROW_NUMBER()` dedup |
+| Lake Formation column-level not supported | Federated catalog doesn't support column exclusion | Use Athena Views for column filtering |
+
+### Quick Runbook: Incident Response
+
+#### DLQ Message Check → Redrive
+
+```bash
+# 1. Check DLQ message count
+aws sqs get-queue-attributes \
+  --queue-url "https://sqs.ap-northeast-1.amazonaws.com/<ACCOUNT_ID>/fsxn-metadata-sync-dlq" \
+  --attribute-names All \
+  --query 'Attributes.ApproximateNumberOfMessages' \
+  --region ap-northeast-1
+
+# 2. Inspect DLQ messages (identify root cause)
+aws sqs receive-message \
+  --queue-url "https://sqs.ap-northeast-1.amazonaws.com/<ACCOUNT_ID>/fsxn-metadata-sync-dlq" \
+  --max-number-of-messages 5 \
+  --region ap-northeast-1
+
+# 3. After fixing root cause, redrive DLQ → main queue
+aws sqs start-message-move-task \
+  --source-arn "arn:aws:sqs:ap-northeast-1:<ACCOUNT_ID>:fsxn-metadata-sync-dlq" \
+  --destination-arn "arn:aws:sqs:ap-northeast-1:<ACCOUNT_ID>:fsxn-metadata-sync" \
+  --region ap-northeast-1
+```
+
+#### Lambda Error Investigation
+
+```bash
+# Check recent error logs
+aws logs filter-log-events \
+  --log-group-name /aws/lambda/fsxn-metadata-sync \
+  --filter-pattern "ERROR" \
+  --start-time $(date -v-1H +%s000) \
+  --region ap-northeast-1 \
+  --query 'events[*].message' --output text
+```
+
+#### Metadata Reconciliation
+
+```bash
+# Compare FSx S3 AP file count with metadata table record count
+# Re-run initial scan if gap detected
+python scripts/initial-metadata-scan.py \
+  --access-point-arn "<AP_ALIAS>" \
+  --table-bucket-arn "<TABLE_BUCKET_ARN>" \
+  --max-files 10000
+```
+
+---
+
+### Full Deployment Roadmap
+
 1. **Phase 2**: Deploy FPolicy → SQS → Lambda pipeline for real-time metadata sync
 2. **Phase 3**: Enable AI enrichment (Bedrock classification + embedding generation)
 3. **Phase 4**: Configure cross-platform access (Databricks, Snowflake)
