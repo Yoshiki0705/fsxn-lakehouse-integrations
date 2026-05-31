@@ -285,20 +285,19 @@ test_S1_snowflake_external_iceberg:
   description: "Snowflake External Iceberg Table read from S3 Tables"
   verified:
     - "Snowflake workspace accessible (MH89262, CVDRQJT)"
-    - "SHOW EXTERNAL VOLUMES: 0 rows (no External Volume configured yet)"
+    - "SHOW EXTERNAL VOLUMES: 0 rows (no External Volume configured yet) → NOW CREATED"
     - "S3 Tables warehouse location identified: s3://4fbd5e7c-8e8c-43a1-gs7cqcjhrd5bmfh7tpafuoyin9mq6apn1b--table-s3"
+    - "SHOW STORAGE INTEGRATIONS: 2 integrations (FSXN_STORAGE_INTEGRATION, FSXN_VERIFICATION_INTEGRATION)"
+    - "DESC STORAGE INTEGRATION: role=fsxn-snowflake-verification-role, external_id confirmed"
+    - "CREATE EXTERNAL VOLUME s3tables_metadata_vol: SUCCESSFULLY CREATED"
   remaining_steps:
-    - "Create Storage Integration with S3 Tables bucket access"
-    - "Update IAM role trust policy for Snowflake external ID"
-    - "Create External Volume pointing to S3 Tables warehouse location"
-    - "Create Iceberg Table with CATALOG = 'SNOWFLAKE' referencing the metadata"
+    - "Create Iceberg Table referencing the External Volume and S3 Tables metadata location"
     - "Query metadata from Snowflake"
-  blocker: "S3 Tables internal bucket name (auto-generated) needs IAM policy update"
+    - "Verify Horizon Catalog governance on external access"
   conclusion: |
-    Snowflake workspace is accessible and ready for configuration.
-    S3 Tables uses auto-generated internal bucket names (e.g., 4fbd5e7c-...-table-s3)
-    which need to be added to the Storage Integration's STORAGE_ALLOWED_LOCATIONS.
-    This is a configuration task, not a technical blocker.
+    External Volume successfully created pointing to S3 Tables internal bucket.
+    IAM role (fsxn-snowflake-verification-role) already has s3tables:* and s3:GetObject
+    permissions. Next step is creating the Iceberg Table with the metadata location.
 
 # =============================================================================
 # Updated Summary
