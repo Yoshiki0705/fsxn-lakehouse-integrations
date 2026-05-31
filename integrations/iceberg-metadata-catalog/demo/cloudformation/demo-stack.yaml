@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Iceberg Metadata Catalog — Demo Environment (All-in-One)
+  Deploys S3 Tables, Glue Catalog, OpenSearch Serverless, and supporting resources.
+  All resources scale-to-zero when idle ($0 cost).
+
+Parameters:
+  S3AccessPointAlias:
+    Type: String
+    Description: FSx for ONTAP S3 Access Point alias (ending in -ext-s3alias)
+
+  Region:
+    Type: String
+    Default: ap-northeast-1
+    Description: AWS Region
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "FSx for ONTAP Configuration"
+        Parameters:
+          - S3AccessPointAlias
+      - Label:
+          default: "Region"
+        Parameters:
+          - Region
+
+Resources:
+  # =========================================================================
+  # S3 Tables Table Bucket
+  # =========================================================================
+  MetadataTableBucket:
+    Type: AWS::S3Tables::TableBucket
+    Properties:
+      TableBucketName: fsxn-metadata-catalog
+
+  # =========================================================================
+  # OpenSearch Serverless (NextGen — scale-to-zero)
+  # =========================================================================
+  OpenSearchEncryptionPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Name: fsxn-demo-encryption
+      Type: encryption
+      Policy: !Sub |
+        {"Rules":[{"ResourceType":"collection","Resource":["collection/fsxn-demo-vectors"]}],"AWSOwnedKey":true}
+
+  OpenSearchNetworkPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Name: fsxn-demo-network
+      Type: network
+      Policy: !Sub |
+        [{"Rules":[{"ResourceType":"collection","Resource":["collection/fsxn-demo-vectors"]}],"AllowFromPublic":true}]
+
+  OpenSearchAccessPolicy:
+    Type: AWS::OpenSearchServerless::AccessPolicy
+    Properties:
+      Name: fsxn-demo-access
+      Type: data
+      Policy: !Sub |
+        [{"Rules":[{"ResourceType":"index","Resource":["index/fsxn-demo-vectors/*"],"Permission":["aoss:*"]},{"ResourceType":"collection","Resource":["collection/fsxn-demo-vectors"],"Permission":["aoss:*"]}],"Principal":["arn:aws:iam::${AWS::AccountId}:root"]}]
+
+  OpenSearchCollection:
+    Type: AWS::OpenSearchServerless::Collection
+    DependsOn:
+      - OpenSearchEncryptionPolicy
+      - OpenSearchNetworkPolicy
+      - OpenSearchAccessPolicy
+    Properties:
+      Name: fsxn-demo-vectors
+      Type: VECTORSEARCH
+      StandbyReplicas: DISABLED
+      Description: Vector search for metadata catalog demo (scale-to-zero)
+
+  # =========================================================================
+  # Athena Workgroup
+  # =========================================================================
+  AthenaWorkgroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: fsxn-metadata-demo
+      State: ENABLED
+      WorkGroupConfiguration:
+        ResultConfiguration:
+          OutputLocation: !Sub 's3://fsxn-athena-verification-results-${Region}/demo/'
+        EngineVersion:
+          SelectedEngineVersion: Athena engine version 3
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Component
+          Value: iceberg-metadata-catalog-demo
+
+Outputs:
+  TableBucketARN:
+    Description: S3 Tables table bucket ARN
+    Value: !GetAtt MetadataTableBucket.TableBucketARN
+
+  OpenSearchEndpoint:
+    Description: OpenSearch Serverless collection endpoint
+    Value: !GetAtt OpenSearchCollection.CollectionEndpoint
+
+  OpenSearchCollectionARN:
+    Description: OpenSearch collection ARN
+    Value: !GetAtt OpenSearchCollection.Arn
+
+  AthenaWorkgroup:
+    Description: Athena workgroup for demo queries
+    Value: !Ref AthenaWorkgroup
+
+  DemoCommand:
+    Description: Command to run the demo
+    Value: !Sub |
+      cd integrations/iceberg-metadata-catalog/demo/scripts && \
+      ./run-demo.sh --ap-alias ${S3AccessPointAlias} --region ${Region}
