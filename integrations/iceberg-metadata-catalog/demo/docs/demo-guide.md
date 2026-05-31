@@ -130,3 +130,14 @@ aws glue delete-catalog --name s3tablescatalog --region ap-northeast-1
 | OpenSearch search returns 0 hits | Wait 30s (scale-to-zero cold start) then retry |
 | Bedrock `ThrottlingException` | Reduce --max-files or wait 30s |
 | `ModuleNotFoundError: pyiceberg` | `pip install 'pyiceberg[s3tables]'` |
+
+## Post-Demo Follow-Up Checklist
+
+After the demo, complete these actions within 1 week:
+
+- [ ] Share demo recording with customer stakeholders (asciinema link or GIF)
+- [ ] Send post-demo feedback survey (`docs/post-demo-survey.md`)
+- [ ] Send "Next Steps" template with PoC process (`docs/next-steps-template.md`)
+- [ ] Schedule 1-week follow-up meeting to discuss PoC scope
+- [ ] Log demo outcome in CRM (interest level, priority use case, timeline)
+- [ ] If interest level ≥ 4: initiate PoC planning with SA team
