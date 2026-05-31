@@ -329,3 +329,7 @@ final_summary:
     - "Lake Formation column-level control NOT supported on S3 Tables federated catalog"
     - "Workaround: Athena views or Snowflake Horizon for column-level governance"
     - "Production recommendation: Lambda reserved concurrency = 1 to avoid commit conflicts"
+    - "Phase 3 AI Enrichment VERIFIED: Bedrock Vision + Titan Embeddings → S3 Tables write"
+    - "invoice_sample.png classified as 'Invoice' (confidence 0.9) with 1024-dim embedding"
+    - "Databricks SQL Warehouse: iceberg_rest connection NOT SUPPORTED"
+    - "Snowflake: Cannot directly read S3 Tables as External Iceberg (Case #01364260 filed)"
