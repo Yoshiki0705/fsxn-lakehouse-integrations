@@ -335,5 +335,8 @@ final_summary:
     - "kNN search 'invoice payment document' → invoice_sample.png (score 0.7126)"
     - "OpenSearch NextGen: scale-to-zero, $0 idle, 10-30s cold start"
     - "Collection: q5st75we2um1mhb4hj27.ap-northeast-1.aoss.amazonaws.com"
+    - "Phase 6 Anonymization VERIFIED: Comprehend PII detection + regex redaction"
+    - "7 PII entities detected (NAME, EMAIL, PHONE, ADDRESS, SSN, CREDIT_CARD, DATE_TIME)"
+    - "All PII correctly redacted to [REDACTED] in output document"
     - "Databricks SQL Warehouse: iceberg_rest connection NOT SUPPORTED"
     - "Snowflake: Cannot directly read S3 Tables as External Iceberg (Case #01364260 filed)"
