@@ -247,6 +247,29 @@ FSx for ONTAP ──S3 AP Stage──→ COPY INTO → Managed Iceberg Table
 
 **Recommendation**: Use FPolicy pipeline as primary path (eliminates S3 copy cost). Use DataSync + S3 Metadata as supplementary path when S3 copy is already required for other reasons (e.g., Bedrock KB data source, cross-region access).
 
+> **AWS Iceberg SA note**: When writing to S3 Tables via the FPolicy pipeline, use PyIceberg SDK's `append` operation. Iceberg format-version=2 supports Row-level Deletes (Position Delete Files), enabling efficient soft delete implementation for file deletions. S3 Tables' automatic compaction periodically merges Position Delete Files, minimizing read performance impact.
+
+> **Partner SA note**: FPolicy pipeline and DataSync path are **not mutually exclusive** — they can be combined. For example, use FPolicy for real-time metadata sync while maintaining DataSync for Bedrock KB S3 copies. In this case, JOIN the S3 Metadata table with the S3 Tables metadata table in Athena for unified queries across both metadata sources.
+
+### Hybrid Architecture: FPolicy + DataSync Combined
+
+```
+FSx for ONTAP
+  ├── FPolicy → SQS → Lambda → S3 Tables (real-time metadata)
+  │                                  ↓
+  │                          Athena / Databricks / Snowflake
+  │
+  └── DataSync (daily) → S3 General Purpose Bucket
+                              ├── S3 Metadata (auto Iceberg)
+                              ├── Bedrock KB (RAG data source)
+                              └── Cross-region DR copy
+```
+
+**Decision criteria**:
+- Metadata search only needed → FPolicy pipeline only (no S3 copy)
+- Bedrock KB RAG also needed → FPolicy + DataSync combined
+- DR requirement → DataSync for cross-region S3 copy + S3 Metadata
+
 ---
 
 ## AI Enrichment Pipeline
@@ -271,6 +294,38 @@ All file types receive a 1536-dimension vector embedding (Amazon Titan Embedding
 - Video: Concatenated scene descriptions
 
 Embeddings enable **similarity search**: "Find files similar to this one" via kNN on OpenSearch Serverless or brute-force scan on the Iceberg embedding column.
+
+### Model Selection Guide
+
+| Use Case | Recommended Model | Dimensions | Cost/1K tokens | Accuracy |
+|----------|------------------|-----------|---------------|----------|
+| General text search | Amazon Titan Embeddings V2 | 1024 | $0.00002 | High |
+| High-precision semantic search | Cohere Embed v3 | 1024 | $0.0001 | Highest |
+| Multilingual (JP+EN mixed) | Amazon Titan Embeddings V2 (multilingual) | 1024 | $0.00002 | High |
+| Image+text unified | Amazon Titan Multimodal Embeddings | 1024 | $0.0008/image | Medium-High |
+
+### Error Handling and Retry Strategy
+
+```
+AI Enrichment failure flow:
+
+1. Bedrock ThrottlingException
+   → exponential backoff (1s, 2s, 4s, 8s, max 30s)
+   → After 3 retries: enrichment_status = "failed", retry_count++
+   → CloudWatch Alarm → reduce parallelism
+
+2. File read failure (S3 AP AccessDenied / Timeout)
+   → enrichment_status = "failed", error_reason = "access_denied"
+   → Retry on next reconciliation cycle
+
+3. Low-quality AI result (confidence < 0.3)
+   → enrichment_status = "low_confidence"
+   → Add to human review queue (SNS → admin notification)
+
+4. Lambda timeout (large files: >100MB)
+   → Fallback to ECS Fargate task (no timeout limit)
+   → Video/large CAD files default to Fargate path
+```
 
 ### PII Detection and Anonymization
 
@@ -612,6 +667,18 @@ AI-based PII detection is not 100% accurate. False negatives (missed PII) create
 
 ## Constraints and Limitations
 
+### Anti-Patterns (Designs to Avoid)
+
+| Anti-Pattern | Why It's Problematic | Correct Approach |
+|-------------|---------------------|-----------------|
+| Write Iceberg tables directly to FSx S3 AP | conditional writes not supported → commit failures | Metadata on S3 Tables, raw data on FSx (separate) |
+| Copy all files to S3 then use S3 Metadata | Negates the "eliminate S3 copy" core value | FPolicy pipeline for metadata-only sync |
+| Store embeddings in DynamoDB | Inefficient kNN search, disconnected from Iceberg ecosystem | S3 Tables BINARY column or OpenSearch Serverless |
+| Process all files with AI (no filter) | Cost explosion (100K files × $0.05 = $5,000/run) | Process only new/changed files, filter by file_type |
+| Store raw data (binary) in metadata table | Table size explosion, query performance degradation | Store file_path reference only, raw data stays on FSx |
+| Single monolithic Lambda for all processing | Timeouts, debugging difficulty, coarse retry granularity | Step Functions with per-file-type Lambda functions |
+| Expose metadata without governance | File paths leak → unauthorized access to raw data | Always apply Lake Formation / Horizon column/row controls |
+
 | Constraint | Impact | Mitigation |
 |-----------|--------|-----------|
 | FSx S3 AP: No conditional writes | Cannot write Iceberg tables directly to FSx S3 AP | Metadata on S3 Tables (not on FSx); raw files on FSx |
@@ -652,12 +719,53 @@ See [Compatibility Matrix](compatibility-matrix.md) for detailed platform × for
 
 ## Next Steps
 
+### Quick Start: Minimal Viable Deployment (1 week)
+
+> **Outcome SA note**: Rather than building all features at once, demonstrate "data discovery time reduction" with a minimal configuration to gain stakeholder buy-in, then expand incrementally.
+
+**Week 1 goal**: Register metadata for 1000 existing files on FSx for ONTAP into S3 Tables and make them searchable via Athena.
+
+```bash
+# Step 1: Create S3 Tables table bucket (5 min)
+aws s3tables create-table-bucket \
+  --name fsxn-metadata-catalog \
+  --region ap-northeast-1
+
+# Step 2: Run initial metadata scan script (30 min)
+python scripts/initial-metadata-scan.py \
+  --access-point-alias <AP_ALIAS> \
+  --table-bucket fsxn-metadata-catalog \
+  --max-files 1000
+
+# Step 3: Verify with Athena query (5 min)
+# "Show all PDF files created since 2025"
+SELECT file_name, file_path, created_at, file_size
+FROM metadata_catalog.unstructured_files
+WHERE file_type = 'application/pdf'
+  AND created_at >= TIMESTAMP '2025-01-01'
+ORDER BY created_at DESC;
+```
+
+**Week 1 success criteria**: Demonstrate that "finding a specific file" is reduced from days to seconds.
+
+### Full Deployment Roadmap
+
 1. **Phase 1**: Deploy S3 Tables table bucket + Iceberg schema (1 week)
 2. **Phase 2**: Build FPolicy → SQS → Lambda metadata sync pipeline (1-2 weeks)
 3. **Phase 3**: Implement AI enrichment Step Functions workflow (2-3 weeks)
 4. **Phase 4**: Configure cross-platform access (Databricks, Snowflake, EMR) (1-2 weeks)
 5. **Phase 5**: Build search & discovery features (SQL + vector) (1-2 weeks)
 6. **Phase 6**: Implement anonymization pipeline (1-2 weeks)
+
+### Go/No-Go Criteria for Each Phase
+
+| Phase Transition | Go Condition | No-Go Action |
+|-----------------|-------------|-------------|
+| Phase 1 → 2 | Athena query returns within 3 seconds | S3 Tables not available in region → Glue Catalog fallback |
+| Phase 2 → 3 | FPolicy events reflected in S3 Tables within 5 minutes | FPolicy Server unstable → switch to DataSync batch path |
+| Phase 3 → 4 | AI classification precision > 0.7 | Model accuracy insufficient → prompt tuning or model change |
+| Phase 4 → 5 | 2+ platforms successfully query metadata | Session policy issues → switch to Lambda API Gateway proxy |
+| Phase 5 → 6 | Similar files appear in top-5 search results | Embedding quality insufficient → model change or chunking strategy revision |
 
 See [Tasks](../../.kiro/specs/iceberg-unstructured-metadata-catalog/tasks.md) for detailed implementation plan.
 
