@@ -80,6 +80,16 @@ SELECT file_name, classification, confidence_score, summary
 FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
 WHERE enrichment_status = 'completed'
 ORDER BY confidence_score DESC;
+
+-- 本番用クエリ（重複排除パターン — Iceberg append-only 書き込み対応）:
+WITH ranked AS (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY file_id ORDER BY modified_at DESC) as rn
+  FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
+)
+SELECT file_name, classification, confidence_score, summary
+FROM ranked
+WHERE rn = 1 AND is_deleted = false
+ORDER BY confidence_score DESC;
 ```
 
 ### 5. ベクトル類似検索 (~1分)
