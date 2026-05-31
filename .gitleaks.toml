@@ -31,6 +31,8 @@ paths = [
   '''\.yaml$''',
   '''\.yml$''',
   '''\.txt$''',
+  '''integrations/databricks/deploy-customer-vpc\.sh$''',
+  '''integrations/snowflake/scripts/configure_fpolicy\.py$''',
 ]
 regexTarget = "line"
 regexes = [

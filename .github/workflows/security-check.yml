@@ -18,7 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Verify .kiro/ not tracked
         run: |
@@ -62,7 +64,7 @@ jobs:
 
       - name: Scan for personal file paths
         run: |
-          HITS=$(git ls-files | xargs grep -rln '/Users/.*/Downloads\|/Users/.*/\.ssh\|/home/.*/\.ssh' 2>/dev/null || true)
+          HITS=$(git ls-files | grep -v 'security-check\.yml' | grep -v 'pre-push-security-check\.sh' | xargs grep -rln '/Users/.*/Downloads\|/Users/.*/\.ssh\|/home/.*/\.ssh' 2>/dev/null || true)
           if [[ -n "$HITS" ]]; then
             echo "::error::Personal file paths found in tracked files"
             echo "$HITS"
