@@ -72,9 +72,12 @@ def main():
         file_name = record["file_name"]
         file_type = record["file_type"] or ""
 
-        # Determine S3 key from file_path
-        parts = record["file_path"].split("/")
-        s3_key = "/".join(parts[4:]) if len(parts) > 4 else file_name
+        # Determine S3 key from file_path (s3://bucket-or-alias/key)
+        # file_path format: s3://<ap-alias>/<key>
+        if record["file_path"].startswith("s3://"):
+            s3_key = "/".join(record["file_path"].split("/")[3:])
+        else:
+            s3_key = file_name
 
         # Classify
         classification = "other"

@@ -80,6 +80,16 @@ SELECT file_name, classification, confidence_score, summary
 FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
 WHERE enrichment_status = 'completed'
 ORDER BY confidence_score DESC;
+
+-- Production query with deduplication (handles append-only Iceberg writes):
+WITH ranked AS (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY file_id ORDER BY modified_at DESC) as rn
+  FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
+)
+SELECT file_name, classification, confidence_score, summary
+FROM ranked
+WHERE rn = 1 AND is_deleted = false
+ORDER BY confidence_score DESC;
 ```
 
 ### 5. Vector Similarity Search (~1 min)

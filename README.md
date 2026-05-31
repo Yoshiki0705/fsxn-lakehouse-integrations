@@ -97,6 +97,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 | [Databricks](integrations/databricks/) | ⚠️ Blocked | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
 | [Snowflake](integrations/snowflake/) | ✅ Verified | External Stage + External Table | Works with `AWS_ACCESS_POINT_ARN` stage parameter. SELECT + External Table verified. |
 | [Apache Iceberg](integrations/iceberg/) | ⚠️ Read Experimental / ❌ Write Failed | REST Catalog (vendor-neutral) | Write fails: S3FileIO cannot handle AP alias for metadata. Read of pre-existing tables expected to work. |
+| [Iceberg Metadata Catalog](integrations/iceberg-metadata-catalog/) | ✅ Fully Verified | S3 Tables + PyIceberg + Bedrock | AI-powered metadata catalog for unstructured data. [40 files in 30s, $0.01/file AI](integrations/iceberg-metadata-catalog/docs/poc-results-summary.md) |
 | [EMR + Spark](integrations/emr-spark/) | ✅ Functional Verified | Spark SQL + Iceberg | Read + Write-back verified. [10K rows in 16s total (EMR Serverless)](verification-pack/emr-spark/) |
 | [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Functional Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
 | [DuckDB](integrations/duckdb/) | ✅ Functional Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
@@ -240,6 +241,18 @@ fsxn-lakehouse-integrations/
 - **Testing**: pytest, cfn-lint
 - **Documentation**: Markdown (bilingual JA/EN)
 
+### Tested With (Iceberg Metadata Catalog)
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| Python | 3.12+ | macOS/Linux |
+| PyIceberg | 0.7+ (tested 0.11.1) | With `[s3tables]` extra |
+| Apache Iceberg | format-version 2 | Position Delete Files for soft delete |
+| S3 Tables | GA (2024-12) | Auto-compaction, Iceberg REST endpoint |
+| OpenSearch Serverless NextGen | GA (2026-05-28) | Scale-to-zero, kNN vector search |
+| Amazon Bedrock | Claude 3 Haiku, Titan Embeddings V2 | Vision classification + 1024-dim embeddings |
+| PyArrow | 17.0+ (tested 24.0.0) | Arrow-based Iceberg writes |
+
 ---
 
 ## Documentation / ドキュメント
@@ -263,7 +276,9 @@ fsxn-lakehouse-integrations/
 
 ## Blog Series / ブログシリーズ
 
-**"FSx for ONTAP S3 Access Points × Lakehouse Deep Dive"** — A 7-part validation series on dev.to:
+### Series 1: "FSx for ONTAP S3 Access Points × Lakehouse Deep Dive" (Published)
+
+A 7-part validation series on dev.to:
 
 | Part | Platform | URL |
 |:---:|----------|-----|
@@ -275,6 +290,20 @@ fsxn-lakehouse-integrations/
 | 5 | EMR Spark — Read-Write ETL on NAS Data | [dev.to](https://dev.to/aws-builders/read-write-etl-on-nas-data-with-emr-serverless-spark-no-cluster-no-copy-hgm) |
 | 6 | Redshift Spectrum + Lake Formation — Enterprise Governance | [dev.to](https://dev.to/aws-builders/redshift-spectrum-lake-formation-enterprise-governance-on-nas-data-2pik) |
 | 7 | Table Format Boundaries — Why Delta/Iceberg/Hudi Can't Write | [dev.to](https://dev.to/aws-builders/why-delta-iceberg-and-hudi-cant-write-to-fsx-s3-access-points-and-what-works-instead-5be3) |
+
+### Series 2: "Iceberg Metadata Catalog for Unstructured Data" (In Progress)
+
+AI-powered metadata catalog that makes unstructured files on FSx for ONTAP instantly searchable — without copying to S3.
+
+| Part | Topic | Status |
+|:---:|-------|--------|
+| 1 | Architecture & PoC Results — From Hours to Seconds | 📝 Draft |
+| 2 | AI Enrichment Pipeline — Bedrock Vision + Embeddings | 📝 Draft |
+| 3 | Governance & Cross-Platform Access — Lake Formation + OpenSearch | 📝 Draft |
+
+**Key results**: 40 files cataloged in 30s, AI classification at $0.01/file, Athena queries < 2s, vector search with scale-to-zero ($0 idle), full demo in 47 seconds for $0.07.
+
+See: [Architecture](docs/en/iceberg-metadata-catalog.md) | [PoC Results](integrations/iceberg-metadata-catalog/docs/poc-results-summary.md) | [Demo Guide](integrations/iceberg-metadata-catalog/demo/docs/demo-guide.md)
 
 ---
 

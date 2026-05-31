@@ -121,15 +121,22 @@ def main():
 
     # Anonymize
     print("  Anonymizing...")
-    redacted, regex_count = redact_text(text)
 
-    # Also redact based on Comprehend entities
+    # Apply Comprehend entity-based redaction first (on original text)
+    redacted = text
+    regex_count = 0
     if entities and "BeginOffset" in entities[0]:
         sorted_entities = sorted(entities, key=lambda x: x["BeginOffset"], reverse=True)
         for e in sorted_entities:
             begin, end = e["BeginOffset"], e["EndOffset"]
-            if REDACTION not in redacted[begin:end]:
-                redacted = redacted[:begin] + REDACTION + redacted[end:]
+            redacted = redacted[:begin] + REDACTION + redacted[end:]
+
+    # Then apply regex as fallback for any remaining PII patterns
+    for pattern in PII_PATTERNS.values():
+        matches = re.findall(pattern, redacted)
+        if matches:
+            redacted = re.sub(pattern, REDACTION, redacted)
+            regex_count += len(matches)
 
     print(f"  {'─' * 50}")
     for line in redacted.strip().split("\n")[:8]:
