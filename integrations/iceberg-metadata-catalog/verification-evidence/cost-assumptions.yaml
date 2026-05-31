@@ -1,0 +1,58 @@
+# =============================================================================
+# Cost Assumptions — Iceberg Metadata Catalog
+# =============================================================================
+# Purpose: Document all pricing assumptions used in blog articles and docs
+# Verified: 2026-06-01 via AWS Pricing API
+# =============================================================================
+
+pricing_date: "2026-06-01"
+region: "ap-northeast-1"
+source: "AWS Price List API (publicationDate: 2026-05-28)"
+
+assumptions:
+  scenario:
+    file_count: 100000
+    data_volume_tb: 10
+    daily_changes: 1000
+    ai_enrichment_ratio: 0.3  # 30% of new files get AI processing
+    opensearch_active_hours_per_day: 8
+    opensearch_active_days_per_month: 22
+
+  models:
+    bedrock_vision: "anthropic.claude-3-haiku-20240307-v1:0"
+    embedding: "amazon.titan-embed-text-v2:0"
+    embedding_dimensions: 1024
+
+  pricing:
+    s3_standard_per_gb:
+      us_east_1: 0.023
+      ap_northeast_1: 0.025
+    s3_tables_storage_per_gb: 0.005  # approximate for metadata
+    bedrock_haiku_per_image: 0.01  # approximate (depends on image size)
+    titan_embed_per_1k_input_tokens: 0.00002
+    opensearch_per_ocu_hour: 0.24
+    lambda_per_gb_second: 0.0000166667
+    sqs_per_million_requests: 0.40
+
+  monthly_projection:
+    s3_tables_metadata: 5
+    lambda_sync_and_ai: 36
+    bedrock_ai_enrichment: 30
+    opensearch_business_hours: 42  # 0.24 * 8h * 22 days
+    sqs_misc: 1
+    total: 114
+    s3_copy_eliminated: 250  # 10TB * $25/TB (ap-northeast-1)
+
+  demo_cost:
+    bedrock_5_files: 0.05
+    opensearch_6_min: 0.024
+    lambda_athena: 0.001
+    total: 0.075
+
+caveats:
+  - "Deduplication ratio (50-70%) is a general ONTAP range, not measured in this PoC"
+  - "ListObjectsV2 projection is linear extrapolation, not a service benchmark"
+  - "AI enrichment cost assumes 30% of files need Vision/embedding processing"
+  - "OpenSearch cost assumes business-hours-only usage (scale-to-zero overnight)"
+  - "Labor savings (90% reduction) is an assumption — measure Before/After in PoC"
+  - "Bedrock pricing may change — verify current rates before customer proposals"

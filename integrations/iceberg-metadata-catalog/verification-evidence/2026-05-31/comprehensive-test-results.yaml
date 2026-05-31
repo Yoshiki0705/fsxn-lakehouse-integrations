@@ -220,16 +220,19 @@ test_ST2_burst_100:
     projected_without_conflicts: "~100 records/30s = 200 records/min"
 
 test_PS2_column_level_control:
-  status: "NOT_SUPPORTED"
+  status: "OBSERVED_LIMITATION"
   description: "Lake Formation column-level control (TableWithColumns) on S3 Tables federated catalog"
   result:
     error: "InvalidInputException: Permissions modification is invalid"
     table_level_select: "Works correctly"
-    column_level_select: "Not supported on federated S3 Tables catalog"
+    column_level_select: "Failed on s3tablescatalog federated path"
   conclusion: |
-    Lake Formation column-level permissions (ColumnWildcard with ExcludedColumnNames)
-    are NOT supported on S3 Tables federated catalogs (s3tablescatalog/*).
-    Table-level SELECT/DESCRIBE works correctly.
+    AWS documentation describes table, column, and row-level permissions for
+    S3 Tables integrated with Lake Formation. However, ColumnWildcard with
+    ExcludedColumnNames returned InvalidInputException on our specific
+    s3tablescatalog/... federated catalog path.
+    Treat as observed limitation in this validation path, not confirmed
+    general product limitation. Table-level SELECT/DESCRIBE works correctly.
     Workaround: Use Athena views with column filtering, or register table
     in standard Glue Catalog (non-federated) for column-level control.
   recommendation: |
