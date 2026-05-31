@@ -15,7 +15,7 @@
 | AWS CLI v2 | 適切な権限で設定済み |
 | Python 3.12+ | パッケージ: `boto3 pyarrow 'pyiceberg[s3tables]' opensearch-py requests-aws4auth` |
 | FSx for ONTAP | S3 Access Point 設定済み（alias が `-ext-s3alias` で終わる） |
-| Bedrock アクセス | Claude 3 Haiku + Titan Embeddings V2 が対象リージョンで有効 |
+| **Bedrock アクセス** | **Claude 3 Haiku + Titan Embeddings V2 が対象リージョンで有効であること** ([モデルアクセスの有効化](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html)) |
 
 ## クイックスタート（1コマンド）
 
@@ -139,6 +139,7 @@ aws glue delete-catalog --name s3tablescatalog --region ap-northeast-1
 | Athena で `COLUMN_NOT_FOUND` | Lake Formation SELECT 権限を付与 |
 | OpenSearch 検索が 0 件 | 30秒待機（scale-to-zero cold start）後にリトライ |
 | Bedrock `ThrottlingException` | --max-files を減らすか 30秒待機 |
+| Bedrock `AccessDeniedException` | モデルアクセスを有効化: [Bedrock コンソール](https://console.aws.amazon.com/bedrock/home#/modelaccess) → Claude 3 Haiku + Titan Embeddings V2 のアクセスをリクエスト |
 | `ModuleNotFoundError: pyiceberg` | `pip install 'pyiceberg[s3tables]'` |
 
 ## デモ後フォローアップチェックリスト
