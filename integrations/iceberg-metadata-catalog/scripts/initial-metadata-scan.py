@@ -78,7 +78,7 @@ METADATA_SCHEMA = pa.schema([
     pa.field("source_volume", pa.string(), nullable=True),
     pa.field("source_svm", pa.string(), nullable=True),
     pa.field("access_point_arn", pa.string(), nullable=False),
-    pa.field("tags", pa.map_(pa.string(), pa.string()), nullable=True),
+    pa.field("tags", pa.map_(pa.field('key', pa.string(), nullable=False), pa.field('value', pa.string(), nullable=False)), nullable=True),
     pa.field("classification", pa.string(), nullable=True),
     pa.field("confidence_score", pa.float64(), nullable=True),
     pa.field("sensitivity_level", pa.string(), nullable=True),
