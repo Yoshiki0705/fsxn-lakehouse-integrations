@@ -259,7 +259,18 @@ test_D1_databricks_external_catalog:
   conclusion: |
     Databricks workspace is fully operational and ready for External Catalog
     configuration. The Serverless Starter Warehouse can execute SQL immediately.
-    CREATE CONNECTION TYPE iceberg_rest is the next step once IAM is configured.
+    
+    CRITICAL FINDING: CREATE CONNECTION TYPE iceberg_rest is NOT SUPPORTED
+    on this Databricks workspace (Premium tier, ap-northeast-1).
+    Error: [CONNECTION_TYPE_NOT_SUPPORTED] Cannot create connection of type 'iceberg_rest'.
+    
+    Alternative approach required:
+    1. Use Spark cluster with Iceberg REST Catalog configured in spark-defaults.conf
+    2. Or wait for Databricks to add iceberg_rest as a supported connection type
+    3. Or use Databricks Lakehouse Federation with Glue Catalog (S3 Tables registered in Glue)
+    
+    The Glue Catalog approach (s3tablescatalog federated catalog) is already working
+    with Athena and could be accessed from Databricks via the Glue connection type.
 
 test_S1_snowflake_external_iceberg:
   status: "PARTIALLY_VERIFIED"
