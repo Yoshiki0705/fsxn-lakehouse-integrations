@@ -71,6 +71,9 @@ info "S3 AP Alias:  ${AP_ALIAS}"
 info "Stack:        ${STACK_NAME}"
 echo ""
 
+# Record demo start time
+DEMO_START=$(date +%s)
+
 # =========================================================================
 # Step 1: Before/After Comparison (Impact Demo)
 # =========================================================================
@@ -199,6 +202,14 @@ python3 "${SCRIPT_DIR}/demo-cost-calculator.py" \
 # =========================================================================
 header "Demo Complete ✅"
 
+# Calculate demo duration
+DEMO_END=$(date +%s)
+DEMO_DURATION=$((DEMO_END - DEMO_START))
+DEMO_MINUTES=$((DEMO_DURATION / 60))
+DEMO_SECONDS=$((DEMO_DURATION % 60))
+
+echo -e "${BOLD}Demo duration: ${DEMO_MINUTES}m ${DEMO_SECONDS}s${NC}"
+echo ""
 echo -e "${BOLD}Demonstrated capabilities:${NC}"
 echo "  1. ✅ Before/After: File search time comparison (ListObjectsV2 vs Athena)"
 echo "  2. ✅ Metadata scan: FSx S3 AP → S3 Tables (Iceberg)"

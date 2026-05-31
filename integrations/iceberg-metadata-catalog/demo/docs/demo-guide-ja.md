@@ -130,3 +130,14 @@ aws glue delete-catalog --name s3tablescatalog --region ap-northeast-1
 | OpenSearch 検索が 0 件 | 30秒待機（scale-to-zero cold start）後にリトライ |
 | Bedrock `ThrottlingException` | --max-files を減らすか 30秒待機 |
 | `ModuleNotFoundError: pyiceberg` | `pip install 'pyiceberg[s3tables]'` |
+
+## デモ後フォローアップチェックリスト
+
+デモ後、1週間以内に以下を完了してください：
+
+- [ ] デモ録画を顧客ステークホルダーに共有（asciinema リンクまたは GIF）
+- [ ] デモ後フィードバックアンケートを送付（`docs/post-demo-survey.md`）
+- [ ] 「次のステップ」テンプレートを送付（`docs/next-steps-template.md`）
+- [ ] 1週間後のフォローアップミーティングを設定（PoC スコープ議論）
+- [ ] デモ結果を CRM に記録（関心度、優先ユースケース、タイムライン）
+- [ ] 関心度 ≥ 4 の場合: SA チームと PoC 計画を開始
