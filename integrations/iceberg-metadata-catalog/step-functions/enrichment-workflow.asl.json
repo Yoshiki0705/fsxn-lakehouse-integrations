@@ -1,0 +1,291 @@
+{
+  "Comment": "AI Enrichment Workflow for Unstructured File Metadata. Processes pending records from S3 Tables, enriches with Bedrock AI, and updates metadata.",
+  "StartAt": "FetchPendingRecords",
+  "States": {
+    "FetchPendingRecords": {
+      "Type": "Task",
+      "Resource": "${FetchPendingRecordsArn}",
+      "Parameters": {
+        "max_records": 50,
+        "table_bucket_arn.$": "$.table_bucket_arn",
+        "namespace.$": "$.namespace",
+        "table_name.$": "$.table_name"
+      },
+      "ResultPath": "$.pending_files",
+      "Next": "HasPendingFiles",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ]
+    },
+
+    "HasPendingFiles": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.pending_files.count",
+          "NumericGreaterThan": 0,
+          "Next": "ProcessFiles"
+        }
+      ],
+      "Default": "NoFilesToProcess"
+    },
+
+    "NoFilesToProcess": {
+      "Type": "Succeed",
+      "Comment": "No pending files found. Workflow complete."
+    },
+
+    "ProcessFiles": {
+      "Type": "Map",
+      "ItemsPath": "$.pending_files.records",
+      "MaxConcurrency": 10,
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "DetermineFileType",
+        "States": {
+          "DetermineFileType": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Or": [
+                  {"Variable": "$.file_type", "StringMatches": "application/pdf"},
+                  {"Variable": "$.file_type", "StringMatches": "application/msword"},
+                  {"Variable": "$.file_type", "StringMatches": "application/vnd.openxmlformats*"},
+                  {"Variable": "$.file_type", "StringMatches": "text/*"}
+                ],
+                "Next": "EnrichDocument"
+              },
+              {
+                "Or": [
+                  {"Variable": "$.file_type", "StringMatches": "image/*"},
+                  {"Variable": "$.file_type", "StringMatches": "application/dicom"}
+                ],
+                "Next": "EnrichImage"
+              },
+              {
+                "Or": [
+                  {"Variable": "$.file_type", "StringMatches": "audio/*"},
+                  {"Variable": "$.file_type", "StringMatches": "video/*"}
+                ],
+                "Next": "SkipLargeMedia"
+              }
+            ],
+            "Default": "GenerateEmbeddingOnly"
+          },
+
+          "EnrichDocument": {
+            "Type": "Task",
+            "Resource": "${EnrichDocumentArn}",
+            "Parameters": {
+              "file_id.$": "$.file_id",
+              "file_path.$": "$.file_path",
+              "file_type.$": "$.file_type",
+              "access_point_arn.$": "$.access_point_arn"
+            },
+            "ResultPath": "$.enrichment_result",
+            "Next": "GenerateEmbedding",
+            "Retry": [
+              {
+                "ErrorEquals": ["ThrottlingException", "ServiceUnavailableException"],
+                "IntervalSeconds": 2,
+                "MaxAttempts": 3,
+                "BackoffRate": 2.0
+              }
+            ],
+            "Catch": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "ResultPath": "$.error",
+                "Next": "MarkEnrichmentFailed"
+              }
+            ]
+          },
+
+          "EnrichImage": {
+            "Type": "Task",
+            "Resource": "${EnrichImageArn}",
+            "Parameters": {
+              "file_id.$": "$.file_id",
+              "file_path.$": "$.file_path",
+              "file_type.$": "$.file_type",
+              "access_point_arn.$": "$.access_point_arn"
+            },
+            "ResultPath": "$.enrichment_result",
+            "Next": "GenerateEmbedding",
+            "Retry": [
+              {
+                "ErrorEquals": ["ThrottlingException", "ServiceUnavailableException"],
+                "IntervalSeconds": 2,
+                "MaxAttempts": 3,
+                "BackoffRate": 2.0
+              }
+            ],
+            "Catch": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "ResultPath": "$.error",
+                "Next": "MarkEnrichmentFailed"
+              }
+            ]
+          },
+
+          "SkipLargeMedia": {
+            "Type": "Pass",
+            "Comment": "Audio/video files require ECS Fargate (Lambda timeout). Mark for async processing.",
+            "Result": {
+              "classification": "media_file",
+              "summary": "Audio/video file — requires dedicated processing pipeline",
+              "confidence_score": 1.0
+            },
+            "ResultPath": "$.enrichment_result",
+            "Next": "GenerateEmbeddingOnly"
+          },
+
+          "GenerateEmbeddingOnly": {
+            "Type": "Task",
+            "Resource": "${GenerateEmbeddingArn}",
+            "Parameters": {
+              "file_id.$": "$.file_id",
+              "file_name.$": "$.file_name",
+              "text.$": "$.file_name"
+            },
+            "ResultPath": "$.embedding_result",
+            "Next": "DetectPII",
+            "Retry": [
+              {
+                "ErrorEquals": ["ThrottlingException"],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2.0
+              }
+            ],
+            "Catch": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "ResultPath": "$.error",
+                "Next": "MarkEnrichmentFailed"
+              }
+            ]
+          },
+
+          "GenerateEmbedding": {
+            "Type": "Task",
+            "Resource": "${GenerateEmbeddingArn}",
+            "Parameters": {
+              "file_id.$": "$.file_id",
+              "file_name.$": "$.file_name",
+              "text.$": "$.enrichment_result.summary"
+            },
+            "ResultPath": "$.embedding_result",
+            "Next": "DetectPII",
+            "Retry": [
+              {
+                "ErrorEquals": ["ThrottlingException"],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2.0
+              }
+            ],
+            "Catch": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "ResultPath": "$.error",
+                "Next": "MarkEnrichmentFailed"
+              }
+            ]
+          },
+
+          "DetectPII": {
+            "Type": "Task",
+            "Resource": "${DetectPIIArn}",
+            "Parameters": {
+              "file_id.$": "$.file_id",
+              "text.$": "$.enrichment_result.summary",
+              "file_type.$": "$.file_type"
+            },
+            "ResultPath": "$.pii_result",
+            "Next": "UpdateMetadata",
+            "Retry": [
+              {
+                "ErrorEquals": ["ThrottlingException"],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 2,
+                "BackoffRate": 2.0
+              }
+            ],
+            "Catch": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "ResultPath": "$.error",
+                "Next": "UpdateMetadataWithoutPII"
+              }
+            ]
+          },
+
+          "UpdateMetadata": {
+            "Type": "Task",
+            "Resource": "${UpdateMetadataArn}",
+            "Parameters": {
+              "file_id.$": "$.file_id",
+              "classification.$": "$.enrichment_result.classification",
+              "confidence_score.$": "$.enrichment_result.confidence_score",
+              "summary.$": "$.enrichment_result.summary",
+              "embedding_vector.$": "$.embedding_result.embedding",
+              "has_pii.$": "$.pii_result.has_pii",
+              "enrichment_status": "completed"
+            },
+            "End": true,
+            "Retry": [
+              {
+                "ErrorEquals": ["States.TaskFailed"],
+                "IntervalSeconds": 2,
+                "MaxAttempts": 2,
+                "BackoffRate": 2.0
+              }
+            ]
+          },
+
+          "UpdateMetadataWithoutPII": {
+            "Type": "Task",
+            "Resource": "${UpdateMetadataArn}",
+            "Parameters": {
+              "file_id.$": "$.file_id",
+              "classification.$": "$.enrichment_result.classification",
+              "confidence_score.$": "$.enrichment_result.confidence_score",
+              "summary.$": "$.enrichment_result.summary",
+              "embedding_vector.$": "$.embedding_result.embedding",
+              "has_pii": null,
+              "enrichment_status": "completed"
+            },
+            "End": true
+          },
+
+          "MarkEnrichmentFailed": {
+            "Type": "Task",
+            "Resource": "${UpdateMetadataArn}",
+            "Parameters": {
+              "file_id.$": "$.file_id",
+              "enrichment_status": "failed",
+              "error_reason.$": "$.error.Cause"
+            },
+            "End": true
+          }
+        }
+      },
+      "ResultPath": "$.processing_results",
+      "Next": "WorkflowComplete"
+    },
+
+    "WorkflowComplete": {
+      "Type": "Succeed",
+      "Comment": "All pending files processed."
+    }
+  }
+}
