@@ -757,7 +757,9 @@ AI ベースの PII 検出は 100% 正確ではない。偽陰性（PII 見逃�
 | FSx S3 AP: S3 Event Notifications 未サポート | ネイティブ S3 イベントで変更検知不可 | FPolicy が同等のリアルタイム検知を提供 |
 | FSx S3 AP: ListObjectsV2 レイテンシ | ディレクトリ一覧が遅い (ネイティブ S3 比 30-80x) | メタデータテーブルにより LIST 操作が不要に |
 | Databricks: Session policy が S3 AP をブロック | UC から FSx ファイルに直接アクセス不可 | メタデータは Iceberg REST 経由; ファイルは Bedrock/Lambda 経由 |
+| Databricks: SQL Warehouse が S3 Tables 未対応 | `CREATE CONNECTION TYPE iceberg_rest` 未サポート (2026年5月検証) | Spark クラスターで Iceberg REST Catalog 設定、または Athena 経由 |
 | Snowflake: TO_FILE が S3 AP で失敗 | Vision AI に内部ステージ回避策が必要 | COPY FILES で内部ステージに転送; PARSE_DOCUMENT は直接動作 |
+| Snowflake: S3 Tables 直接読み取り不可 | `CATALOG = 'ICEBERG_REST'` 未サポート (2026年5月検証) | COPY INTO → Managed Iceberg Table; External Volume 作成は成功 |
 | S3 Tables: リージョン対応 | 全リージョンで利用可能ではない | Glue Catalog + セルフマネージド Iceberg にフォールバック |
 
 詳細なプラットフォーム × フォーマット × モードの検証状況は [互換性マトリクス](compatibility-matrix.md) を参照。

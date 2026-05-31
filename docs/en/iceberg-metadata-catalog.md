@@ -685,7 +685,9 @@ AI-based PII detection is not 100% accurate. False negatives (missed PII) create
 | FSx S3 AP: No S3 Event Notifications | Cannot use native S3 events for change detection | FPolicy provides equivalent real-time detection |
 | FSx S3 AP: ListObjectsV2 latency | Slow directory listing (30-80x vs native S3) | Metadata table eliminates need for LIST operations |
 | Databricks: Session policy blocks S3 AP | Cannot access FSx files directly from UC | Access metadata via Iceberg REST; files via Bedrock/Lambda |
+| Databricks: SQL Warehouse doesn't support S3 Tables | `CREATE CONNECTION TYPE iceberg_rest` not supported (verified May 2026) | Use Spark cluster with Iceberg REST Catalog config, or query via Athena |
 | Snowflake: TO_FILE fails on S3 AP | Vision AI requires internal stage workaround | COPY FILES to internal stage; PARSE_DOCUMENT works directly |
+| Snowflake: Cannot directly read S3 Tables | `CATALOG = 'ICEBERG_REST'` not supported (verified May 2026) | COPY INTO → Managed Iceberg Table; External Volume creation succeeds |
 | S3 Tables: Region availability | Not available in all regions | Fallback to Glue Catalog + self-managed Iceberg |
 
 See [Compatibility Matrix](compatibility-matrix.md) for detailed platform × format × mode verification status.

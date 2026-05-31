@@ -152,6 +152,42 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 
 ---
 
+## S3 Tables Iceberg REST Endpoint — Cross-Platform Access Status
+
+> Verified 2026-05-31. S3 Tables (GA Dec 2024) provides a managed Iceberg REST Catalog endpoint for cross-platform access. The following table documents actual test results for each platform's ability to query S3 Tables metadata.
+
+| Platform | Access Method | Status | Error / Notes | Workaround |
+|----------|-------------|--------|---------------|-----------|
+| **Amazon Athena** | Glue Federated Catalog (`s3tablescatalog`) | ✅ Verified | Sub-2-second queries, Lake Formation governance applied | — (native support) |
+| **Amazon EMR Spark** | Iceberg REST Catalog (spark-defaults.conf) | ✅ Expected | Same Iceberg REST endpoint as PyIceberg | Configure `spark.sql.catalog.s3tables` |
+| **AWS Glue ETL** | Iceberg REST Catalog | ✅ Expected | Same mechanism as EMR | Configure catalog in job parameters |
+| **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE iceberg_rest` | ❌ Not Supported | `CONNECTION_TYPE_NOT_SUPPORTED` — iceberg_rest not in supported types | Use Spark cluster with manual catalog config |
+| **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE GLUE` | ❌ Not Applicable | GLUE type requires host/httpPath/PAT (Databricks-to-Databricks only) | — |
+| **Databricks Spark Cluster** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ Expected | Not yet tested; technically same as EMR | Configure `spark.sql.catalog.s3tables` in cluster config |
+| **Snowflake** | External Iceberg Table (`CATALOG = 'ICEBERG_REST'`) | ❌ Not Supported | S3 Tables REST endpoint not a supported catalog type | COPY INTO → Managed Iceberg Table |
+| **Snowflake** | External Volume (direct S3 read) | ✅ Verified | External Volume `s3tables_metadata_vol` created successfully | Requires column schema for Managed Iceberg Table |
+| **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ Expected | Documented path: Export → Stage → COPY INTO | Production-ready pattern |
+| **Redshift Spectrum** | Glue Federated Catalog | ✅ Expected | Same as Athena (Glue Catalog backend) | — |
+| **DuckDB** | PyIceberg REST Catalog | ✅ Verified | Same PyIceberg SDK used in Lambda | Direct Python access |
+
+### Key Findings
+
+1. **Athena is the only "zero-config" SQL access path** to S3 Tables via Glue Federated Catalog
+2. **Spark-based engines** (EMR, Glue ETL, Databricks clusters) can access via Iceberg REST Catalog configuration
+3. **Databricks SQL Warehouse** does not support `iceberg_rest` connection type (feature request filed)
+4. **Snowflake** cannot directly read existing S3 Tables Iceberg tables; requires COPY INTO for data ingestion
+5. **Lake Formation column-level control** is not supported on S3 Tables federated catalogs (table-level only)
+
+### Feature Requests Filed
+
+| Vendor | Request | Status | Case Reference |
+|--------|---------|--------|---------------|
+| Databricks | Add `iceberg_rest` as supported CONNECTION TYPE | Filed (May 2026) | Support case pending |
+| Snowflake | Support S3 Tables Iceberg REST endpoint as External Catalog source | Filed (May 2026) | Support case pending |
+| AWS | Lake Formation column-level permissions on S3 Tables federated catalog | Identified (May 2026) | To be filed |
+
+---
+
 ## Verification Level Definitions
 
 | Level | Definition | What Was Tested | Confidence for Production |
