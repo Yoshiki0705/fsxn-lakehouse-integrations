@@ -462,6 +462,89 @@ aws glue delete-catalog --name s3tablescatalog --region ap-northeast-1
 
 ## PoC 後の次のステップ
 
+### 本番推奨設定（テスト結果から得られた知見）
+
+以下の設定は Phase 1+2 のテスト結果から導出された本番環境向けの推奨値です:
+
+```yaml
+# Lambda 設定
+reserved_concurrency: 1       # Iceberg commit conflict 回避（最重要）
+memory_size: 512              # PyIceberg + PyArrow に必要
+timeout: 120                  # S3 Tables 書き込みに十分な時間
+
+# SQS 設定
+batch_size: 10                # 1回の Lambda で10メッセージ処理
+max_batching_window: 30       # 30秒間メッセージを蓄積してからバッチ処理
+visibility_timeout: 300       # Lambda timeout の5倍
+max_receive_count: 3          # DLQ 送信前のリトライ回数
+
+# Athena クエリ（重複排除付き — 本番では必ず使用）
+# Iceberg append-only のため、同一 file_id に複数レコードが存在する場合がある
+# ROW_NUMBER() で最新レコードのみ取得
+SELECT * FROM (
+  SELECT *,
+    ROW_NUMBER() OVER (PARTITION BY file_id ORDER BY modified_at DESC) as rn
+  FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
+) WHERE rn = 1 AND is_deleted = false;
+```
+
+**重要な制約**:
+| 制約 | 影響 | 回避策 |
+|------|------|--------|
+| Lambda 並行実行で commit conflict | バースト時に一部失敗 → リトライ | `reserved_concurrency: 1` |
+| append-only で重複レコード | クエリ結果に重複 | `ROW_NUMBER()` dedup |
+| Lake Formation 列レベル制御が未サポート | フェデレーテッドカタログでは列制御不可 | Athena View で列フィルタ |
+
+### 簡易 Runbook: 障害対応手順
+
+#### DLQ メッセージ確認 → リドライブ
+
+```bash
+# 1. DLQ メッセージ数確認
+aws sqs get-queue-attributes \
+  --queue-url "https://sqs.ap-northeast-1.amazonaws.com/<ACCOUNT_ID>/fsxn-metadata-sync-dlq" \
+  --attribute-names All \
+  --query 'Attributes.ApproximateNumberOfMessages' \
+  --region ap-northeast-1
+
+# 2. DLQ メッセージ内容確認（原因特定）
+aws sqs receive-message \
+  --queue-url "https://sqs.ap-northeast-1.amazonaws.com/<ACCOUNT_ID>/fsxn-metadata-sync-dlq" \
+  --max-number-of-messages 5 \
+  --region ap-northeast-1
+
+# 3. 原因修正後、DLQ → メインキューにリドライブ
+aws sqs start-message-move-task \
+  --source-arn "arn:aws:sqs:ap-northeast-1:<ACCOUNT_ID>:fsxn-metadata-sync-dlq" \
+  --destination-arn "arn:aws:sqs:ap-northeast-1:<ACCOUNT_ID>:fsxn-metadata-sync" \
+  --region ap-northeast-1
+```
+
+#### Lambda エラー確認
+
+```bash
+# 最新のエラーログ確認
+aws logs filter-log-events \
+  --log-group-name /aws/lambda/fsxn-metadata-sync \
+  --filter-pattern "ERROR" \
+  --start-time $(date -v-1H +%s000) \
+  --region ap-northeast-1 \
+  --query 'events[*].message' --output text
+```
+
+#### メタデータ整合性確認（リコンシリエーション）
+
+```bash
+# FSx S3 AP のファイル数とメタデータテーブルのレコード数を比較
+# 差分がある場合は initial-metadata-scan.py を再実行
+python scripts/initial-metadata-scan.py \
+  --access-point-arn "<AP_ALIAS>" \
+  --table-bucket-arn "<TABLE_BUCKET_ARN>" \
+  --max-files 10000
+```
+
+---
+
 1. **Phase 2**: FPolicy → SQS → Lambda パイプラインでリアルタイムメタデータ同期
 2. **Phase 3**: AI エンリッチメント有効化 (Bedrock 分類 + embedding 生成)
 3. **Phase 4**: クロスプラットフォームアクセス設定 (Databricks, Snowflake)
