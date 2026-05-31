@@ -1,0 +1,133 @@
+# =============================================================================
+# Iceberg Metadata Catalog — Phase 1 Verification Evidence
+# =============================================================================
+# Date: 2026-05-31
+# Verified by: Automated PoC deployment
+# Environment: ap-northeast-1, Account 178625946981
+# =============================================================================
+
+verification_id: "iceberg-metadata-catalog-phase1-2026-05-31"
+date: "2026-05-31"
+region: "ap-northeast-1"
+account_id: "178625946981"
+
+# Infrastructure
+s3_tables:
+  table_bucket_arn: "arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog"
+  table_bucket_name: "fsxn-metadata-catalog"
+  namespace: "metadata"
+  table_name: "unstructured_files"
+  format: "ICEBERG"
+  format_version: 2
+  partition_spec: "file_type (identity)"
+  warehouse_location: "s3://4fbd5e7c-8e8c-43a1-gs7cqcjhrd5bmfh7tpafuoyin9mq6apn1b--table-s3"
+
+source_access_point:
+  alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+  name: "verification-test-ap"
+  network_origin: "INTERNET"
+  file_system: "fs-09ffe72a3b2b7dbbd"
+  svm: "svm-0e5ef72d9b4470f19"
+  volume: "fsvol-0e1fe85769794a92e (verification_vol)"
+
+# Initial Scan Results
+initial_scan:
+  script: "scripts/initial-metadata-scan.py"
+  execution_time: "< 30 seconds"
+  files_scanned: 38
+  metadata_records_created: 38
+  enrichment_status: "all pending"
+  file_types_found:
+    - type: "application/x-parquet"
+      count: 26
+      total_bytes: 217777490
+    - type: "text/csv"
+      count: 2
+      total_bytes: 58143
+    - type: "image/png"
+      count: 3
+      total_bytes: 27898
+    - type: "application/json"
+      count: 2
+      total_bytes: 3471
+    - type: "application/octet-stream"
+      count: 4
+      total_bytes: 1455
+    - type: "text/plain"
+      count: 1
+      total_bytes: 24
+
+# Athena Query Verification
+athena_queries:
+  - query_id: "485d3df7-a4ce-4a18-9451-a7274e8f3f3a"
+    description: "Basic SELECT with column filter"
+    sql: |
+      SELECT file_name, file_type, file_size, enrichment_status
+      FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
+      LIMIT 10
+    status: "SUCCEEDED"
+    engine_version: "Athena engine version 3"
+    data_scanned_bytes: 1190
+    execution_time_ms: 1351
+    rows_returned: 10
+
+  - query_id: "9f8fab08-5772-4e49-ab22-c0b8940a2780"
+    description: "GROUP BY aggregation (file type distribution)"
+    sql: |
+      SELECT file_type, COUNT(*) AS file_count, SUM(file_size) AS total_bytes
+      FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
+      WHERE is_deleted = false
+      GROUP BY file_type
+      ORDER BY total_bytes DESC
+    status: "SUCCEEDED"
+    data_scanned_bytes: 1190
+    rows_returned: 6
+
+  - query_id: "99bf86ca-bdf1-4691-bf3f-6f335e01e386"
+    description: "Full metadata query with ORDER BY"
+    sql: |
+      SELECT file_name, file_type, file_size, enrichment_status, created_at, source_volume
+      FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
+      WHERE is_deleted = false
+      ORDER BY file_size DESC
+      LIMIT 20
+    status: "SUCCEEDED"
+    data_scanned_bytes: 4650
+    execution_time_ms: 799
+    total_time_ms: 985
+    rows_returned: 20
+
+# Glue Catalog Configuration
+glue_catalog:
+  catalog_name: "s3tablescatalog"
+  type: "Federated (S3 Tables)"
+  identifier: "arn:aws:s3tables:ap-northeast-1:178625946981:bucket/*"
+  connection_name: "aws:s3tables"
+
+# Lake Formation Permissions
+lake_formation:
+  principal: "arn:aws:iam::178625946981:user/yoshiki0705"
+  resource: "s3tablescatalog/fsxn-metadata-catalog.metadata.unstructured_files"
+  permissions: ["SELECT", "DESCRIBE"]
+
+# Key Findings
+findings:
+  - "S3 Tables table bucket creation: instant (< 1 second)"
+  - "PyIceberg table creation with schema: instant"
+  - "Initial scan of 38 files: < 30 seconds total"
+  - "Athena query latency: 799-1351ms (sub-2-second for all queries)"
+  - "Data scanned per query: 1-5 KB (metadata only, very efficient)"
+  - "Glue Federated Catalog registration required for Athena access"
+  - "Lake Formation permissions required (SELECT + DESCRIBE on table)"
+  - "Map type schema: value field must be non-nullable to match Iceberg"
+
+# Issues Encountered and Resolved
+issues:
+  - issue: "S3 Tables create-table with --format ICEBERG creates empty table without schema"
+    resolution: "Use PyIceberg catalog.create_table() with explicit schema definition"
+  - issue: "PyArrow map type default has nullable values, Iceberg requires non-nullable"
+    resolution: "Use pa.field('value', pa.string(), nullable=False) in map type definition"
+  - issue: "Athena returns CATALOG_NOT_FOUND for s3tablescatalog"
+    resolution: "Register federated catalog: aws glue create-catalog --name s3tablescatalog"
+  - issue: "Athena returns COLUMN_NOT_FOUND after catalog registration"
+    resolution: "Grant Lake Formation SELECT + DESCRIBE permissions on the table"
