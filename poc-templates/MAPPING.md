@@ -34,6 +34,7 @@ This file maps each PoC template module to the corresponding detailed documentat
 | Networking | [docs/en/fsxn-s3ap-networking.md](../docs/en/fsxn-s3ap-networking.md) | VPC/Internet origin, DNS/AD issues |
 | Recovery Semantics | [docs/en/recovery-semantics.md](../docs/en/recovery-semantics.md) | Snapshot + table format recovery |
 | Zero-Copy Unstructured Data Governance | [docs/en/zero-copy-media-governance.md](../docs/en/zero-copy-media-governance.md) | S3 dedup + multi-platform governance + FlexCache S3 AP roadmap |
+| Iceberg Metadata Catalog | [docs/en/iceberg-metadata-catalog.md](../docs/en/iceberg-metadata-catalog.md) | S3 Tables + FSx for ONTAP unstructured data metadata management |
 | KPI & Validation | [docs/en/kpi-and-validation.md](../docs/en/kpi-and-validation.md) | PoC success criteria and validation metrics |
 
 ---

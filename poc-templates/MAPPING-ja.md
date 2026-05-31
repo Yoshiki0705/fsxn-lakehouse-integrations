@@ -34,6 +34,7 @@
 | ネットワーキング | [docs/en/fsxn-s3ap-networking.md](../docs/en/fsxn-s3ap-networking.md) | VPC/Internet origin、DNS/AD 問題 |
 | リカバリセマンティクス | [docs/ja/recovery-semantics.md](../docs/ja/recovery-semantics.md) | Snapshot + テーブルフォーマットリカバリ |
 | ゼロコピー非構造化データガバナンス | [docs/ja/zero-copy-media-governance.md](../docs/ja/zero-copy-media-governance.md) | S3 重複排除 + マルチプラットフォーム活用 + FlexCache S3 AP ロードマップ |
+| Iceberg メタデータカタログ | [docs/ja/iceberg-metadata-catalog.md](../docs/ja/iceberg-metadata-catalog.md) | S3 Tables + FSx for ONTAP による非構造化データメタデータ管理 |
 | KPI と PoC 検証 | [docs/ja/kpi-and-validation.md](../docs/ja/kpi-and-validation.md) | PoC 成功基準と検証メトリクス |
 
 ---
