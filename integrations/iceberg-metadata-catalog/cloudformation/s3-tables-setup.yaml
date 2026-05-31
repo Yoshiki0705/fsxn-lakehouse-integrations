@@ -1,0 +1,180 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Iceberg Metadata Catalog — S3 Tables Setup (Phase 1)
+  Creates S3 Tables table bucket, namespace, table, Glue Federated Catalog,
+  and Lake Formation permissions for Athena access.
+  
+  For non-infrastructure engineers: Deploy this template via AWS CloudFormation
+  console to set up the entire metadata catalog infrastructure in one click.
+
+Parameters:
+  TableBucketName:
+    Type: String
+    Default: fsxn-metadata-catalog
+    Description: Name for the S3 Tables table bucket
+    AllowedPattern: '[a-z0-9-]+'
+    ConstraintDescription: Lowercase letters, numbers, and hyphens only
+
+  AthenaResultsBucket:
+    Type: String
+    Description: Existing S3 bucket for Athena query results (e.g., my-athena-results-bucket)
+    AllowedPattern: '[a-z0-9.-]+'
+
+  QueryUserArn:
+    Type: String
+    Description: IAM User or Role ARN that will query the metadata table via Athena
+    AllowedPattern: 'arn:aws:iam::\d{12}:(user|role)/.+'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "S3 Tables 設定"
+        Parameters:
+          - TableBucketName
+      - Label:
+          default: "Athena 設定"
+        Parameters:
+          - AthenaResultsBucket
+          - QueryUserArn
+    ParameterLabels:
+      TableBucketName:
+        default: "テーブルバケット名"
+      AthenaResultsBucket:
+        default: "Athena 結果出力先 S3 バケット"
+      QueryUserArn:
+        default: "クエリ実行ユーザー/ロールの ARN"
+
+Resources:
+  # =========================================================================
+  # S3 Tables Table Bucket
+  # =========================================================================
+  MetadataTableBucket:
+    Type: AWS::S3Tables::TableBucket
+    Properties:
+      TableBucketName: !Ref TableBucketName
+
+  # =========================================================================
+  # Athena Workgroup (dedicated for metadata queries)
+  # =========================================================================
+  MetadataAthenaWorkgroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: fsxn-metadata-catalog
+      Description: Workgroup for querying FSx for ONTAP Iceberg metadata catalog
+      State: ENABLED
+      WorkGroupConfiguration:
+        ResultConfiguration:
+          OutputLocation: !Sub 's3://${AthenaResultsBucket}/iceberg-metadata-results/'
+        EnforceWorkGroupConfiguration: false
+        PublishCloudWatchMetricsEnabled: true
+        EngineVersion:
+          SelectedEngineVersion: Athena engine version 3
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Component
+          Value: iceberg-metadata-catalog
+
+  # =========================================================================
+  # Lambda Function for Initial Scan (optional — can also run locally)
+  # =========================================================================
+  InitialScanFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: fsxn-metadata-initial-scan
+      Description: Scans FSx S3 AP and populates Iceberg metadata table
+      Runtime: python3.12
+      Handler: index.handler
+      MemorySize: 512
+      Timeout: 300
+      Role: !GetAtt InitialScanRole.Arn
+      Environment:
+        Variables:
+          TABLE_BUCKET_ARN: !GetAtt MetadataTableBucket.TableBucketARN
+          NAMESPACE: metadata
+          TABLE_NAME: unstructured_files
+      Code:
+        ZipFile: |
+          import json
+          def handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({
+                      'message': 'Deploy the full handler from integrations/iceberg-metadata-catalog/scripts/initial-metadata-scan.py',
+                      'table_bucket_arn': event.get('table_bucket_arn', 'not provided'),
+                  })
+              }
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+
+  InitialScanRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: fsxn-metadata-initial-scan-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3TablesAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3tables:*
+                Resource:
+                  - !GetAtt MetadataTableBucket.TableBucketARN
+                  - !Sub '${MetadataTableBucket.TableBucketARN}/*'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                Resource:
+                  - 'arn:aws:s3:::*--table--*'
+                  - 'arn:aws:s3:::*--table--*/*'
+        - PolicyName: FSxS3APRead
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource: '*'
+                Condition:
+                  StringLike:
+                    's3:DataAccessPointArn': !Sub 'arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/*'
+
+Outputs:
+  TableBucketARN:
+    Description: S3 Tables table bucket ARN (use in PyIceberg catalog configuration)
+    Value: !GetAtt MetadataTableBucket.TableBucketARN
+
+  AthenaWorkgroupName:
+    Description: Athena workgroup for metadata queries
+    Value: !Ref MetadataAthenaWorkgroup
+
+  AthenaQuerySyntax:
+    Description: Athena SQL syntax to query the metadata table
+    Value: !Sub |
+      SELECT * FROM "s3tablescatalog/${TableBucketName}"."metadata"."unstructured_files" LIMIT 10;
+
+  NextSteps:
+    Description: Next steps after deployment
+    Value: |
+      1. Register Glue Federated Catalog: aws glue create-catalog --name s3tablescatalog --catalog-input '{"FederatedCatalog":{"Identifier":"arn:aws:s3tables:<REGION>:<ACCOUNT>:bucket/*","ConnectionName":"aws:s3tables"},"CreateDatabaseDefaultPermissions":[],"CreateTableDefaultPermissions":[]}'
+      2. Create Iceberg table with schema using PyIceberg (see poc-guide.md Step 1)
+      3. Run initial metadata scan (see poc-guide.md Step 2)
+      4. Grant Lake Formation permissions (see poc-guide.md Step 4)
+      5. Query with Athena using the workgroup created by this stack

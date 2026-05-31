@@ -10,9 +10,195 @@
 **コスト**: < $1 (S3 Tables ストレージ + Athena クエリ)  
 **前提条件**: FSx for ONTAP + S3 Access Point 設定済み
 
+### 実施方法の選択
+
+| 方法 | 対象者 | 所要時間 | 難易度 |
+|------|--------|---------|--------|
+| **方法 A: AWS コンソール (GUI)** | データアナリスト、非インフラエンジニア | 1時間 | ★☆☆ |
+| **方法 B: CloudFormation** | インフラ管理者、再現性重視 | 30分 | ★★☆ |
+| **方法 C: CLI + スクリプト** | 開発者、自動化志向 | 20分 | ★★★ |
+
 ---
 
-## Step 1: S3 Tables テーブルバケット作成 (2分)
+## 方法 A: AWS マネジメントコンソール (GUI) での実施
+
+### A-1: S3 Tables テーブルバケット作成
+
+1. AWS マネジメントコンソールにログイン
+2. **S3** サービスを開く
+3. 左メニューから **「テーブルバケット」** を選択
+4. **「テーブルバケットを作成」** をクリック
+5. 以下を入力:
+   - バケット名: `fsxn-metadata-catalog`
+   - リージョン: アジアパシフィック (東京) `ap-northeast-1`
+6. **「テーブルバケットを作成」** をクリック
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Amazon S3 > テーブルバケット > テーブルバケットを作成         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  テーブルバケット名: [fsxn-metadata-catalog          ]      │
+│                                                             │
+│  AWS リージョン:    [アジアパシフィック (東京) ▼     ]      │
+│                                                             │
+│                    [テーブルバケットを作成]                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### A-2: Athena でクエリ実行
+
+> **前提**: Step A-1 完了後、CLI で Namespace/Table 作成と初期スキャンを実行済み（方法 C の Step 1-2 を参照）。GUI のみでのテーブル作成は現時点で未サポート（PyIceberg が必要）。
+
+1. **Athena** サービスを開く
+2. 左メニューから **「クエリエディタ」** を選択
+3. ワークグループ: `primary` または `fsxn-metadata-catalog` を選択
+4. **データソース**: `AwsDataCatalog` を選択
+5. 以下のクエリを入力して **「実行」** をクリック:
+
+```sql
+SELECT file_name, file_type, file_size, enrichment_status
+FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
+LIMIT 10;
+```
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Amazon Athena > クエリエディタ                                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│ ワークグループ: [primary ▼]  データソース: [AwsDataCatalog ▼]           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1 │ SELECT file_name, file_type, file_size, enrichment_status          │
+│  2 │ FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"            │
+│  3 │      ."unstructured_files"                                         │
+│  4 │ LIMIT 10;                                                          │
+│                                                                         │
+│                              [▶ 実行]                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│ 結果 (10 行, 実行時間: 1.35 秒, スキャンデータ: 1.19 KB)               │
+├──────────────────────────────┬──────────────────────┬──────────┬────────┤
+│ file_name                    │ file_type            │file_size │status  │
+├──────────────────────────────┼──────────────────────┼──────────┼────────┤
+│ sensor_data_large.parquet    │ application/x-parquet│108002572 │pending │
+│ sensor_data.parquet          │ application/x-parquet│  250880  │pending │
+│ customers.csv                │ text/csv             │   58132  │pending │
+│ invoice_sample.png           │ image/png            │   11338  │pending │
+│ product_inspection.png       │ image/png            │    7180  │pending │
+└──────────────────────────────┴──────────────────────┴──────────┴────────┘
+```
+
+### A-3: Lake Formation 権限設定 (GUI)
+
+1. **Lake Formation** サービスを開く
+2. 左メニューから **「データ権限」** を選択
+3. **「付与」** をクリック
+4. 以下を設定:
+   - プリンシパル: IAM ユーザーまたはロールを選択
+   - カタログ: `s3tablescatalog/fsxn-metadata-catalog`
+   - データベース: `metadata`
+   - テーブル: `unstructured_files`
+   - テーブル権限: ✅ Select, ✅ Describe
+5. **「付与」** をクリック
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ AWS Lake Formation > データ権限 > 付与                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  プリンシパル                                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ IAM ユーザーとロール: [yoshiki0705 ▼]                           │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  LF タグまたはカタログリソース                                          │
+│  ○ LF タグを使用した名前付きデータカタログリソース                      │
+│  ● 名前付きデータカタログリソース                                       │
+│                                                                         │
+│  カタログ:    [s3tablescatalog/fsxn-metadata-catalog ▼]                 │
+│  データベース: [metadata ▼]                                             │
+│  テーブル:    [unstructured_files ▼]                                    │
+│                                                                         │
+│  テーブル権限                                                           │
+│  ☑ Select    ☑ Describe    ☐ Alter    ☐ Drop    ☐ Insert               │
+│                                                                         │
+│                              [付与]                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 方法 B: CloudFormation テンプレートでの実施
+
+### B-1: CloudFormation スタックのデプロイ
+
+1. **CloudFormation** サービスを開く
+2. **「スタックの作成」** > **「新しいリソースを使用」** をクリック
+3. テンプレートソース: **「テンプレートファイルのアップロード」** を選択
+4. ファイル: `cloudformation/s3-tables-setup.yaml` をアップロード
+5. パラメータを入力:
+
+| パラメータ | 値 | 説明 |
+|----------|---|------|
+| TableBucketName | `fsxn-metadata-catalog` | テーブルバケット名 |
+| AthenaResultsBucket | `fsxn-athena-verification-results-ap-northeast-1` | Athena 結果出力先 |
+| QueryUserArn | `arn:aws:iam::178625946981:user/yoshiki0705` | クエリ実行ユーザー |
+
+6. **「次へ」** → **「次へ」** → IAM リソース作成の確認にチェック → **「送信」**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ CloudFormation > スタックの作成                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  テンプレートの指定                                                      │
+│  ● テンプレートファイルのアップロード                                    │
+│    [s3-tables-setup.yaml]  [ファイルを選択]                             │
+│                                                                         │
+│  スタック名: [fsxn-metadata-catalog-stack]                              │
+│                                                                         │
+│  パラメータ:                                                            │
+│  ┌───────────────────────────────────────────────────────────────┐     │
+│  │ テーブルバケット名:        [fsxn-metadata-catalog        ]    │     │
+│  │ Athena 結果出力先バケット: [fsxn-athena-verification-... ]    │     │
+│  │ クエリ実行ユーザー ARN:   [arn:aws:iam::178625...        ]    │     │
+│  └───────────────────────────────────────────────────────────────┘     │
+│                                                                         │
+│  ☑ AWS CloudFormation によって IAM リソースが作成される場合があること    │
+│    を承認します。                                                        │
+│                                                                         │
+│                              [送信]                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### B-2: スタック作成後の手順
+
+CloudFormation スタック作成後、以下の追加手順が必要です:
+
+1. **Glue フェデレーテッドカタログ登録** (CLI — 現時点で GUI 未対応):
+```bash
+aws glue create-catalog --name "s3tablescatalog" --catalog-input '{
+  "FederatedCatalog": {
+    "Identifier": "arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/*",
+    "ConnectionName": "aws:s3tables"
+  },
+  "CreateDatabaseDefaultPermissions": [],
+  "CreateTableDefaultPermissions": []
+}' --region ap-northeast-1
+```
+
+2. **Iceberg テーブル作成** (PyIceberg — 方法 C の Step 1 を参照)
+
+3. **初期メタデータスキャン** (方法 C の Step 2 を参照)
+
+4. **Lake Formation 権限付与** (方法 A の A-3 を GUI で実施可能)
+
+---
+
+## 方法 C: CLI + スクリプトでの実施
+
+> 開発者・自動化志向の方向け。最も高速（約20分）。
 
 ```bash
 # テーブルバケット作成
