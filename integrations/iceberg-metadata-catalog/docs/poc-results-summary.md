@@ -24,25 +24,25 @@ FSx for ONTAP (actual files: PDF, images, CAD, video)
        │ S3 Access Point (read)
        ▼
 ┌─────────────────────────────────────────────┐
-│  AI Enrichment (Bedrock)                     │
-│  • Claude Vision: image classification       │
-│  • Titan Embeddings: 1024-dim vectors        │
-│  • Processing: ~6 sec/file, ~$0.01/file      │
+│  AI Enrichment (Bedrock)                    │
+│  • Claude Vision: image classification      │
+│  • Titan Embeddings: 1024-dim vectors       │
+│  • Processing: ~6 sec/file, ~$0.01/file     │
 └──────────────────┬──────────────────────────┘
                    ▼
 ┌─────────────────────────────────────────────┐
-│  S3 Tables (Iceberg Metadata)                │
-│  • File path, type, size, timestamps         │
-│  • AI classification + confidence score      │
-│  • Vector embedding (similarity search)      │
-│  • PII detection flag                        │
-│  • Auto-compaction, no maintenance needed    │
+│  S3 Tables (Iceberg Metadata)               │
+│  • File path, type, size, timestamps        │
+│  • AI classification + confidence score     │
+│  • Vector embedding (similarity search)     │
+│  • PII detection flag                       │
+│  • Auto-compaction, no maintenance needed   │
 └──────────────────┬──────────────────────────┘
                    ▼
 ┌─────────────────────────────────────────────┐
-│  Query Engines                               │
-│  • Athena: < 2 sec queries ✅ Verified       │
-│  • EMR Spark: Iceberg REST ✅ Expected       │
+│  Query Engines                              │
+│  • Athena: < 2 sec queries ✅ Verified      │
+│  • EMR Spark: Iceberg REST ✅ Expected      │
 │  • Databricks: Spark cluster ⚠️ Workaround  │
 │  • Snowflake: COPY INTO path ⚠️ Workaround  │
 └─────────────────────────────────────────────┘
@@ -91,7 +91,7 @@ FSx for ONTAP (actual files: PDF, images, CAD, video)
 | Option | When to Choose | Additional Cost |
 |--------|---------------|----------------|
 | **Deploy as-is (Phase 1-3)** | Metadata search + AI classification is sufficient | $0 additional |
-| **Add vector search (Phase 5)** | Need "find similar files" capability | +$350/month (OpenSearch) |
+| **Add vector search (Phase 5)** | Need "find similar files" capability | Scale-to-zero: $0 idle + ~$0.24/OCU-hour active (NextGen, May 2026 GA) |
 | **Add anonymization (Phase 6)** | Have PII/PHI data requiring clean room | +$22/month |
 | **Wait for platform updates** | Databricks/Snowflake direct access needed | $0 (monitor support cases) |
 
