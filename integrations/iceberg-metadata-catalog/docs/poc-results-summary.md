@@ -90,9 +90,9 @@ FSx for ONTAP (actual files: PDF, images, CAD, video)
 
 | Limitation | Impact | Workaround | Status |
 |-----------|--------|-----------|--------|
-| Databricks SQL Warehouse can't query S3 Tables directly | Must use Spark cluster or Athena | Spark cluster config or Athena | Feature request filed |
-| Snowflake can't read S3 Tables as External Iceberg | Must use COPY INTO | COPY INTO → Managed Iceberg | Case #01364260 filed |
-| Lake Formation column-level control not supported on federated catalog | Can't hide specific columns | Athena Views | AWS case filed |
+| Databricks SQL Warehouse can't query S3 Tables directly | Must use Spark cluster or Athena | Spark cluster config or Athena | Feature request submitted |
+| Snowflake can't read S3 Tables as External Iceberg | Must use COPY INTO | COPY INTO → Managed Iceberg | Feature request submitted |
+| Lake Formation column-level control not supported on S3 Tables federated catalog | Can't hide specific columns | Athena Views | AWS case filed |
 | Concurrent Lambda writes cause Iceberg commit conflicts | Some writes retry | reserved_concurrency=1 | Design recommendation |
 
 ## Next Steps (Customer Decision Points)
