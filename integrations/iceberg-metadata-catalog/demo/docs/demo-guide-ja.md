@@ -141,6 +141,10 @@ aws glue delete-catalog --name s3tablescatalog --region ap-northeast-1
 | Bedrock `ThrottlingException` | --max-files を減らすか 30秒待機 |
 | Bedrock `AccessDeniedException` | モデルアクセスを有効化: [Bedrock コンソール](https://console.aws.amazon.com/bedrock/home#/modelaccess) → Claude 3 Haiku + Titan Embeddings V2 のアクセスをリクエスト |
 | `ModuleNotFoundError: pyiceberg` | `pip install 'pyiceberg[s3tables]'` |
+| Lambda ログが見つからない | CloudWatch Logs → `/aws/lambda/fsxn-metadata-sync` を確認 |
+| パイプライン全体の状態確認 | `aws cloudwatch get-metric-data` で DLQ + Lambda エラー率を一括確認（アーキテクチャドキュメント参照） |
+
+> **本番運用注記**: デモでは可読性のためにテキストログを使用しています。本番 Lambda では JSON 構造化ログ（`aws_lambda_powertools` または `structlog`）を使用し、CloudWatch Logs Insights での効率的なクエリを実現してください。
 
 ## デモ後フォローアップチェックリスト
 
