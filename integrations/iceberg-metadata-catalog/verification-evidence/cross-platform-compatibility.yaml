@@ -1,0 +1,67 @@
+# =============================================================================
+# Cross-Platform Compatibility — Tested Paths
+# =============================================================================
+# Purpose: Document exactly what was tested, what worked, and what didn't
+# This separates "platform capability" from "our tested path"
+# =============================================================================
+
+tested_date: "2026-05-31"
+region: "ap-northeast-1"
+
+platforms:
+  aws:
+    tested_paths:
+      - name: "Athena via S3 Tables federated catalog (s3tablescatalog)"
+        result: "verified"
+        notes: "Sub-2-second queries, Lake Formation table-level grants work"
+      - name: "PyIceberg via S3 Tables REST endpoint"
+        result: "verified"
+        notes: "Read/write/append all work. Used for initial scan and enrichment"
+      - name: "Lake Formation table-level SELECT/DESCRIBE"
+        result: "verified"
+        notes: "Grant/revoke works correctly"
+      - name: "Lake Formation column-level (ColumnWildcard + ExcludedColumnNames)"
+        result: "observed_limitation"
+        error: "InvalidInputException: Permissions modification is invalid"
+        notes: "AWS docs describe column-level support for S3 Tables. Failed on our specific federated catalog path. Not a confirmed general limitation."
+      - name: "AWS Glue Iceberg REST endpoint (glue.<region>.amazonaws.com/iceberg)"
+        result: "not_tested"
+        notes: "Recommended for production. Uses Lake Formation for governance."
+
+  databricks:
+    tested_paths:
+      - name: "SQL Warehouse CREATE CONNECTION TYPE iceberg_rest to S3 Tables REST"
+        result: "CONNECTION_TYPE_NOT_SUPPORTED"
+        status: "observed_limitation"
+        notes: "Does not mean Databricks lacks Iceberg REST support — UC provides its own Iceberg REST endpoint"
+      - name: "Spark cluster + Iceberg REST catalog + SigV4 to S3 Tables"
+        result: "not_tested"
+        status: "recommended_next_validation"
+        notes: "Config provided in blog Part 3. Requires Databricks cluster with Iceberg JARs"
+      - name: "Unity Catalog Foreign Iceberg for S3 Tables"
+        result: "not_tested"
+        status: "track_support"
+        notes: "UC supports Foreign Iceberg; verify compatibility with S3 Tables storage path"
+      - name: "AWS Glue Catalog Federation with Databricks UC"
+        result: "not_tested"
+        status: "strategic_alternative"
+        notes: "AWS docs describe Glue → UC federation for Iceberg tables"
+
+  snowflake:
+    tested_paths:
+      - name: "External Iceberg Table with S3 Tables REST endpoint as catalog"
+        result: "not_supported_catalog_type"
+        status: "observed_limitation"
+        notes: "S3 Tables REST is not in Snowflake's supported catalog type list"
+      - name: "Snowflake Open Catalog (Polaris) as Iceberg catalog"
+        result: "not_tested"
+        status: "strategic_alternative"
+        notes: "Polaris is GA. Could serve as catalog for new metadata tables"
+      - name: "COPY INTO from S3 export of metadata"
+        result: "available"
+        status: "workaround"
+        notes: "Works but negates zero-copy for metadata. Raw files stay on FSx"
+      - name: "Metadata sync to Snowflake for Cortex Search / Intelligence"
+        result: "not_tested"
+        status: "recommended_activation_pattern"
+        notes: "Sync redacted metadata only; raw files remain on FSx"
