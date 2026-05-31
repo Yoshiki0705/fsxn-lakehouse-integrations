@@ -71,6 +71,15 @@ info "S3 AP Alias:  ${AP_ALIAS}"
 info "Stack:        ${STACK_NAME}"
 echo ""
 
+# Prerequisite checks
+log "Checking prerequisites..."
+python3 --version >/dev/null 2>&1 || error "Python 3 not found. Install Python 3.12+"
+python3 -c "import boto3, pyarrow, pyiceberg" 2>/dev/null || error "Missing Python packages. Run: pip install -r requirements.txt"
+aws sts get-caller-identity >/dev/null 2>&1 || error "AWS credentials not configured"
+aws s3 ls "s3://${AP_ALIAS}/" --region "${REGION}" >/dev/null 2>&1 || error "Cannot access S3 AP: ${AP_ALIAS}"
+log "✅ All prerequisites met"
+echo ""
+
 # Record demo start time
 DEMO_START=$(date +%s)
 

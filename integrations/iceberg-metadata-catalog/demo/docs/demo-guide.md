@@ -15,7 +15,7 @@ This guide enables you to run the complete Iceberg Metadata Catalog demo in ~15 
 | AWS CLI v2 | Configured with appropriate permissions |
 | Python 3.12+ | With packages: `boto3 pyarrow 'pyiceberg[s3tables]' opensearch-py requests-aws4auth` |
 | FSx for ONTAP | With S3 Access Point configured (alias ending in `-ext-s3alias`) |
-| Bedrock access | Claude 3 Haiku + Titan Embeddings V2 enabled in target region |
+| **Bedrock access** | **Claude 3 Haiku + Titan Embeddings V2 must be enabled in target region** ([Enable model access](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html)) |
 
 ## Quick Start (One Command)
 
@@ -139,6 +139,7 @@ aws glue delete-catalog --name s3tablescatalog --region ap-northeast-1
 | `COLUMN_NOT_FOUND` in Athena | Grant Lake Formation SELECT permission |
 | OpenSearch search returns 0 hits | Wait 30s (scale-to-zero cold start) then retry |
 | Bedrock `ThrottlingException` | Reduce --max-files or wait 30s |
+| Bedrock `AccessDeniedException` | Enable model access: [Bedrock Console](https://console.aws.amazon.com/bedrock/home#/modelaccess) → Request access for Claude 3 Haiku + Titan Embeddings V2 |
 | `ModuleNotFoundError: pyiceberg` | `pip install 'pyiceberg[s3tables]'` |
 
 ## Post-Demo Follow-Up Checklist
