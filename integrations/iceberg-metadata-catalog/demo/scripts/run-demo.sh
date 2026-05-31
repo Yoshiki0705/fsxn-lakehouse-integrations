@@ -72,10 +72,20 @@ info "Stack:        ${STACK_NAME}"
 echo ""
 
 # =========================================================================
-# Step 1: Deploy Infrastructure
+# Step 1: Before/After Comparison (Impact Demo)
+# =========================================================================
+header "Step 1/8: Before/After — File Discovery Time"
+
+python3 "${SCRIPT_DIR}/demo-before-after.py" \
+  --ap-alias "${AP_ALIAS}" \
+  --region "${REGION}" \
+  --search-term "invoice"
+
+# =========================================================================
+# Step 2: Deploy Infrastructure
 # =========================================================================
 if [[ "$SKIP_DEPLOY" == "false" ]]; then
-  header "Step 1/6: Deploy Infrastructure (CloudFormation)"
+  header "Step 2/8: Deploy Infrastructure (CloudFormation)"
 
   aws cloudformation deploy \
     --template-file "${SCRIPT_DIR}/../cloudformation/demo-stack.yaml" \
@@ -95,9 +105,9 @@ else
 fi
 
 # =========================================================================
-# Step 2: Initial Metadata Scan
+# Step 3: Initial Metadata Scan
 # =========================================================================
-header "Step 2/6: Scan Files on FSx for ONTAP"
+header "Step 3/8: Scan Files on FSx for ONTAP"
 
 log "Scanning files via S3 Access Point..."
 python3 "${PROJECT_DIR}/scripts/initial-metadata-scan.py" \
@@ -108,9 +118,9 @@ python3 "${PROJECT_DIR}/scripts/initial-metadata-scan.py" \
 log "✅ Metadata scan complete"
 
 # =========================================================================
-# Step 3: AI Enrichment
+# Step 4: AI Enrichment
 # =========================================================================
-header "Step 3/6: AI Enrichment (Bedrock Vision + Embeddings)"
+header "Step 4/8: AI Enrichment (Bedrock Vision + Embeddings)"
 
 python3 "${SCRIPT_DIR}/demo-enrich.py" \
   --table-bucket-arn "${TABLE_BUCKET_ARN}" \
@@ -121,9 +131,9 @@ python3 "${SCRIPT_DIR}/demo-enrich.py" \
 log "✅ AI enrichment complete"
 
 # =========================================================================
-# Step 4: Athena Query
+# Step 5: Athena Query + Time Travel
 # =========================================================================
-header "Step 4/6: Query Metadata with Athena"
+header "Step 5/8: Query Metadata with Athena + Time Travel"
 
 QUERY_SQL="SELECT file_name, file_type, classification, confidence_score, enrichment_status FROM \"s3tablescatalog/fsxn-metadata-catalog\".\"metadata\".\"unstructured_files\" WHERE is_deleted = false ORDER BY file_size DESC LIMIT 10"
 
@@ -149,23 +159,40 @@ else
   warn "Query status: ${STATUS}"
 fi
 
+echo ""
+log "Iceberg Time Travel (snapshot history):"
+python3 "${SCRIPT_DIR}/demo-time-travel.py" --region "${REGION}"
+
 # =========================================================================
-# Step 5: Vector Similarity Search
+# Step 6: Vector Similarity Search
 # =========================================================================
-header "Step 5/6: Vector Similarity Search (OpenSearch)"
+header "Step 6/8: Vector Similarity Search (OpenSearch)"
 
 python3 "${SCRIPT_DIR}/demo-search.py" \
   --query "find invoice or payment documents" \
   --region "${REGION}"
 
 # =========================================================================
-# Step 6: PII Detection + Anonymization
+# Step 7: PII Detection + Anonymization + Access Control
 # =========================================================================
-header "Step 6/6: PII Detection & Anonymization"
+header "Step 7/8: PII Detection, Anonymization & Access Control"
 
 python3 "${SCRIPT_DIR}/demo-anonymize.py" \
   --ap-alias "${AP_ALIAS}" \
   --region "${REGION}"
+
+echo ""
+python3 "${SCRIPT_DIR}/demo-access-control.py" \
+  --region "${REGION}"
+
+# =========================================================================
+# Step 8: Cost & ROI Summary
+# =========================================================================
+header "Step 8/8: Cost & ROI Analysis"
+
+python3 "${SCRIPT_DIR}/demo-cost-calculator.py" \
+  --files-processed 5 \
+  --queries-run 10
 
 # =========================================================================
 # Summary
@@ -173,14 +200,18 @@ python3 "${SCRIPT_DIR}/demo-anonymize.py" \
 header "Demo Complete ✅"
 
 echo -e "${BOLD}Demonstrated capabilities:${NC}"
-echo "  1. ✅ Metadata scan: FSx S3 AP → S3 Tables (Iceberg)"
-echo "  2. ✅ AI classification: Bedrock Vision (image → category)"
-echo "  3. ✅ Vector embeddings: Titan Embeddings V2 (1024-dim)"
-echo "  4. ✅ SQL queries: Athena < 2 seconds"
-echo "  5. ✅ Similarity search: OpenSearch kNN"
-echo "  6. ✅ PII anonymization: Comprehend/Bedrock + redaction"
+echo "  1. ✅ Before/After: File search time comparison (ListObjectsV2 vs Athena)"
+echo "  2. ✅ Metadata scan: FSx S3 AP → S3 Tables (Iceberg)"
+echo "  3. ✅ AI classification: Bedrock Vision (image → category)"
+echo "  4. ✅ Vector embeddings: Titan Embeddings V2 (1024-dim)"
+echo "  5. ✅ SQL queries: Athena < 2 seconds + Iceberg Time Travel"
+echo "  6. ✅ Similarity search: OpenSearch kNN"
+echo "  7. ✅ PII anonymization: Comprehend/Bedrock + redaction"
+echo "  8. ✅ Access control: Lake Formation grant/revoke + CloudTrail audit"
+echo "  9. ✅ Cost & ROI: Demo cost + projected savings"
 echo ""
 echo -e "${BOLD}Cost:${NC}"
+echo "  • This demo: < \$1"
 echo "  • Active: ~\$0.01/file (AI processing)"
 echo "  • Idle: \$0 (all resources scale-to-zero)"
 echo ""
