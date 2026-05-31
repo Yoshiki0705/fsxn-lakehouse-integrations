@@ -256,6 +256,14 @@ test_D1_databricks_external_catalog:
     Databricks needs an IAM role with s3tables:* permissions configured
     as a Storage Credential or Instance Profile. This is a configuration
     task, not a technical blocker.
+    
+    UPDATE: After testing, Databricks SQL Warehouse (Serverless) does NOT support:
+    - CREATE CONNECTION TYPE iceberg_rest (not in supported types list)
+    - CREATE CONNECTION TYPE GLUE for AWS Glue Catalog federation
+    
+    The only viable path is Spark cluster with manual Iceberg REST catalog config.
+    IAM policies have been added to both databricks-cross-account-role and
+    fsxn-snowflake-verification-role for s3tables:* and s3:GetObject on table buckets.
   conclusion: |
     Databricks workspace is fully operational and ready for External Catalog
     configuration. The Serverless Starter Warehouse can execute SQL immediately.
