@@ -409,9 +409,11 @@ File → PII Detection (Comprehend / Bedrock)
 | Approach | Monthly Cost (10TB) | Metadata Latency | Governance |
 |----------|-------------------|-----------------|------------|
 | **This architecture (FPolicy + S3 Tables)** | $175-575 | ~5 seconds | Lake Formation / Horizon |
-| S3 full copy + Glue Crawler | $230 (S3) + $50 (Glue) | Hours | Lake Formation |
-| S3 full copy + S3 Metadata | $230 (S3) + $15 (Metadata) | Minutes | Lake Formation |
+| S3 full copy + Glue Crawler | $230-256 (S3)* + $50 (Glue) | Hours | Lake Formation |
+| S3 full copy + S3 Metadata | $230-256 (S3)* + $15 (Metadata) | Minutes | Lake Formation |
 | Custom DynamoDB catalog | $50-200 | Seconds | Custom IAM |
+
+> *S3 Standard storage pricing: us-east-1 $0.023/GB ($230/10TB), ap-northeast-1 $0.025/GB ($256/10TB). Verified 2026-06-01.
 
 > **Cost evaluation note**: Above costs are direct costs only. The true ROI of this architecture includes "data discovery time reduction," "sharing lead time elimination," and "AI automation labor savings." If 10 data scientists spend 5 hours/week on data exploration, annual labor savings of $150K+ are achievable.
 

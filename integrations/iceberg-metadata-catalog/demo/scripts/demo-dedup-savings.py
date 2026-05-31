@@ -103,7 +103,7 @@ def main():
     print("  ├──────────────────────────────┬─────────────────────────────┤")
     print("  │  Approach                     │  Monthly Storage Cost       │")
     print("  ├──────────────────────────────┼─────────────────────────────┤")
-    print("  │  S3 Standard (no dedup)       │  $230/month                 │")
+    print("  │  S3 Standard (no dedup)       │  ~$230-256/month*           │")
     print("  │  FSx for ONTAP (50% dedup)    │  $225/month (5TB effective) │")
     print("  │  FSx + FabricPool (80% cold)  │  $135/month                 │")
     print("  │  This solution (no S3 copy)   │  $0 additional S3 cost      │")

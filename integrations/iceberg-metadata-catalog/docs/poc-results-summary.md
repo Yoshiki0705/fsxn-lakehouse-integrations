@@ -12,7 +12,7 @@ A **metadata catalog for unstructured data** that makes files on FSx for ONTAP i
 |--------|--------|-------|-------------|
 | **File discovery time** | Minutes-hours (manual ListObjectsV2) | < 2 seconds (Athena SQL) | 100x+ at scale |
 | **AI classification** | Manual (human reviews each file) | Automatic (6 sec/file, $0.01/file) | Fully automated |
-| **Storage cost** | S3 full copy required ($230/month per 10TB) | No S3 copy needed ($5-15/month metadata only) | 95% reduction |
+| **Storage cost** | S3 full copy required (~$230-256/month per 10TB)* | No S3 copy needed ($5-15/month metadata only) | 95% reduction |
 | **Governance** | None on unstructured data | Lake Formation LF-Tags on all metadata | 0% → 100% coverage |
 | **Cross-platform access** | Platform-specific silos | Single Iceberg table, multiple engines | Unified catalog |
 
@@ -78,9 +78,11 @@ FSx for ONTAP (actual files: PDF, images, CAD, video)
 | Comprehend (PII detection) | ~$5 (included in AI processing) |
 | **Total** | **~$170-570** (active), **~$0** (idle) |
 | FSx for ONTAP (existing, no change) | — |
-| S3 copy (eliminated) | **-$230 saved** |
+| S3 copy (eliminated) | **-$230-256 saved** |
 
 **Net effect**: AI-powered metadata catalog with vector search and PII anonymization for less than the cost of the S3 copy it eliminates. Scale-to-zero means PoC/dev environments cost $0 when idle.
+
+> *S3 Standard storage pricing: us-east-1 $0.023/GB ($230/10TB), ap-northeast-1 $0.025/GB ($256/10TB). Verified 2026-06-01.
 
 **PoC deployment time**: All 6 phases verified in a single day.
 

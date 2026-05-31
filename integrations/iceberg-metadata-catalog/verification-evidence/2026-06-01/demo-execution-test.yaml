@@ -1,0 +1,152 @@
+# =============================================================================
+# Demo Execution Test Results
+# =============================================================================
+# Date: 2026-06-01
+# Purpose: End-to-end demo script verification + pricing/escaping validation
+# =============================================================================
+
+test_execution:
+  date: "2026-06-01"
+  region: "ap-northeast-1"
+  account_id: "178625946981"
+  fsxn_s3_ap_alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+  table_bucket_arn: "arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog"
+  demo_mode: "--skip-deploy (infrastructure pre-deployed)"
+
+# =============================================================================
+# Demo Script Full Execution
+# =============================================================================
+demo_full_run:
+  status: "PASS"
+  duration_seconds: 47
+  steps_completed: 8/8
+  exit_code: 0
+  
+  step_results:
+    step_1_before_after:
+      status: "PASS"
+      listobjectsv2_time_ms: 892
+      athena_query_time_ms: 2963
+      objects_scanned: 40
+      matches_found: 1
+      note: |
+        At 40 files, ListObjectsV2 is faster (892ms vs 2963ms).
+        Architecture value is at scale: 100K files → ListObjectsV2 ~1543s vs Athena ~1.9s.
+        Athena time includes cold start overhead.
+    
+    step_2_deploy:
+      status: "SKIPPED (--skip-deploy)"
+    
+    step_3_metadata_scan:
+      status: "PASS"
+      files_scanned: 40
+      records_written: 40
+      duration_seconds: 3
+    
+    step_4_ai_enrichment:
+      status: "PASS"
+      files_enriched: 5
+      enrichment_type: "metadata-only (no images in pending queue)"
+      duration_seconds: 6
+    
+    step_5_athena_query:
+      status: "PASS"
+      query_succeeded: true
+      time_travel_snapshots: 10
+      note: "$history table escaping verified — Python script handles correctly"
+    
+    step_6_vector_search:
+      status: "PASS"
+      results_found: 2
+      top_score: 0.6749
+      top_result: "invoice_sample.png (classification: Invoice)"
+      opensearch_endpoint: "q5st75we2um1mhb4hj27.ap-northeast-1.aoss.amazonaws.com"
+    
+    step_7_pii_anonymization:
+      status: "PASS"
+      engine: "Comprehend (English)"
+      pii_entities_detected: 7
+      pii_types: ["CREDIT_DEBIT_NUMBER", "ADDRESS", "EMAIL", "SSN", "NAME", "PHONE", "DATE_TIME"]
+      regex_redactions: 5
+      access_control:
+        authorized_query: "SUCCEEDED (3 rows)"
+        revoked_query: "BLOCKED (COLUMN_NOT_FOUND — access denied)"
+        restored_query: "SUCCEEDED"
+        cloudtrail_events: 5
+    
+    step_8_cost_roi:
+      status: "PASS"
+      demo_cost: "$0.0746"
+      idle_cost: "$0.00"
+      projected_monthly_cost: "$114"
+      s3_copy_cost_eliminated: "$250/month (ap-northeast-1)"
+
+# =============================================================================
+# Verification 1: Athena $history Table Escaping
+# =============================================================================
+verification_history_escaping:
+  status: "PASS"
+  description: "Verify $history table reference is not expanded by bash"
+  finding: |
+    The $history table reference is used ONLY in demo-time-travel.py (Python),
+    not directly in any shell script. Python triple-quoted strings do not expand
+    $ as variables. The run-demo.sh script delegates to Python for time travel queries.
+  evidence:
+    - "grep -r '$history' *.sh → No matches (not used in shell scripts)"
+    - "demo-time-travel.py uses Python string: '...\"unstructured_files$history\"...'"
+    - "Athena query executed successfully, returning 10 snapshots"
+  conclusion: "No escaping issue. Design correctly delegates $history queries to Python."
+
+# =============================================================================
+# Verification 2: FabricPool / S3 Standard Cost Values
+# =============================================================================
+verification_s3_pricing:
+  status: "UPDATED"
+  description: "Verify $230/TB/month S3 Standard cost claim"
+  finding: |
+    AWS Pricing API (verified 2026-06-01):
+    - us-east-1: $0.023/GB = $23/TB = $230/10TB ✓
+    - ap-northeast-1: $0.025/GB = $25/TB = $250/10TB (higher than documented)
+    
+    Previous documentation used $230/10TB (us-east-1 pricing).
+    For ap-northeast-1 (our test region), correct value is $250-256/10TB.
+  action_taken:
+    - "Updated demo-cost-calculator.py to use region-aware pricing ($25/TB for AP regions)"
+    - "Updated poc-results-summary.md (EN/JA) to show ~$230-256 range with footnote"
+    - "Updated iceberg-metadata-catalog.md (EN/JA) cost comparison table with footnote"
+    - "Updated demo-dedup-savings.py to show ~$230-256 range"
+  verified_pricing:
+    s3_standard_us_east_1: "$0.023/GB (first 50TB)"
+    s3_standard_ap_northeast_1: "$0.025/GB (first 50TB)"
+    effective_date: "2026-05-01"
+    source: "AWS Price List API (publicationDate: 2026-05-28)"
+
+# =============================================================================
+# Bug Fix: SIGPIPE in run-demo.sh
+# =============================================================================
+bugfix_sigpipe:
+  status: "FIXED"
+  description: "run-demo.sh exited with code 255 due to SIGPIPE from 'head -30' pipe"
+  root_cause: |
+    `set -euo pipefail` causes script to exit when `aws athena get-query-results | head -30`
+    triggers SIGPIPE (head closes pipe after 30 lines, aws CLI gets SIGPIPE).
+  fix: "Added '|| true' after the piped command to suppress SIGPIPE exit"
+  verification: "Full demo now completes all 8 steps with exit code 0"
+
+# =============================================================================
+# Summary
+# =============================================================================
+summary:
+  demo_execution: "PASS — all 8 steps complete in 47 seconds"
+  history_escaping: "PASS — no issue (Python handles $history correctly)"
+  s3_pricing: "UPDATED — docs now show regional pricing range with footnote"
+  sigpipe_fix: "FIXED — demo script no longer exits early"
+  
+  files_modified:
+    - "integrations/iceberg-metadata-catalog/demo/scripts/run-demo.sh (SIGPIPE fix)"
+    - "integrations/iceberg-metadata-catalog/demo/scripts/demo-cost-calculator.py (region-aware pricing)"
+    - "integrations/iceberg-metadata-catalog/demo/scripts/demo-dedup-savings.py (pricing range)"
+    - "integrations/iceberg-metadata-catalog/docs/poc-results-summary.md (pricing footnote)"
+    - "integrations/iceberg-metadata-catalog/docs/poc-results-summary-ja.md (pricing footnote)"
+    - "docs/en/iceberg-metadata-catalog.md (pricing footnote)"
+    - "docs/ja/iceberg-metadata-catalog.md (pricing footnote)"
