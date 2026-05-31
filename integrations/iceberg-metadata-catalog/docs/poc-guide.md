@@ -10,9 +10,172 @@ This guide walks through a complete PoC deployment of the Iceberg Metadata Catal
 **Cost**: < $1 (S3 Tables storage + Athena queries)  
 **Prerequisites**: FSx for ONTAP with S3 Access Point configured
 
+### Choose Your Method
+
+| Method | Audience | Time | Difficulty |
+|--------|----------|------|-----------|
+| **Method A: AWS Console (GUI)** | Data analysts, non-infrastructure engineers | 1 hour | ★☆☆ |
+| **Method B: CloudFormation** | Infrastructure admins, reproducibility-focused | 30 min | ★★☆ |
+| **Method C: CLI + Scripts** | Developers, automation-oriented | 20 min | ★★★ |
+
 ---
 
-## Step 1: Create S3 Tables Table Bucket (2 minutes)
+## Method A: AWS Management Console (GUI)
+
+### A-1: Create S3 Tables Table Bucket
+
+1. Sign in to the AWS Management Console
+2. Open the **S3** service
+3. In the left menu, select **"Table buckets"**
+4. Click **"Create table bucket"**
+5. Enter:
+   - Bucket name: `fsxn-metadata-catalog`
+   - Region: Asia Pacific (Tokyo) `ap-northeast-1`
+6. Click **"Create table bucket"**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Amazon S3 > Table buckets > Create table bucket              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Table bucket name: [fsxn-metadata-catalog          ]       │
+│                                                             │
+│  AWS Region:        [Asia Pacific (Tokyo) ▼         ]       │
+│                                                             │
+│                    [Create table bucket]                     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### A-2: Query with Athena
+
+> **Prerequisite**: After Step A-1, run Namespace/Table creation and initial scan via CLI (see Method C Steps 1-2). GUI-only table creation is not currently supported (PyIceberg required).
+
+1. Open the **Athena** service
+2. In the left menu, select **"Query editor"**
+3. Workgroup: Select `primary` or `fsxn-metadata-catalog`
+4. **Data source**: Select `AwsDataCatalog`
+5. Enter the following query and click **"Run"**:
+
+```sql
+SELECT file_name, file_type, file_size, enrichment_status
+FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"."unstructured_files"
+LIMIT 10;
+```
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Amazon Athena > Query editor                                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Workgroup: [primary ▼]  Data source: [AwsDataCatalog ▼]                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1 │ SELECT file_name, file_type, file_size, enrichment_status          │
+│  2 │ FROM "s3tablescatalog/fsxn-metadata-catalog"."metadata"            │
+│  3 │      ."unstructured_files"                                         │
+│  4 │ LIMIT 10;                                                          │
+│                                                                         │
+│                              [▶ Run]                                    │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Results (10 rows, Run time: 1.35 sec, Data scanned: 1.19 KB)           │
+├──────────────────────────────┬──────────────────────┬──────────┬────────┤
+│ file_name                    │ file_type            │file_size │status  │
+├──────────────────────────────┼──────────────────────┼──────────┼────────┤
+│ sensor_data_large.parquet    │ application/x-parquet│108002572 │pending │
+│ sensor_data.parquet          │ application/x-parquet│  250880  │pending │
+│ customers.csv                │ text/csv             │   58132  │pending │
+│ invoice_sample.png           │ image/png            │   11338  │pending │
+│ product_inspection.png       │ image/png            │    7180  │pending │
+└──────────────────────────────┴──────────────────────┴──────────┴────────┘
+```
+
+### A-3: Lake Formation Permission Grant (GUI)
+
+1. Open the **Lake Formation** service
+2. In the left menu, select **"Data permissions"**
+3. Click **"Grant"**
+4. Configure:
+   - Principal: Select your IAM user or role
+   - Catalog: `s3tablescatalog/fsxn-metadata-catalog`
+   - Database: `metadata`
+   - Table: `unstructured_files`
+   - Table permissions: ✅ Select, ✅ Describe
+5. Click **"Grant"**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ AWS Lake Formation > Data permissions > Grant                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  Principals                                                             │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ IAM users and roles: [your-user-name ▼]                         │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  LF-Tags or catalog resources                                           │
+│  ○ Resources matched by LF-Tags                                         │
+│  ● Named Data Catalog resources                                         │
+│                                                                         │
+│  Catalog:  [s3tablescatalog/fsxn-metadata-catalog ▼]                    │
+│  Database: [metadata ▼]                                                 │
+│  Table:    [unstructured_files ▼]                                       │
+│                                                                         │
+│  Table permissions                                                      │
+│  ☑ Select    ☑ Describe    ☐ Alter    ☐ Drop    ☐ Insert                │
+│                                                                         │
+│                              [Grant]                                     │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Method B: CloudFormation Template
+
+### B-1: Deploy CloudFormation Stack
+
+1. Open the **CloudFormation** service
+2. Click **"Create stack"** > **"With new resources"**
+3. Template source: **"Upload a template file"**
+4. File: Upload `cloudformation/s3-tables-setup.yaml`
+5. Enter parameters:
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| TableBucketName | `fsxn-metadata-catalog` | Table bucket name |
+| AthenaResultsBucket | `your-athena-results-bucket` | Athena output bucket |
+| QueryUserArn | `arn:aws:iam::<ACCOUNT>:user/<USER>` | Query user ARN |
+
+6. **"Next"** → **"Next"** → Check IAM acknowledgment → **"Submit"**
+
+### B-2: Post-Deployment Steps
+
+After CloudFormation stack creation, these additional steps are required:
+
+1. **Register Glue Federated Catalog** (CLI — GUI not yet supported):
+```bash
+aws glue create-catalog --name "s3tablescatalog" --catalog-input '{
+  "FederatedCatalog": {
+    "Identifier": "arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/*",
+    "ConnectionName": "aws:s3tables"
+  },
+  "CreateDatabaseDefaultPermissions": [],
+  "CreateTableDefaultPermissions": []
+}' --region ap-northeast-1
+```
+
+2. **Create Iceberg table with schema** (PyIceberg — see Method C Step 1)
+
+3. **Run initial metadata scan** (see Method C Step 2)
+
+4. **Grant Lake Formation permissions** (can use GUI — see Method A Step A-3)
+
+---
+
+## Method C: CLI + Scripts
+
+> For developers and automation-oriented users. Fastest path (~20 minutes).
+
+### Step 1: Create S3 Tables Table Bucket (2 minutes)
 
 ```bash
 # Create the table bucket
