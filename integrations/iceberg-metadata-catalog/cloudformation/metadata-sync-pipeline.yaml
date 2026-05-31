@@ -1,0 +1,277 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Iceberg Metadata Catalog — FPolicy → SQS → Lambda Sync Pipeline
+  Processes FPolicy file events and writes metadata to S3 Tables Iceberg table.
+
+Parameters:
+  TableBucketArn:
+    Type: String
+    Description: S3 Tables table bucket ARN
+    AllowedPattern: 'arn:aws:s3tables:[a-z0-9-]+:\d{12}:bucket/.+'
+
+  AccessPointArn:
+    Type: String
+    Description: FSx for ONTAP S3 Access Point ARN (for Lambda read permissions)
+    AllowedPattern: 'arn:aws:s3:[a-z0-9-]+:\d{12}:accesspoint/.+'
+
+  Namespace:
+    Type: String
+    Default: metadata
+    Description: Iceberg namespace name
+
+  TableName:
+    Type: String
+    Default: unstructured_files
+    Description: Iceberg table name
+
+  LambdaMemorySize:
+    Type: Number
+    Default: 256
+    MinValue: 128
+    MaxValue: 1024
+    Description: Lambda memory size in MB
+
+  LambdaTimeout:
+    Type: Number
+    Default: 60
+    MinValue: 30
+    MaxValue: 300
+    Description: Lambda timeout in seconds
+
+  BatchSize:
+    Type: Number
+    Default: 10
+    MinValue: 1
+    MaxValue: 100
+    Description: SQS batch size for Lambda trigger
+
+  MaxBatchingWindow:
+    Type: Number
+    Default: 30
+    MinValue: 0
+    MaxValue: 300
+    Description: Maximum batching window in seconds
+
+Resources:
+  # =========================================================================
+  # SQS Queue (receives FPolicy events from ECS Fargate FPolicy Server)
+  # =========================================================================
+  MetadataSyncQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: fsxn-metadata-sync
+      VisibilityTimeout: 300  # 5x Lambda timeout
+      MessageRetentionPeriod: 1209600  # 14 days
+      ReceiveMessageWaitTimeSeconds: 20  # Long polling
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt MetadataSyncDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Component
+          Value: iceberg-metadata-catalog
+
+  MetadataSyncDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: fsxn-metadata-sync-dlq
+      MessageRetentionPeriod: 1209600  # 14 days
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Component
+          Value: iceberg-metadata-catalog-dlq
+
+  # =========================================================================
+  # Lambda Function (metadata sync handler)
+  # =========================================================================
+  MetadataSyncFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: fsxn-metadata-sync
+      Runtime: python3.12
+      Handler: handler.handler
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Role: !GetAtt MetadataSyncRole.Arn
+      Environment:
+        Variables:
+          TABLE_BUCKET_ARN: !Ref TableBucketArn
+          NAMESPACE: !Ref Namespace
+          TABLE_NAME: !Ref TableName
+          LOG_LEVEL: INFO
+      Layers:
+        - !Ref PyIcebergLayer
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Component
+          Value: iceberg-metadata-catalog
+
+  # SQS Event Source Mapping
+  MetadataSyncEventSource:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt MetadataSyncQueue.Arn
+      FunctionName: !Ref MetadataSyncFunction
+      BatchSize: !Ref BatchSize
+      MaximumBatchingWindowInSeconds: !Ref MaxBatchingWindow
+      FunctionResponseTypes:
+        - ReportBatchItemFailures  # Partial batch failure support
+      Enabled: true
+
+  # Lambda Layer (PyIceberg + PyArrow)
+  PyIcebergLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: pyiceberg-s3tables
+      Description: PyIceberg with S3 Tables support + PyArrow
+      CompatibleRuntimes:
+        - python3.12
+      # Note: Layer must be built separately with:
+      #   pip install -t python/ pyiceberg[s3tables] pyarrow
+      #   zip -r pyiceberg-layer.zip python/
+      Content:
+        S3Bucket: !Sub '${AWS::AccountId}-lambda-layers-${AWS::Region}'
+        S3Key: pyiceberg-s3tables-layer.zip
+
+  # =========================================================================
+  # IAM Role
+  # =========================================================================
+  MetadataSyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: fsxn-metadata-sync-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SQSReadPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt MetadataSyncQueue.Arn
+
+        - PolicyName: S3TablesWritePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3tables:GetTableBucket
+                  - s3tables:GetTable
+                  - s3tables:GetTableMetadataLocation
+                  - s3tables:UpdateTableMetadataLocation
+                Resource:
+                  - !Ref TableBucketArn
+                  - !Sub '${TableBucketArn}/table/*'
+              # S3 Tables data access (underlying S3 bucket)
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                Resource:
+                  - 'arn:aws:s3:::*--table--*'
+                  - 'arn:aws:s3:::*--table--*/*'
+
+        - PolicyName: FSxS3APReadPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Ref AccessPointArn
+                  - !Sub '${AccessPointArn}/object/*'
+
+  # =========================================================================
+  # CloudWatch Alarms
+  # =========================================================================
+  DLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: fsxn-metadata-sync-dlq-messages
+      AlarmDescription: Messages in DLQ indicate processing failures
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt MetadataSyncDLQ.QueueName
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  LambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: fsxn-metadata-sync-errors
+      AlarmDescription: Lambda invocation errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref MetadataSyncFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  ProcessingStoppedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: fsxn-metadata-sync-stopped
+      AlarmDescription: No messages processed for 10+ minutes (FPolicy may be down)
+      Namespace: AWS/Lambda
+      MetricName: Invocations
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref MetadataSyncFunction
+      Statistic: Sum
+      Period: 600
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: breaching
+
+Outputs:
+  QueueUrl:
+    Description: SQS Queue URL (configure FPolicy Server to send events here)
+    Value: !Ref MetadataSyncQueue
+
+  QueueArn:
+    Description: SQS Queue ARN
+    Value: !GetAtt MetadataSyncQueue.Arn
+
+  DLQUrl:
+    Description: Dead Letter Queue URL (check for failed messages)
+    Value: !Ref MetadataSyncDLQ
+
+  FunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt MetadataSyncFunction.Arn
+
+  FunctionName:
+    Description: Lambda function name
+    Value: !Ref MetadataSyncFunction
