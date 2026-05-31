@@ -19,6 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description="Cost & ROI Calculator")
     parser.add_argument("--files-processed", type=int, default=5, help="Files processed in this demo")
     parser.add_argument("--queries-run", type=int, default=10, help="Athena queries run in this demo")
+    parser.add_argument("--region", default="ap-northeast-1", help="AWS region (affects S3 pricing)")
     parser.add_argument("--customer-files", type=int, default=100000, help="Customer total file count")
     parser.add_argument("--customer-data-tb", type=float, default=10, help="Customer data volume in TB")
     parser.add_argument("--customer-changes-per-day", type=int, default=1000, help="Daily file changes")
@@ -64,8 +65,10 @@ def main():
     monthly_sqs = 1
     monthly_total = monthly_s3tables + monthly_lambda + monthly_bedrock + monthly_opensearch + monthly_sqs
 
-    # Current cost (S3 copy)
-    current_s3_cost = args.customer_data_tb * 23  # $23/TB/month for S3 Standard
+    # Current cost (S3 copy) — S3 Standard pricing varies by region
+    # us-east-1: $0.023/GB = $23/TB, ap-northeast-1: $0.025/GB = $25/TB
+    s3_per_tb = 25 if "northeast" in args.region or "ap-" in args.region else 23
+    current_s3_cost = args.customer_data_tb * s3_per_tb
 
     print("┌──────────────────────────────────────────────────────────────┐")
     print("│  Projected Monthly Cost (Customer Scale)                      │")

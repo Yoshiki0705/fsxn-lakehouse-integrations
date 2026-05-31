@@ -568,9 +568,11 @@ def detect_pii(text: str, language: str) -> list:
 | アプローチ | 月額コスト (10TB) | メタデータレイテンシ | ガバナンス |
 |----------|-----------------|-------------------|-----------|
 | **本アーキテクチャ (FPolicy + S3 Tables)** | $175-575 | ~5 秒 | Lake Formation / Horizon |
-| S3 フルコピー + Glue Crawler | $230 (S3) + $50 (Glue) | 時間 | Lake Formation |
-| S3 フルコピー + S3 Metadata | $230 (S3) + $15 (Metadata) | 分 | Lake Formation |
+| S3 フルコピー + Glue Crawler | $230-256 (S3)* + $50 (Glue) | 時間 | Lake Formation |
+| S3 フルコピー + S3 Metadata | $230-256 (S3)* + $15 (Metadata) | 分 | Lake Formation |
 | カスタム DynamoDB カタログ | $50-200 | 秒 | カスタム IAM |
+
+> *S3 Standard ストレージ料金: us-east-1 $0.023/GB ($230/10TB)、ap-northeast-1 $0.025/GB ($256/10TB)。2026-06-01 確認。
 
 > **コスト評価の注記**: 上記コストは直接コストのみ。本アーキテクチャの真の ROI は「データ発見時間の短縮」「共有リードタイムの削減」「AI 自動化による人件費削減」を含めて評価すべき。10人のデータサイエンティストが週5時間をデータ探索に費やしている場合、年間 $150K+ の人件費削減が見込める。
 

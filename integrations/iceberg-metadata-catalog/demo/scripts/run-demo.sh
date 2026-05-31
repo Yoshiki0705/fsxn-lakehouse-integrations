@@ -157,7 +157,7 @@ STATUS=$(aws athena get-query-execution --query-execution-id "${QUERY_ID}" --reg
 if [[ "$STATUS" == "SUCCEEDED" ]]; then
   log "✅ Query succeeded"
   aws athena get-query-results --query-execution-id "${QUERY_ID}" --region "${REGION}" \
-    --query 'ResultSet.Rows[*].Data[*].VarCharValue' --output table 2>/dev/null | head -30
+    --query 'ResultSet.Rows[*].Data[*].VarCharValue' --output table 2>/dev/null | head -30 || true
 else
   warn "Query status: ${STATUS}"
 fi
