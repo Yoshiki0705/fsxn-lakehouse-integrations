@@ -94,7 +94,7 @@ fi
 # Check 5: No personal file paths
 # -----------------------------------------------
 echo "🔍 Check 5: No personal file paths (/Users/*/Downloads, /home/*/)"
-PERSONAL_PATHS=$(git ls-files | xargs grep -rln '/Users/.*/Downloads\|/Users/.*/\.ssh\|/home/.*/\.ssh' 2>/dev/null || true)
+PERSONAL_PATHS=$(git ls-files | grep -v 'security-check\.yml' | grep -v 'pre-push-security-check\.sh' | xargs grep -rln '/Users/.*/Downloads\|/Users/.*/\.ssh\|/home/.*/\.ssh' 2>/dev/null || true)
 if [[ -z "$PERSONAL_PATHS" ]]; then
   pass "No personal file paths found"
 else
