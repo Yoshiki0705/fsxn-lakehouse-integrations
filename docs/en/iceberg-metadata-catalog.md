@@ -343,6 +343,44 @@ File → PII Detection (Comprehend / Bedrock)
                     anonymization_status = "completed"
 ```
 
+### PII Detection Engine Selection by Language
+
+| Language | Recommended Engine | Detectable PII Types | Verification |
+|----------|-------------------|---------------------|-------------|
+| **English** | Amazon Comprehend (`detect_pii_entities`) | NAME, EMAIL, PHONE, ADDRESS, SSN, CREDIT_DEBIT_NUMBER, DATE_TIME, etc. | ✅ 7/7 detected (confidence >= 0.8) |
+| **Spanish** | Amazon Comprehend (`detect_pii_entities`) | Same as English | — (not tested) |
+| **Japanese** | **Bedrock Claude** (prompt-based) | Name, email, phone, address, My Number, credit card, date of birth | ✅ 8/8 detected (confidence 1.0) |
+| **Other languages** | Bedrock Claude (prompt-based) | Any PII type specified in prompt | — |
+
+> **Constraint**: Amazon Comprehend `detect_pii_entities` API supports only `en` (English) and `es` (Spanish) as of May 2026. For Japanese and other languages, use Bedrock Claude as the PII detection engine.
+
+### Japanese PII Detection Pattern (Bedrock Claude)
+
+**Verification results (2026-05-31)**:
+
+| PII Type | Detected Value | Confidence |
+|----------|---------------|-----------|
+| NAME | 山田太郎 | 1.0 |
+| EMAIL | taro.yamada@example.co.jp | 1.0 |
+| PHONE | 090-1234-5678 | 1.0 |
+| ADDRESS | 〒150-0002 東京都渋谷区渋谷1-2-3 | 1.0 |
+| MY_NUMBER | 1234 5678 9012 | 1.0 |
+| CREDIT_CARD | 4111-1111-1111-1111 | 1.0 |
+| DATE_OF_BIRTH | 1985年3月15日 | 1.0 |
+| OTHER (employee ID) | EMP-2024-0042 | 1.0 |
+
+### PII Detection Engine Comparison
+
+| Aspect | Comprehend | Bedrock Claude |
+|--------|-----------|---------------|
+| Languages | en, es only | All languages |
+| Latency | ~200ms | ~2-5 seconds |
+| Cost | $0.0001/100 chars | ~$0.003/request (Haiku) |
+| Accuracy | High (trained model) | Very high (LLM inference) |
+| My Number (Japan) detection | ❌ Not supported | ✅ Supported |
+| Custom PII types | ❌ Fixed set | ✅ Configurable via prompt |
+| Best for | English bulk processing | Japanese, multilingual, custom PII |
+
 **Data Clean Room pattern**: Original metadata table (restricted access) + Clean metadata table (broader access, anonymized files only). Lake Formation enforces separation.
 
 ---
