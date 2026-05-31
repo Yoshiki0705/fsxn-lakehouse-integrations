@@ -155,7 +155,7 @@ FSx S3 Access Points 上の分析ワークロードを計画する際：
 | ベンダー | リクエスト内容 | 状態 | ケース参照 |
 |---------|-------------|------|----------|
 | Databricks | `iceberg_rest` を CONNECTION TYPE としてサポート追加 | 提出済み (2026年5月) | サポートケース保留中 |
-| Snowflake | S3 Tables Iceberg REST endpoint を External Catalog ソースとしてサポート | 提出済み (2026年5月) | サポートケース保留中 |
+| Snowflake | S3 Tables Iceberg REST endpoint を External Catalog ソースとしてサポート | 提出済み (2026年5月) | Case #01364260 |
 | AWS | S3 Tables フェデレーテッドカタログで Lake Formation 列レベル権限対応 | 特定済み (2026年5月) | 提出予定 |
 
 ---
