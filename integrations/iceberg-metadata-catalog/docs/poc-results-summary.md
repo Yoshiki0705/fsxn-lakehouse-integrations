@@ -95,6 +95,27 @@ FSx for ONTAP (actual files: PDF, images, CAD, video)
 | Lake Formation column-level control: observed limitation on S3 Tables federated catalog path | Can't hide specific columns via this path | Athena Views; AWS docs describe column-level support — investigate alternative registration | AWS case filed |
 | Concurrent Lambda writes cause Iceberg commit conflicts | Some writes retry | reserved_concurrency=1 | Design recommendation |
 
+## Iceberg Table Maintenance (Production)
+
+For production deployments, define:
+
+- Snapshot retention period (S3 Tables auto-manages, but verify policy)
+- Manifest rewrite cadence (if metadata table grows large)
+- Orphan file cleanup policy
+- Deduplication view or materialized latest-record table
+- Time travel retention policy
+- Athena engine version and Iceberg version compatibility
+
+## S3 Tables Access Paths
+
+| Access path | Best for | Governance |
+|---|---|---|
+| S3 Tables REST (`s3tables.<region>.amazonaws.com/iceberg`) | Direct PoC / simple client | IAM + S3 Tables permissions |
+| AWS Glue REST (`glue.<region>.amazonaws.com/iceberg`) | Production analytics | IAM + Lake Formation |
+| Athena via Glue federated catalog | SQL analytics | Lake Formation |
+
+> **Verified 2026-06-01**: Both S3 Tables REST and Glue REST endpoints successfully access the metadata table from PyIceberg.
+
 ## Next Steps (Customer Decision Points)
 
 | Option | When to Choose | Additional Cost |

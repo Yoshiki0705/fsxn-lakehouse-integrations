@@ -17,6 +17,8 @@ This guide enables you to run the complete Iceberg Metadata Catalog demo in ~15 
 | FSx for ONTAP | With S3 Access Point configured (alias ending in `-ext-s3alias`) |
 | **Bedrock access** | **Claude 3 Haiku + Titan Embeddings V2 must be enabled in target region** ([Enable model access](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html)) |
 
+> **Naming convention**: Use lowercase for all table, namespace, and column names. Mixed-case names are not compatible with Athena / Glue / Lake Formation when using S3 Tables. See [naming rules](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables-buckets-naming.html).
+
 ## Quick Start (One Command)
 
 ```bash

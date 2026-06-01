@@ -97,7 +97,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 | [Databricks](integrations/databricks/) | ⚠️ Blocked | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
 | [Snowflake](integrations/snowflake/) | ✅ Verified | External Stage + External Table | Works with `AWS_ACCESS_POINT_ARN` stage parameter. SELECT + External Table verified. |
 | [Apache Iceberg](integrations/iceberg/) | ⚠️ Read Experimental / ❌ Write Failed | REST Catalog (vendor-neutral) | Write fails: S3FileIO cannot handle AP alias for metadata. Read of pre-existing tables expected to work. |
-| [Iceberg Metadata Catalog](integrations/iceberg-metadata-catalog/) | ✅ Fully Verified | S3 Tables + PyIceberg + Bedrock | AI-powered metadata catalog for unstructured data. [40 files in 30s, $0.01/file AI](integrations/iceberg-metadata-catalog/docs/poc-results-summary.md) |
+| [Iceberg Metadata Catalog](integrations/iceberg-metadata-catalog/) | ✅ Fully Verified | S3 Tables + PyIceberg + Glue REST + Bedrock | AI-powered metadata catalog for unstructured data. [40 files in 30s, $0.01/file AI](integrations/iceberg-metadata-catalog/docs/poc-results-summary.md) |
 | [EMR + Spark](integrations/emr-spark/) | ✅ Functional Verified | Spark SQL + Iceberg | Read + Write-back verified. [10K rows in 16s total (EMR Serverless)](verification-pack/emr-spark/) |
 | [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Functional Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
 | [DuckDB](integrations/duckdb/) | ✅ Functional Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
