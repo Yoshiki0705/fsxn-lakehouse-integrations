@@ -1,5 +1,7 @@
 # Partner Readiness Checklist
 
+🌐 [日本語](partner-readiness-checklist-ja.md) | English
+
 ## Purpose
 
 Pre-engagement checklist for partners deploying the Iceberg Metadata Catalog pattern at customer sites.
