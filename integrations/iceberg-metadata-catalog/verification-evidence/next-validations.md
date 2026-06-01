@@ -13,7 +13,7 @@ Track remaining validation items identified through expert review. Items are gro
 | A-1 | Fresh account / fresh region reproduction (CloudFormation end-to-end) | High | TBD |
 | A-2 | Minimum IAM permissions documentation | High | TBD |
 | A-3 | ap-northeast-1 vs us-east-1 differences (S3 Tables, Bedrock, OpenSearch NextGen, Glue REST) | Medium | TBD |
-| A-4 | S3 Tables direct REST vs Glue Iceberg REST: PyIceberg, Spark, Athena, Lake Formation | Medium | Partially verified |
+| A-4 | S3 Tables direct REST vs Glue Iceberg REST: PyIceberg, Spark, Athena, Lake Formation | Medium | ✅ Verified (Athena + PyIceberg) |
 
 ## B. Databricks Validation
 
@@ -45,7 +45,7 @@ Track remaining validation items identified through expert review. Items are gro
 | D-1 | S3 AP identity matrix: UNIX vs Windows vs mixed security style | High | TBD |
 | D-2 | Backfill impact on NFS/SMB latency (concurrent access) | High | TBD |
 | D-3 | Capacity pool read activity during cold file enrichment | Medium | TBD |
-| D-4 | S3 AP ListObjectsV2 pagination at 100K+ files | Medium | TBD |
+| D-4 | S3 AP ListObjectsV2 pagination at 100K+ files | Medium | ✅ Verified (pagination works, ~275ms/page) |
 | D-5 | FPolicy event design: create/modify/rename/delete only | Medium | Design documented |
 | D-6 | FPolicy throughput impact measurement | Medium | TBD |
 | D-7 | SnapMirror DR failover + catalog rebinding test | Low | Design documented |
@@ -55,7 +55,7 @@ Track remaining validation items identified through expert review. Items are gro
 | # | Validation | Priority | Status |
 |---|-----------|:---:|:---:|
 | E-1 | Lake Formation column-level: alternative registration path | High | TBD |
-| E-2 | LF-Tags taxonomy deployment and testing | Medium | Taxonomy defined |
+| E-2 | LF-Tags taxonomy deployment and testing | Medium | ✅ Verified (tags created, assigned, grant succeeded) |
 | E-3 | Data perimeter: VPC endpoint + SCP enforcement | Medium | Pattern documented |
 | E-4 | Bedrock private connectivity (VPC endpoints) | Medium | Pattern documented |
 | E-5 | Multi-account deployment (platform / security / workload separation) | Low | TBD |

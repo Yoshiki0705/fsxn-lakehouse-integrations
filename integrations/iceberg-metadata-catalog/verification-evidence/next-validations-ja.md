@@ -13,7 +13,7 @@
 | A-1 | 新規アカウント / 新規リージョンでの再現（CloudFormation エンドツーエンド） | 高 | TBD |
 | A-2 | 最小 IAM 権限の文書化 | 高 | TBD |
 | A-3 | ap-northeast-1 vs us-east-1 の差分（S3 Tables、Bedrock、OpenSearch NextGen、Glue REST） | 中 | TBD |
-| A-4 | S3 Tables direct REST vs Glue Iceberg REST: PyIceberg、Spark、Athena、Lake Formation | 中 | 部分検証済み |
+| A-4 | S3 Tables direct REST vs Glue Iceberg REST: PyIceberg、Spark、Athena、Lake Formation | 中 | ✅ 検証済み (Athena + PyIceberg) |
 
 ## B. Databricks 検証
 
@@ -45,7 +45,7 @@
 | D-1 | S3 AP アイデンティティマトリクス: UNIX vs Windows vs mixed security style | 高 | TBD |
 | D-2 | バックフィルの NFS/SMB レイテンシへの影響（同時アクセス） | 高 | TBD |
 | D-3 | コールドファイルエンリッチメント時のキャパシティプール読み取り活動 | 中 | TBD |
-| D-4 | 10 万ファイル以上での S3 AP ListObjectsV2 ページネーション | 中 | TBD |
+| D-4 | 10 万ファイル以上での S3 AP ListObjectsV2 ページネーション | 中 | ✅ 検証済み (ページネーション動作確認、~275ms/ページ) |
 | D-5 | FPolicy イベント設計: create/modify/rename/delete のみ | 中 | 設計文書化済み |
 | D-6 | FPolicy スループット影響の測定 | 中 | TBD |
 | D-7 | SnapMirror DR フェイルオーバー + カタログリバインドテスト | 低 | 設計文書化済み |
@@ -55,7 +55,7 @@
 | # | 検証内容 | 優先度 | 状態 |
 |---|---------|:---:|:---:|
 | E-1 | Lake Formation カラムレベル: 代替登録パス | 高 | TBD |
-| E-2 | LF-Tags 分類体系のデプロイとテスト | 中 | 分類体系定義済み |
+| E-2 | LF-Tags 分類体系のデプロイとテスト | 中 | ✅ 検証済み (タグ作成、割り当て、グラント成功) |
 | E-3 | データペリメーター: VPC エンドポイント + SCP 適用 | 中 | パターン文書化済み |
 | E-4 | Bedrock プライベート接続（VPC エンドポイント） | 中 | パターン文書化済み |
 | E-5 | マルチアカウントデプロイ（プラットフォーム / セキュリティ / ワークロード分離） | 低 | TBD |
