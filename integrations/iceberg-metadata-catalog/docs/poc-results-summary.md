@@ -108,13 +108,13 @@ For production deployments, define:
 
 ## S3 Tables Access Paths
 
-| Access path | Best for | Governance |
-|---|---|---|
-| S3 Tables REST (`s3tables.<region>.amazonaws.com/iceberg`) | Direct PoC / simple client | IAM + S3 Tables permissions |
-| AWS Glue REST (`glue.<region>.amazonaws.com/iceberg`) | Production analytics | IAM + Lake Formation |
-| Athena via Glue federated catalog | SQL analytics | Lake Formation |
+| Access path | Best for | Governance | Verified |
+|---|---|---|:---:|
+| S3 Tables REST (`s3tables.<region>.amazonaws.com/iceberg`) | Direct PoC / simple client | IAM + S3 Tables permissions | ✅ |
+| AWS Glue REST (`glue.<region>.amazonaws.com/iceberg`) | Production analytics | IAM + Lake Formation | ✅ |
+| Athena via Glue federated catalog | SQL analytics | Lake Formation | ✅ |
 
-> **Verified 2026-06-01**: Both S3 Tables REST and Glue REST endpoints successfully access the metadata table from PyIceberg.
+> **Verified 2026-06-01**: Both S3 Tables REST and Glue REST endpoints successfully access the metadata table from PyIceberg. See [Glue Iceberg REST docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables-integrating-glue-endpoint.html).
 
 ## Next Steps (Customer Decision Points)
 
