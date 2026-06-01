@@ -96,7 +96,7 @@ integrations/iceberg-metadata-catalog/
 
 > 本番環境では **AWS Glue Iceberg REST エンドポイント** + Lake Formation を使用してください。[ドキュメント](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables-integrating-glue-endpoint.html) 参照。
 
-## クロスプラットフォーム状況 (2026-05-31 テスト)
+## クロスプラットフォーム状況 (2026-05-31 テスト、2026-06-01 更新)
 
 | プラットフォーム | 状態 | パス |
 |-------------|:----:|------|
@@ -104,8 +104,11 @@ integrations/iceberg-metadata-catalog/
 | PyIceberg | ✅ | S3 Tables REST + Glue REST |
 | EMR Spark | ✅ 見込み | Iceberg REST catalog |
 | Databricks SQL Warehouse | ⚠️ | テスト済みパスで `iceberg_rest` 接続タイプ非対応 |
+| Databricks UC 監査 | ✅ | 外部エンジンアクセスが `system.access.audit` に完全記録 |
 | Databricks Spark | TBD | Iceberg REST + SigV4 / UC Foreign Iceberg を検証予定 |
-| Snowflake | ⚠️ | テスト済みパスで S3 Tables REST が対応カタログタイプではない |
+| Snowflake (Glue REST) | 🔄 進行中 | CATALOG INTEGRATION 作成成功; credential vending 設定調整中 |
+| Snowflake (S3 Tables 直接) | ⚠️ | テスト済みパスで対応カタログタイプではない |
+| Snowflake External Stage | ✅ | FSx S3 AP 動作確認済み（TO_FILE のみ制限、Engineering 対応中） |
 
 詳細: [cross-platform-compatibility.yaml](verification-evidence/cross-platform-compatibility.yaml)
 

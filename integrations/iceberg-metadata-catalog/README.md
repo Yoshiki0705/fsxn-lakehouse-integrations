@@ -96,7 +96,7 @@ integrations/iceberg-metadata-catalog/
 
 > For production, use the **AWS Glue Iceberg REST endpoint** with Lake Formation. See [docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables-integrating-glue-endpoint.html).
 
-## Cross-Platform Status (Tested 2026-05-31)
+## Cross-Platform Status (Tested 2026-05-31, Updated 2026-06-01)
 
 | Platform | Status | Path |
 |----------|:------:|------|
@@ -104,8 +104,11 @@ integrations/iceberg-metadata-catalog/
 | PyIceberg | ✅ | S3 Tables REST + Glue REST |
 | EMR Spark | ✅ Expected | Iceberg REST catalog |
 | Databricks SQL Warehouse | ⚠️ | `iceberg_rest` connection type not supported in tested path |
+| Databricks UC Audit | ✅ | External engine access fully logged in `system.access.audit` |
 | Databricks Spark | TBD | Validate Iceberg REST + SigV4 / UC Foreign Iceberg |
-| Snowflake | ⚠️ | S3 Tables REST not a supported catalog type in tested path |
+| Snowflake (Glue REST) | 🔄 In Progress | CATALOG INTEGRATION created; credential vending config in progress |
+| Snowflake (S3 Tables direct) | ⚠️ | Not a supported catalog type in tested path |
+| Snowflake External Stage | ✅ | FSx S3 AP works (TO_FILE only limitation, Engineering WIP) |
 
 Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platform-compatibility.yaml)
 
