@@ -22,11 +22,13 @@ platforms:
         notes: "Grant/revoke works correctly"
       - name: "Lake Formation column-level (ColumnWildcard + ExcludedColumnNames)"
         result: "observed_limitation"
-        error: "InvalidInputException: Permissions modification is invalid"
-        notes: "AWS docs describe column-level support for S3 Tables. Failed on our specific federated catalog path. Not a confirmed general limitation."
+        tested_date: "2026-06-01"
+        error: "InvalidInputException: Permissions modification is invalid (with account prefix); ExcludedColumnNames silently ignored (without prefix)"
+        notes: "AWS docs describe column-level support for S3 Tables. Failed on both tested CatalogId formats. Re-tested 2026-06-01 — confirmed not working on this federated catalog path."
       - name: "AWS Glue Iceberg REST endpoint (glue.<region>.amazonaws.com/iceberg)"
-        result: "not_tested"
-        notes: "Recommended for production. Uses Lake Formation for governance."
+        result: "verified"
+        tested_date: "2026-06-01"
+        notes: "Successfully connected via PyIceberg. warehouse='178625946981:s3tablescatalog/fsxn-metadata-catalog'. Recommended for production with Lake Formation."
 
   databricks:
     tested_paths:
