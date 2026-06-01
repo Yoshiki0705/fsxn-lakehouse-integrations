@@ -1,0 +1,53 @@
+# =============================================================================
+# Lake Formation Tag Taxonomy
+# =============================================================================
+# Define LF-Tags for tag-based access control (LF-TBAC) on metadata tables.
+# Convert row/column filters into tag-based policies for scalable governance.
+# =============================================================================
+
+lf_tags:
+  sensitivity:
+    description: "Data sensitivity classification"
+    values: [public, internal, restricted, confidential]
+    usage: "Row-level filtering on metadata queries"
+
+  data_domain:
+    description: "Business domain ownership"
+    values: [finance, hr, legal, manufacturing, engineering, research, operations]
+    usage: "Domain-based access control"
+
+  pii_status:
+    description: "PII detection and anonymization state"
+    values: [none, detected, redacted, reviewed]
+    usage: "Control access to PII-containing metadata"
+
+  tenant_id:
+    description: "Multi-tenant isolation"
+    values: [tenant-a, tenant-b]  # Extend per deployment
+    usage: "Tenant-level row filtering"
+
+  path_classification:
+    description: "File path sensitivity"
+    values: [public, internal, restricted, confidential]
+    usage: "Control visibility of raw file paths in metadata"
+
+  catalog_environment:
+    description: "Deployment environment"
+    values: [production, staging, development, dr]
+    usage: "Environment-based access separation"
+
+grant_examples:
+  - principal: "arn:aws:iam::<ACCOUNT>:role/analyst-role"
+    tag_expression: "sensitivity IN ('public', 'internal') AND pii_status = 'none'"
+    permissions: [SELECT]
+
+  - principal: "arn:aws:iam::<ACCOUNT>:role/security-team"
+    tag_expression: "ALL"
+    permissions: [SELECT, DESCRIBE]
+
+notes: |
+  For enterprise governance, convert sensitivity_level, path_classification,
+  tenant_id, and pii_status into LF-Tags rather than relying only on named
+  resource grants. LF-Tags scale better across many tables and principals.
+  
+  Reference: https://docs.aws.amazon.com/lake-formation/latest/dg/tag-based-access-control.html
