@@ -108,6 +108,8 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 
 > **Key finding**: AWS-native services (Athena, Glue, EMR, Bedrock) work correctly. Third-party platforms require explicit S3 AP ARN configuration: Snowflake uses `AWS_ACCESS_POINT_ARN` (fully resolved), Databricks uses `access_point` field (partially resolved). See [Compatibility Matrix](docs/en/compatibility-matrix.md) for details.
 
+> **Note**: The table above shows FSx for ONTAP S3 Access Point integration status (general). For the S3 Tables / Iceberg Metadata Catalog cross-platform status (Databricks Spark, Snowflake Glue REST, etc.), see [integrations/iceberg-metadata-catalog/README.md](integrations/iceberg-metadata-catalog/README.md#cross-platform-status-tested-2026-05-31-updated-2026-06-01).
+
 ---
 
 ## Partner Quick Reference: Which Engine for Which Customer?
