@@ -1,5 +1,7 @@
 # SQS → Lambda Processing Pattern
 
+🌐 [日本語](sqs-lambda-processing-pattern-ja.md) | English
+
 ## Design Principles
 
 - `visibility_timeout` >= 6 × `lambda_timeout`

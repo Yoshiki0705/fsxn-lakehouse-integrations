@@ -1,5 +1,7 @@
 # Step Functions Distributed Map — Backfill Pattern
 
+🌐 [日本語](step-functions-backfill-pattern-ja.md) | English
+
 ## Purpose
 
 For large initial backfills (100K+ files), use Step Functions Distributed Map to orchestrate parallel processing with concurrency control, failure thresholds, and progress tracking.

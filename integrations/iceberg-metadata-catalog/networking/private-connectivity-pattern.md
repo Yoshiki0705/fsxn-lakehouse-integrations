@@ -1,5 +1,7 @@
 # Private Connectivity Pattern
 
+🌐 [日本語](private-connectivity-pattern-ja.md) | English
+
 ## Purpose
 
 Document which AWS services in this architecture require VPC endpoints for private connectivity in production.

@@ -1,6 +1,7 @@
 # =============================================================================
 # Lake Formation Tag Taxonomy
 # =============================================================================
+# 🌐 日本語: lf-tag-taxonomy-ja.yaml | English (this file)
 # Define LF-Tags for tag-based access control (LF-TBAC) on metadata tables.
 # Convert row/column filters into tag-based policies for scalable governance.
 # =============================================================================

@@ -1,0 +1,56 @@
+# =============================================================================
+# Lake Formation タグ分類体系
+# =============================================================================
+# メタデータテーブルに対するタグベースアクセス制御（LF-TBAC）用の LF-Tags を定義。
+# 行/カラムフィルターをタグベースポリシーに変換し、スケーラブルなガバナンスを実現。
+# =============================================================================
+#
+# 🌐 English: lf-tag-taxonomy.yaml | 日本語（本ファイル）
+
+lf_tags:
+  sensitivity:
+    description: "データ機密性分類"
+    values: [public, internal, restricted, confidential]
+    usage: "メタデータクエリに対する行レベルフィルタリング"
+
+  data_domain:
+    description: "ビジネスドメインのオーナーシップ"
+    values: [finance, hr, legal, manufacturing, engineering, research, operations]
+    usage: "ドメインベースのアクセス制御"
+
+  pii_status:
+    description: "PII 検出および匿名化状態"
+    values: [none, detected, redacted, reviewed]
+    usage: "PII を含むメタデータへのアクセス制御"
+
+  tenant_id:
+    description: "マルチテナント分離"
+    values: [tenant-a, tenant-b]  # デプロイメントごとに拡張
+    usage: "テナントレベルの行フィルタリング"
+
+  path_classification:
+    description: "ファイルパスの機密性"
+    values: [public, internal, restricted, confidential]
+    usage: "メタデータ内の生ファイルパスの可視性制御"
+
+  catalog_environment:
+    description: "デプロイメント環境"
+    values: [production, staging, development, dr]
+    usage: "環境ベースのアクセス分離"
+
+grant_examples:
+  - principal: "arn:aws:iam::<ACCOUNT>:role/analyst-role"
+    tag_expression: "sensitivity IN ('public', 'internal') AND pii_status = 'none'"
+    permissions: [SELECT]
+
+  - principal: "arn:aws:iam::<ACCOUNT>:role/security-team"
+    tag_expression: "ALL"
+    permissions: [SELECT, DESCRIBE]
+
+notes: |
+  エンタープライズガバナンスでは、sensitivity_level、path_classification、
+  tenant_id、pii_status を名前付きリソースグラントのみに頼るのではなく、
+  LF-Tags に変換する。LF-Tags は多数のテーブルとプリンシパルにわたって
+  より良くスケールする。
+  
+  参考: https://docs.aws.amazon.com/lake-formation/latest/dg/tag-based-access-control.html
