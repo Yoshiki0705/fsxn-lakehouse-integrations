@@ -1,0 +1,61 @@
+# =============================================================================
+# Domain Metadata Extension: Manufacturing / Engineering
+# =============================================================================
+# Add these columns to the base unstructured_files schema for manufacturing
+# workloads where domain-specific metadata drives search value.
+# =============================================================================
+
+extension_name: manufacturing
+description: "Additional metadata columns for CAD, inspection, and engineering documents"
+
+columns:
+  - name: part_number
+    type: string
+    description: "Part/component number from PLM/ERP"
+    example: "PN-2024-A001"
+
+  - name: drawing_revision
+    type: string
+    description: "Drawing/document revision (e.g., Rev.C)"
+    example: "C"
+
+  - name: project_code
+    type: string
+    description: "Project or program code"
+    example: "PRJ-ALPHA-2026"
+
+  - name: plant_id
+    type: string
+    description: "Manufacturing plant/site identifier"
+    example: "PLANT-TKY-01"
+
+  - name: machine_id
+    type: string
+    description: "Machine or equipment identifier (for inspection images)"
+    example: "CNC-A3-007"
+
+  - name: inspection_lot
+    type: string
+    description: "Quality inspection lot number"
+    example: "LOT-20260601-001"
+
+  - name: supplier_id
+    type: string
+    description: "Supplier/vendor identifier"
+    example: "SUP-ACME-JP"
+
+  - name: product_family
+    type: string
+    description: "Product family or category"
+    example: "EV-Motor-Series-X"
+
+usage_notes: |
+  These columns can be populated from:
+  - File path parsing (e.g., /projects/PRJ-ALPHA/parts/PN-2024-A001/)
+  - PLM/ERP API integration during enrichment
+  - Manual tagging via metadata update pipeline
+  - AI extraction from document content (Bedrock)
+  
+  For manufacturing, domain metadata often drives more search value
+  than AI classification alone. Consider joining with PLM/MES/ERP
+  systems for complete context.

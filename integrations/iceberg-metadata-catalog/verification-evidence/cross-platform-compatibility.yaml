@@ -19,9 +19,23 @@ platforms:
     tested_paths:
       - name: "Athena via S3 Tables federated catalog (s3tablescatalog)"
         result: "verified"
+        capabilities:
+          read_select: verified
+          time_travel: verified
+          append_write: "not tested via Athena (PyIceberg used)"
+          metadata_tables: verified
+          lake_formation_table_grant: verified
+          lake_formation_column_grant: observed_limitation
         notes: "Sub-2-second queries, Lake Formation table-level grants work"
       - name: "PyIceberg via S3 Tables REST endpoint"
         result: "verified"
+        capabilities:
+          read_select: verified
+          time_travel: verified
+          append_write: verified
+          metadata_tables: verified
+          lake_formation_table_grant: "via Athena"
+          lake_formation_column_grant: observed_limitation
         notes: "Read/write/append all work. Used for initial scan and enrichment"
       - name: "Lake Formation table-level SELECT/DESCRIBE"
         result: "verified"
