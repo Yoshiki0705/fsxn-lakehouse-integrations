@@ -1,5 +1,7 @@
 # Well-Architected Review Summary
 
+🌐 [日本語](well-architected-review-ja.md) | English
+
 ## Purpose
 
 Map this PoC against the AWS Well-Architected 6 pillars to identify what's validated and what requires additional work before production.

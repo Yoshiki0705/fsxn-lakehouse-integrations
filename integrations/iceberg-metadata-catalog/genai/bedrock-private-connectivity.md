@@ -1,5 +1,7 @@
 # Bedrock Private Connectivity
 
+🌐 [日本語](bedrock-private-connectivity-ja.md) | English
+
 ## Purpose
 
 For sensitive workloads, ensure Bedrock API calls and batch inference data never traverse the public internet.

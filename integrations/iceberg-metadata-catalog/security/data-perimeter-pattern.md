@@ -1,5 +1,7 @@
 # Data Perimeter Pattern
 
+🌐 [日本語](data-perimeter-pattern-ja.md) | English
+
 ## Purpose
 
 Define network and identity boundaries around raw file access and metadata queries for regulated environments.
