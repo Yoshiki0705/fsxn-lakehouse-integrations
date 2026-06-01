@@ -19,7 +19,7 @@ Track remaining validation items identified through expert review. Items are gro
 
 | # | Validation | Priority | Status |
 |---|-----------|:---:|:---:|
-| B-1 | Spark cluster + AWS Glue Iceberg REST: read, append, time travel | High | TBD |
+| B-1 | Spark cluster + AWS Glue Iceberg REST: read, append, time travel | High | ❌ Blocked by Unity Catalog (spark.conf.set and cluster Spark config both ineffective; UC controls catalog registration) |
 | B-2 | Lake Formation credential vending via Glue REST from Databricks | High | TBD |
 | B-3 | S3 Tables metadata table access ($history, $manifests) from Spark | Medium | TBD |
 | B-4 | Unity Catalog Foreign Iceberg: S3 Tables direct REST | Medium | TBD |

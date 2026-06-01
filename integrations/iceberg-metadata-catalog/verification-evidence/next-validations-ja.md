@@ -19,7 +19,7 @@
 
 | # | 検証内容 | 優先度 | 状態 |
 |---|---------|:---:|:---:|
-| B-1 | Spark cluster + AWS Glue Iceberg REST: read、append、time travel | 高 | TBD |
+| B-1 | Spark cluster + AWS Glue Iceberg REST: read、append、time travel | 高 | ❌ Unity Catalog によりブロック（spark.conf.set とクラスター Spark config の両方が無効; UC がカタログ登録を制御） |
 | B-2 | Glue REST 経由の Lake Formation credential vending（Databricks から） | 高 | TBD |
 | B-3 | Spark からの S3 Tables metadata table アクセス（$history、$manifests） | 中 | TBD |
 | B-4 | Unity Catalog Foreign Iceberg: S3 Tables direct REST | 中 | TBD |
