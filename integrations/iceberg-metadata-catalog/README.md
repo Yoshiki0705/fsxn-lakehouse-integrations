@@ -105,7 +105,7 @@ integrations/iceberg-metadata-catalog/
 | EMR Spark | ✅ Expected | Iceberg REST catalog |
 | Databricks SQL Warehouse | ⚠️ | `iceberg_rest` connection type not supported in tested path |
 | Databricks UC Audit | ✅ | External engine access fully logged in `system.access.audit` |
-| Databricks Spark | TBD | Validate Iceberg REST + SigV4 / UC Foreign Iceberg |
+| Databricks Spark | ❌ | UC blocks external catalog registration via spark.conf.set; UC Foreign Catalog required |
 | Snowflake (Glue REST) | 🔄 In Progress | CATALOG INTEGRATION created; credential vending config in progress |
 | Snowflake (S3 Tables direct) | ⚠️ | Not a supported catalog type in tested path |
 | Snowflake External Stage | ✅ | FSx S3 AP works (TO_FILE only limitation, Engineering WIP) |
