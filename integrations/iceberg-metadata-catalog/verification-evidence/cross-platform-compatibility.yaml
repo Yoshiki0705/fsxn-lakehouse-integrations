@@ -8,6 +8,12 @@
 tested_date: "2026-05-31"
 region: "ap-northeast-1"
 
+review_policy:
+  revalidate_after_days: 90
+  last_reviewed: "2026-06-01"
+  next_review_due: "2026-08-30"
+  reason: "Databricks/Snowflake/S3 Tables interoperability evolves rapidly"
+
 platforms:
   aws:
     tested_paths:
