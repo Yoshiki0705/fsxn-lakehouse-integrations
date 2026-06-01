@@ -56,3 +56,11 @@ caveats:
   - "OpenSearch cost assumes business-hours-only usage (scale-to-zero overnight)"
   - "Labor savings (90% reduction) is an assumption — measure Before/After in PoC"
   - "Bedrock pricing may change — verify current rates before customer proposals"
+
+unit_economics:
+  cost_per_searchable_file: "$0.00005/month (metadata storage only)"
+  cost_per_ai_enriched_file: "~$0.01 (Vision + Embedding, one-time)"
+  cost_per_1000_incremental_changes: "~$10 (Lambda + Bedrock + S3 Tables writes)"
+  cost_per_1m_backfill: "~$5,000-10,000 (Batch Inference, one-time)"
+  cost_per_business_query: "~$0.000005 (Athena, metadata scan only)"
+  note: "Track cost per searchable file and cost per accepted AI classification for production business cases"
