@@ -4,152 +4,132 @@
 
 ## Overview
 
-This module implements the **Iceberg Metadata Catalog** pattern — using Apache Iceberg tables (on Amazon S3 Tables) as a metadata catalog for unstructured data stored on FSx for ONTAP.
+An **AI-powered metadata catalog** that makes unstructured files on FSx for ONTAP instantly searchable — without copying data to S3. Uses Apache Iceberg (S3 Tables) as the metadata layer, Bedrock for AI classification, and OpenSearch Serverless NextGen for vector search.
 
-**Architecture**: See [docs/en/iceberg-metadata-catalog.md](../../docs/en/iceberg-metadata-catalog.md) for the full architecture document.
+**Key results** (verified 2026-05-31): 40 files cataloged in 30s, AI classification at ~$0.01/file, Athena queries < 2s, full demo in 42 seconds for $0.07.
 
-## Quick Start (1 week PoC)
+## Architecture
 
-### Prerequisites
+```
+FSx for ONTAP ──S3 Access Point──→ AI Enrichment (Bedrock)
+       │                                    │
+       │                                    ▼
+       │                          S3 Tables (Iceberg)
+       │                                    │
+       │                          ┌─────────┴─────────┐
+       │                          ▼                   ▼
+       │                    Athena (SQL)      OpenSearch (kNN)
+       │                          │
+       │                    Lake Formation (governance)
+       │
+       └──NFS/SMB──→ Existing applications (unchanged)
+```
 
-- AWS CLI v2
-- Python 3.12+
-- FSx for ONTAP with S3 Access Point configured
-- IAM permissions: `s3tables:*`, `s3:GetObject`, `s3:ListBucket` on AP ARN
-
-### Step 1: Create S3 Tables Table Bucket
+## Quick Start
 
 ```bash
-chmod +x scripts/create-table-bucket.sh
-./scripts/create-table-bucket.sh create
+# Install dependencies
+pip install -r requirements.txt
+
+# Option A: Full demo (requires FSx for ONTAP with S3 Access Point)
+cd demo/scripts
+./run-demo.sh --ap-alias <your-ap-alias-ext-s3alias>
+
+# Option B: S3-only mode (no FSx required)
+# See demo/docs/quickstart-s3-only.md
 ```
 
-### Step 2: Run Initial Metadata Scan
+## Phases (All Verified ✅)
 
-```bash
-pip install boto3 pyarrow 'pyiceberg[s3tables]'
-
-python scripts/initial-metadata-scan.py \
-  --access-point-arn arn:aws:s3:ap-northeast-1:178625946981:accesspoint/your-ap-name \
-  --table-bucket-arn arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog \
-  --max-files 1000
-```
-
-### Step 3: Query with Athena
-
-```sql
--- Find all PDF files created in 2025
-SELECT file_name, file_path, file_size, created_at
-FROM "metadata"."unstructured_files"
-WHERE file_type = 'application/pdf'
-  AND created_at >= TIMESTAMP '2025-01-01'
-ORDER BY created_at DESC;
-
--- File type distribution
-SELECT file_type, COUNT(*) as count, SUM(file_size) as total_bytes
-FROM "metadata"."unstructured_files"
-WHERE is_deleted = false
-GROUP BY file_type
-ORDER BY count DESC;
-
--- Files pending AI enrichment
-SELECT COUNT(*) as pending_count
-FROM "metadata"."unstructured_files"
-WHERE enrichment_status = 'pending';
-```
+| Phase | Status | Description | Key Evidence |
+|-------|:------:|-------------|-------------|
+| **Phase 1** | ✅ Verified | S3 Tables + PyIceberg schema + initial scan | 40 files in 3s |
+| **Phase 2** | ✅ Verified | FPolicy → SQS → Lambda pipeline | E2E verified, DLQ = 0 |
+| **Phase 3** | ✅ Verified | AI enrichment (Bedrock Vision + Titan Embeddings) | invoice classified at 0.95 confidence |
+| **Phase 4** | ⚠️ Partial | Cross-platform (Athena ✅, Databricks ⚠️, Snowflake ⚠️) | Tested paths documented |
+| **Phase 5** | ✅ Verified | OpenSearch Serverless NextGen (scale-to-zero, kNN) | Score 0.67, cold start 10-30s |
+| **Phase 6** | ✅ Verified | PII anonymization (Comprehend EN + Bedrock Claude JA) | 7/7 entities detected |
 
 ## Directory Structure
 
 ```
 integrations/iceberg-metadata-catalog/
-├── README.md                          # This file
-├── README-ja.md                       # Japanese version
+├── README.md                              # This file
+├── README-ja.md                           # Japanese version
+├── requirements.txt                       # Python dependencies (pinned)
 ├── scripts/
-│   ├── create-table-bucket.sh         # S3 Tables setup script
-│   └── initial-metadata-scan.py       # Initial metadata population
-├── lambda/                            # FPolicy → metadata sync
-│   └── metadata-sync-handler/
-│       ├── handler.py                 # Lambda handler (SQS → Iceberg)
-│       ├── requirements.txt           # Python dependencies
-│       └── build-layer.sh             # Lambda layer build script
-├── cloudformation/
-│   └── metadata-sync-pipeline.yaml    # SQS + Lambda + IAM + Alarms
-├── step-functions/                    # (Phase 3) AI enrichment workflow
-│   └── enrichment-workflow.asl.json
-└── queries/                           # (Phase 5) Athena named queries
-    └── common-searches.sql
+│   ├── create-table-bucket.sh             # S3 Tables setup
+│   └── initial-metadata-scan.py           # Initial metadata population
+├── lambda/
+│   └── metadata-sync-handler/             # FPolicy → SQS → Iceberg sync
+├── demo/
+│   ├── scripts/                           # Full demo (run-demo.sh + 16 scripts)
+│   ├── docs/                              # Demo guide, S3-only quickstart
+│   ├── cloudformation/                    # Demo infrastructure stack
+│   ├── notebooks/                         # Databricks/Snowflake notebooks
+│   └── sample-data/                       # Industry sample data catalog
+├── docs/
+│   ├── poc-guide.md / poc-guide-ja.md     # PoC deployment guide
+│   ├── poc-results-summary.md / -ja.md    # PoC results (1-page summary)
+│   └── standards-vs-service-behavior.md   # Iceberg spec vs S3 Tables behavior
+├── ops/
+│   ├── iceberg-maintenance-runbook.md     # Production maintenance guide
+│   └── athena-named-queries/              # Curated SQL views (latest_records, PII coverage)
+├── schema/
+│   └── extensions/                        # Domain metadata extensions (manufacturing, etc.)
+├── verification-evidence/
+│   ├── evidence-record.yaml               # What was validated vs projected
+│   ├── cost-assumptions.yaml              # All pricing assumptions
+│   ├── cross-platform-compatibility.yaml  # Tested paths per platform
+│   └── 2026-05-31/                        # Detailed test results
+└── cloudformation/
+    └── metadata-sync-pipeline.yaml        # Production pipeline stack
 ```
 
-## Phases
+## S3 Tables Access Paths
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| **Phase 1** | ✅ Implemented | S3 Tables setup + initial scan script |
-| **Phase 2** | ✅ Implemented | FPolicy → SQS → Lambda metadata sync |
-| Phase 3 | 🔲 Planned | AI enrichment (Step Functions + Bedrock) |
-| Phase 4 | 🔲 Planned | Cross-platform access (Databricks, Snowflake) |
-| Phase 5 | 🔲 Planned | Search & discovery (SQL + vector) |
-| Phase 6 | 🔲 Planned | Anonymization pipeline |
+| Access path | Best for | Governance | Verified |
+|---|---|---|:---:|
+| S3 Tables REST (`s3tables.<region>.amazonaws.com/iceberg`) | Direct PoC | IAM + S3 Tables | ✅ |
+| AWS Glue REST (`glue.<region>.amazonaws.com/iceberg`) | Production | IAM + Lake Formation | ✅ |
+| Athena via Glue federated catalog | SQL analytics | Lake Formation | ✅ |
 
-## Phase 2: FPolicy → Metadata Sync Pipeline
+> For production, use the **AWS Glue Iceberg REST endpoint** with Lake Formation. See [docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables-integrating-glue-endpoint.html).
 
-### Deploy
+## Cross-Platform Status (Tested 2026-05-31)
 
-```bash
-# 1. Build Lambda layer
-cd lambda/metadata-sync-handler
-./build-layer.sh
-# Upload layer to S3 (for CloudFormation reference)
-aws s3 cp pyiceberg-s3tables-layer.zip \
-  s3://<ACCOUNT_ID>-lambda-layers-ap-northeast-1/pyiceberg-s3tables-layer.zip
+| Platform | Status | Path |
+|----------|:------:|------|
+| Athena | ✅ | Glue federated catalog |
+| PyIceberg | ✅ | S3 Tables REST + Glue REST |
+| EMR Spark | ✅ Expected | Iceberg REST catalog |
+| Databricks SQL Warehouse | ⚠️ | `iceberg_rest` connection type not supported in tested path |
+| Databricks Spark | TBD | Validate Iceberg REST + SigV4 / UC Foreign Iceberg |
+| Snowflake | ⚠️ | S3 Tables REST not a supported catalog type in tested path |
 
-# 2. Deploy CloudFormation stack
-aws cloudformation deploy \
-  --template-file cloudformation/metadata-sync-pipeline.yaml \
-  --stack-name fsxn-metadata-sync-pipeline \
-  --parameter-overrides \
-    TableBucketArn=arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog \
-    AccessPointArn=arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/your-ap-name \
-  --capabilities CAPABILITY_NAMED_IAM
+Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platform-compatibility.yaml)
 
-# 3. Configure FPolicy Server to send events to the SQS queue
-# Get queue URL from stack outputs:
-aws cloudformation describe-stacks \
-  --stack-name fsxn-metadata-sync-pipeline \
-  --query 'Stacks[0].Outputs[?OutputKey==`QueueUrl`].OutputValue' \
-  --output text
-```
+## Documentation
 
-### Test
+| Document | EN | JA |
+|----------|----|----|
+| Architecture | [EN](../../docs/en/iceberg-metadata-catalog.md) | [JA](../../docs/ja/iceberg-metadata-catalog.md) |
+| PoC Results Summary | [EN](docs/poc-results-summary.md) | [JA](docs/poc-results-summary-ja.md) |
+| PoC Guide | [EN](docs/poc-guide.md) | [JA](docs/poc-guide-ja.md) |
+| Demo Guide | [EN](demo/docs/demo-guide.md) | [JA](demo/docs/demo-guide-ja.md) |
+| S3-Only Quickstart | [EN](demo/docs/quickstart-s3-only.md) | [JA](demo/docs/quickstart-s3-only-ja.md) |
+| Iceberg Spec vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | — |
+| Maintenance Runbook | [EN](ops/iceberg-maintenance-runbook.md) | — |
 
-```bash
-# Send a test event to the SQS queue
-aws sqs send-message \
-  --queue-url <QUEUE_URL> \
-  --message-body '{
-    "event_type": "create",
-    "file_path": "/vol1/test/sample.pdf",
-    "file_size": 1024,
-    "timestamp": "2026-06-01T10:00:00Z",
-    "svm_name": "svm1",
-    "volume_name": "vol1",
-    "access_point_arn": "arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/your-ap-name"
-  }'
+## Blog Series
 
-# Verify record in Athena
-# SELECT * FROM "metadata"."unstructured_files" WHERE file_name = 'sample.pdf';
-```
+- **Part 1**: Architecture & PoC Results — From Hours to Seconds
+- **Part 2**: AI Enrichment Pipeline — Bedrock Vision + OpenSearch NextGen
+- **Part 3**: Governance & Cross-Platform Access
 
-### Monitor
+## Key Constraints
 
-- **DLQ Alarm**: Messages in DLQ indicate processing failures
-- **Error Alarm**: >5 Lambda errors in 5 minutes
-- **Stopped Alarm**: No invocations for 10+ minutes (FPolicy may be down)
-
-## Related Documents
-
-- [Architecture Document (EN)](../../docs/en/iceberg-metadata-catalog.md)
-- [Architecture Document (JA)](../../docs/ja/iceberg-metadata-catalog.md)
-- [Compatibility Matrix](../../docs/en/compatibility-matrix.md)
-- [Spec: Requirements](../../.kiro/specs/iceberg-unstructured-metadata-catalog/requirements.md)
-- [Spec: Tasks](../../.kiro/specs/iceberg-unstructured-metadata-catalog/tasks.md)
+- Use **lowercase** table, namespace, and column names (S3 Tables + Athena requirement)
+- Iceberg does not enforce primary-key uniqueness — use `ops/athena-named-queries/latest_records.sql`
+- Lake Formation column exclusion grants: observed limitation on S3 Tables federated catalog path
+- S3 Tables auto-compaction is service-managed — verify behavior for your retention needs
