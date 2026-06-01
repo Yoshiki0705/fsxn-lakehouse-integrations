@@ -1,0 +1,40 @@
+# =============================================================================
+# S3 Access Point Identity Matrix
+# =============================================================================
+# Each FSx for ONTAP S3 Access Point has an associated file-system identity
+# (UNIX or Windows) that authorizes all file access through that AP.
+# Document this for security review and audit.
+# =============================================================================
+# Reference: https://docs.aws.amazon.com/fsx/latest/APIReference/API_OntapFileSystemIdentity.html
+
+access_points:
+  - name: "verification-test-ap"
+    alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+    volume_id: "<VOLUME_ID>"
+    svm: "<SVM_NAME>"
+    identity:
+      type: "UNIX"  # or "WINDOWS"
+      unix_user:
+        uid: "<UID>"
+        gid: "<GID>"
+      # windows_user:
+      #   domain: "CORP"
+      #   username: "svc-ai-reader"
+    iam_principals:
+      - "arn:aws:iam::<ACCOUNT>:user/yoshiki0705"
+      - "arn:aws:iam::<ACCOUNT>:role/fsxn-metadata-sync-role"
+    access_point_policy: "Allow s3:GetObject, s3:ListBucket for specified principals"
+    allowed_prefixes:
+      - "media/"
+      - "documents/"
+      - "sensor-data/"
+    security_notes:
+      - "Identity has read-only access to specified prefixes"
+      - "Cannot bypass ONTAP file-system permissions"
+      - "IAM policy evaluated first, then ONTAP permissions"
+      - "Audit: CloudTrail logs S3 API calls; ONTAP audit logs file-level access"
+
+review_policy:
+  last_reviewed: "2026-06-01"
+  next_review_due: "2026-09-01"
+  reviewer: "Security team"
