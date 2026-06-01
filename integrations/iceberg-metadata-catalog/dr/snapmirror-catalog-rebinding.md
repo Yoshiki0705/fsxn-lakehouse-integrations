@@ -1,5 +1,7 @@
 # DR and Catalog Rebinding
 
+🌐 [日本語](snapmirror-catalog-rebinding-ja.md) | English
+
 ## Problem
 
 When DR failover occurs (SnapMirror), the metadata catalog contains references to the primary volume's S3 Access Point alias and volume ID. After failover, these references become stale.

@@ -1,0 +1,40 @@
+# =============================================================================
+# S3 Access Point ID マトリクス
+# =============================================================================
+# 各 FSx for ONTAP S3 Access Point には、その AP を通じた全ファイルアクセスを
+# 認可するファイルシステム ID（UNIX または Windows）が関連付けられています。
+# セキュリティレビューと監査のためにこれを文書化してください。
+# =============================================================================
+# 参考: https://docs.aws.amazon.com/fsx/latest/APIReference/API_OntapFileSystemIdentity.html
+
+access_points:
+  - name: "verification-test-ap"
+    alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
+    volume_id: "<VOLUME_ID>"
+    svm: "<SVM_NAME>"
+    identity:
+      type: "UNIX"  # または "WINDOWS"
+      unix_user:
+        uid: "<UID>"
+        gid: "<GID>"
+      # windows_user:
+      #   domain: "CORP"
+      #   username: "svc-ai-reader"
+    iam_principals:
+      - "arn:aws:iam::<ACCOUNT>:user/yoshiki0705"
+      - "arn:aws:iam::<ACCOUNT>:role/fsxn-metadata-sync-role"
+    access_point_policy: "指定プリンシパルに s3:GetObject, s3:ListBucket を許可"
+    allowed_prefixes:
+      - "media/"
+      - "documents/"
+      - "sensor-data/"
+    security_notes:
+      - "ID は指定プレフィックスへの読み取り専用アクセスを持つ"
+      - "ONTAP ファイルシステム権限をバイパスできない"
+      - "IAM ポリシーが最初に評価され、次に ONTAP 権限が評価される"
+      - "監査: CloudTrail が S3 API 呼び出しを記録; ONTAP 監査ログがファイルレベルアクセスを記録"
+
+review_policy:
+  last_reviewed: "2026-06-01"
+  next_review_due: "2026-09-01"
+  reviewer: "セキュリティチーム"
