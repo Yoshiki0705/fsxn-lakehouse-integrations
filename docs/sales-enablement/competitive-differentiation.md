@@ -43,7 +43,7 @@ This document compares architectural approaches for connecting unstructured file
 - ONTAP features (SnapMirror, FlexClone, storage efficiency) remain available
 
 **Limitations & Considerations:**
-- S3 Access Point is **read-only** — no write-back from analytics tools to FSx volumes
+- S3 AP is used read-only in this pipeline (**writes are supported**) — no write-back from analytics tools to FSx volumes
 - S3 Access Point does **not support S3 Event Notifications** (cannot auto-trigger Snowpipe, EventBridge rules, etc.)
 - FPolicy adds latency overhead (~1–5ms per file operation) to NAS clients
 - Lambda processing: file content passes through Lambda memory (ephemeral, not persisted, but not "zero data movement" at the processing layer)
@@ -170,7 +170,7 @@ This solution is **not the best fit** when:
 | Data is born in S3 (no NAS origin) | S3-native + Glue | No benefit from zero-copy storage if data is already in S3 |
 | Object-native workloads (large media, append-only logs) | S3 + S3 Events | S3 Event Notifications enable Snowpipe/EventBridge triggers |
 | Small file counts (<5,000 files, infrequent changes) | DataSync + S3 | DataSync is simpler to operate; event-driven detection is unnecessary |
-| Need write-back from analytics to storage | S3 Standard | S3 AP is read-only; cannot write results back to FSx |
+| Need write-back from analytics to storage | S3 Standard | S3 AP is used read-only in this pipeline (writes supported); cannot write results back to FSx |
 | Structured/tabular data only | Databricks / Glue | Unity Catalog or Glue Data Catalog handles tabular data without AI classification |
 | No existing FSx for ONTAP deployment | Evaluate cost of FSx adoption first | Solution assumes FSx for ONTAP is already in place or planned |
 
@@ -209,7 +209,7 @@ Is FSx for ONTAP already deployed (or planned)?
   → No: Evaluate whether FSx for ONTAP adoption is justified for other reasons first
 
 Do analytics tools need to write results back to storage?
-  → Yes: S3 Standard (S3 AP is read-only)
+  → Yes: S3 Standard (S3 AP is used read-only in this pipeline (writes supported))
   → No: FSx for ONTAP + S3 AP is compatible
 ```
 

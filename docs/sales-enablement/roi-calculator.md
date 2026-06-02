@@ -194,7 +194,7 @@ ROI = (Annual Benefits - Annual Costs) / Annual Costs × 100%
 2. **Use Conservative scenario by default**: "Your environment would save approximately $X/month in the conservative case"
 3. **Show range**: "Depending on adoption, benefits range from $X (conservative) to $Y (optimistic)"
 4. **Be transparent about assumptions**: Call out what must be true for savings to materialize
-5. **Acknowledge limitations**: S3 AP is read-only, classification accuracy varies, cold start delays exist
+5. **Acknowledge limitations**: S3 AP is used read-only in this pipeline (writes supported), classification accuracy varies, cold start delays exist
 6. **Payback framing**: Even the conservative scenario shows payback in under 2 weeks
 
 ---
