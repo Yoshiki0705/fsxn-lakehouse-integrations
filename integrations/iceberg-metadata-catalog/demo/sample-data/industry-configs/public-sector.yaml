@@ -1,0 +1,61 @@
+industry: public-sector
+display_name: "Public Sector (公共機関)"
+file_types:
+  - extension: ".docx"
+    category: "policy_document"
+    ai_classification: "政策文書"
+    sample_content: "Digital Transformation Strategy 2026, Status: Draft, Department: Digital Agency"
+    count: 15
+  - extension: ".pdf"
+    category: "citizen_correspondence"
+    ai_classification: "住民対応文書"
+    sample_content: "Inquiry ID: INQ-2026-4521, Topic: Public service access, Response: Pending"
+    count: 20
+  - extension: ".xlsx"
+    category: "budget_report"
+    ai_classification: "予算報告"
+    sample_content: "FY2026 Q1 Budget Execution, Total: ¥2.3B, Execution rate: 24.5%"
+    count: 8
+  - extension: ".docx"
+    category: "internal_memo"
+    ai_classification: "内部メモ"
+    sample_content: "Subject: Security protocol review, Classification: Confidential"
+    count: 12
+  - extension: ".pdf"
+    category: "procurement_contract"
+    ai_classification: "調達契約"
+    sample_content: "Contract ID: PROC-2026-0089, Vendor: IT Services Co., Value: ¥45M"
+    count: 10
+metadata_fields:
+  - name: "department"
+    type: "string"
+    example: "Digital Agency"
+  - name: "sensitivity_level"
+    type: "string"
+    example: "Internal"
+  - name: "retention_years"
+    type: "integer"
+    example: 10
+  - name: "foia_relevant"
+    type: "boolean"
+    example: true
+  - name: "disposition_status"
+    type: "string"
+    example: null
+  - name: "pii_detected"
+    type: "boolean"
+    example: false
+queries:
+  - name: "FOIA-relevant documents by topic"
+    sql: "SELECT * FROM metadata WHERE foia_relevant = true AND content_summary LIKE '%digital transformation%'"
+  - name: "Documents past retention with no disposition"
+    sql: "SELECT * FROM metadata WHERE date_add('year', retention_years, creation_date) < current_date AND disposition_status IS NULL"
+  - name: "Department inventory by sensitivity"
+    sql: "SELECT department, sensitivity_level, count(*) FROM metadata GROUP BY department, sensitivity_level"
+  - name: "Procurement contracts by value"
+    sql: "SELECT * FROM metadata WHERE ai_classification = '調達契約' ORDER BY contract_value DESC"
+limitations:
+  - "AI classification is assistive - not authoritative for information disclosure decisions"
+  - "Classified/sensitive content passes through Lambda memory during processing"
+  - "Legal/regulatory terminology may reduce classification accuracy"
+  - "S3 AP read-only - cannot auto-apply retention disposition (delete/archive)"
