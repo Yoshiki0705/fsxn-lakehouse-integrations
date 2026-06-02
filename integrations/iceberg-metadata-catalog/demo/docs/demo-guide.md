@@ -10,6 +10,12 @@ This guide enables you to run the complete Iceberg Metadata Catalog demo in ~15 
 
 ## Prerequisites
 
+> **Quick check**: Run `./check-prerequisites.sh` to verify your environment before starting.
+> ```bash
+> cd demo/scripts && ./check-prerequisites.sh --ap-alias <your-alias>
+> ```
+> **Need infrastructure?** Send [`docs/infrastructure-request-template.md`](../../docs/infrastructure-request-template.md) to your platform team.
+
 | Requirement | Details |
 |------------|---------|
 | AWS CLI v2 | Configured with appropriate permissions |
