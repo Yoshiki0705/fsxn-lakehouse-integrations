@@ -1,0 +1,54 @@
+industry: advertising-marketing
+display_name: "Advertising & Marketing (広告・マーケティング)"
+aws_industry_team: "Advertising & Marketing"
+file_types:
+  - extension: ".psd"
+    category: "creative_asset"
+    ai_classification: "クリエイティブ/ヒーロー画像"
+    sample_content: "Brand: Brand X, Campaign: Summer 2026, Version: 3, Status: Approved, Format: Print-ready"
+    count: 60
+  - extension: ".pdf"
+    category: "campaign_brief"
+    ai_classification: "キャンペーンブリーフ"
+    sample_content: "Brand: Brand X, Campaign: Summer 2026, Objective: Awareness, Budget: ¥50M"
+    count: 20
+  - extension: ".xlsx"
+    category: "media_plan"
+    ai_classification: "メディアプラン"
+    sample_content: "Brand: Brand X, Quarter: Q3, Channels: Digital(60%)+OOH(25%)+TV(15%), Budget: ¥30M"
+    count: 15
+  - extension: ".pdf"
+    category: "brand_guidelines"
+    ai_classification: "ブランドガイドライン"
+    sample_content: "Brand: Brand X, Version: 4.2, Status: Current, Updated: 2026-03-01"
+    count: 8
+  - extension: ".pdf"
+    category: "performance_report"
+    ai_classification: "パフォーマンスレポート"
+    sample_content: "Brand: Brand X, Campaign: Summer, Week: 4, Impressions: 12.4M, CTR: 2.1%"
+    count: 30
+metadata_fields:
+  - name: "brand"
+    type: "string"
+    example: "Brand X"
+  - name: "campaign"
+    type: "string"
+    example: "Summer 2026"
+  - name: "approval_status"
+    type: "string"
+    example: "Approved"
+  - name: "usage_rights"
+    type: "string"
+    example: "Owned (worldwide)"
+  - name: "version"
+    type: "integer"
+    example: 3
+queries:
+  - name: "Approved assets by campaign"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Creative%' AND approval_status = 'Approved' AND brand = 'Brand X' ORDER BY campaign"
+  - name: "Assets with expiring usage rights"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Creative%' AND usage_rights_expiry < current_date + interval '90' day"
+  - name: "Campaign document completeness"
+    sql: "SELECT brand, campaign, COUNT(DISTINCT ai_classification) as doc_types FROM metadata GROUP BY brand, campaign"
+  - name: "Latest brand guidelines by brand"
+    sql: "SELECT brand, MAX(version) as latest_version FROM metadata WHERE ai_classification = 'Brand Guidelines' GROUP BY brand"

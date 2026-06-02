@@ -1,0 +1,54 @@
+industry: smart-city
+display_name: "Smart City & Telecom (スマートシティ・通信)"
+aws_industry_team: "Telecommunications"
+file_types:
+  - extension: ".json"
+    category: "iot_traffic_sensor"
+    ai_classification: "IoT/交通"
+    sample_content: "District: 7, Intersection: INT-042, Anomalies: 3, Peak: 08:15-08:45, Completeness: 99.8%"
+    count: 50
+  - extension: ".jpg"
+    category: "traffic_camera"
+    ai_classification: "カメラ/交通異常"
+    sample_content: "District: 7, Intersection: INT-042, Event: Vehicle Stop, Confidence: 0.93"
+    count: 40
+  - extension: ".pdf"
+    category: "citizen_complaint"
+    ai_classification: "市民苦情"
+    sample_content: "ID: CC-2026-08842, District: 7, Type: Road Damage, Status: Open"
+    count: 30
+  - extension: ".pdf"
+    category: "infrastructure_plan"
+    ai_classification: "インフラ計画"
+    sample_content: "District: 7, Type: Water Main, Status: Planned, Budget: ¥450M, Start: 2026-09"
+    count: 10
+  - extension: ".csv"
+    category: "environmental_sensor"
+    ai_classification: "IoT/環境"
+    sample_content: "Station: A7, Measurements: 1440, PM2.5 Max: 35ug/m3, Alert: No"
+    count: 30
+metadata_fields:
+  - name: "district"
+    type: "string"
+    example: "D7"
+  - name: "location"
+    type: "string"
+    example: "INT-042"
+  - name: "event_type"
+    type: "string"
+    example: "Anomaly"
+  - name: "anomaly_count"
+    type: "integer"
+    example: 3
+  - name: "data_quality"
+    type: "string"
+    example: "99.8%"
+queries:
+  - name: "Traffic anomalies by district"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'IoT/Traffic' AND anomaly_count > 0 ORDER BY anomaly_count DESC"
+  - name: "Open citizen complaints by district"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Citizen Complaint' AND status = 'Open' ORDER BY submission_date"
+  - name: "Environmental alerts"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'IoT/Environmental' AND alert_triggered = true ORDER BY alert_time DESC"
+  - name: "Infrastructure plans by status"
+    sql: "SELECT district, plan_type, status, budget FROM metadata WHERE ai_classification = 'Infrastructure Plan' ORDER BY start_date"

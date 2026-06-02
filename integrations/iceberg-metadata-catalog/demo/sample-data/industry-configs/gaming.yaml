@@ -1,0 +1,54 @@
+industry: gaming
+display_name: "Gaming (ゲーム)"
+aws_industry_team: "Media & Entertainment"
+file_types:
+  - extension: ".png"
+    category: "texture_asset"
+    ai_classification: "テクスチャ/環境"
+    sample_content: "Resolution: 4096x4096, Biome: Forest, Element: Ground, Compression: None"
+    count: 100
+  - extension: ".fbx"
+    category: "3d_model"
+    ai_classification: "3Dモデル/キャラクター"
+    sample_content: "Character: Hero, Version: 12, Polycount: 45000, Rigged: Yes"
+    count: 40
+  - extension: ".log"
+    category: "build_log"
+    ai_classification: "ビルドログ/ナイトリー"
+    sample_content: "Build: v2.4.1, Date: 2026-06-01, Warnings: 342, Errors: 0, Duration: 47min"
+    count: 30
+  - extension: ".pdf"
+    category: "qa_report"
+    ai_classification: "QA レポート"
+    sample_content: "Sprint: 42, Component: Combat System, Critical Bugs: 2, Total: 18"
+    count: 25
+  - extension: ".wav"
+    category: "audio_asset"
+    ai_classification: "オーディオ/SFX"
+    sample_content: "Category: Explosion, Size: Large, Duration: 3.2s, SampleRate: 48000"
+    count: 60
+metadata_fields:
+  - name: "asset_type"
+    type: "string"
+    example: "Texture"
+  - name: "resolution"
+    type: "string"
+    example: "4096x4096"
+  - name: "build_version"
+    type: "string"
+    example: "v2.4.1"
+  - name: "sprint"
+    type: "integer"
+    example: 42
+  - name: "project"
+    type: "string"
+    example: "ProjectX"
+queries:
+  - name: "Uncompressed textures above 4K resolution"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Texture%' AND resolution_x >= 4096 AND compression_status = 'None'"
+  - name: "Build failures in last 7 days"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Build Log/Nightly' AND error_count > 0 AND scan_timestamp > current_date - interval '7' day"
+  - name: "QA reports with critical bugs"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'QA Report' AND critical_bug_count > 0 ORDER BY critical_bug_count DESC"
+  - name: "Audio assets by category"
+    sql: "SELECT audio_category, COUNT(*) as count, SUM(file_size_mb) as total_size FROM metadata WHERE ai_classification LIKE 'Audio%' GROUP BY audio_category"

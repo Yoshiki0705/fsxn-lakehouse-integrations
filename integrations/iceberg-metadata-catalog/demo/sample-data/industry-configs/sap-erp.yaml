@@ -1,0 +1,54 @@
+industry: sap-erp
+display_name: "SAP / ERP Integration (SAP/ERP 連携)"
+aws_industry_team: "Cross-Industry"
+file_types:
+  - extension: ".pdf"
+    category: "invoice_scan"
+    ai_classification: "請求書"
+    sample_content: "Vendor: VND-0042, Invoice: INV2026-08842, Amount: ¥2,400,000, PO: PO2026-04421"
+    count: 50
+  - extension: ".pdf"
+    category: "purchase_order"
+    ai_classification: "発注書"
+    sample_content: "PO: PO2026-04421, Vendor: VND-0042, Amount: ¥3,000,000, Category: Raw Materials"
+    count: 30
+  - extension: ".pdf"
+    category: "delivery_note"
+    ai_classification: "納品書"
+    sample_content: "DN: DN2026-08842, PO: PO2026-04421, Delivery: Partial 80%, Date: 2026-06-01"
+    count: 35
+  - extension: ".pdf"
+    category: "warehouse_receipt"
+    ai_classification: "入庫伝票"
+    sample_content: "WR: WR2026-08842, PO: PO2026-04421, Status: Received, Inspection: Pass"
+    count: 30
+  - extension: ".pdf"
+    category: "credit_memo"
+    ai_classification: "クレジットメモ"
+    sample_content: "CM: CM2026-0042, Vendor: VND-0042, Amount: -¥180,000, Reason: Return"
+    count: 10
+metadata_fields:
+  - name: "vendor_id"
+    type: "string"
+    example: "VND-0042"
+  - name: "document_number"
+    type: "string"
+    example: "INV2026-08842"
+  - name: "amount"
+    type: "integer"
+    example: 2400000
+  - name: "po_reference"
+    type: "string"
+    example: "PO2026-04421"
+  - name: "match_status"
+    type: "string"
+    example: "Pending"
+queries:
+  - name: "Unmatched high-value invoices"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Invoice' AND amount > 1000000 AND match_status = 'Pending' ORDER BY amount DESC"
+  - name: "Three-way match status by vendor"
+    sql: "SELECT vendor_id, COUNT(DISTINCT ai_classification) as doc_types FROM metadata GROUP BY vendor_id, po_reference"
+  - name: "Credit memos by vendor"
+    sql: "SELECT vendor_id, COUNT(*) as credits, SUM(amount) as total_credit FROM metadata WHERE ai_classification = 'Credit Memo' GROUP BY vendor_id"
+  - name: "All documents for a PO"
+    sql: "SELECT * FROM metadata WHERE po_reference = 'PO2026-04421' ORDER BY ai_classification"

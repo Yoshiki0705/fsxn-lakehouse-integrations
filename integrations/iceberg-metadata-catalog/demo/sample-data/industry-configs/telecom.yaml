@@ -1,0 +1,54 @@
+industry: telecom
+display_name: "Telecommunications (通信)"
+aws_industry_team: "Telecommunications"
+file_types:
+  - extension: ".log"
+    category: "network_log"
+    ai_classification: "ネットワークログ/RAN"
+    sample_content: "Site: SITE-042, Events: 42000, Critical: 3, Element: gNodeB, Tech: 5G NR"
+    count: 50
+  - extension: ".pdf"
+    category: "tower_inspection"
+    ai_classification: "鉄塔点検"
+    sample_content: "Site: SITE-042, Region: East, Structure: Good, Antenna: Normal, Date: 2026-06-01"
+    count: 25
+  - extension: ".jpg"
+    category: "inspection_photo"
+    ai_classification: "点検写真/鉄塔"
+    sample_content: "Site: SITE-042, Component: Antenna Array, Condition: Normal, Height: 45m"
+    count: 40
+  - extension: ".pdf"
+    category: "customer_contract"
+    ai_classification: "顧客契約書/5G"
+    sample_content: "Customer: ENT-C08842, Type: 5G SLA, Tier: Premium, Renewal: 2027-03-31"
+    count: 30
+  - extension: ".pdf"
+    category: "spectrum_analysis"
+    ai_classification: "スペクトル分析"
+    sample_content: "Band: n77, Region: East, Utilization: 72%, Interference: 2 events, Date: 2026-06-01"
+    count: 15
+metadata_fields:
+  - name: "site_id"
+    type: "string"
+    example: "SITE-042"
+  - name: "region"
+    type: "string"
+    example: "East"
+  - name: "network_element"
+    type: "string"
+    example: "gNodeB"
+  - name: "critical_alert_count"
+    type: "integer"
+    example: 3
+  - name: "technology"
+    type: "string"
+    example: "5G NR"
+queries:
+  - name: "Sites with critical alerts in last 24 hours"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Network Log/RAN' AND critical_alert_count > 0 AND scan_timestamp > current_timestamp - interval '24' hour"
+  - name: "Tower inspections with structural concerns"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Tower Inspection' AND structural_status != 'Good' ORDER BY finding_severity DESC"
+  - name: "Enterprise contracts approaching renewal"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Customer Contract%' AND renewal_date < current_date + interval '90' day"
+  - name: "Spectrum utilization by band and region"
+    sql: "SELECT band, region, utilization_pct FROM metadata WHERE ai_classification = 'Spectrum Analysis' ORDER BY utilization_pct DESC"

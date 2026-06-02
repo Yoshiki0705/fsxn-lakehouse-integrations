@@ -1,0 +1,54 @@
+industry: insurance
+display_name: "Insurance (保険)"
+aws_industry_team: "Financial Services"
+file_types:
+  - extension: ".pdf"
+    category: "claims_form"
+    ai_classification: "保険金請求書/自動車"
+    sample_content: "Claim: CLM-08421, Type: Auto Collision, Damage: ¥2,300,000, Severity: High"
+    count: 30
+  - extension: ".pdf"
+    category: "medical_report"
+    ai_classification: "医療報告書"
+    sample_content: "Claim: CLM-08421, Injury: Whiplash, Treatment: 6 weeks, Prognosis: Full recovery"
+    count: 20
+  - extension: ".jpg"
+    category: "damage_photo"
+    ai_classification: "損害写真/車両"
+    sample_content: "Claim: CLM-08421, Location: Front, Severity: High, Signature: Present"
+    count: 40
+  - extension: ".pdf"
+    category: "policy_document"
+    ai_classification: "保険証券/自動車"
+    sample_content: "Policy: AUT-P2026-44210, Type: Comprehensive, Coverage: ¥50,000,000, Status: Active"
+    count: 15
+  - extension: ".pdf"
+    category: "adjuster_report"
+    ai_classification: "査定レポート"
+    sample_content: "Claim: CLM-08421, Assessment: ¥2,150,000, Recommendation: Approve, Fraud: None"
+    count: 25
+metadata_fields:
+  - name: "claim_id"
+    type: "string"
+    example: "CLM-08421"
+  - name: "claim_type"
+    type: "string"
+    example: "Collision"
+  - name: "severity"
+    type: "string"
+    example: "High"
+  - name: "estimated_damage"
+    type: "integer"
+    example: 2300000
+  - name: "fraud_indicators"
+    type: "boolean"
+    example: false
+queries:
+  - name: "High-value claims pending review"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Claims Form%' AND estimated_damage > 1000000 AND status = 'Pending Review'"
+  - name: "Claims with fraud indicators"
+    sql: "SELECT * FROM metadata WHERE fraud_indicators = true ORDER BY confidence_score DESC"
+  - name: "Document completeness by claim"
+    sql: "SELECT claim_id, COUNT(DISTINCT ai_classification) as doc_types FROM metadata GROUP BY claim_id HAVING COUNT(DISTINCT ai_classification) < 3"
+  - name: "Claims processing time analysis"
+    sql: "SELECT claim_type, AVG(days_pending) as avg_days, COUNT(*) as count FROM metadata WHERE ai_classification LIKE 'Claims Form%' GROUP BY claim_type"

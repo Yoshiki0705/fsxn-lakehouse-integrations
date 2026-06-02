@@ -1,0 +1,54 @@
+industry: construction-bim
+display_name: "Construction & BIM (建設・BIM)"
+aws_industry_team: "AEC"
+file_types:
+  - extension: ".ifc"
+    category: "bim_model"
+    ai_classification: "BIMモデル/構造"
+    sample_content: "Project: Building A, Discipline: Structural, Revision: 8, LOD: 350, Phase: Construction"
+    count: 20
+  - extension: ".jpg"
+    category: "site_photo"
+    ai_classification: "現場写真/進捗"
+    sample_content: "Project: Building A, Location: Floor 3, Activity: Concrete pour, Date: 2026-06-01"
+    count: 100
+  - extension: ".pdf"
+    category: "safety_inspection"
+    ai_classification: "安全点検"
+    sample_content: "Project: Building A, Findings: 2, Severity: Medium, Status: Open"
+    count: 30
+  - extension: ".pdf"
+    category: "permit_document"
+    ai_classification: "許認可/建築"
+    sample_content: "Project: Building A, Type: Building Permit, Expiry: 2027-03-31, Status: Active"
+    count: 10
+  - extension: ".pdf"
+    category: "rfi_document"
+    ai_classification: "RFI/構造"
+    sample_content: "Project: Building A, RFI: STR-042, Subject: Column spacing, Status: Pending"
+    count: 25
+metadata_fields:
+  - name: "project"
+    type: "string"
+    example: "Building A"
+  - name: "discipline"
+    type: "string"
+    example: "Structural"
+  - name: "revision"
+    type: "integer"
+    example: 8
+  - name: "phase"
+    type: "string"
+    example: "Construction"
+  - name: "expiry_date"
+    type: "date"
+    example: "2027-03-31"
+queries:
+  - name: "Latest BIM model revisions by discipline"
+    sql: "SELECT project, discipline, MAX(revision) as latest_rev FROM metadata WHERE ai_classification LIKE 'BIM Model%' GROUP BY project, discipline"
+  - name: "Open safety findings"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Safety Inspection' AND finding_status = 'Open' ORDER BY severity DESC"
+  - name: "Permits approaching expiry"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Permit%' AND expiry_date < current_date + interval '90' day"
+  - name: "Pending RFIs by discipline"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'RFI%' AND status = 'Pending' ORDER BY submission_date ASC"

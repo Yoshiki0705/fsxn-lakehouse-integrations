@@ -1,0 +1,54 @@
+industry: genomics
+display_name: "Genomics & Biotech (ゲノミクス・バイオテック)"
+aws_industry_team: "HCLS"
+file_types:
+  - extension: ".html"
+    category: "qc_report"
+    ai_classification: "QCレポート/シーケンシング"
+    sample_content: "Run: RUN2026042, Sample: S001, Type: WGS, Coverage: 30x, Q30: 87%, Status: PASS"
+    count: 30
+  - extension: ".vcf"
+    category: "variant_file"
+    ai_classification: "バリアント/生殖細胞系"
+    sample_content: "Sample: S001, Variants: 42847, Pathogenic: 3, VUS: 12, Pipeline: GATK 4.5.2"
+    count: 40
+  - extension: ".json"
+    category: "fastq_metrics"
+    ai_classification: "FASTQメトリクス"
+    sample_content: "Run: RUN2026042, TotalReads: 1.2B, PassFilter: 98.2%, Instrument: NovaSeq6000"
+    count: 20
+  - extension: ".pdf"
+    category: "consent_form"
+    ai_classification: "同意書/ゲノム"
+    sample_content: "Patient: PT8842, Scope: Research+Clinical, Version: 2, Expiry: 2028-06-01"
+    count: 15
+  - extension: ".tsv"
+    category: "clinical_annotation"
+    ai_classification: "臨床アノテーション"
+    sample_content: "Sample: S001, Gene: BRCA1, Variant: c.5266dupC, Significance: Pathogenic"
+    count: 25
+metadata_fields:
+  - name: "run_id"
+    type: "string"
+    example: "RUN2026042"
+  - name: "sample_id"
+    type: "string"
+    example: "S001"
+  - name: "sequencing_type"
+    type: "string"
+    example: "WGS"
+  - name: "quality_status"
+    type: "string"
+    example: "PASS"
+  - name: "pathogenic_count"
+    type: "integer"
+    example: 3
+queries:
+  - name: "Failed QC runs in last 30 days"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'QC Report/Sequencing' AND quality_status = 'FAIL' AND scan_timestamp > current_date - interval '30' day"
+  - name: "Samples with pathogenic variants"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Clinical Annotation' AND pathogenic_count > 0 ORDER BY pathogenic_count DESC"
+  - name: "Consent forms expiring within 6 months"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Consent/Genomic' AND expiry_date < current_date + interval '180' day"
+  - name: "Run quality metrics aggregation"
+    sql: "SELECT run_id, AVG(coverage) as avg_coverage, MIN(q30_pct) as min_q30 FROM metadata WHERE ai_classification = 'QC Report/Sequencing' GROUP BY run_id"

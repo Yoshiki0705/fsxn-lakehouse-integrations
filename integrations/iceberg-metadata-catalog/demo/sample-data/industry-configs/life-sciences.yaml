@@ -1,0 +1,54 @@
+industry: life-sciences
+display_name: "Life Sciences & Pharma (ライフサイエンス・製薬)"
+aws_industry_team: "HCLS"
+file_types:
+  - extension: ".pdf"
+    category: "clinical_protocol"
+    ai_classification: "治験プロトコル"
+    sample_content: "Study: ONCO-2026-042, Phase: 3, Indication: NSCLC, Version: 2.0, Status: Approved"
+    count: 15
+  - extension: ".pdf"
+    category: "adverse_event_report"
+    ai_classification: "有害事象/SAE"
+    sample_content: "Study: ONCO-042, Event: Hepatotoxicity, Grade: 3, Causality: Possible"
+    count: 30
+  - extension: ".pdf"
+    category: "lab_report"
+    ai_classification: "ラボレポート/バイオマーカー"
+    sample_content: "Study: ONCO-042, Visit: Week 24, Biomarker: PD-L1, Result: 65%"
+    count: 40
+  - extension: ".pdf"
+    category: "sop_document"
+    ai_classification: "SOP/GCP"
+    sample_content: "SOP: GCP-MON-004, Version: 4.2, Effective: 2026-01-15, Review: 2027-01-15"
+    count: 20
+  - extension: ".pdf"
+    category: "regulatory_submission"
+    ai_classification: "規制当局/eCTD M5"
+    sample_content: "Study: ONCO-042, Module: 5.3.5.1, Type: Clinical Overview, Status: Draft"
+    count: 10
+metadata_fields:
+  - name: "study_id"
+    type: "string"
+    example: "ONCO-042"
+  - name: "phase"
+    type: "integer"
+    example: 3
+  - name: "therapeutic_area"
+    type: "string"
+    example: "Oncology"
+  - name: "ectd_module"
+    type: "string"
+    example: "5.3.5.1"
+  - name: "document_version"
+    type: "string"
+    example: "2.0"
+queries:
+  - name: "Phase 3 adverse events by therapeutic area"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Adverse Event/SAE' AND phase = 3 AND therapeutic_area = 'Oncology' ORDER BY report_date DESC"
+  - name: "eCTD submission readiness"
+    sql: "SELECT ectd_module, COUNT(*) as docs, COUNT(CASE WHEN status = 'Approved' THEN 1 END) as approved FROM metadata WHERE study_id = 'ONCO-042' GROUP BY ectd_module"
+  - name: "SOPs approaching review date"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'SOP%' AND next_review_date < current_date + interval '90' day ORDER BY next_review_date"
+  - name: "Cross-study safety signals"
+    sql: "SELECT study_id, ae_type, COUNT(*) as occurrences FROM metadata WHERE ai_classification = 'Adverse Event/SAE' GROUP BY study_id, ae_type HAVING COUNT(*) > 2"
