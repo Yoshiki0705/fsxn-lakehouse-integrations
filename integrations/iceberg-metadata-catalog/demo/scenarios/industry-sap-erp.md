@@ -176,7 +176,7 @@ Using OpenSearch:
 
 | Limitation | Impact for ERP Integration |
 |-----------|---------------------------|
-| S3 AP read-only | Cannot write back to ERP or trigger SAP workflows |
+| S3 AP (pipeline reads only) | Cannot write back to ERP or trigger SAP workflows |
 | OCR quality | Scanned document accuracy depends on scan resolution and paper quality |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |
 | ERP master data | AI classification references extracted IDs; does not query ERP master data |

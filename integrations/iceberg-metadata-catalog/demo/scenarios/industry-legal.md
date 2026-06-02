@@ -190,7 +190,7 @@ OpenSearch semantic search:
 | Privilege classification is AI-assisted | NOT determinative — attorney review required for all privilege assertions |
 | Lambda ephemeral processing | Privileged/confidential content passes through Lambda memory — evaluate with IT security |
 | Bedrock accuracy varies | Multi-language contracts, handwritten annotations, and specialized legal terms affect accuracy |
-| S3 AP read-only | Cannot auto-apply hold notices or move documents to litigation hold storage |
+| S3 AP (pipeline reads only) | Cannot auto-apply hold notices or move documents to litigation hold storage |
 | No S3 Event Notifications | Cannot auto-trigger matter management system updates via S3 events |
 | Complex contracts | Multi-party, multi-jurisdictional contracts may have lower metadata extraction accuracy |
 

@@ -192,7 +192,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Logistics |
 |-----------|---------------------|
-| S3 AP read-only | Cannot auto-archive completed shipment documents via pipeline |
+| S3 AP (pipeline reads only) | Cannot auto-archive completed shipment documents via pipeline |
 | No S3 Event Notifications | Cannot trigger downstream routing workflows via S3 events |
 | Bedrock accuracy varies | Multi-language trade documents (EN/JA/CN) may need prompt tuning |
 | Delivery photo quality | Mobile photos in poor conditions may reduce damage detection accuracy |

@@ -178,7 +178,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Defense |
 |-----------|-------------------|
-| S3 AP read-only | Cannot trigger tasking requests via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger tasking requests via pipeline |
 | Classification levels | Metadata catalog must be deployed within appropriate security boundary |
 | Lambda ephemeral access | File content passes through Lambda memory — verify against security requirements |
 | ITAR/EAR considerations | Ensure no controlled technical data flows outside authorized environment |

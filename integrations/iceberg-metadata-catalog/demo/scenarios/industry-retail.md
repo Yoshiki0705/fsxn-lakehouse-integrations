@@ -191,7 +191,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Retail |
 |-----------|-------------------|
-| S3 AP read-only | Cannot auto-archive obsolete planograms or expired assets via pipeline |
+| S3 AP (pipeline reads only) | Cannot auto-archive obsolete planograms or expired assets via pipeline |
 | No S3 Event Notifications | Cannot trigger downstream inventory workflows via S3 events |
 | Bedrock accuracy varies | Product image classification accuracy depends on image quality and lighting |
 | FPolicy latency (~1–5ms) | Negligible for document management; no impact on POS operations |

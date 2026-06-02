@@ -192,7 +192,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Financial |
 |-----------|---------------------|
-| S3 AP read-only | Cannot auto-archive expired documents via analytics pipeline |
+| S3 AP (pipeline reads only) | Cannot auto-archive expired documents via analytics pipeline |
 | No S3 Event Notifications | Cannot trigger downstream compliance workflows via S3 events |
 | Bedrock accuracy varies | Legal/regulatory document classification may need prompt tuning for specialized terms |
 | FPolicy latency (~1–5ms) | Minimal impact for document management; test if trading systems share the volume |

@@ -126,7 +126,7 @@ The following limitations apply to every scenario above:
 
 | Limitation | Description |
 |-----------|-------------|
-| S3 Access Point read-only | Pipeline can read files but cannot write back or archive via S3 AP |
+| S3 AP (pipeline reads only) | Pipeline can read files but cannot write back or archive via S3 AP |
 | No S3 Event Notifications | S3 Tables does not support event notifications; FPolicy is the event source |
 | Bedrock accuracy varies | Classification confidence depends on document quality, language mix, and domain terminology |
 | FPolicy latency | ~1–5ms overhead per file operation (negligible for most workflows) |

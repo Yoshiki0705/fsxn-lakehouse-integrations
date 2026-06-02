@@ -195,7 +195,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Semiconductor |
 |-----------|--------------------------|
-| S3 AP read-only | Cannot trigger recipe adjustments or lot holds via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger recipe adjustments or lot holds via pipeline |
 | No S3 Event Notifications | Cannot trigger MES actions via S3 events |
 | Proprietary formats | KLARF, SINF formats processed at metadata level; not full spatial analysis |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |
