@@ -125,6 +125,20 @@ platforms:
           likely requires this operation during table creation/metadata resolution.
           CONCLUSION: Object Store catalog is NOT viable for S3 Tables internal buckets.
           Metadata must be exported to a standard S3 bucket first.
+      - name: "Glue REST + EXTERNAL_VOLUME_CREDENTIALS"
+        result: "access_denied"
+        tested_date: "2026-06-02"
+        status: "blocked"
+        notes: |
+          Tested per Snowflake Support recommendation (2026-06-02).
+          Catalog Integration recreated without ACCESS_DELEGATION_MODE (defaults to
+          EXTERNAL_VOLUME_CREDENTIALS). IAM trust policy updated with new External ID.
+          Same 'access denied' error as Object Store path.
+          Query ID: 01c4c702-0003-a2c8-0003-6a860025f20a
+          CONCLUSION: The blocker is NOT credential vending mode — it is the S3 Tables
+          internal bucket itself rejecting Snowflake's storage access pattern.
+          All three catalog paths (VENDED_CREDENTIALS, Object Store, EXTERNAL_VOLUME_CREDENTIALS)
+          are blocked by the same S3 Tables internal bucket restriction.
       - name: "Snowflake Open Catalog (Polaris) as Iceberg catalog"
         result: "not_tested"
         status: "strategic_alternative"
