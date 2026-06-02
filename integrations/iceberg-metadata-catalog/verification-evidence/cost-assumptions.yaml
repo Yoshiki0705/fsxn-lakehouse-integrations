@@ -64,3 +64,95 @@ unit_economics:
   cost_per_1m_backfill: "~$5,000-10,000 (Batch Inference, one-time)"
   cost_per_business_query: "~$0.000005 (Athena, metadata scan only)"
   note: "Track cost per searchable file and cost per accepted AI classification for production business cases"
+
+# =============================================================================
+# Databricks Cost Model (if metadata activation is used)
+# =============================================================================
+# Added: 2026-06-01
+# Status: Estimated (not yet activated in this PoC)
+# =============================================================================
+
+databricks_cost_model:
+  metadata_activation:
+    mode: "sync_to_uc_delta"
+    description: "Sync redacted metadata table to UC-managed Delta table for BI/ML"
+    data_volume_mb: 50  # ~100K file metadata records
+    sync_frequency: "hourly or event-driven"
+    compute_options:
+      - name: "Serverless SQL Warehouse"
+        cost_model: "per-query DBU"
+        estimated_monthly_dbu: 10  # light dashboard usage
+      - name: "Jobs (scheduled sync)"
+        cost_model: "per-job DBU"
+        estimated_monthly_dbu: 5  # hourly sync job
+    estimated_monthly_cost_usd: "15-50 (depends on query volume and compute type)"
+
+  uc_foreign_catalog:
+    validation_status: "pending (B-4/B-5)"
+    description: "Direct read from S3 Tables via Glue REST — no sync needed"
+    additional_cost: "Query compute only (no storage duplication)"
+    refresh_frequency_minutes: 60  # REFRESH FOREIGN TABLE cadence
+    estimated_monthly_cost_usd: "5-20 (query compute only)"
+
+  dashboard_usage:
+    monthly_queries: 1000
+    avg_query_scan_mb: 5
+    compute_type: "serverless_sql"
+
+  caveats:
+    - "Databricks pricing is DBU-based and varies by compute type and region"
+    - "UC Foreign Catalog cost is query-compute only if validated"
+    - "Metadata sync cost is minimal due to small data volume (~50MB)"
+    - "Does not include Databricks platform subscription cost"
+    - "Verify current DBU pricing before customer proposals"
+
+# =============================================================================
+# Snowflake Cost Model (if metadata activation is used)
+# =============================================================================
+# Added: 2026-06-01
+# Status: Estimated (not yet activated in this PoC)
+# =============================================================================
+
+snowflake_cost_model:
+  metadata_activation:
+    mode: "sync_redacted_metadata"
+    description: "Sync curated latest-record metadata to Snowflake for BI/Cortex/governance"
+    raw_file_copy_required: false
+    data_volume_mb: 50  # ~100K file metadata records (redacted, no embeddings)
+    sync_frequency: "hourly or event-driven (Snowpipe)"
+
+  compute:
+    warehouse_size: "X-SMALL"
+    sync_job_frequency: "hourly"
+    monthly_dashboard_queries: 1000
+    estimated_monthly_warehouse_cost_usd: "7-20"
+
+  cortex_search:
+    enabled: true
+    refresh_frequency_minutes: 60
+    indexed_columns: ["file_name", "classification", "summary", "file_type"]
+    estimated_monthly_cost_usd: "10-30"
+
+  storage:
+    synced_metadata_gb: 1
+    monthly_storage_cost_usd: "0.02"
+
+  tasks_streams:
+    sync_task_frequency: "hourly"
+    estimated_monthly_cost_usd: "1-3"
+
+  total_estimated_monthly_cost_usd: "20-55"
+
+  glue_rest_vended_credentials:
+    validation_status: "pending (C-1)"
+    description: "If resolved, zero-copy Iceberg query from Snowflake — no sync needed"
+    additional_cost: "Query compute only (no storage duplication)"
+    estimated_monthly_cost_usd: "5-15 (query compute only)"
+
+  caveats:
+    - "Snowflake pricing varies by edition (Standard/Enterprise/Business Critical) and region"
+    - "Cortex Search pricing is usage-based; estimate depends on query volume and index size"
+    - "Warehouse cost depends on query complexity and concurrency"
+    - "Does not include Snowflake platform subscription cost"
+    - "Verify current Snowflake pricing before customer proposals"
+    - "If Glue REST vended credentials path is validated, sync cost becomes optional"

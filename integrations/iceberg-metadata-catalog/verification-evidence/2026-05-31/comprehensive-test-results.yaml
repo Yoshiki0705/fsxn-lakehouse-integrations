@@ -8,7 +8,7 @@
 test_execution:
   date: "2026-05-31"
   region: "ap-northeast-1"
-  account_id: "178625946981"
+  account_id: "<ACCOUNT_ID>"
   total_tests: 8
   passed: 7
   known_behavior: 1  # I-2 concurrent writes — expected Iceberg commit conflict

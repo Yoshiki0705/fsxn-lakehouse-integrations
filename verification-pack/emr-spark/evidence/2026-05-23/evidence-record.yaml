@@ -8,7 +8,7 @@ region: "ap-northeast-1"
 emr_serverless_app_id: "00g5tb5c6rpbsg2l"
 emr_release: "emr-7.1.0"
 spark_version: "3.5"
-execution_role: "arn:aws:iam::178625946981:role/fsxn-emr-serverless-role"
+execution_role: "arn:aws:iam::<ACCOUNT_ID>:role/fsxn-emr-serverless-role"
 
 # S3 Access Point
 ap_name: "verification-test-ap"
