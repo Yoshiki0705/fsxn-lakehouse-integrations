@@ -257,4 +257,4 @@ ORDER BY delta DESC;
 ---
 
 *関連設定: [`media-vfx.yaml`](../sample-data/industry-configs/media-vfx.yaml)*
-*ペアドキュメント: [industry-media.md](./industry-media.md)*
+*ペアドキュメント: [industry-media-vfx.md](./industry-media-vfx.md)*

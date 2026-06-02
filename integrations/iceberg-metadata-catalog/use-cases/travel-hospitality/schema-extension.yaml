@@ -1,0 +1,34 @@
+# Travel & Hospitality — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: travel-hospitality
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: property_id
+    type: string
+    description: "Property or hotel identifier"
+
+  - name: room_category
+    type: string
+    description: "Room type (standard, deluxe, suite, penthouse)"
+
+  - name: document_type
+    type: string
+    description: "Document category (booking, contract, inspection, marketing)"
+
+  - name: season
+    type: string
+    description: "Travel season (peak, off, shoulder)"
+
+  - name: compliance_status
+    type: string
+    description: "Regulatory status (compliant, review_needed, expired)"
+
+classification_categories:
+  - property_photo
+  - room_image
+  - guest_document
+  - maintenance_report
+  - marketing_material
+  - contract

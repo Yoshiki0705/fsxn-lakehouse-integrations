@@ -39,6 +39,9 @@
 | UC18 | Gaming | [gaming/](gaming/) | FBX, DDS, WAV | Asset classification, build tracking |
 | UC19 | SAP / ERP | [sap-erp/](sap-erp/) | PDF, XML, CSV | Spool classification, archive search |
 | UC20 | Life Sciences | [life-sciences/](life-sciences/) | PDF, XLSX, DCM | Research data management |
+| UC21 | Advertising & Marketing | [advertising-marketing/](advertising-marketing/) | PSD, AI, PNG, MP4 | Creative asset tracking, campaign compliance |
+| UC22 | Telecommunications | [telecom/](telecom/) | PDF, CFG, PNG | Network config search, tower inspection |
+| UC23 | Travel & Hospitality | [travel-hospitality/](travel-hospitality/) | JPG, PDF, DOCX | Property photos, guest docs, maintenance |
 
 ## Each Use Case Contains
 

@@ -69,7 +69,7 @@
 
 | 業界 | シナリオ (EN) | シナリオ (JA) | 設定 | ユースケース |
 |------|--------------|---------------|------|-------------|
-| メディア/VFX | [Asset Tracking & Similarity Search](industry-media.md) | [アセット追跡・類似検索](industry-media-ja.md) | [`media-vfx.yaml`](../sample-data/industry-configs/media-vfx.yaml) | [use-cases/media-vfx/](../../use-cases/media-vfx/) |
+| メディア/VFX | [Asset Tracking & Similarity Search](industry-media-vfx.md) | [アセット追跡・類似検索](industry-media-vfx-ja.md) | [`media-vfx.yaml`](../sample-data/industry-configs/media-vfx.yaml) | [use-cases/media-vfx/](../../use-cases/media-vfx/) |
 | ゲーミング | [Game Asset Classification & Build Tracking](industry-gaming.md) | [ゲームアセット分類・ビルド追跡](industry-gaming-ja.md) | [`gaming.yaml`](../sample-data/industry-configs/gaming.yaml) | [use-cases/gaming/](../../use-cases/gaming/) |
 
 ### 公共セクター

@@ -1,0 +1,38 @@
+# Advertising & Marketing — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: advertising-marketing
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: campaign_id
+    type: string
+    description: "Campaign identifier"
+
+  - name: brand
+    type: string
+    description: "Brand or sub-brand name"
+
+  - name: channel
+    type: string
+    description: "Distribution channel (web, social, print, tv)"
+
+  - name: asset_type
+    type: string
+    description: "Creative asset type (hero, banner, thumbnail, video)"
+
+  - name: rights_expiry
+    type: date
+    description: "License or rights expiration date"
+
+  - name: approval_status
+    type: string
+    description: "Workflow approval status (draft, pending, approved, rejected)"
+
+classification_categories:
+  - hero_image
+  - banner
+  - video_ad
+  - brand_guideline
+  - creative_brief
+  - campaign_report
