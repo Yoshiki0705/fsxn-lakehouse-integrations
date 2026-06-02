@@ -3,17 +3,17 @@
 # =============================================================================
 # Date: 2026-05-31
 # Verified by: Automated PoC deployment
-# Environment: ap-northeast-1, Account 178625946981
+# Environment: ap-northeast-1, Account <ACCOUNT_ID>
 # =============================================================================
 
 verification_id: "iceberg-metadata-catalog-phase1-2026-05-31"
 date: "2026-05-31"
 region: "ap-northeast-1"
-account_id: "178625946981"
+account_id: "<ACCOUNT_ID>"
 
 # Infrastructure
 s3_tables:
-  table_bucket_arn: "arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog"
+  table_bucket_arn: "arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog"
   table_bucket_name: "fsxn-metadata-catalog"
   namespace: "metadata"
   table_name: "unstructured_files"
@@ -101,12 +101,12 @@ athena_queries:
 glue_catalog:
   catalog_name: "s3tablescatalog"
   type: "Federated (S3 Tables)"
-  identifier: "arn:aws:s3tables:ap-northeast-1:178625946981:bucket/*"
+  identifier: "arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/*"
   connection_name: "aws:s3tables"
 
 # Lake Formation Permissions
 lake_formation:
-  principal: "arn:aws:iam::178625946981:user/yoshiki0705"
+  principal: "arn:aws:iam::<ACCOUNT_ID>:user/yoshiki0705"
   resource: "s3tablescatalog/fsxn-metadata-catalog.metadata.unstructured_files"
   permissions: ["SELECT", "DESCRIBE"]
 

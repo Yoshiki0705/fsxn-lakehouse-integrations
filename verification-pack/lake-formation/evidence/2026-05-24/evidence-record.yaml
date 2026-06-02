@@ -5,7 +5,7 @@ tester: "Yoshiki Fujiwara"
 
 # Configuration
 region: "ap-northeast-1"
-lake_formation_admin: "arn:aws:iam::178625946981:user/yoshiki0705"
+lake_formation_admin: "arn:aws:iam::<ACCOUNT_ID>:user/yoshiki0705"
 database: "fsxn_athena_verification"
 s3_ap: "verification-test-ap (internet-origin)"
 

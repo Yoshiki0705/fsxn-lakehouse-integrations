@@ -5,8 +5,8 @@ tester: "Yoshiki Fujiwara"
 
 # Infrastructure
 region: "ap-northeast-1"
-lake_formation_admin: "arn:aws:iam::178625946981:user/yoshiki0705"
-test_role: "arn:aws:iam::178625946981:role/fsxn-athena-glue-role"
+lake_formation_admin: "arn:aws:iam::<ACCOUNT_ID>:user/yoshiki0705"
+test_role: "arn:aws:iam::<ACCOUNT_ID>:role/fsxn-athena-glue-role"
 database: "fsxn_athena_verification"
 table: "sensor_readings"
 data_source: "FSx for ONTAP S3 Access Point (internet-origin)"

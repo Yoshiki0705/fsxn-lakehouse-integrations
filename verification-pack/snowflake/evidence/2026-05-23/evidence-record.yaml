@@ -9,7 +9,7 @@ environment:
   snowflake_edition: "Standard"
   snowflake_role: "ACCOUNTADMIN"
   snowflake_warehouse: "COMPUTE_WH"
-  aws_account: "178625946981"
+  aws_account: "<ACCOUNT_ID>"
   aws_region: "ap-northeast-1"
   fsx_file_system: "fs-09ffe72a3b2b7dbbd"
   svm: "svm-0e5ef72d9b4470f19 (verification-svm)"
@@ -18,7 +18,7 @@ environment:
   s3_ap_alias: "snowflake-verifi-qmkpa4gi8dwt3frn3i695qpha41c6apn1b-ext-s3alias"
   s3_ap_network_origin: "Internet"
   s3_ap_file_system_user: "root (UNIX)"
-  iam_role: "arn:aws:iam::178625946981:role/fsxn-snowflake-verification-role"
+  iam_role: "arn:aws:iam::<ACCOUNT_ID>:role/fsxn-snowflake-verification-role"
 
 results:
   storage_integration_creation: "PASS"
