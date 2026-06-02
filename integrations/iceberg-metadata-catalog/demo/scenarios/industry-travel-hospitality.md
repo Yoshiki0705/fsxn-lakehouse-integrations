@@ -168,6 +168,8 @@ Using OpenSearch:
 | Photo quality assessment | AI quality rating is assistive signal — not a replacement for professional review |
 | Real-time operations | Not designed for real-time check-in/out; batch document processing |
 
+- **Minimum scale**: This industry may have smaller file volumes than manufacturing or financial services. Validate that daily file change rate exceeds 100/day to justify the AI pipeline overhead vs simpler alternatives.
+
 ---
 
 ## Customization Points

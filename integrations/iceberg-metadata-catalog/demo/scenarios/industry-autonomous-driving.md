@@ -200,6 +200,8 @@ Using OpenSearch:
 | Real-time constraints | Not designed for real-time vehicle data; batch/near-real-time metadata cataloging |
 | Data sovereignty | Driving data may have geographic restrictions; verify cross-region replication policies |
 
+- **Sensor data formats**: LiDAR point clouds (.pcd, .las), radar data, and raw camera feeds cannot be directly processed by Bedrock Claude. Extract metadata (timestamp, sensor ID, GPS coordinates) via format-specific parsers before classification. Image frames (JPEG/PNG) extracted from video can be classified. See [AI Prompt Guide](ai-prompt-customization-guide.md) multimodal matrix.
+
 ---
 
 ## Customization Points

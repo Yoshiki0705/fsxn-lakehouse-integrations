@@ -201,6 +201,13 @@ CREATE OR REPLACE CORTEX SEARCH SERVICE file_metadata_search
   SEARCH_COLUMN = 'file_name';
 ```
 
+> **TARGET_LAG チューニング**: `TARGET_LAG = '1 hour'` 設定は Cortex Search の再インデックス頻度を制御します。業界要件に応じて調整：
+> - 金融サービス（準リアルタイムコンプライアンス）: `'5 minute'`
+> - 製造業（日次バッチ）: `'6 hour'`
+> - エネルギー/ユーティリティ（週次レポート）: `'24 hour'`
+> 
+> TARGET_LAG が低い = ウェアハウスコンピュートコストが高い。デフォルトの '1 hour' はほとんどのユースケースに適切です。
+
 **注**: Cortex Searchにはテキストベース検索に使用する`SEARCH_COLUMN`が必要です。より豊富な検索のために、メタデータフィールドを検索専用テキストカラムに結合します：
 
 ```sql
@@ -426,4 +433,5 @@ SELECT * FROM TABLE(
 
 *関連: [ガバナンス詳細](governance-deep-dive-ja.md) — クロスプラットフォーム同期のアクセス制御考慮事項*
 *関連: [AIプロンプトカスタマイズガイド](ai-prompt-customization-guide-ja.md) — 同期されるメタデータを生成する分類*
+*関連: [Snowflake Horizon REST Catalog 監査ログ](../../snowflake/glue-rest-vended-credentials-validation-ja.md) — INGRESS_NETWORK_ACCESS_HISTORY 経由の外部エンジンアクセスログ*
 *ペアドキュメント: [snowflake-activation-pattern.md](snowflake-activation-pattern.md)*

@@ -1,4 +1,18 @@
 # Databricks notebook source
+# =============================================================================
+# STATUS NOTE (2026-06):
+# This notebook is for VALIDATION PURPOSES. The spark.conf.set approach for
+# Iceberg REST catalog is blocked by Unity Catalog (confirmed 2026-06-01).
+#
+# WORKING PATH TODAY:
+#   DataSync → S3 → UC External Location → CREATE TABLE
+#
+# PENDING:
+#   UC Foreign Catalog with Glue federated S3 Tables — awaiting support response
+#
+# When UC Foreign Catalog becomes available, this notebook will be updated
+# to use the supported path. See: databricks/uc-foreign-iceberg-validation.md
+# =============================================================================
 # MAGIC %md
 # MAGIC # Iceberg Metadata Catalog — Databricks Demo
 # MAGIC

@@ -14,6 +14,7 @@ Track remaining validation items identified through expert review. Items are gro
 | A-2 | Minimum IAM permissions documentation | High | TBD |
 | A-3 | ap-northeast-1 vs us-east-1 differences (S3 Tables, Bedrock, OpenSearch NextGen, Glue REST) | Medium | TBD |
 | A-4 | S3 Tables direct REST vs Glue Iceberg REST: PyIceberg, Spark, Athena, Lake Formation | Medium | ✅ Verified: Athena ✅, PyIceberg ✅, EMR Spark 7.13.0 ✅ (full SELECT + time travel), Glue REST credential vending ❌ (not implemented) |
+| A-5 | Monitor Glue REST /v1/config for credential vending indicators | Low | TBD — Periodically check if `token-refresh-enabled` changes from `false` to `true` (would indicate credential vending support added) |
 
 ## B. Databricks Validation
 

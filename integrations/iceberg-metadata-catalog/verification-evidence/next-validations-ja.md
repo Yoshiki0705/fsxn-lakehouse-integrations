@@ -14,6 +14,7 @@
 | A-2 | 最小 IAM 権限の文書化 | 高 | TBD |
 | A-3 | ap-northeast-1 vs us-east-1 の差分（S3 Tables、Bedrock、OpenSearch NextGen、Glue REST） | 中 | TBD |
 | A-4 | S3 Tables direct REST vs Glue Iceberg REST: PyIceberg、Spark、Athena、Lake Formation | 中 | ✅ 検証済み: Athena ✅、PyIceberg ✅、EMR Spark 7.13.0 ✅ (full SELECT + time travel)、Glue REST credential vending ❌ (未実装) |
+| A-5 | Glue REST /v1/config の credential vending 指標を監視 | 低 | TBD — `token-refresh-enabled` が `false` から `true` に変わるか定期確認（credential vending サポート追加の兆候） |
 
 ## B. Databricks 検証
 

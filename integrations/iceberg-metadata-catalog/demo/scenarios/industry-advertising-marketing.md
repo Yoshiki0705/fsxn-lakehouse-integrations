@@ -180,6 +180,8 @@ Using OpenSearch:
 | Creative judgment | AI cannot assess creative quality or brand fit — human review required |
 | Client confidentiality | Ensure client creative does not leak across account boundaries |
 
+- **Minimum scale**: This industry may have smaller file volumes than manufacturing or financial services. Validate that daily file change rate exceeds 100/day to justify the AI pipeline overhead vs simpler alternatives.
+
 ---
 
 ## Customization Points

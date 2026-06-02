@@ -133,6 +133,7 @@ The following limitations apply to every scenario above:
 | Lambda ephemeral processing | File content passes through Lambda memory — zero-copy storage with ephemeral processing |
 | S3 Tables cross-platform | Federated catalog access from Snowflake/Databricks still evolving |
 | Lake Formation column-level | Column-level filtering on S3 Tables federated catalog not yet working (table-level grants work) |
+| EMR Spark time travel syntax | EMR Spark uses `VERSION AS OF <snapshot_id>` or `TIMESTAMP AS OF` via Spark SQL; Athena uses `FOR TIMESTAMP AS OF`. Verify syntax per engine. |
 
 ---
 
