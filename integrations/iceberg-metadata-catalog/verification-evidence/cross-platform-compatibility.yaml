@@ -131,3 +131,20 @@ platforms:
         result: "not_tested"
         status: "recommended_activation_pattern"
         notes: "Sync redacted metadata only; raw files remain on FSx"
+      - name: "TO_FILE with S3 Access Point-backed External Stage"
+        result: "verified"
+        tested_date: "2026-06-02"
+        status: "working"
+        notes: |
+          TO_FILE works correctly with S3 AP stages when using:
+          (1) String literal syntax: TO_FILE('@DB.SCHEMA.STAGE', 'path/to/file')
+          (2) Correct file path that exists on the stage.
+          Original failures were due to (a) identifier syntax instead of string literal,
+          and (b) referencing non-existent file '_sample.png'.
+          Confirmed working with 'athena-results/athena-s3cp-test.txt' (8.0s, Claude Sonnet 4.5).
+          This means AI multimodal (Cortex COMPLETE) can read files from FSx for ONTAP via S3 AP.
+      - name: "SYSTEM$VERIFY_CATALOG_INTEGRATION for Glue REST"
+        result: "verified"
+        tested_date: "2026-06-02"
+        status: "healthy"
+        notes: "Returns 'Statement executed successfully'. Confirms Snowflake ↔ Glue REST connectivity and authentication are healthy. Failure is only at credential vending step."

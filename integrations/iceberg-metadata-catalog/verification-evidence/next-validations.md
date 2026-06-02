@@ -40,7 +40,7 @@ Track remaining validation items identified through expert review. Items are gro
 | C-5 | Metadata sync to Snowflake managed table for Cortex Search | Medium | TBD |
 | C-6 | Horizon governance (Row Access Policy) on synced metadata | Low | TBD |
 | C-7 | Object Store catalog integration (read metadata file directly) | High | Pending — proposed by Snowflake Support as workaround (2026-06-02) |
-| C-8 | TO_FILE with string literal syntax on S3 AP stage | Medium | Pending retest — syntax issue identified by Support (2026-06-02, Case #01359474) |
+| C-8 | TO_FILE with string literal syntax on S3 AP stage | Medium | ✅ **Verified** (2026-06-02): TO_FILE works with S3 AP stage using string literal syntax + correct file path. Original issues were (1) syntax error (identifier vs string literal) and (2) non-existent file path. NOT an S3 AP-specific limitation. |
 | C-9 | SYSTEM$VERIFY_CATALOG_INTEGRATION('S3TABLES_GLUE_REST_INT') | Medium | Pending |
 
 ## D. ONTAP / FSx Validation
