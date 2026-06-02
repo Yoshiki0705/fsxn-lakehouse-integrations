@@ -70,6 +70,7 @@ aws-exports.js
 *secret*
 *credential*
 !**/docs/**/*credential*
+!**/snowflake/**/*credential*
 !**/docs/**/*secret*
 
 # =============================================================================
