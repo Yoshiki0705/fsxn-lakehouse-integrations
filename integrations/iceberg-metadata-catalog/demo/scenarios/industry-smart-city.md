@@ -172,7 +172,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Smart City |
 |-----------|----------------------|
-| S3 AP read-only | Cannot trigger automated responses to sensor alerts via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger automated responses to sensor alerts via pipeline |
 | Real-time streaming | Not designed for real-time IoT streaming; batch metadata cataloging |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |
 | Data privacy | Citizen complaint PII must be handled per municipal privacy regulations |

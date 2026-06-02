@@ -195,7 +195,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Life Sciences |
 |-----------|-------------------------|
-| S3 AP read-only | Cannot trigger document workflow transitions via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger document workflow transitions via pipeline |
 | No S3 Event Notifications | Cannot trigger submission compilation via S3 events |
 | Bedrock accuracy varies | Specialized medical/scientific terminology may need domain-specific prompt tuning |
 | GxP validation | AI classification is assistive; does not replace validated document management systems |

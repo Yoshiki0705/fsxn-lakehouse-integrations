@@ -195,7 +195,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Insurance |
 |-----------|---------------------|
-| S3 AP read-only | Cannot auto-archive settled claims via pipeline |
+| S3 AP (pipeline reads only) | Cannot auto-archive settled claims via pipeline |
 | No S3 Event Notifications | Cannot trigger downstream claims workflow via S3 events |
 | Bedrock accuracy varies | Medical terminology and legal language may need prompt tuning |
 | Damage photo analysis | AI severity estimation is assistive signal only — not a replacement for adjuster judgment |

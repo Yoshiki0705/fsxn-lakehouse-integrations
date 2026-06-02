@@ -191,7 +191,7 @@ OpenSearch semantic search:
 | AI classification is assistive | Not authoritative for disclosure decisions — human review required |
 | Lambda ephemeral processing | Classified/sensitive content passes through Lambda memory — evaluate against security requirements |
 | Bedrock accuracy varies | Legal/regulatory terminology and bilingual documents may reduce accuracy |
-| S3 AP read-only | Cannot auto-apply retention disposition (delete/archive) via analytics pipeline |
+| S3 AP (pipeline reads only) | Cannot auto-apply retention disposition (delete/archive) via analytics pipeline |
 | No S3 Event Notifications | Cannot trigger downstream records management workflows via S3 events |
 | Cross-agency access | Requires careful Lake Formation policy design for multi-department visibility |
 

@@ -14,9 +14,10 @@
 - 複製されるのは Iceberg メタデータテーブルのデータファイルのみ（~MB スケール）
 
 **なぜ標準 S3 であり、FSx S3 Access Point ではないか**:
-- FSx S3 AP は読み取り専用 — Iceberg テーブルは書き込み操作（PUT、コンパクション用 DELETE）が必要
-- Iceberg データファイル（Parquet + メタデータ JSON）は ListObjectsV2 を含む標準 S3 操作が必要
-- ミラーされるメタデータは小さい（ファイルレコードあたり ~1KB × ファイル数）— ストレージコストは無視できるレベル
+- FSx S3 AP は PutObject/DeleteObject/ListObjectsV2 をサポートしているが、Iceberg テーブルのデータファイル保存先として使う場合、PyIceberg/Spark の Iceberg ライブラリが FSx S3 AP エイリアス形式の URI をサポートしているか未検証
+- Iceberg カタログ（Glue Data Catalog）にテーブルロケーションとして FSx S3 AP パスを登録できるか未確認
+- 標準 S3 バケットは Glue + Lake Formation + Snowflake の全コンポーネントとの互換性が確認済みのため、確実なパスとして選択
+- FSx S3 AP をメタデータ Iceberg テーブルの保存先として使えるかは将来の検証候補
 
 ---
 

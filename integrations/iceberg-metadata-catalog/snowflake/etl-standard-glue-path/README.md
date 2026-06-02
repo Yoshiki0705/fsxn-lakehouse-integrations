@@ -14,9 +14,12 @@ This workaround replicates **metadata only** (not source files) from S3 Tables t
 - Only the Iceberg metadata table data files (~MB scale) are duplicated to standard S3
 
 **Why standard S3 and not FSx S3 Access Point**:
-- FSx S3 AP is read-only — Iceberg tables require write operations (PUT, DELETE for compaction)
-- Iceberg data files (Parquet + metadata JSON) need standard S3 operations including ListObjectsV2
-- The mirrored metadata is small (~1KB per file record × number of files) — storage cost is negligible
+- FSx S3 AP does support PutObject, DeleteObject, and ListObjectsV2 — it is NOT read-only
+- However, whether PyIceberg/Spark Iceberg libraries support FSx S3 AP alias URI format as a table location has not been validated
+- Whether Glue Data Catalog can register FSx S3 AP paths as Iceberg table locations is unconfirmed
+- Standard S3 is chosen as the reliable path because compatibility with Glue + Lake Formation + Snowflake is fully confirmed
+- Using FSx S3 AP as Iceberg metadata table storage is a future validation candidate
+- The mirrored metadata is small (~1KB per file record × number of files) — storage cost is negligible either way
 
 ## Architecture
 

@@ -195,7 +195,7 @@ OpenSearch semantic search:
 | Large file costs | 10MB+ files cost ~$0.15 each for Bedrock classification; VFX projects with millions of EXR frames can accumulate cost |
 | Bedrock accuracy on media files | Binary formats (EXR, DPX) classified primarily by filename/path; actual image content analysis limited |
 | FPolicy latency (~1–5ms) | Minimal for file saves; test with real-time render pipelines if volumes are shared |
-| S3 AP read-only | Cannot auto-move finaled assets to archive storage |
+| S3 AP (pipeline reads only) | Cannot auto-move finaled assets to archive storage |
 | Lambda memory limits | Very large files (>500MB) may exceed Lambda memory; requires chunked processing |
 | Naming convention dependency | Metadata extraction quality depends heavily on consistent file/folder naming |
 

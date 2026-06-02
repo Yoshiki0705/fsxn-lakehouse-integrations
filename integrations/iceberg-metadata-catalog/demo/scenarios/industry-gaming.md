@@ -194,7 +194,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Gaming |
 |-----------|-------------------|
-| S3 AP read-only | Cannot auto-convert or compress assets via pipeline |
+| S3 AP (pipeline reads only) | Cannot auto-convert or compress assets via pipeline |
 | No S3 Event Notifications | Cannot trigger build pipeline steps via S3 events |
 | Bedrock accuracy varies | Custom asset naming conventions may need prompt tuning |
 | Large file sizes | Game assets (100MB+ models) increase Lambda processing time |

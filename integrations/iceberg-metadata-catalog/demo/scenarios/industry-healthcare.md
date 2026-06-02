@@ -191,7 +191,7 @@ OpenSearch semantic search:
 |-----------|----------------------|
 | Lambda ephemeral processing | PHI passes through Lambda memory — review with compliance team for HIPAA/regulatory requirements |
 | Bedrock accuracy varies | Medical terminology, handwritten notes, and low-quality scans reduce accuracy |
-| S3 AP read-only | Cannot auto-quarantine or move flagged PHI documents via analytics pipeline |
+| S3 AP (pipeline reads only) | Cannot auto-quarantine or move flagged PHI documents via analytics pipeline |
 | DICOM image processing | Large DICOM files (10MB+) cost ~$0.15/file and may have lower classification confidence |
 | No write-back | Governance tags cannot be written back to original file metadata on FSx |
 | Regulatory scope | Solution provides assistive classification — not a substitute for clinical data governance systems |

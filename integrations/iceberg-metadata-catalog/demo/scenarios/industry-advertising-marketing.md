@@ -173,7 +173,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Advertising |
 |-----------|------------------------|
-| S3 AP read-only | Cannot trigger creative approval workflows via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger creative approval workflows via pipeline |
 | Large creative files | PSD/AI files (100MB+) processed at metadata/filename level |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |
 | Usage rights | AI extraction of rights metadata is assistive; verify with legal |

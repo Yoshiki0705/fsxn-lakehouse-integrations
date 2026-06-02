@@ -196,7 +196,7 @@ OpenSearch Dashboards:
 |-----------|------------------------|
 | Bedrock accuracy on CAD files | Binary CAD formats (DWG, STEP) classified by filename/metadata — limited content analysis of proprietary formats |
 | FPolicy latency (~1–5ms) | Minimal for file saves; test if CAD applications perform frequent auto-saves on shared volumes |
-| S3 AP read-only | Cannot auto-update PLM systems or write status back to file metadata |
+| S3 AP (pipeline reads only) | Cannot auto-update PLM systems or write status back to file metadata |
 | Lambda ephemeral access | Design file content passes through Lambda memory — evaluate IP protection requirements |
 | Classification confidence varies | Handwritten notes, scanned old drawings, and mixed-language documents reduce accuracy |
 | No S3 Event Notifications | Cannot trigger PLM/MES system updates via S3 events |

@@ -193,7 +193,7 @@ Using OpenSearch:
 
 | Limitation | Impact for AV |
 |-----------|---------------|
-| S3 AP read-only | Cannot trigger reprocessing or re-annotation via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger reprocessing or re-annotation via pipeline |
 | No S3 Event Notifications | Cannot trigger ML training pipelines via S3 events |
 | Large binary files | Point clouds (100MB+) processed by metadata/filename; not full content analysis |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |

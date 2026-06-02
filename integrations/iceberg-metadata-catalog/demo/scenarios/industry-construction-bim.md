@@ -174,7 +174,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Construction |
 |-----------|------------------------|
-| S3 AP read-only | Cannot trigger BIM workflow transitions via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger BIM workflow transitions via pipeline |
 | Large BIM files | IFC/RVT files (100MB+) processed at metadata level |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |
 | CDE integration | Supplements but does not replace dedicated Common Data Environment platforms |

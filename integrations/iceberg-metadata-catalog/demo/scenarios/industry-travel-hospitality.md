@@ -161,7 +161,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Hospitality |
 |-----------|------------------------|
-| S3 AP read-only | Cannot trigger PMS workflows or room status updates |
+| S3 AP (pipeline reads only) | Cannot trigger PMS workflows or room status updates |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |
 | Guest PII | Guest documents contain extensive PII; verify data handling per privacy regulations |
 | Multi-property scale | Performance at portfolio scale (100+ properties) needs capacity planning |

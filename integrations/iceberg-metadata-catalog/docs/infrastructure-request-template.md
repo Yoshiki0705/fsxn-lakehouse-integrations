@@ -131,7 +131,7 @@ After setup, please provide:
 ## FAQ for Infrastructure Team
 
 **Q: Does this modify any files on FSx?**
-A: No. The S3 Access Point provides read-only access. No files are modified, moved, or deleted.
+A: No. The AI classification pipeline reads files via S3 Access Point but does not modify, move, or delete them. S3 Access Point supports write operations (PutObject, DeleteObject), but this solution's pipeline is designed for read-only access to source files.
 
 **Q: Does this affect NFS/SMB performance?**
 A: Minimal impact. S3 AP reads use the same backend as NFS/SMB but through a separate protocol path. For large-scale scans (100K+ files), schedule during off-peak hours.

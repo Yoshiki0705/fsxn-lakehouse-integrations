@@ -192,7 +192,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Energy |
 |-----------|-------------------|
-| S3 AP read-only | Cannot trigger work order creation via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger work order creation via pipeline |
 | No S3 Event Notifications | Cannot trigger maintenance workflows via S3 events |
 | Bedrock accuracy varies | Technical inspection terminology may need domain-specific prompt tuning |
 | SCADA data volume | Large SCADA exports processed at summary level; not real-time streaming |

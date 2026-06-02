@@ -178,7 +178,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Telecom |
 |-----------|-------------------|
-| S3 AP read-only | Cannot trigger network configuration changes via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger network configuration changes via pipeline |
 | No S3 Event Notifications | Cannot trigger NOC alerting via S3 events |
 | Real-time constraints | Not designed for real-time fault management; batch log cataloging |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |

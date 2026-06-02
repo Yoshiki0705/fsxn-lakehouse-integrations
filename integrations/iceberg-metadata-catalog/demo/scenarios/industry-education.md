@@ -169,7 +169,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Education |
 |-----------|---------------------|
-| S3 AP read-only | Cannot trigger publication workflows via pipeline |
+| S3 AP (pipeline reads only) | Cannot trigger publication workflows via pipeline |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |
 | Copyright content | Research papers may contain copyrighted material; metadata-only extraction |
 | Student privacy | FERPA-equivalent student data handling required for thesis documents |

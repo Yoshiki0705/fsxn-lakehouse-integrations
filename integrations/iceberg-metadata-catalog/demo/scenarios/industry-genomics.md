@@ -193,7 +193,7 @@ Using OpenSearch:
 
 | Limitation | Impact for Genomics |
 |-----------|---------------------|
-| S3 AP read-only | Cannot trigger re-analysis pipelines via the catalog |
+| S3 AP (pipeline reads only) | Cannot trigger re-analysis pipelines via the catalog |
 | No S3 Event Notifications | Cannot trigger downstream analysis via S3 events |
 | Large binary files | BAM/CRAM files (10–100GB) processed by metadata only; not content-level analysis |
 | Lambda ephemeral access | File content passes through Lambda memory — zero-copy storage with ephemeral processing |
