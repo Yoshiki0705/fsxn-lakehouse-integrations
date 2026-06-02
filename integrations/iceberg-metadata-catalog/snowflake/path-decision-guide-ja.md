@@ -14,7 +14,7 @@ Snowflake ユーザーとパートナーが、FSx for ONTAP メタデータカ�
 | Cortex Search / Intelligence | サマリー + 匿名化メタデータを同期 | ✅ 今すぐ利用可能 |
 | ゼロコピー Iceberg クエリ | Glue REST + vended credentials を検証 | 🔄 進行中 |
 | Snowflake ファースト Iceberg ガバナンス | Open Catalog / Polaris | 戦略的代替案 |
-| Snowflake での生ファイル処理 | External stage (FSx S3 AP) | ✅ 検証済み（TO_FILE 制限あり） |
+| Snowflake での生ファイル処理 | External stage (FSx S3 AP) | ✅ 検証済み（TO_FILE + Cortex AI 含む） |
 | クロスプラットフォーム Iceberg 相互運用 | Glue REST + vended credentials | 🔄 進行中 |
 
 ## ガバナンスポリシーマッピング
@@ -83,5 +83,6 @@ WHEN NOT MATCHED THEN INSERT ...;
 - [Snowflake: Cortex Search 概要](https://docs.snowflake.com/user-guide/snowflake-cortex/cortex-search/cortex-search-overview)
 - [Snowflake: Iceberg REST catalog integration](https://docs.snowflake.com/en/user-guide/tables-iceberg-configure-catalog-integration-rest)
 - [Snowflake: Vended credentials](https://docs.snowflake.com/en/user-guide/tables-iceberg-configure-catalog-integration-vended-credentials)
+- [トラブルシューティングガイド](troubleshooting-guide-ja.md) | [Troubleshooting Guide (EN)](troubleshooting-guide.md)
 - [Glue REST 検証](glue-rest-vended-credentials-validation-ja.md)
 - [External Stage 検証](external-stage-fsx-s3ap-validation-ja.md)

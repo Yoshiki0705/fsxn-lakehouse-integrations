@@ -14,7 +14,7 @@ Help Snowflake users and partners choose the right integration path for accessin
 | Cortex Search / Intelligence | Sync summary + redacted metadata | ✅ Available now |
 | Zero-copy Iceberg query | Validate Glue REST + vended credentials | 🔄 In progress |
 | Snowflake-first Iceberg governance | Open Catalog / Polaris | Strategic alternative |
-| Raw file processing in Snowflake | External stage (FSx S3 AP) | ✅ Verified (TO_FILE limitation) |
+| Raw file processing in Snowflake | External stage (FSx S3 AP) | ✅ Verified (incl. TO_FILE + Cortex AI) |
 | Cross-platform Iceberg interop | Glue REST + vended credentials | 🔄 In progress |
 
 ## Governance Policy Mapping
@@ -84,5 +84,6 @@ WHEN NOT MATCHED THEN INSERT ...;
 - [Snowflake: Iceberg REST catalog integration](https://docs.snowflake.com/en/user-guide/tables-iceberg-configure-catalog-integration-rest)
 - [Snowflake: Vended credentials](https://docs.snowflake.com/en/user-guide/tables-iceberg-configure-catalog-integration-vended-credentials)
 - [Snowflake: External stages](https://docs.snowflake.com/en/sql-reference/sql/create-stage)
+- [Troubleshooting guide](troubleshooting-guide.md) | [トラブルシューティングガイド](troubleshooting-guide-ja.md)
 - [Glue REST validation](glue-rest-vended-credentials-validation.md)
 - [External Stage validation](external-stage-fsx-s3ap-validation.md)
