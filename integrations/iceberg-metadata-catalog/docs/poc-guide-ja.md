@@ -143,7 +143,7 @@ LIMIT 10;
 |----------|---|------|
 | TableBucketName | `fsxn-metadata-catalog` | テーブルバケット名 |
 | AthenaResultsBucket | `fsxn-athena-verification-results-ap-northeast-1` | Athena 結果出力先 |
-| QueryUserArn | `arn:aws:iam::178625946981:user/yoshiki0705` | クエリ実行ユーザー |
+| QueryUserArn | `arn:aws:iam::<ACCOUNT_ID>:user/yoshiki0705` | クエリ実行ユーザー |
 
 6. **「次へ」** → **「次へ」** → IAM リソース作成の確認にチェック → **「送信」**
 

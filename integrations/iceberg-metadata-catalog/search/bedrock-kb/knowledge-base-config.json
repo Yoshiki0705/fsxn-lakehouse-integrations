@@ -5,7 +5,7 @@
   "knowledgeBase": {
     "name": "fsxn-metadata-catalog-kb",
     "description": "Natural language search over FSx for ONTAP unstructured file metadata. Indexes AI-generated summaries, classifications, and file attributes.",
-    "roleArn": "arn:aws:iam::178625946981:role/bedrock-kb-metadata-role",
+    "roleArn": "arn:aws:iam::<ACCOUNT_ID>:role/bedrock-kb-metadata-role",
 
     "knowledgeBaseConfiguration": {
       "type": "VECTOR",
@@ -22,7 +22,7 @@
     "storageConfiguration": {
       "type": "OPENSEARCH_SERVERLESS",
       "opensearchServerlessConfiguration": {
-        "collectionArn": "arn:aws:aoss:ap-northeast-1:178625946981:collection/<COLLECTION_ID>",
+        "collectionArn": "arn:aws:aoss:ap-northeast-1:<ACCOUNT_ID>:collection/<COLLECTION_ID>",
         "vectorIndexName": "fsxn-metadata-kb-index",
         "fieldMapping": {
           "vectorField": "embedding",

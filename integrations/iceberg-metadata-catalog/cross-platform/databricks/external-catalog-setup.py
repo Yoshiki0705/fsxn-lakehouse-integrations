@@ -38,7 +38,7 @@ CREATE CONNECTION IF NOT EXISTS fsxn_metadata_catalog
 TYPE iceberg_rest
 OPTIONS (
   uri = 'https://s3tables.ap-northeast-1.amazonaws.com/iceberg',
-  warehouse = 'arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog',
+  warehouse = 'arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog',
   'rest.sigv4-enabled' = 'true',
   'rest.signing-region' = 'ap-northeast-1',
   'rest.signing-name' = 's3tables'

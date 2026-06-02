@@ -28,7 +28,7 @@ CREATE OR REPLACE EXTERNAL VOLUME fsxn_metadata_iceberg_vol
       NAME = 'metadata-iceberg-s3'
       STORAGE_BASE_URL = 's3://fsxn-metadata-iceberg-output/'
       STORAGE_PROVIDER = 'S3'
-      STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::178625946981:role/snowflake-iceberg-metadata-role'
+      STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::<ACCOUNT_ID>:role/snowflake-iceberg-metadata-role'
       STORAGE_AWS_EXTERNAL_ID = 'snowflake_external_id'
     )
   );

@@ -15,7 +15,7 @@ This enables natural language search like:
 
 Usage:
     python export-summaries.py \
-        --table-bucket-arn arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog \
+        --table-bucket-arn arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog \
         --output-bucket fsxn-metadata-kb-documents \
         --output-prefix summaries/
 

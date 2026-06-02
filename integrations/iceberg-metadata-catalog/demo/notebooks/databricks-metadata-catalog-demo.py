@@ -24,7 +24,7 @@
 # Configure S3 Tables Iceberg REST Catalog
 # Replace <ACCOUNT_ID> with your AWS account ID
 
-ACCOUNT_ID = "178625946981"
+ACCOUNT_ID = "<ACCOUNT_ID>"
 REGION = "ap-northeast-1"
 TABLE_BUCKET = f"arn:aws:s3tables:{REGION}:{ACCOUNT_ID}:bucket/fsxn-metadata-catalog"
 
