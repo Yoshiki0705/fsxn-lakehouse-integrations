@@ -62,7 +62,7 @@ We recommend a 1–2 week PoC with your actual files to validate accuracy for yo
 
 | Limitation | Impact |
 |-----------|--------|
-| S3 Access Point is read-only | Analytics tools cannot write results back to FSx volumes |
+| S3 AP is used read-only in this pipeline (writes are supported) | Analytics tools cannot write results back to FSx volumes |
 | No S3 Event Notifications via S3 AP | Cannot auto-trigger Snowpipe, EventBridge rules, or bucket notifications |
 | FPolicy adds latency | ~1–5ms per file operation on NAS clients |
 | Lambda ephemeral processing | File content passes through Lambda memory (not truly "zero data movement" at the processing layer) |

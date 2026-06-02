@@ -26,7 +26,7 @@ Here's how it works:
 
 **Files stay on FSx. Only metadata moves.**
 
-Important to note: S3 Access Point is read-only (no write-back from analytics), and AI classification accuracy varies by file type and language. We recommend a PoC to validate on your actual data."
+Important to note: S3 AP is used read-only in this pipeline (writes are supported) (no write-back from analytics), and AI classification accuracy varies by file type and language. We recommend a PoC to validate on your actual data."
 
 ### Evidence (30 seconds)
 
@@ -63,7 +63,7 @@ These are PoC results — production performance depends on your file mix."
 
 Total: **5–7 business days** to production.
 
-Key constraints to share with customers: S3 AP is read-only, FPolicy adds ~1–5ms latency, and Bedrock accuracy should be validated in a PoC. These are straightforward conversations."
+Key constraints to share with customers: S3 AP is used read-only in this pipeline (writes supported), FPolicy adds ~1–5ms latency, and Bedrock accuracy should be validated in a PoC. These are straightforward conversations."
 
 ### Evidence (30 seconds)
 

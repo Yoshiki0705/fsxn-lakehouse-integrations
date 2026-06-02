@@ -43,7 +43,7 @@
 - ONTAP 機能（SnapMirror、FlexClone、ストレージ効率化）がそのまま利用可能
 
 **制限事項 & 考慮事項:**
-- S3 Access Point は**読み取り専用** — 分析ツールから FSx ボリュームへの書き戻しは不可
+- S3 AP はこのパイプラインでは読み取り専用で使用（**書き込みもサポート**） — 分析ツールから FSx ボリュームへの書き戻しは不可
 - S3 Access Point は **S3 Event Notifications をサポートしない**（Snowpipe、EventBridge ルール等の自動トリガー不可）
 - FPolicy は NAS クライアントに対し ~1–5ms のレイテンシオーバーヘッドを追加
 - Lambda 処理: ファイルコンテンツは Lambda メモリを通過（一時的、永続化されないが、処理レイヤーでは「ゼロデータ移動」ではない）
