@@ -12,10 +12,10 @@ Snowflake ユーザーとパートナーが、FSx for ONTAP メタデータカ�
 |---|---|---|
 | Snowflake ダッシュボードのみ | 匿名化メタデータを Snowflake テーブルに同期 | ✅ 今すぐ利用可能 |
 | Cortex Search / Intelligence | サマリー + 匿名化メタデータを同期 | ✅ 今すぐ利用可能 |
-| ゼロコピー Iceberg クエリ | Glue REST + vended credentials を検証 | 🔄 進行中 |
+| ゼロコピー Iceberg クエリ | Glue REST + vended credentials を検証 | ❌ ブロック（Glue REST が credentials を払い出さない; Object Store も S3 Tables 内部バケットでブロック） |
 | Snowflake ファースト Iceberg ガバナンス | Open Catalog / Polaris | 戦略的代替案 |
 | Snowflake での生ファイル処理 | External stage (FSx S3 AP) | ✅ 検証済み（TO_FILE + Cortex AI 含む） |
-| クロスプラットフォーム Iceberg 相互運用 | Glue REST + vended credentials | 🔄 進行中 |
+| クロスプラットフォーム Iceberg 相互運用 | Glue REST + vended credentials | ❌ ブロック; AWS credential vending ロードマップを追跡 |
 
 ## ガバナンスポリシーマッピング
 
