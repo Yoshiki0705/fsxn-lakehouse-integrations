@@ -6,9 +6,9 @@
 
 FSx for ONTAP S3 Access Point エイリアスを Snowflake External Stage として使用する検証済み設定を文書化する。
 
-## ステータス: ✅ 検証済み (2026-05-31)
+## ステータス: ✅ 検証済み (2026-06-02)
 
-External Stage の作成と LIST/SELECT 操作は FSx for ONTAP S3 Access Point エイリアスで動作。TO_FILE 操作は Engineering 対応中。
+External Stage の作成、LIST/SELECT、および **TO_FILE (Cortex COMPLETE マルチモーダル)** 操作はすべて FSx for ONTAP S3 Access Point エイリアスで動作。
 
 ## 設定
 
