@@ -112,13 +112,19 @@ platforms:
           - Snowflake states no known Snowflake-side issues — problem is AWS Glue REST not vending credentials.
           ALTERNATIVE: Object Store catalog integration (read metadata file directly, manual refresh).
       - name: "Object Store catalog integration (read metadata file directly)"
-        result: "not_tested"
+        result: "access_denied"
         tested_date: "2026-06-02"
-        status: "alternative_proposed"
+        status: "blocked"
         notes: |
-          Proposed by Snowflake support as workaround. Uses External Volume to read Iceberg
-          metadata file directly without credential vending. Read-only, requires manual refresh
-          when metadata pointer changes. Requires knowing current metadata.json path.
+          Tested with correct S3 Tables internal bucket path and External Volume.
+          AssumeRole succeeds but Snowflake receives 'access denied' when attempting
+          to read metadata file. IAM role can read the file directly (verified via CLI),
+          but Snowflake's access pattern (likely includes ListBucket or other operations)
+          is blocked by S3 Tables internal bucket restrictions.
+          S3 Tables internal buckets block ListObjectsV2 (MethodNotAllowed) — Snowflake
+          likely requires this operation during table creation/metadata resolution.
+          CONCLUSION: Object Store catalog is NOT viable for S3 Tables internal buckets.
+          Metadata must be exported to a standard S3 bucket first.
       - name: "Snowflake Open Catalog (Polaris) as Iceberg catalog"
         result: "not_tested"
         status: "strategic_alternative"

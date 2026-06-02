@@ -39,7 +39,7 @@
 | C-4 | Snowflake Open Catalog / Polaris を代替カタログとして | 中 | TBD |
 | C-5 | Cortex Search 用に Snowflake マネージドテーブルへメタデータ同期 | 中 | TBD |
 | C-6 | 同期メタデータに対する Horizon ガバナンス（Row Access Policy） | 低 | TBD |
-| C-7 | Object Store catalog integration（メタデータファイル直接読み取り） | 高 | 未検証 — Snowflake サポートがワークアラウンドとして提案 (2026-06-02) |
+| C-7 | Object Store catalog integration（メタデータファイル直接読み取り） | 高 | ❌ **Access Denied** (2026-06-02): AssumeRole は成功するが、Snowflake のアクセスパターン（ListBucket 含む）が S3 Tables 内部バケットの制限によりブロックされる。メタデータを標準 S3 バケットにエクスポートする必要あり。 |
 | C-8 | TO_FILE の文字列リテラル構文で S3 AP ステージ再テスト | 中 | ✅ **成功** (2026-06-02): 文字列リテラル構文 + 正しいファイルパスで TO_FILE が S3 AP ステージから正常動作。問題は (1) 構文エラー (2) 存在しないファイルパスの2点だった。S3 AP 固有の制限ではない。 |
 | C-9 | SYSTEM$VERIFY_CATALOG_INTEGRATION('S3TABLES_GLUE_REST_INT') | 中 | 未実行 |
 
