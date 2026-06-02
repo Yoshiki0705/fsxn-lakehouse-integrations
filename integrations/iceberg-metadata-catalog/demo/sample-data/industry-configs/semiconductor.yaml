@@ -1,0 +1,54 @@
+industry: semiconductor
+display_name: "Semiconductor (半導体)"
+aws_industry_team: "Manufacturing"
+file_types:
+  - extension: ".klarf"
+    category: "wafer_map"
+    ai_classification: "ウェーハマップ/欠陥"
+    sample_content: "Lot: LOT2026A042, Wafer: 08, Step: Lithography, Defects: 142, Yield: 82.3%"
+    count: 100
+  - extension: ".csv"
+    category: "process_log"
+    ai_classification: "プロセスログ/エッチ"
+    sample_content: "Lot: LOT2026A042, Step: Etch, Parameters: 1247, Tool: ETCH-04, Duration: 45min"
+    count: 50
+  - extension: ".tiff"
+    category: "defect_image"
+    ai_classification: "欠陥画像/パーティクル"
+    sample_content: "Wafer: 08, Defect: D0042, Type: Particle, Size: 0.12um, Magnification: 50000x"
+    count: 80
+  - extension: ".pdf"
+    category: "drc_report"
+    ai_classification: "DRC レポート"
+    sample_content: "Chip: A42, Revision: 3, Violations: 3, Categories: Width(1), Space(2)"
+    count: 15
+  - extension: ".pdf"
+    category: "excursion_log"
+    ai_classification: "エクスカーションログ"
+    sample_content: "Tool: ETCH-04, Type: Temperature drift, Affected lots: 3, Duration: 2h"
+    count: 20
+metadata_fields:
+  - name: "lot_id"
+    type: "string"
+    example: "LOT2026A042"
+  - name: "process_step"
+    type: "string"
+    example: "Lithography"
+  - name: "tool_id"
+    type: "string"
+    example: "LITHO-ASML04"
+  - name: "yield_estimate"
+    type: "string"
+    example: "82.3%"
+  - name: "defect_count"
+    type: "integer"
+    example: 142
+queries:
+  - name: "Low-yield wafers by process step"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Wafer Map/Defect' AND yield_estimate < 85.0 AND scan_timestamp > current_date - interval '7' day"
+  - name: "Defect density by tool"
+    sql: "SELECT tool_id, AVG(defect_count) as avg_defects FROM metadata WHERE ai_classification = 'Wafer Map/Defect' GROUP BY tool_id ORDER BY avg_defects DESC"
+  - name: "Recent excursion events"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Excursion Log' AND scan_timestamp > current_date - interval '7' day ORDER BY event_time DESC"
+  - name: "DRC violations by chip revision"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'DRC Report' AND violation_count > 0 ORDER BY violation_count DESC"

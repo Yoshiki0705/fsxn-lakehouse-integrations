@@ -1,0 +1,54 @@
+industry: travel-hospitality
+display_name: "Travel & Hospitality (旅行・ホスピタリティ)"
+aws_industry_team: "Travel & Hospitality"
+file_types:
+  - extension: ".pdf"
+    category: "booking_confirmation"
+    ai_classification: "予約確認書"
+    sample_content: "Reservation: RES2026-088421, Room: Suite 801, Nights: 3, Status: Confirmed"
+    count: 50
+  - extension: ".jpg"
+    category: "property_photo"
+    ai_classification: "施設写真/客室"
+    sample_content: "Property: TKY01, Room: Suite 801, View: Main, Quality: Publication-ready"
+    count: 80
+  - extension: ".pdf"
+    category: "maintenance_log"
+    ai_classification: "メンテナンスログ"
+    sample_content: "Property: TKY01, System: HVAC, Floor: 8, Status: Pending, Priority: Medium"
+    count: 30
+  - extension: ".pdf"
+    category: "guest_request"
+    ai_classification: "ゲストリクエスト"
+    sample_content: "Reservation: RES088421, Type: Dietary, Details: Gluten-free, Nut allergy"
+    count: 25
+  - extension: ".pdf"
+    category: "brand_audit"
+    ai_classification: "ブランド監査"
+    sample_content: "Property: TKY01, Quarter: Q2 2026, Compliance: 94%, Findings: 3"
+    count: 8
+metadata_fields:
+  - name: "property_id"
+    type: "string"
+    example: "TKY01"
+  - name: "room"
+    type: "string"
+    example: "Suite 801"
+  - name: "reservation_id"
+    type: "string"
+    example: "RES2026-088421"
+  - name: "maintenance_status"
+    type: "string"
+    example: "Pending"
+  - name: "brand_compliance_pct"
+    type: "integer"
+    example: 94
+queries:
+  - name: "Pending maintenance by property"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Maintenance%' AND property_id = 'TKY01' AND status = 'Pending' ORDER BY priority DESC"
+  - name: "Property photos needing refresh"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Property Photo%' AND last_modified < current_date - interval '365' day"
+  - name: "Upcoming guest special requests"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Guest Request' AND check_in_date BETWEEN current_date AND current_date + interval '7' day"
+  - name: "Brand compliance across portfolio"
+    sql: "SELECT property_id, brand_compliance_pct FROM metadata WHERE ai_classification = 'Brand Audit' ORDER BY brand_compliance_pct ASC"

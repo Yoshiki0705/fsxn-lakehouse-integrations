@@ -1,0 +1,54 @@
+industry: autonomous-driving
+display_name: "Autonomous Driving & Mobility (自動運転・モビリティ)"
+aws_industry_team: "Automotive"
+file_types:
+  - extension: ".json"
+    category: "driving_log"
+    ai_classification: "走行ログ/都市"
+    sample_content: "Vehicle: VH042, Route: 7, Duration: 2h14m, Weather: Rain, Events: 847"
+    count: 40
+  - extension: ".pcd"
+    category: "lidar_pointcloud"
+    ai_classification: "センサー/LiDAR"
+    sample_content: "Vehicle: VH042, Frame: 08421, Scene: Intersection, Points: 128000"
+    count: 200
+  - extension: ".json"
+    category: "annotation"
+    ai_classification: "アノテーション/3Dボックス"
+    sample_content: "Frame: 08421, Objects: 23, Classes: Car(8), Pedestrian(5), Cyclist(3), Truck(7)"
+    count: 150
+  - extension: ".yaml"
+    category: "calibration"
+    ai_classification: "キャリブレーション/マルチセンサー"
+    sample_content: "Vehicle: VH042, Sensors: LiDAR+Camera(6)+Radar(4), Date: 2026-06-01"
+    count: 20
+  - extension: ".pdf"
+    category: "scenario_report"
+    ai_classification: "シナリオレポート/安全"
+    sample_content: "Event: Near-miss, Type: Pedestrian, Weather: Rain, Severity: High"
+    count: 15
+metadata_fields:
+  - name: "vehicle_id"
+    type: "string"
+    example: "VH042"
+  - name: "scenario_type"
+    type: "string"
+    example: "Intersection"
+  - name: "weather"
+    type: "string"
+    example: "Rain"
+  - name: "safety_events"
+    type: "integer"
+    example: 12
+  - name: "annotation_complete"
+    type: "boolean"
+    example: true
+queries:
+  - name: "Rainy pedestrian scenarios for training"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Driving Log%' AND weather = 'Rain' AND scenario_type LIKE '%pedestrian%'"
+  - name: "Annotation completeness by scenario"
+    sql: "SELECT scenario_type, COUNT(*) as annotated FROM metadata WHERE ai_classification LIKE 'Annotation%' GROUP BY scenario_type"
+  - name: "Calibration files by vehicle and date"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE 'Calibration%' ORDER BY vehicle_id, calibration_date DESC"
+  - name: "Safety-critical events in last 30 days"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Scenario Report/Safety' AND scan_timestamp > current_date - interval '30' day ORDER BY severity DESC"

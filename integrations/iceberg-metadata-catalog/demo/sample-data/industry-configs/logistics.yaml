@@ -1,0 +1,54 @@
+industry: logistics
+display_name: "Logistics & Supply Chain (物流・サプライチェーン)"
+aws_industry_team: "Automotive & Transportation"
+file_types:
+  - extension: ".pdf"
+    category: "bill_of_lading"
+    ai_classification: "船荷証券"
+    sample_content: "Shipment: SHP2026060142, Route: Tokyo→LA, Container: MSKU7234561, Weight: 18450kg"
+    count: 30
+  - extension: ".pdf"
+    category: "customs_declaration"
+    ai_classification: "通関申告書"
+    sample_content: "Declaration: IMP-2026-08821, HS Code: 8471.30, Origin: Japan, Status: Pending"
+    count: 25
+  - extension: ".jpg"
+    category: "delivery_photo"
+    ai_classification: "配送証明/写真"
+    sample_content: "Delivery: DEL88421, Signature: Present, Damage: None, Time: 14:32"
+    count: 50
+  - extension: ".csv"
+    category: "tracking_log"
+    ai_classification: "追跡ログ"
+    sample_content: "Shipment: SHP2026060142, Waypoints: 847, Exceptions: 2, Status: In Transit"
+    count: 20
+  - extension: ".pdf"
+    category: "exception_report"
+    ai_classification: "例外レポート"
+    sample_content: "Date: 2026-06-01, Delays: 12, Damages: 3, Weather: 5, Customs: 4"
+    count: 15
+metadata_fields:
+  - name: "shipment_id"
+    type: "string"
+    example: "SHP2026060142"
+  - name: "route"
+    type: "string"
+    example: "TYO→LAX"
+  - name: "carrier"
+    type: "string"
+    example: "Ocean Line Co."
+  - name: "status"
+    type: "string"
+    example: "In Transit"
+  - name: "damage_detected"
+    type: "boolean"
+    example: false
+queries:
+  - name: "Pending customs declarations by origin"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Customs Declaration' AND status = 'Pending' ORDER BY submission_date"
+  - name: "Delivery photos with damage detected"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Delivery Proof/Photo' AND damage_detected = true ORDER BY delivery_date DESC"
+  - name: "Shipments with exceptions in last 48 hours"
+    sql: "SELECT * FROM metadata WHERE ai_classification = 'Tracking Log' AND exception_count > 0 AND last_event_time > current_timestamp - interval '48' hour"
+  - name: "All documents for a specific shipment"
+    sql: "SELECT * FROM metadata WHERE shipment_id = 'SHP2026060142' ORDER BY ai_classification"
