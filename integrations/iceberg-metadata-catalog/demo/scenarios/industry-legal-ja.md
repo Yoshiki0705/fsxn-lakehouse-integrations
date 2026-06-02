@@ -206,5 +206,50 @@ OpenSearch セマンティック検索：
 
 ---
 
+## Iceberg Time Travel: 履歴比較
+
+Iceberg テーブル形式のユニークな利点の一つがタイムトラベル — 過去の任意の時点でのメタデータをクエリする機能です。
+
+```sql
+-- スナップショット履歴の表示
+SELECT * FROM s3_tables.metadata_catalog.file_metadata$snapshots
+ORDER BY committed_at DESC LIMIT 10;
+
+-- 24 時間前の時点でのメタデータをクエリ
+SELECT ai_classification, COUNT(*) as file_count
+FROM s3_tables.metadata_catalog.file_metadata
+FOR TIMESTAMP AS OF (current_timestamp - interval '24' hour)
+GROUP BY ai_classification;
+
+-- 現在 vs. 以前の分類件数を比較
+WITH current_state AS (
+  SELECT ai_classification, COUNT(*) as current_count
+  FROM s3_tables.metadata_catalog.file_metadata
+  GROUP BY ai_classification
+),
+previous_state AS (
+  SELECT ai_classification, COUNT(*) as previous_count
+  FROM s3_tables.metadata_catalog.file_metadata
+  FOR TIMESTAMP AS OF (current_timestamp - interval '7' day)
+  GROUP BY ai_classification
+)
+SELECT COALESCE(c.ai_classification, p.ai_classification) as category,
+       COALESCE(c.current_count, 0) as now,
+       COALESCE(p.previous_count, 0) as week_ago,
+       COALESCE(c.current_count, 0) - COALESCE(p.previous_count, 0) as delta
+FROM current_state c
+FULL OUTER JOIN previous_state p ON c.ai_classification = p.ai_classification
+ORDER BY delta DESC;
+```
+
+**この業界でのタイムトラベル活用例**:
+- ファイル分類分布の時系列変化を追跡
+- コンプライアンス判断時のメタデータ状態を監査
+- 意図しない一括再分類や削除からの復旧
+- 異なる AI モデルバージョン間のエンリッチメント結果比較
+
+
+---
+
 *関連設定: [`legal.yaml`](../sample-data/industry-configs/legal.yaml)*
 *ペアドキュメント: [industry-legal.md](./industry-legal.md)*

@@ -150,6 +150,7 @@ Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platfor
 | PoC Guide | [EN](docs/poc-guide.md) | [JA](docs/poc-guide-ja.md) |
 | Infrastructure Request | [EN](docs/infrastructure-request-template.md) | [JA](docs/infrastructure-request-template-ja.md) |
 | Demo Guide | [EN](demo/docs/demo-guide.md) | [JA](demo/docs/demo-guide-ja.md) |
+| Demo Scenarios (23 industries) | [EN](demo/scenarios/README.md) | [JA](demo/scenarios/README-ja.md) |
 | S3-Only Quickstart | [EN](demo/docs/quickstart-s3-only.md) | [JA](demo/docs/quickstart-s3-only-ja.md) |
 | Iceberg Spec vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | — |
 | Maintenance Runbook | [EN](ops/iceberg-maintenance-runbook.md) | — |

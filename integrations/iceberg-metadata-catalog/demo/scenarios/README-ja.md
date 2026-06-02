@@ -144,6 +144,14 @@
 | [AIプロンプトカスタマイズガイド](ai-prompt-customization-guide-ja.md) | 業界別Bedrock Claudeプロンプトチューニング |
 | [Snowflakeアクティベーションパターン](snowflake-activation-pattern-ja.md) | メタデータ同期 + Cortex Search連携 |
 
+## プラットフォーム別リソース
+
+| プラットフォーム | リソース | 説明 |
+|---------------|---------|------|
+| Databricks | [`demo/notebooks/databricks-metadata-catalog-demo.py`](../notebooks/databricks-metadata-catalog-demo.py) | Databricksでのメタデータ探索用インタラクティブノートブック |
+| Snowflake | [`snowflake-activation-pattern-ja.md`](snowflake-activation-pattern-ja.md) | Cortex Search連携のフルアクティベーションガイド |
+| EMR Spark | [`cross-platform/athena-emr/emr-spark-access.py`](../../cross-platform/athena-emr/emr-spark-access.py) | EMR Sparkアクセススクリプト |
+
 ---
 
 *参照: [use-cases/README.md](../../use-cases/README.md) — ユースケース詳細ドキュメント*

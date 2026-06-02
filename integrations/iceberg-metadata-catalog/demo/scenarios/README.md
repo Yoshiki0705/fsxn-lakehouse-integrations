@@ -144,6 +144,14 @@ The following limitations apply to every scenario above:
 | [AI Prompt Customization Guide](ai-prompt-customization-guide.md) | Per-industry Bedrock Claude prompt tuning |
 | [Snowflake Activation Pattern](snowflake-activation-pattern.md) | Metadata sync + Cortex Search integration |
 
+## Platform-Specific Resources
+
+| Platform | Resource | Description |
+|----------|----------|-------------|
+| Databricks | [`demo/notebooks/databricks-metadata-catalog-demo.py`](../notebooks/databricks-metadata-catalog-demo.py) | Interactive notebook for metadata exploration in Databricks |
+| Snowflake | [`snowflake-activation-pattern.md`](snowflake-activation-pattern.md) | Full activation guide with Cortex Search |
+| EMR Spark | [`cross-platform/athena-emr/emr-spark-access.py`](../../cross-platform/athena-emr/emr-spark-access.py) | EMR Spark access script |
+
 ---
 
 *See also: [use-cases/README.md](../../use-cases/README.md) for detailed use case documentation*
