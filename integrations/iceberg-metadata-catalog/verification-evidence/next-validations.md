@@ -40,6 +40,7 @@ Track remaining validation items identified through expert review. Items are gro
 | C-5 | Metadata sync to Snowflake managed table for Cortex Search | Medium | TBD |
 | C-6 | Horizon governance (Row Access Policy) on synced metadata | Low | TBD |
 | C-7 | Object Store catalog integration (read metadata file directly) | High | ❌ **Access Denied** (2026-06-02): AssumeRole succeeds but Snowflake's access pattern (includes ListBucket) is blocked by S3 Tables internal bucket restrictions. Metadata must be exported to standard S3 bucket first. |
+| C-10 | Glue REST + EXTERNAL_VOLUME_CREDENTIALS | High | ❌ **Access Denied** (2026-06-02): Tested per Snowflake Support recommendation. Same S3 Tables internal bucket restriction. Blocker is NOT credential mode — it's the storage layer itself. |
 | C-8 | TO_FILE with string literal syntax on S3 AP stage | Medium | ✅ **Verified** (2026-06-02): TO_FILE works with S3 AP stage using string literal syntax + correct file path. Original issues were (1) syntax error (identifier vs string literal) and (2) non-existent file path. NOT an S3 AP-specific limitation. |
 | C-9 | SYSTEM$VERIFY_CATALOG_INTEGRATION('S3TABLES_GLUE_REST_INT') | Medium | Pending |
 
