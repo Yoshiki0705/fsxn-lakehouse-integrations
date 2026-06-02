@@ -1,0 +1,51 @@
+industry: financial
+display_name: "Financial Services (金融機関)"
+file_types:
+  - extension: ".pdf"
+    category: "kyc_document"
+    ai_classification: "KYC/本人確認書類"
+    sample_content: "Customer ID: C-789012, Verification: Complete, Risk: Low"
+    count: 20
+  - extension: ".pdf"
+    category: "contract"
+    ai_classification: "契約書"
+    sample_content: "Contract No: FIN-2026-0042, Type: Loan Agreement, Amount: ¥50,000,000"
+    count: 15
+  - extension: ".xlsx"
+    category: "risk_report"
+    ai_classification: "リスクレポート"
+    sample_content: "Portfolio VaR: 2.3%, Stress test: PASS, Date: 2026-Q1"
+    count: 8
+  - extension: ".pdf"
+    category: "regulatory_filing"
+    ai_classification: "規制当局提出書類"
+    sample_content: "Filing type: Basel III, Period: 2026-Q1, Status: Submitted"
+    count: 5
+  - extension: ".msg"
+    category: "client_communication"
+    ai_classification: "顧客コミュニケーション"
+    sample_content: "Subject: Account review, Client: Corp ABC, Priority: Normal"
+    count: 12
+metadata_fields:
+  - name: "customer_id"
+    type: "string"
+    example: "C-789012"
+  - name: "document_type"
+    type: "string"
+    example: "KYC"
+  - name: "risk_level"
+    type: "string"
+    example: "Low"
+  - name: "retention_period_years"
+    type: "integer"
+    example: 10
+  - name: "pii_detected"
+    type: "boolean"
+    example: true
+queries:
+  - name: "KYC documents expiring soon"
+    sql: "SELECT * FROM metadata WHERE document_type = 'KYC' AND expiry_date < current_date + interval '90' day"
+  - name: "High-risk client documents"
+    sql: "SELECT * FROM metadata WHERE risk_level = 'High' ORDER BY last_modified DESC"
+  - name: "PII-containing documents without redaction"
+    sql: "SELECT * FROM metadata WHERE pii_detected = true AND pii_redacted = false"
