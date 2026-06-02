@@ -210,5 +210,50 @@ Using OpenSearch:
 
 ---
 
+## Iceberg Time Travel: Historical Comparison
+
+One unique advantage of the Iceberg table format is time travel — querying metadata as it existed at any past point in time.
+
+```sql
+-- View snapshot history
+SELECT * FROM s3_tables.metadata_catalog.file_metadata$snapshots
+ORDER BY committed_at DESC LIMIT 10;
+
+-- Query metadata as of 24 hours ago
+SELECT ai_classification, COUNT(*) as file_count
+FROM s3_tables.metadata_catalog.file_metadata
+FOR TIMESTAMP AS OF (current_timestamp - interval '24' hour)
+GROUP BY ai_classification;
+
+-- Compare current vs. previous classification counts
+WITH current_state AS (
+  SELECT ai_classification, COUNT(*) as current_count
+  FROM s3_tables.metadata_catalog.file_metadata
+  GROUP BY ai_classification
+),
+previous_state AS (
+  SELECT ai_classification, COUNT(*) as previous_count
+  FROM s3_tables.metadata_catalog.file_metadata
+  FOR TIMESTAMP AS OF (current_timestamp - interval '7' day)
+  GROUP BY ai_classification
+)
+SELECT COALESCE(c.ai_classification, p.ai_classification) as category,
+       COALESCE(c.current_count, 0) as now,
+       COALESCE(p.previous_count, 0) as week_ago,
+       COALESCE(c.current_count, 0) - COALESCE(p.previous_count, 0) as delta
+FROM current_state c
+FULL OUTER JOIN previous_state p ON c.ai_classification = p.ai_classification
+ORDER BY delta DESC;
+```
+
+**Use cases for time travel in this industry**:
+- Track how file classification distribution changes over time
+- Audit what metadata looked like when a compliance decision was made
+- Recover from accidental bulk reclassification or deletion
+- Compare enrichment pipeline output across different AI model versions
+
+
+---
+
 *Related config: [`financial.yaml`](../sample-data/industry-configs/financial.yaml)*
 *Pair document: [industry-financial-ja.md](./industry-financial-ja.md)*

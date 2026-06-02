@@ -141,6 +141,7 @@ integrations/iceberg-metadata-catalog/
 | PoC ガイド | [EN](docs/poc-guide.md) | [JA](docs/poc-guide-ja.md) |
 | インフラ依頼テンプレート | [EN](docs/infrastructure-request-template.md) | [JA](docs/infrastructure-request-template-ja.md) |
 | デモガイド | [EN](demo/docs/demo-guide.md) | [JA](demo/docs/demo-guide-ja.md) |
+| デモシナリオ（23 業種） | [EN](demo/scenarios/README.md) | [JA](demo/scenarios/README-ja.md) |
 | S3 のみクイックスタート | [EN](demo/docs/quickstart-s3-only.md) | [JA](demo/docs/quickstart-s3-only-ja.md) |
 | Iceberg 仕様 vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | — |
 | メンテナンス Runbook | [EN](ops/iceberg-maintenance-runbook.md) | — |
