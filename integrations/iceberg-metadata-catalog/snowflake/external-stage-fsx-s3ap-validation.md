@@ -6,9 +6,9 @@
 
 Document the validated configuration for using FSx for ONTAP S3 Access Point alias as a Snowflake External Stage.
 
-## Status: ✅ Verified (2026-05-31)
+## Status: ✅ Verified (2026-06-02)
 
-External Stage creation and LIST/SELECT operations work with FSx for ONTAP S3 Access Point alias. TO_FILE operation is an Engineering WIP.
+External Stage creation, LIST/SELECT, and **TO_FILE (Cortex COMPLETE multimodal)** operations all work with FSx for ONTAP S3 Access Point alias.
 
 ## Configuration
 
@@ -48,13 +48,25 @@ COPY INTO target_table FROM @fsxn_external_stage/path/to/file.csv;
 -- ✅ Works for supported file formats
 ```
 
-### Known Limitation: TO_FILE
+### Known Limitation: TO_FILE — RESOLVED (2026-06-02)
+
+Previous test failures were caused by (1) incorrect syntax (identifier instead of string literal) and (2) non-existent file path. After correction, TO_FILE works correctly:
 
 ```sql
--- COPY FILES (TO_FILE) from S3 AP
-COPY FILES INTO @another_stage FROM @fsxn_external_stage;
--- ⚠️ Engineering WIP — not yet supported for S3 AP paths
+-- TO_FILE with Cortex COMPLETE (AI multimodal) — VERIFIED ✅
+SELECT SNOWFLAKE.CORTEX.COMPLETE(
+  'claude-sonnet-4-5',
+  'What is in this file?',
+  TO_FILE('@FSXN_LAKEHOUSE.PUBLIC.FSXN_AP_ARN_TEST_STAGE', 'athena-results/athena-s3cp-test.txt')
+) AS result;
+-- ✅ SUCCESS (8.0s) — Claude reads file content from FSx via S3 AP
+
+-- Key syntax requirement: stage name must be a STRING LITERAL
+-- ✅ TO_FILE('@DB.SCHEMA.STAGE', 'path/to/file')    -- Correct
+-- ❌ TO_FILE(@DB.SCHEMA.STAGE, 'path/to/file')      -- Incorrect (SQL compilation error)
 ```
+
+This means Snowflake Cortex AI multimodal features (vision, document understanding) can directly read files stored on FSx for ONTAP via S3 Access Points.
 
 ## IAM Policy Requirements
 
