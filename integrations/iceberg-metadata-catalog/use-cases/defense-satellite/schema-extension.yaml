@@ -1,0 +1,38 @@
+# Defense & Satellite — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: defense-satellite
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: acquisition_date
+    type: string
+    description: "Image acquisition date (ISO 8601)"
+
+  - name: sensor_type
+    type: string
+    description: "Satellite sensor type (e.g., optical, SAR, multispectral, hyperspectral)"
+
+  - name: geographic_area
+    type: string
+    description: "Geographic area of interest identifier or bounding box"
+
+  - name: cloud_cover_pct
+    type: float
+    description: "Cloud cover percentage (0.0-100.0)"
+
+  - name: classification_level
+    type: string
+    description: "Security classification level (e.g., unclassified, confidential, secret)"
+
+  - name: ground_resolution_m
+    type: float
+    description: "Ground sample distance in meters"
+
+classification_categories:
+  - optical_imagery
+  - sar_imagery
+  - multispectral
+  - change_detection
+  - object_detection
+  - terrain_model

@@ -1,0 +1,34 @@
+# Insurance — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: insurance
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: claim_id
+    type: string
+    description: "Insurance claim identifier"
+
+  - name: policy_number
+    type: string
+    description: "Insurance policy number"
+
+  - name: damage_type
+    type: string
+    description: "Type of damage (e.g., collision, fire, flood, theft)"
+
+  - name: severity_score
+    type: float
+    description: "Damage severity score (0.0-1.0)"
+
+  - name: fraud_risk_score
+    type: float
+    description: "Fraud risk assessment score (0.0-1.0)"
+
+classification_categories:
+  - vehicle_damage
+  - property_damage
+  - medical_report
+  - policy_document
+  - claim_form
+  - surveillance_video

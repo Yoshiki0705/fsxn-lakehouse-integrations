@@ -1,0 +1,39 @@
+# Healthcare — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: healthcare
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: study_id
+    type: string
+    description: "Clinical study or trial identifier"
+
+  - name: patient_id_hash
+    type: string
+    description: "De-identified patient identifier (hashed)"
+
+  - name: modality
+    type: string
+    description: "Imaging modality (e.g., MRI, CT, X-ray, ultrasound)"
+
+  - name: body_part
+    type: string
+    description: "Anatomical region (e.g., brain, chest, abdomen)"
+
+  - name: irb_status
+    type: string
+    description: "Institutional Review Board approval status"
+
+  - name: anonymization_status
+    type: string
+    description: "Data anonymization/de-identification status"
+
+classification_categories:
+  - mri_scan
+  - ct_scan
+  - pathology_slide
+  - clinical_protocol
+  - consent_form
+  - lab_report
+  - surgical_video

@@ -1,0 +1,34 @@
+# Education — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: education
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: research_field
+    type: string
+    description: "Academic research field or discipline"
+
+  - name: publication_year
+    type: integer
+    description: "Year of publication"
+
+  - name: journal
+    type: string
+    description: "Journal or conference name"
+
+  - name: funding_source
+    type: string
+    description: "Research funding source or grant agency"
+
+  - name: open_access_status
+    type: string
+    description: "Open access status (e.g., gold, green, hybrid, closed)"
+
+classification_categories:
+  - journal_paper
+  - thesis
+  - dataset
+  - notebook
+  - grant_proposal
+  - course_material

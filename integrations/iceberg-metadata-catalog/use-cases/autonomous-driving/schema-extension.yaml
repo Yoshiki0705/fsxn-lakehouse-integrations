@@ -1,0 +1,38 @@
+# Autonomous Driving — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: autonomous-driving
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: scene_type
+    type: string
+    description: "Driving scene type (e.g., highway, urban, intersection, parking)"
+
+  - name: weather
+    type: string
+    description: "Weather condition during capture (e.g., clear, rain, fog, snow)"
+
+  - name: time_of_day
+    type: string
+    description: "Time of day (e.g., day, night, dawn, dusk)"
+
+  - name: sensor_type
+    type: string
+    description: "Sensor type (e.g., camera, lidar, radar, gps, imu)"
+
+  - name: annotation_status
+    type: string
+    description: "Annotation status (e.g., raw, annotated, verified, rejected)"
+
+  - name: vehicle_id
+    type: string
+    description: "Data collection vehicle identifier"
+
+classification_categories:
+  - camera_frame
+  - lidar_pointcloud
+  - radar_data
+  - gps_trajectory
+  - can_bus_log
+  - annotation_file

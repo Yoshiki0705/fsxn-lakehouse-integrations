@@ -1,0 +1,34 @@
+# Logistics — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: logistics
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: shipment_id
+    type: string
+    description: "Shipment or consignment identifier"
+
+  - name: origin_country
+    type: string
+    description: "Country of origin (ISO 3166-1 alpha-2)"
+
+  - name: destination_country
+    type: string
+    description: "Destination country (ISO 3166-1 alpha-2)"
+
+  - name: carrier
+    type: string
+    description: "Shipping carrier or logistics provider"
+
+  - name: document_type
+    type: string
+    description: "Trade document type (e.g., bill_of_lading, customs, invoice)"
+
+classification_categories:
+  - bill_of_lading
+  - customs_declaration
+  - delivery_proof
+  - packing_list
+  - invoice
+  - tracking_update

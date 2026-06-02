@@ -1,0 +1,55 @@
+# Manufacturing — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+# Reference: schema/extensions/manufacturing_metadata.yaml
+
+industry: manufacturing
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: part_number
+    type: string
+    description: "Part/component number (e.g., P-2000)"
+
+  - name: revision
+    type: string
+    description: "Document revision (e.g., v3, Rev.C)"
+
+  - name: plant
+    type: string
+    description: "Manufacturing plant/site identifier"
+
+  - name: machine_id
+    type: string
+    description: "Machine/equipment identifier (e.g., CNC-01)"
+
+  - name: inspection_lot
+    type: string
+    description: "Quality inspection lot number"
+
+  - name: production_order
+    type: string
+    description: "Production/work order number"
+
+  - name: document_category
+    type: string
+    description: "engineering / quality / maintenance / safety / compliance / training"
+
+  - name: material_spec
+    type: string
+    description: "Material specification (e.g., SUS304, FC250)"
+
+  - name: tolerance_class
+    type: string
+    description: "Tolerance class or grade"
+
+classification_categories:
+  - engineering_drawing
+  - quality_report
+  - maintenance_record
+  - safety_inspection
+  - bill_of_materials
+  - production_schedule
+  - training_material
+  - compliance_document
+  - test_result
+  - calibration_record

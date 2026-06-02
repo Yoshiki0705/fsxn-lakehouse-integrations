@@ -1,0 +1,34 @@
+# Energy — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: energy
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: survey_area
+    type: string
+    description: "Geographic survey area or block identifier"
+
+  - name: well_id
+    type: string
+    description: "Well or borehole identifier"
+
+  - name: acquisition_date
+    type: string
+    description: "Data acquisition date (ISO 8601)"
+
+  - name: processing_stage
+    type: string
+    description: "Data processing stage (e.g., raw, processed, interpreted)"
+
+  - name: depth_range
+    type: string
+    description: "Depth range in meters (e.g., 1000-3500m)"
+
+classification_categories:
+  - seismic_survey
+  - well_log
+  - pipeline_inspection
+  - scada_data
+  - environmental_report
+  - thermal_image

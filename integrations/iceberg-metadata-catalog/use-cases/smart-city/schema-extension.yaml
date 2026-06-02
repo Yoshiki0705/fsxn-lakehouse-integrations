@@ -1,0 +1,34 @@
+# Smart City — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: smart-city
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: data_layer
+    type: string
+    description: "GIS data layer name (e.g., buildings, roads, utilities)"
+
+  - name: coordinate_system
+    type: string
+    description: "Coordinate reference system (e.g., EPSG:4326, EPSG:3857)"
+
+  - name: district
+    type: string
+    description: "City district or administrative area"
+
+  - name: last_updated
+    type: string
+    description: "Last data update timestamp (ISO 8601)"
+
+  - name: spatial_resolution
+    type: string
+    description: "Spatial resolution (e.g., 1m, 10m, 30m)"
+
+classification_categories:
+  - zoning_map
+  - utility_network
+  - elevation_model
+  - land_use
+  - disaster_risk
+  - traffic_flow
