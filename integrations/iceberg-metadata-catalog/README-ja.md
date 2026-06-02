@@ -28,6 +28,9 @@ FSx for ONTAP ──S3 Access Point──→ AI Enrichment (Bedrock)
 ## クイックスタート
 
 ```bash
+# 前提条件を確認
+cd demo/scripts && ./check-prerequisites.sh
+
 # 依存パッケージインストール
 pip install -r requirements.txt
 
@@ -38,6 +41,9 @@ cd demo/scripts
 # オプション B: S3 のみモード (FSx 不要)
 # demo/docs/quickstart-s3-only-ja.md を参照
 ```
+
+> **FSx for ONTAP がない場合**: [S3 のみクイックスタート](demo/docs/quickstart-s3-only-ja.md) から始めてください。
+> **インフラが必要な場合**: [インフラ依頼テンプレート](docs/infrastructure-request-template-ja.md) をプラットフォームチームに送付してください。
 
 ## フェーズ (全て検証済み ✅)
 
@@ -77,6 +83,16 @@ integrations/iceberg-metadata-catalog/
 │   └── athena-named-queries/              # キュレート済み SQL ビュー (latest_records、PII カバレッジ)
 ├── schema/
 │   └── extensions/                        # ドメインメタデータ拡張 (製造業等)
+├── databricks/
+│   ├── uc-foreign-iceberg-validation.md   # UC Foreign Catalog 検証計画
+│   ├── coexistence-roadmap.md             # AWS + Databricks 段階的統合
+│   └── audit-correlation-guide.md         # クロスプラットフォーム監査相関
+├── snowflake/
+│   ├── glue-rest-vended-credentials-validation.md  # Glue REST credential vending 検証
+│   ├── external-stage-fsx-s3ap-validation.md       # FSx S3 AP の External Stage
+│   └── path-decision-guide.md                      # Snowflake 統合パス判断
+├── lakehouse-tools/
+│   └── tool-compatibility-matrix.yaml              # マルチエンジン互換性マトリクス
 ├── verification-evidence/
 │   ├── evidence-record.yaml               # 検証済み vs 推定の一覧
 │   ├── cost-assumptions.yaml              # 全コスト前提条件
@@ -102,13 +118,16 @@ integrations/iceberg-metadata-catalog/
 |-------------|:----:|------|
 | Athena | ✅ | Glue フェデレーテッドカタログ |
 | PyIceberg | ✅ | S3 Tables REST + Glue REST |
-| EMR Spark | ✅ 見込み | Iceberg REST catalog |
+| EMR Spark | ✅ 検証済み | Glue Iceberg REST via EMR Serverless 7.13.0; SHOW NAMESPACES/TABLES/SELECT 全て動作 |
 | Databricks SQL Warehouse | ⚠️ | テスト済みパスで `iceberg_rest` 接続タイプ非対応 |
 | Databricks UC 監査 | ✅ | 外部エンジンアクセスが `system.access.audit` に完全記録 |
 | Databricks Spark | ❌ | UC が spark.conf.set による外部カタログ登録をブロック; UC Foreign Catalog が必要 |
-| Snowflake (Glue REST) | 🔄 進行中 | CATALOG INTEGRATION 作成成功; credential vending 設定調整中 |
+| Databricks UC Foreign Catalog | 🔄 | サポートにフォローアップ送信済み (2026-06-01); ガバナンス付きアクセスの必須パス |
+| Databricks Delta Sharing | ❌ | Sharing server は同じ UC credentials を使用; S3 AP session policy を bypass 不可 |
+| Databricks NFS → UC Volume | ❌ | クラウドストレージ URI のみ; NFS/FUSE マウントパス非対応 |
+| Snowflake (Glue REST) | ❌ ブロック | Glue REST は credential vending を実装していない（`/credentials` が UnknownOperationException を返す） |
 | Snowflake (S3 Tables 直接) | ⚠️ | テスト済みパスで対応カタログタイプではない |
-| Snowflake External Stage | ✅ | FSx S3 AP 動作確認済み（TO_FILE のみ制限、Engineering 対応中） |
+| Snowflake External Stage | ✅ | FSx S3 AP 動作確認済み（LIST、SELECT、COPY、TO_FILE + Cortex AI すべて検証済み） |
 
 詳細: [cross-platform-compatibility.yaml](verification-evidence/cross-platform-compatibility.yaml)
 
@@ -117,12 +136,15 @@ integrations/iceberg-metadata-catalog/
 | ドキュメント | EN | JA |
 |-----------|----|----|
 | アーキテクチャ | [EN](../../docs/en/iceberg-metadata-catalog.md) | [JA](../../docs/ja/iceberg-metadata-catalog.md) |
+| **業種別ユースケース** | [EN](docs/industry-use-cases.md) | [JA](docs/industry-use-cases-ja.md) |
 | PoC 結果サマリー | [EN](docs/poc-results-summary.md) | [JA](docs/poc-results-summary-ja.md) |
 | PoC ガイド | [EN](docs/poc-guide.md) | [JA](docs/poc-guide-ja.md) |
+| インフラ依頼テンプレート | [EN](docs/infrastructure-request-template.md) | [JA](docs/infrastructure-request-template-ja.md) |
 | デモガイド | [EN](demo/docs/demo-guide.md) | [JA](demo/docs/demo-guide-ja.md) |
 | S3 のみクイックスタート | [EN](demo/docs/quickstart-s3-only.md) | [JA](demo/docs/quickstart-s3-only-ja.md) |
 | Iceberg 仕様 vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | — |
 | メンテナンス Runbook | [EN](ops/iceberg-maintenance-runbook.md) | — |
+| Snowflake トラブルシューティング | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
 
 ## ブログシリーズ
 

@@ -28,6 +28,9 @@ FSx for ONTAP ──S3 Access Point──→ AI Enrichment (Bedrock)
 ## Quick Start
 
 ```bash
+# Check prerequisites first
+cd demo/scripts && ./check-prerequisites.sh
+
 # Install dependencies
 pip install -r requirements.txt
 
@@ -38,6 +41,9 @@ cd demo/scripts
 # Option B: S3-only mode (no FSx required)
 # See demo/docs/quickstart-s3-only.md
 ```
+
+> **Don't have FSx for ONTAP?** Start with [S3-only quickstart](demo/docs/quickstart-s3-only.md).
+> **Need infrastructure?** Send [infrastructure-request-template.md](docs/infrastructure-request-template.md) to your platform team.
 
 ## Phases (All Verified ✅)
 
@@ -77,6 +83,25 @@ integrations/iceberg-metadata-catalog/
 │   └── athena-named-queries/              # Curated SQL views (latest_records, PII coverage)
 ├── schema/
 │   └── extensions/                        # Domain metadata extensions (manufacturing, etc.)
+├── use-cases/                             # Industry-specific use cases (20 industries)
+│   ├── README.md                          # Use case selection guide
+│   ├── _shared/                           # Common schema, prompts, demo framework
+│   ├── manufacturing/                     # UC3: CAD, QC, maintenance
+│   ├── financial/                         # UC2: IDP, KYC/AML
+│   ├── healthcare/                        # UC5: DICOM, PHI
+│   ├── ... (20 industries total)          # See use-cases/README.md
+│   └── sap-erp/                           # UC19: ERP document management
+├── databricks/
+│   ├── uc-foreign-iceberg-validation.md   # UC Foreign Catalog validation plan
+│   ├── coexistence-roadmap.md             # AWS + Databricks phased integration
+│   └── audit-correlation-guide.md         # Cross-platform audit correlation
+├── snowflake/
+│   ├── glue-rest-vended-credentials-validation.md  # Glue REST credential vending validation
+│   ├── external-stage-fsx-s3ap-validation.md       # External Stage with FSx S3 AP
+│   ├── path-decision-guide.md                      # Snowflake integration path decision
+│   └── troubleshooting-guide.md                    # Troubleshooting guide (EN/JA)
+├── lakehouse-tools/
+│   └── tool-compatibility-matrix.yaml              # Multi-engine compatibility matrix
 ├── verification-evidence/
 │   ├── evidence-record.yaml               # What was validated vs projected
 │   ├── cost-assumptions.yaml              # All pricing assumptions
@@ -102,13 +127,16 @@ integrations/iceberg-metadata-catalog/
 |----------|:------:|------|
 | Athena | ✅ | Glue federated catalog |
 | PyIceberg | ✅ | S3 Tables REST + Glue REST |
-| EMR Spark | ✅ Expected | Iceberg REST catalog |
+| EMR Spark | ✅ Verified | Glue Iceberg REST via EMR Serverless 7.13.0; SHOW NAMESPACES/TABLES/SELECT all work |
 | Databricks SQL Warehouse | ⚠️ | `iceberg_rest` connection type not supported in tested path |
 | Databricks UC Audit | ✅ | External engine access fully logged in `system.access.audit` |
 | Databricks Spark | ❌ | UC blocks external catalog registration via spark.conf.set; UC Foreign Catalog required |
-| Snowflake (Glue REST) | 🔄 In Progress | CATALOG INTEGRATION created; credential vending config in progress |
+| Databricks UC Foreign Catalog | 🔄 | Follow-up submitted to support (2026-06-01); required path for governed access |
+| Databricks Delta Sharing | ❌ | Sharing server uses same UC credentials; cannot bypass S3 AP session policy |
+| Databricks NFS → UC Volume | ❌ | Cloud storage URIs only; NFS/FUSE mount paths not supported |
+| Snowflake (Glue REST) | ❌ Blocked | Glue REST does not implement credential vending (`/credentials` returns UnknownOperationException) |
 | Snowflake (S3 Tables direct) | ⚠️ | Not a supported catalog type in tested path |
-| Snowflake External Stage | ✅ | FSx S3 AP works (TO_FILE only limitation, Engineering WIP) |
+| Snowflake External Stage | ✅ | FSx S3 AP works (LIST, SELECT, COPY, TO_FILE + Cortex AI all verified) |
 
 Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platform-compatibility.yaml)
 
@@ -117,12 +145,15 @@ Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platfor
 | Document | EN | JA |
 |----------|----|----|
 | Architecture | [EN](../../docs/en/iceberg-metadata-catalog.md) | [JA](../../docs/ja/iceberg-metadata-catalog.md) |
+| **Industry Use Cases** | [EN](docs/industry-use-cases.md) | [JA](docs/industry-use-cases-ja.md) |
 | PoC Results Summary | [EN](docs/poc-results-summary.md) | [JA](docs/poc-results-summary-ja.md) |
 | PoC Guide | [EN](docs/poc-guide.md) | [JA](docs/poc-guide-ja.md) |
+| Infrastructure Request | [EN](docs/infrastructure-request-template.md) | [JA](docs/infrastructure-request-template-ja.md) |
 | Demo Guide | [EN](demo/docs/demo-guide.md) | [JA](demo/docs/demo-guide-ja.md) |
 | S3-Only Quickstart | [EN](demo/docs/quickstart-s3-only.md) | [JA](demo/docs/quickstart-s3-only-ja.md) |
 | Iceberg Spec vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | — |
 | Maintenance Runbook | [EN](ops/iceberg-maintenance-runbook.md) | — |
+| Snowflake Troubleshooting | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
 
 ## Blog Series
 
