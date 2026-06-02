@@ -1,0 +1,34 @@
+# Construction & BIM — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: construction-bim
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: project_name
+    type: string
+    description: "Construction project name"
+
+  - name: project_phase
+    type: string
+    description: "Project phase (e.g., design, construction, handover, operation)"
+
+  - name: discipline
+    type: string
+    description: "Engineering discipline (e.g., structural, architectural, MEP, civil)"
+
+  - name: revision
+    type: string
+    description: "Document or model revision identifier"
+
+  - name: ifc_schema_version
+    type: string
+    description: "IFC schema version (e.g., IFC2x3, IFC4, IFC4.3)"
+
+classification_categories:
+  - structural_drawing
+  - architectural_model
+  - mep_design
+  - site_photo
+  - safety_report
+  - as_built

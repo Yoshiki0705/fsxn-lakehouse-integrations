@@ -1,0 +1,39 @@
+# Legal — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: legal
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: matter_id
+    type: string
+    description: "Legal matter or case identifier"
+
+  - name: counterparty
+    type: string
+    description: "Counterparty name in the agreement"
+
+  - name: contract_type
+    type: string
+    description: "Type of legal document (e.g., NDA, MSA, SLA)"
+
+  - name: expiration_date
+    type: string
+    description: "Contract or document expiration date (ISO 8601)"
+
+  - name: privilege_status
+    type: string
+    description: "Attorney-client privilege status (e.g., privileged, not_privileged, work_product)"
+
+  - name: jurisdiction
+    type: string
+    description: "Applicable legal jurisdiction"
+
+classification_categories:
+  - nda
+  - service_agreement
+  - employment_contract
+  - lease
+  - litigation_document
+  - privilege_log
+  - regulatory_response

@@ -1,0 +1,34 @@
+# SAP ERP — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: sap-erp
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: sap_document_number
+    type: string
+    description: "SAP document number"
+
+  - name: transaction_code
+    type: string
+    description: "SAP transaction code (e.g., VA01, ME21N, MIGO)"
+
+  - name: company_code
+    type: string
+    description: "SAP company code (e.g., 1000, 2000)"
+
+  - name: fiscal_year
+    type: integer
+    description: "SAP fiscal year"
+
+  - name: document_type_sap
+    type: string
+    description: "SAP document type code (e.g., RE, KR, SA)"
+
+classification_categories:
+  - sap_invoice
+  - delivery_note
+  - material_document
+  - purchase_order
+  - production_order
+  - idoc_message

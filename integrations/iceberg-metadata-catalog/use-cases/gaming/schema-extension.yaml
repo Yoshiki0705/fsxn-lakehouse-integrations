@@ -1,0 +1,35 @@
+# Gaming — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: gaming
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: asset_type
+    type: string
+    description: "Game asset type (e.g., character, environment, prop, UI)"
+
+  - name: target_platform
+    type: string
+    description: "Target platform (e.g., PC, PS5, Xbox, mobile, VR)"
+
+  - name: build_version
+    type: string
+    description: "Game build version identifier"
+
+  - name: lod_level
+    type: integer
+    description: "Level of detail (0=highest, increasing=lower)"
+
+  - name: texture_resolution
+    type: string
+    description: "Texture resolution (e.g., 512, 1024, 2048, 4096)"
+
+classification_categories:
+  - 3d_model
+  - texture
+  - animation
+  - audio_clip
+  - shader
+  - level_design
+  - ui_element

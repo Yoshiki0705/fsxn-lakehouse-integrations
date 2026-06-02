@@ -1,0 +1,35 @@
+# Public Sector — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: public-sector
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: department
+    type: string
+    description: "Government department or agency name"
+
+  - name: foia_request_id
+    type: string
+    description: "Freedom of Information Act request identifier"
+
+  - name: retention_schedule
+    type: string
+    description: "Records retention schedule code"
+
+  - name: disclosure_status
+    type: string
+    description: "Public disclosure status (e.g., public, restricted, exempt)"
+
+  - name: redaction_status
+    type: string
+    description: "Redaction processing status (e.g., pending, completed, not_required)"
+
+classification_categories:
+  - permit_application
+  - council_minutes
+  - gis_map
+  - public_comment
+  - budget_proposal
+  - emergency_plan
+  - foia_response

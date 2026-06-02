@@ -1,0 +1,35 @@
+# Financial — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: financial
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: client_name
+    type: string
+    description: "Client or counterparty name"
+
+  - name: contract_type
+    type: string
+    description: "Type of financial contract (e.g., loan, derivative, deposit)"
+
+  - name: regulatory_body
+    type: string
+    description: "Governing regulatory authority (e.g., SEC, FSA, FCA)"
+
+  - name: retention_years
+    type: integer
+    description: "Required document retention period in years"
+
+  - name: document_category
+    type: string
+    description: "kyc / audit / contract / regulatory / tax"
+
+classification_categories:
+  - invoice
+  - contract
+  - audit_report
+  - kyc_document
+  - regulatory_filing
+  - board_minutes
+  - tax_filing

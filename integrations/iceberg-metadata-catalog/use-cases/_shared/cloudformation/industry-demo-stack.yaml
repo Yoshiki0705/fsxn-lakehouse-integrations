@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Iceberg Metadata Catalog — Industry Use Case Demo Stack
+  Shared template for all 20 industries. Deploys S3 Tables + Athena workgroup.
+  OpenSearch is optional (for vector search use cases).
+  All resources scale-to-zero when idle ($0 cost).
+
+Parameters:
+  Industry:
+    Type: String
+    Description: Industry identifier (maps to use-cases/<industry>/)
+    AllowedValues:
+      - manufacturing
+      - financial
+      - healthcare
+      - public-sector
+      - legal
+      - media-vfx
+      - semiconductor
+      - genomics
+      - energy
+      - autonomous-driving
+      - construction-bim
+      - retail
+      - logistics
+      - education
+      - insurance
+      - defense-satellite
+      - smart-city
+      - gaming
+      - sap-erp
+      - life-sciences
+
+  S3AccessPointAlias:
+    Type: String
+    Description: FSx for ONTAP S3 Access Point alias (ending in -ext-s3alias)
+    Default: ''
+
+  EnableOpenSearch:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Enable OpenSearch Serverless for vector search (adds cold start latency)
+
+  EnableLakeFormation:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Enable Lake Formation governance
+
+Conditions:
+  HasS3AP: !Not [!Equals [!Ref S3AccessPointAlias, '']]
+  CreateOpenSearch: !Equals [!Ref EnableOpenSearch, 'true']
+
+Resources:
+  # S3 Tables Table Bucket (shared across industries within account)
+  MetadataTableBucket:
+    Type: AWS::S3Tables::TableBucket
+    Properties:
+      TableBucketName: !Sub 'fsxn-metadata-${Industry}'
+
+  # Athena Workgroup (per industry)
+  AthenaWorkgroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: !Sub 'fsxn-${Industry}-demo'
+      State: ENABLED
+      WorkGroupConfiguration:
+        ResultConfiguration:
+          OutputLocation: !Sub 's3://fsxn-athena-verification-results-${AWS::Region}/${Industry}/'
+        EngineVersion:
+          SelectedEngineVersion: Athena engine version 3
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Industry
+          Value: !Ref Industry
+
+  # OpenSearch Serverless (optional, for vector search)
+  OpenSearchEncryptionPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Condition: CreateOpenSearch
+    Properties:
+      Name: !Sub 'fsxn-${Industry}-enc'
+      Type: encryption
+      Policy: !Sub |
+        {"Rules":[{"ResourceType":"collection","Resource":["collection/fsxn-${Industry}-vectors"]}],"AWSOwnedKey":true}
+
+  OpenSearchNetworkPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Condition: CreateOpenSearch
+    Properties:
+      Name: !Sub 'fsxn-${Industry}-net'
+      Type: network
+      Policy: !Sub |
+        [{"Rules":[{"ResourceType":"collection","Resource":["collection/fsxn-${Industry}-vectors"]}],"AllowFromPublic":true}]
+
+  OpenSearchAccessPolicy:
+    Type: AWS::OpenSearchServerless::AccessPolicy
+    Condition: CreateOpenSearch
+    Properties:
+      Name: !Sub 'fsxn-${Industry}-access'
+      Type: data
+      Policy: !Sub |
+        [{"Rules":[{"ResourceType":"index","Resource":["index/fsxn-${Industry}-vectors/*"],"Permission":["aoss:*"]},{"ResourceType":"collection","Resource":["collection/fsxn-${Industry}-vectors"],"Permission":["aoss:*"]}],"Principal":["arn:aws:iam::${AWS::AccountId}:root"]}]
+
+  OpenSearchCollection:
+    Type: AWS::OpenSearchServerless::Collection
+    Condition: CreateOpenSearch
+    DependsOn:
+      - OpenSearchEncryptionPolicy
+      - OpenSearchNetworkPolicy
+      - OpenSearchAccessPolicy
+    Properties:
+      Name: !Sub 'fsxn-${Industry}-vectors'
+      Type: VECTORSEARCH
+      StandbyReplicas: DISABLED
+      Description: !Sub 'Vector search for ${Industry} metadata catalog (scale-to-zero)'
+
+Outputs:
+  TableBucketARN:
+    Description: S3 Tables table bucket ARN
+    Value: !GetAtt MetadataTableBucket.TableBucketARN
+
+  AthenaWorkgroup:
+    Description: Athena workgroup name
+    Value: !Ref AthenaWorkgroup
+
+  OpenSearchEndpoint:
+    Condition: CreateOpenSearch
+    Description: OpenSearch collection endpoint
+    Value: !GetAtt OpenSearchCollection.CollectionEndpoint
+
+  DemoCommand:
+    Description: Command to run the industry demo
+    Value: !Sub |
+      cd integrations/iceberg-metadata-catalog/use-cases/_shared && \
+      ./demo-runner.sh --industry ${Industry} --ap-alias ${S3AccessPointAlias}
+
+  CleanupCommand:
+    Description: Command to delete this stack
+    Value: !Sub |
+      aws cloudformation delete-stack --stack-name fsxn-${Industry}-demo --region ${AWS::Region}

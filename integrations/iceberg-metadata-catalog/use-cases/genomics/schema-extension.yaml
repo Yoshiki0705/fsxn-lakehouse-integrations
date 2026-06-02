@@ -1,0 +1,38 @@
+# Genomics — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: genomics
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: study_id
+    type: string
+    description: "Genomic study or project identifier"
+
+  - name: sample_id
+    type: string
+    description: "Biological sample identifier"
+
+  - name: sequencing_platform
+    type: string
+    description: "Sequencing platform (e.g., Illumina, PacBio, Oxford Nanopore)"
+
+  - name: read_depth
+    type: float
+    description: "Average sequencing read depth (coverage)"
+
+  - name: variant_count
+    type: integer
+    description: "Number of detected variants"
+
+  - name: consent_status
+    type: string
+    description: "Participant consent status for data sharing"
+
+classification_categories:
+  - whole_genome
+  - exome
+  - rna_seq
+  - variant_call
+  - quality_report
+  - clinical_annotation

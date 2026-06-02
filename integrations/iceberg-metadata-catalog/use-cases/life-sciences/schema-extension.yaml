@@ -1,0 +1,34 @@
+# Life Sciences — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: life-sciences
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: compound_id
+    type: string
+    description: "Chemical compound or drug candidate identifier"
+
+  - name: assay_type
+    type: string
+    description: "Assay type (e.g., ELISA, PCR, cell_viability, binding)"
+
+  - name: experiment_id
+    type: string
+    description: "Experiment or batch identifier"
+
+  - name: researcher
+    type: string
+    description: "Lead researcher or principal investigator"
+
+  - name: lab_notebook_ref
+    type: string
+    description: "Electronic lab notebook reference number"
+
+classification_categories:
+  - assay_result
+  - compound_structure
+  - microscopy_image
+  - lab_notebook
+  - regulatory_submission
+  - patent_filing

@@ -1,0 +1,39 @@
+# Media & VFX — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: media-vfx
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: project_name
+    type: string
+    description: "Production or project name"
+
+  - name: scene
+    type: string
+    description: "Scene identifier (e.g., SC001, INT_OFFICE)"
+
+  - name: take
+    type: string
+    description: "Take number (e.g., T01, T12)"
+
+  - name: resolution
+    type: string
+    description: "Output resolution (e.g., 4K, 8K, 1920x1080)"
+
+  - name: color_space
+    type: string
+    description: "Color space (e.g., ACES, Rec.709, DCI-P3)"
+
+  - name: license_type
+    type: string
+    description: "Content license type (e.g., royalty_free, rights_managed, exclusive)"
+
+classification_categories:
+  - raw_footage
+  - edited_video
+  - vfx_composite
+  - color_grade
+  - audio_mix
+  - storyboard
+  - subtitle

@@ -1,0 +1,117 @@
+# =============================================================================
+# Base Iceberg Schema — Common Fields for All Industries
+# =============================================================================
+# All industry use cases extend this base schema with industry-specific fields.
+# Extension fields are defined in each use-case's schema-extension.yaml.
+# =============================================================================
+
+base_fields:
+  # Identity
+  - name: file_id
+    type: string
+    required: true
+    description: "Deterministic UUID: hash(volume_id + normalized_path)"
+
+  - name: file_path
+    type: string
+    required: true
+    description: "Full path on FSx volume (restricted access)"
+
+  - name: file_name
+    type: string
+    required: true
+    description: "File name without path"
+
+  # File metadata
+  - name: file_type
+    type: string
+    description: "MIME type or extension-based type"
+
+  - name: file_size
+    type: long
+    description: "File size in bytes"
+
+  - name: created_at
+    type: timestamptz
+    description: "File creation timestamp"
+
+  - name: modified_at
+    type: timestamptz
+    description: "Last modification timestamp"
+
+  # Source tracking
+  - name: source_volume
+    type: string
+    description: "FSx volume name"
+
+  - name: source_svm
+    type: string
+    description: "Storage Virtual Machine name"
+
+  - name: scan_run_id
+    type: string
+    description: "Batch scan identifier"
+
+  # AI enrichment
+  - name: classification
+    type: string
+    description: "AI-assigned document/file classification"
+
+  - name: confidence_score
+    type: float
+    description: "AI classification confidence (0.0 - 1.0)"
+
+  - name: summary
+    type: string
+    description: "AI-generated summary (max 500 chars)"
+
+  - name: embedding_vector
+    type: binary
+    description: "1024-dim vector embedding (Titan V2)"
+
+  # Governance
+  - name: sensitivity_level
+    type: string
+    description: "public / internal / restricted / confidential"
+
+  - name: has_pii
+    type: boolean
+    description: "PII detected in file content"
+
+  - name: pii_status
+    type: string
+    description: "not_scanned / clean / detected / redacted"
+
+  - name: path_classification
+    type: string
+    description: "Path-based sensitivity (from directory structure)"
+
+  # Lifecycle
+  - name: enrichment_status
+    type: string
+    description: "pending / completed / failed / low_confidence"
+
+  - name: change_type
+    type: string
+    description: "created / modified / deleted / renamed"
+
+  - name: is_deleted
+    type: boolean
+    required: true
+    description: "Soft delete flag"
+
+  # Multi-tenant
+  - name: tenant_id
+    type: string
+    description: "Tenant/department identifier"
+
+# Partition spec
+partition:
+  - source: file_type
+    transform: identity
+    name: file_type_partition
+
+# Table properties
+properties:
+  format-version: 2
+  write.parquet.compression-codec: zstd

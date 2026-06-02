@@ -1,0 +1,37 @@
+# Retail — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: retail
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: product_id
+    type: string
+    description: "Internal product identifier"
+
+  - name: sku
+    type: string
+    description: "Stock Keeping Unit code"
+
+  - name: category
+    type: string
+    description: "Product category (e.g., apparel, electronics, home)"
+
+  - name: color
+    type: string
+    description: "Product color or colorway"
+
+  - name: season
+    type: string
+    description: "Retail season (e.g., SS25, FW24, Holiday)"
+
+  - name: brand
+    type: string
+    description: "Brand name"
+
+classification_categories:
+  - product_photo
+  - lifestyle_image
+  - design_file
+  - brand_asset
+  - user_generated_content

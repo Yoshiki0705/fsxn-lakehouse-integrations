@@ -1,0 +1,34 @@
+# Semiconductor — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: semiconductor
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: technology_node
+    type: string
+    description: "Process technology node (e.g., 5nm, 7nm, 14nm)"
+
+  - name: design_stage
+    type: string
+    description: "EDA design stage (e.g., RTL, synthesis, place_and_route, signoff)"
+
+  - name: ip_block
+    type: string
+    description: "Intellectual property block name"
+
+  - name: cell_library
+    type: string
+    description: "Standard cell library identifier"
+
+  - name: tape_out_date
+    type: string
+    description: "Scheduled or actual tape-out date (ISO 8601)"
+
+classification_categories:
+  - gds_layout
+  - oasis_layout
+  - timing_library
+  - drc_report
+  - lvs_report
+  - schematic
