@@ -1,0 +1,48 @@
+industry: manufacturing
+display_name: "Manufacturing (設計・品質管理)"
+file_types:
+  - extension: ".pdf"
+    category: "design_drawing"
+    ai_classification: "CAD/設計図面"
+    sample_content: "Part number: ABC-1234, Revision: R3, Material: SUS304"
+    count: 15
+  - extension: ".pdf"
+    category: "quality_report"
+    ai_classification: "品質レポート"
+    sample_content: "Inspection date: 2026-01-15, Result: PASS, Lot: L2026-001"
+    count: 10
+  - extension: ".xlsx"
+    category: "bom"
+    ai_classification: "部品表 (BOM)"
+    sample_content: "Assembly: Main Frame, Parts: 47, Total cost: ¥1,234,567"
+    count: 5
+  - extension: ".docx"
+    category: "meeting_notes"
+    ai_classification: "議事録"
+    sample_content: "Design review meeting, 2026-01-20, Attendees: 8"
+    count: 8
+  - extension: ".dwg"
+    category: "cad_drawing"
+    ai_classification: "CAD 3Dモデル"
+    sample_content: "AutoCAD 2026, Layer: MECHANICAL, Scale: 1:1"
+    count: 12
+metadata_fields:
+  - name: "part_number"
+    type: "string"
+    example: "ABC-1234"
+  - name: "revision"
+    type: "string"
+    example: "R3"
+  - name: "department"
+    type: "string"
+    example: "設計第一課"
+  - name: "project_code"
+    type: "string"
+    example: "PRJ-2026-042"
+queries:
+  - name: "Find drawings by part number"
+    sql: "SELECT * FROM metadata WHERE part_number LIKE 'ABC%' AND file_category = 'design_drawing'"
+  - name: "Quality reports for specific lot"
+    sql: "SELECT * FROM metadata WHERE lot_number = 'L2026-001' ORDER BY inspection_date DESC"
+  - name: "Recent design changes"
+    sql: "SELECT * FROM metadata WHERE change_type IN ('modify', 'create') AND file_category = 'cad_drawing' AND scan_timestamp > current_timestamp - interval '7' day"
