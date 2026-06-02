@@ -25,6 +25,8 @@
 
 > **No existing FSx for ONTAP?** The CloudFormation template can deploy a demo FSx environment with sample files included.
 
+> **Minimum scale guidance**: This solution provides the most value in environments with 10,000+ files and regular daily changes. For smaller file sets (<5,000 files with infrequent changes), simpler approaches like DataSync + S3 may be more cost-effective. See [Architecture Comparison](../../../docs/sales-enablement/competitive-differentiation.md) for decision guidance.
+
 ---
 
 ## Demo Flow

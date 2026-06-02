@@ -186,6 +186,8 @@ Using OpenSearch:
 | Air-gapped environments | Solution requires network access; verify connectivity requirements |
 | Audit requirements | All access must be logged per security compliance requirements |
 
+- **GovCloud requirement**: ITAR/EAR-controlled workloads may require AWS GovCloud (US) regions. This solution has been validated in commercial regions (ap-northeast-1) only. GovCloud validation is separate — verify Bedrock model availability, S3 Tables support, and FedRAMP authorization status before deployment.
+
 ---
 
 ## Customization Points

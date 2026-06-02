@@ -201,6 +201,8 @@ Using OpenSearch:
 | Consent sensitivity | Patient data handling must comply with institutional ethics board requirements |
 | Data sovereignty | Genomic data may have country-specific storage requirements (e.g., APPI in Japan) |
 
+- **Binary file formats**: FASTQ, BAM, VCF, and other bioinformatics formats cannot be directly classified by Bedrock Claude. Use format-specific parsers (e.g., BioPython) in a pre-processing Lambda to extract headers and quality metrics before AI classification. See [AI Prompt Guide](ai-prompt-customization-guide.md) multimodal matrix.
+
 ---
 
 ## Customization Points

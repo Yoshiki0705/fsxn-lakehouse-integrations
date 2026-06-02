@@ -133,6 +133,7 @@
 | Lambda一時的処理 | ファイルコンテンツはLambdaメモリを通過 — ゼロコピーストレージ + 一時的処理 |
 | S3 Tablesクロスプラットフォーム | Snowflake/Databricksからのフェデレーテッドカタログアクセスはまだ進化中 |
 | Lake Formationカラムレベル | S3 Tablesフェデレーテッドカタログでのカラムレベルフィルタリングは未対応（テーブルレベル権限は動作） |
+| EMR Spark タイムトラベル構文 | EMR Spark は Spark SQL で `VERSION AS OF <snapshot_id>` または `TIMESTAMP AS OF` を使用; Athena は `FOR TIMESTAMP AS OF` を使用。エンジンごとに構文を確認してください。 |
 
 ---
 

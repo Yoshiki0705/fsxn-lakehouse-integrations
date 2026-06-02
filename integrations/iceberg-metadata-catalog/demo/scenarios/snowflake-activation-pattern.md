@@ -201,6 +201,13 @@ CREATE OR REPLACE CORTEX SEARCH SERVICE file_metadata_search
   SEARCH_COLUMN = 'file_name';
 ```
 
+> **TARGET_LAG tuning**: The `TARGET_LAG = '1 hour'` setting controls how frequently Cortex Search re-indexes. Adjust per industry requirements:
+> - Financial services (near real-time compliance): `'5 minute'`
+> - Manufacturing (daily batch): `'6 hour'`
+> - Energy/utilities (weekly reporting): `'24 hour'`
+> 
+> Lower TARGET_LAG = higher warehouse compute cost. Default '1 hour' is appropriate for most use cases.
+
 **Note**: Cortex Search requires a `SEARCH_COLUMN` — the column used for text-based search. For richer search, concatenate metadata fields into a dedicated search text column:
 
 ```sql
@@ -426,4 +433,5 @@ SELECT * FROM TABLE(
 
 *Related: [Governance Deep Dive](governance-deep-dive.md) — access control considerations for cross-platform sync*
 *Related: [AI Prompt Customization Guide](ai-prompt-customization-guide.md) — classification that produces the metadata being synced*
+*Related: [Snowflake Horizon REST Catalog audit logging](../../snowflake/glue-rest-vended-credentials-validation.md) — external engine access logging via INGRESS_NETWORK_ACCESS_HISTORY*
 *Pair document: [snowflake-activation-pattern-ja.md](snowflake-activation-pattern-ja.md)*

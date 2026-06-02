@@ -236,6 +236,18 @@ The `sensitivity_level` field is set during AI classification and applies consis
 
 ---
 
+### PII Detection Language Coverage
+
+| Language | Status | Method |
+|----------|--------|--------|
+| English | ✅ Verified | Amazon Comprehend (native) |
+| Japanese | ✅ Verified | Bedrock Claude (prompt-based) |
+| Other languages | ⚠️ Not validated | Expected to work with Comprehend-supported languages; validate per language |
+
+**Note**: PII detection accuracy varies by language. For multi-language environments, validate detection accuracy per language in your PoC. Amazon Comprehend supports multiple languages natively; Bedrock Claude can detect PII patterns in most languages but accuracy is not guaranteed for all entity types.
+
+---
+
 ## Working vs. Not-Yet-Working
 
 ### Confirmed Working
