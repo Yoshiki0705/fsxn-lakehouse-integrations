@@ -1,0 +1,61 @@
+industry: legal
+display_name: "Legal (法務)"
+file_types:
+  - extension: ".pdf"
+    category: "contract_nda"
+    ai_classification: "契約書/NDA"
+    sample_content: "Non-Disclosure Agreement, Parties: Client / Acme Corp, Term: 2025-03-15 to 2026-03-14"
+    count: 20
+  - extension: ".docx"
+    category: "pleading"
+    ai_classification: "訴状/準備書面"
+    sample_content: "Motion for Summary Judgment, Case No: 2026-0042, Filed: 2026-01-20"
+    count: 12
+  - extension: ".pdf"
+    category: "legal_opinion"
+    ai_classification: "法律意見書"
+    sample_content: "Re: IP Transfer - Cross-border assignment analysis, Privilege: Work Product"
+    count: 8
+  - extension: ".msg"
+    category: "privileged_communication"
+    ai_classification: "秘匿特権通信"
+    sample_content: "Attorney-Client Privileged, Matter: 789, Subject: Settlement discussion"
+    count: 15
+  - extension: ".xlsx"
+    category: "due_diligence"
+    ai_classification: "デューデリジェンス"
+    sample_content: "M&A Due Diligence Checklist, Target: Corp X, Status: In Progress"
+    count: 5
+metadata_fields:
+  - name: "matter_id"
+    type: "string"
+    example: "CASE-2026-0042"
+  - name: "document_parties"
+    type: "array"
+    example: ["Client", "Acme Corporation"]
+  - name: "expiry_date"
+    type: "date"
+    example: "2026-03-14"
+  - name: "auto_renewal"
+    type: "boolean"
+    example: true
+  - name: "privilege_flag"
+    type: "string"
+    example: "Attorney-Client"
+  - name: "key_terms"
+    type: "array"
+    example: ["confidentiality", "non-compete"]
+queries:
+  - name: "Contracts expiring in 60 days"
+    sql: "SELECT * FROM metadata WHERE ai_classification LIKE '契約書%' AND expiry_date BETWEEN current_date AND current_date + interval '60' day"
+  - name: "Privileged documents for a matter"
+    sql: "SELECT * FROM metadata WHERE matter_id = 'CASE-2026-0042' AND privilege_flag IS NOT NULL"
+  - name: "Due diligence document inventory"
+    sql: "SELECT ai_classification, count(*) FROM metadata WHERE matter_id = 'MA-2026' GROUP BY ai_classification"
+  - name: "Auto-renewal contracts requiring notice"
+    sql: "SELECT * FROM metadata WHERE auto_renewal = true AND expiry_date - interval '30' day <= current_date"
+limitations:
+  - "Privilege classification is AI-assisted - NOT determinative; attorney review required"
+  - "Privileged/confidential content passes through Lambda memory during processing"
+  - "Multi-language contracts and specialized legal terms may reduce accuracy"
+  - "Complex multi-party contracts may have lower metadata extraction accuracy"

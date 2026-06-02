@@ -1,0 +1,61 @@
+industry: healthcare
+display_name: "Healthcare (医療機関)"
+file_types:
+  - extension: ".dcm"
+    category: "radiology_image"
+    ai_classification: "放射線画像/DICOM"
+    sample_content: "Modality: MRI, Body Part: Brain, Study Date: 2026-01-15"
+    count: 15
+  - extension: ".pdf"
+    category: "pathology_report"
+    ai_classification: "病理レポート"
+    sample_content: "Study: Tissue biopsy, Result: Benign, Patient ID: PT-2026-0089"
+    count: 12
+  - extension: ".docx"
+    category: "clinical_note"
+    ai_classification: "臨床ノート"
+    sample_content: "Chief Complaint: Chest pain, Assessment: Rule out ACS, Plan: ECG + Troponin"
+    count: 20
+  - extension: ".pdf"
+    category: "consent_form"
+    ai_classification: "同意書"
+    sample_content: "Procedure: Laparoscopic cholecystectomy, Patient consent: Obtained"
+    count: 8
+  - extension: ".pdf"
+    category: "prescription"
+    ai_classification: "処方箋"
+    sample_content: "Medication: Metformin 500mg, Dosage: BID, Duration: 90 days"
+    count: 10
+metadata_fields:
+  - name: "patient_id"
+    type: "string"
+    example: "PT-2026-0089"
+  - name: "department"
+    type: "string"
+    example: "Pathology"
+  - name: "phi_detected"
+    type: "boolean"
+    example: true
+  - name: "phi_elements"
+    type: "array"
+    example: ["patient_name", "dob", "medical_record_number"]
+  - name: "retention_years"
+    type: "integer"
+    example: 10
+  - name: "study_type"
+    type: "string"
+    example: "Tissue biopsy"
+queries:
+  - name: "Documents with PHI requiring access review"
+    sql: "SELECT * FROM metadata WHERE phi_detected = true AND access_restricted = false"
+  - name: "Retention compliance - documents past expiry"
+    sql: "SELECT * FROM metadata WHERE date_add('year', retention_years, creation_date) < current_date"
+  - name: "Department document inventory"
+    sql: "SELECT department, ai_classification, count(*) FROM metadata GROUP BY department, ai_classification"
+  - name: "Pathology reports by study type"
+    sql: "SELECT * FROM metadata WHERE ai_classification = '病理レポート' AND study_type LIKE '%liver%'"
+limitations:
+  - "PHI passes through Lambda memory during processing (ephemeral, not persisted)"
+  - "Bedrock classification accuracy varies for medical terminology and handwritten notes"
+  - "DICOM files (10MB+) cost ~$0.15/file for classification"
+  - "AI classification is assistive - not a substitute for clinical data governance systems"

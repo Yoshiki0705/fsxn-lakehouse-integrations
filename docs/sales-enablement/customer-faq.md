@@ -1,184 +1,196 @@
 # Customer FAQ: FSx for ONTAP AI Metadata Catalog
 
----
-
-## Q: Do I need to copy my files?
-
-**A:** No. The solution uses FSx for ONTAP's S3 Access Point to read file content in-place. Your files never leave the FSx volume. Only extracted metadata (classification labels, embeddings, timestamps) is stored in S3 Tables. This is the **zero-copy principle**.
-
-**Q: ファイルをコピーする必要がありますか？**
-
-**A:** いいえ。FSx for ONTAP の S3 Access Point を使い、ファイルをその場で読み取ります。ファイルが FSx ボリュームから移動することはありません。S3 Tables に格納されるのは抽出されたメタデータ（分類ラベル、埋め込み、タイムスタンプ）のみです。これが**ゼロコピー原則**です。
+> Honest answers including limitations and constraints.
 
 ---
 
-## Q: What about security and compliance?
+## General
 
-**A:** Files remain on FSx for ONTAP with your existing access controls (NFS/SMB permissions). Only metadata flows through the AI pipeline. Governance is enforced through:
+### Q: Do I need to copy my files?
+
+**A:** No. The solution uses FSx for ONTAP's S3 Access Point to read file content in-place (zero-copy storage). Files never leave the FSx volume. Only extracted metadata is stored externally in S3 Tables.
+
+**Clarification on "zero-copy storage":** File bytes are not duplicated to another storage location. However, during AI processing, file content is temporarily accessed in Lambda memory (ephemeral — not persisted outside the source FSx volume).
+
+---
+
+### Q: What about security and compliance?
+
+**A:** Files remain on FSx for ONTAP with existing access controls (NFS/SMB permissions). Only metadata flows through the AI pipeline. Governance is enforced through:
 - **AWS Lake Formation**: Fine-grained access control on metadata tables
 - **AWS CloudTrail**: Full audit trail of all API calls
 - **IAM Policies**: Least-privilege access to S3 Access Points and Bedrock
-- **VPC Private Endpoints**: All traffic stays within your VPC (no internet transit)
-
-**Q: セキュリティとコンプライアンスはどうなっていますか？**
-
-**A:** ファイルは既存のアクセス制御（NFS/SMB 権限）を維持したまま FSx for ONTAP 上に残ります。AI パイプラインを通るのはメタデータのみです。ガバナンスは以下で実現します：
-- **AWS Lake Formation**: メタデータテーブルへのきめ細かいアクセス制御
-- **AWS CloudTrail**: 全 API コールの完全な監査証跡
-- **IAM ポリシー**: S3 Access Point と Bedrock への最小権限アクセス
-- **VPC プライベートエンドポイント**: 全トラフィックは VPC 内で完結（インターネット経由なし）
+- **VPC Private Endpoints**: All traffic stays within your VPC
 
 ---
 
-## Q: Can I use Snowflake or Databricks?
+### Q: What's the cost?
+
+**A:** Approximately **$114/month** for 100,000 files with 1,000 daily changes (assuming 100KB–1MB average file size).
+
+File-size-dependent Bedrock costs:
+| File Size | Cost per File |
+|-----------|:------------:|
+| 1 KB text | ~$0.01 |
+| 100 KB document | ~$0.05 |
+| 1 MB PDF | ~$0.07 |
+| 10 MB image | ~$0.15 |
+
+Actual cost depends on prompt complexity and output tokens. No upfront commitment — costs scale with file activity. Idle cost: ~$5/month.
+
+---
+
+### Q: How accurate is the AI classification?
+
+**A:** PoC testing achieved **0.94 average confidence** on a test dataset of mixed business documents.
+
+**Important caveat:** This is PoC accuracy on a specific test dataset. Production accuracy varies by:
+- File type (text documents classify better than scanned images)
+- Language mix (single-language content is more accurate than mixed)
+- Domain terminology (specialized vocabulary may need prompt tuning)
+- File quality (poor scans, handwritten notes reduce accuracy)
+
+We recommend a 1–2 week PoC with your actual files to validate accuracy for your environment.
+
+---
+
+## Limitations & Constraints
+
+### Q: What DOESN'T work with this solution?
+
+**A:** Key constraints to be aware of:
+
+| Limitation | Impact |
+|-----------|--------|
+| S3 Access Point is read-only | Analytics tools cannot write results back to FSx volumes |
+| No S3 Event Notifications via S3 AP | Cannot auto-trigger Snowpipe, EventBridge rules, or bucket notifications |
+| FPolicy adds latency | ~1–5ms per file operation on NAS clients |
+| Lambda ephemeral processing | File content passes through Lambda memory (not truly "zero data movement" at the processing layer) |
+| Athena cold start | First query after idle: 3–5s additional latency |
+| OpenSearch warm-up | Serverless OCU allocation may take 10–30s after extended idle |
+| S3 Tables is relatively new | GA Dec 2024; some cross-platform integrations still evolving |
+
+---
+
+### Q: Can analytics tools write back to FSx through S3 Access Point?
+
+**A:** No. S3 Access Point on FSx for ONTAP is **read-only**. If your analytics workflow requires writing results back to storage, those results must be written to a separate S3 bucket or other storage. The source FSx volume is not writable via S3 AP.
+
+---
+
+### Q: Does FPolicy affect NAS performance?
+
+**A:** Yes, modestly. FPolicy adds approximately **1–5ms latency per file operation** (create, modify, delete, rename) on NAS clients. For most workloads this is imperceptible, but latency-sensitive applications (e.g., high-frequency trading data feeds, real-time video editing) should be tested.
+
+FPolicy can be scoped to specific volumes/shares and event types to minimize impact.
+
+---
+
+### Q: Can I trigger Snowpipe or EventBridge from S3 Access Point?
+
+**A:** No. S3 Access Point on FSx for ONTAP does **not support S3 Event Notifications**. This means:
+- Snowpipe cannot be auto-triggered by file changes via S3 AP
+- EventBridge rules cannot be triggered by S3 AP events
+- S3 bucket notification configurations do not apply to S3 AP
+
+The workaround is FPolicy → Lambda → direct API call (to Snowpipe REST API, EventBridge PutEvents, etc.), which is how this solution operates.
+
+---
+
+## Platform Integration
+
+### Q: Can I use Snowflake?
 
 **A:**
-- **Snowflake**: Cortex File AI integration is verified (✅). Direct Iceberg table query via S3 Tables catalog is pending Snowflake feature support.
-- **Databricks**: Integration via DataSync or Foreign Catalog is under evaluation (pending).
-- **Amazon Athena**: Fully supported (✅). Direct SQL query against S3 Tables Iceberg.
-- **Amazon EMR (Spark)**: Fully supported (✅). Read/write Iceberg tables natively.
+- **Cortex File AI**: Verified ✅ — can process files via presigned URLs
+- **Iceberg table query via S3 Tables catalog**: Pending Snowflake feature support. Snowflake's S3 Tables integration as an Iceberg catalog is not yet available.
+- **Workaround**: Export metadata to S3 in Parquet format for Snowflake external table access
 
-**Q: Snowflake や Databricks は使えますか？**
+---
+
+### Q: Can I use Databricks?
 
 **A:**
-- **Snowflake**: Cortex File AI 連携は検証済み（✅）。S3 Tables カタログ経由の直接 Iceberg クエリは Snowflake 側の機能対応待ちです。
-- **Databricks**: DataSync または Foreign Catalog 経由の統合を評価中（保留）。
-- **Amazon Athena**: 完全対応（✅）。S3 Tables Iceberg テーブルへの直接 SQL クエリ。
-- **Amazon EMR (Spark)**: 完全対応（✅）。Iceberg テーブルのネイティブ読み書き。
+- **Direct S3 Tables access via Foreign Catalog**: Under evaluation. Databricks Foreign Catalog support for S3 Tables is still evolving (as of 2026-06).
+- **Workaround**: DataSync to copy metadata to S3 bucket accessible by Databricks, or export Iceberg metadata to a Databricks-managed location.
 
 ---
 
-## Q: What's the cost?
+### Q: What about Amazon Athena performance?
 
-**A:** Approximately **$114/month** for 100,000 files with 1,000 daily changes. Key components:
-- Lambda invocations: ~$0.20/1M requests
-- Bedrock (Claude): ~$0.07/file for classification
-- S3 Tables (Iceberg metadata): ~$0.01/GB/month
-- OpenSearch Serverless: scales to near-zero when idle
-
-**No upfront commitment.** Costs scale linearly with file activity.
-
-**Q: コストはどのくらいですか？**
-
-**A:** 10 万ファイル、1 日 1,000 件変更の環境で月額約 **$114** です。主なコスト構成：
-- Lambda 実行: ~$0.20/100 万リクエスト
-- Bedrock (Claude): ~$0.07/ファイル（分類処理）
-- S3 Tables (Iceberg メタデータ): ~$0.01/GB/月
-- OpenSearch Serverless: アイドル時はほぼゼロまでスケールダウン
-
-**事前のコミットメントは不要です。** コストはファイルの更新頻度に比例します。
+**A:** Athena queries against S3 Tables Iceberg work well for analytics workloads. Note:
+- **Cold start**: First query after idle period takes 3–5 seconds additional latency
+- **Subsequent queries**: Sub-second to a few seconds depending on data volume
+- **Partition pruning**: Effective when queries filter on partitioned columns (e.g., scan_date)
 
 ---
 
-## Q: How long does a PoC take?
+### Q: What about OpenSearch Serverless performance?
 
-**A:** **1–2 weeks** for full validation:
-- Week 1: Infrastructure deploy + AI pipeline configuration + initial classification
-- Week 2: Accuracy tuning + dashboard setup + user acceptance testing
-
-A minimal "Quick Win" demo can run in **30 minutes** using CloudFormation and sample data.
-
-**Q: PoC にはどのくらいの期間がかかりますか？**
-
-**A:** フル検証で **1〜2 週間** です：
-- 1 週目: インフラデプロイ + AI パイプライン設定 + 初期分類実行
-- 2 週目: 精度チューニング + ダッシュボード構築 + ユーザー受入テスト
-
-CloudFormation とサンプルデータを使った「クイックウィン」デモなら **30 分** で実行可能です。
+**A:** OpenSearch Serverless provides vector + keyword search. Note:
+- **Warm-up time**: After extended idle, OCU allocation may take 10–30 seconds
+- **Once warm**: Sub-second response for both vector similarity and keyword searches
+- **Scale-to-zero**: Minimizes cost during idle periods but introduces warm-up latency
 
 ---
 
-## Q: What industries are supported?
+## Technical Details
 
-**A:** **20 industry templates** are available out of the box:
-Manufacturing, Financial Services, Healthcare, Construction, Legal, Media, Public Sector, Education, Logistics, Retail, Real Estate, Energy, Telecommunications, Pharmaceutical, Insurance, Agriculture, Automotive, Aerospace, Government, Research/Academia.
-
-Each template includes pre-configured AI classification categories, sample queries, and ROI narratives.
-
-**Q: どの業種に対応していますか？**
-
-**A:** **20 業種テンプレート** がすぐに利用可能です：
-製造業、金融、医療、建設、法務、メディア、公共、教育、物流、小売、不動産、エネルギー、通信、製薬、保険、農業、自動車、航空宇宙、政府機関、研究/学術。
-
-各テンプレートには事前設定された AI 分類カテゴリ、サンプルクエリ、ROI ストーリーが含まれます。
-
----
-
-## Q: What AI models are used?
+### Q: What AI models are used?
 
 **A:**
-- **Amazon Bedrock Claude** (Anthropic): File classification, content extraction, and vision (image/PDF analysis)
+- **Amazon Bedrock Claude** (Anthropic): File classification, content extraction, vision (image/PDF analysis)
 - **Amazon Titan Embeddings**: Vector embeddings for semantic similarity search
 - **Amazon Comprehend**: PII detection (names, addresses, phone numbers, etc.)
 
 All models run within your AWS account. No data leaves your account or region.
 
-**Q: どの AI モデルが使われていますか？**
-
-**A:**
-- **Amazon Bedrock Claude** (Anthropic): ファイル分類、コンテンツ抽出、ビジョン（画像/PDF 解析）
-- **Amazon Titan Embeddings**: セマンティック類似検索用のベクトル埋め込み
-- **Amazon Comprehend**: PII 検出（氏名、住所、電話番号など）
-
-すべてのモデルはお客様の AWS アカウント内で実行されます。データがアカウントやリージョンの外に出ることはありません。
+**Accuracy note:** Bedrock classification accuracy varies by file type and language. PoC accuracy on test dataset; production accuracy depends on your specific file mix.
 
 ---
 
-## Q: What about PII (Personally Identifiable Information)?
+### Q: What about PII detection?
 
 **A:** PII is automatically detected in both English and Japanese content using Amazon Comprehend. Detected PII is:
 1. Flagged in metadata with PII type and confidence score
-2. Redacted before indexing in OpenSearch (optional, configurable)
+2. Optionally redacted before indexing in OpenSearch (configurable)
 3. Available for compliance reporting via Athena queries
 
-Types detected: names, addresses, phone numbers, email addresses, national IDs, credit card numbers, bank account numbers, and more.
+---
 
-**Q: PII（個人情報）の扱いはどうなっていますか？**
+### Q: Can on-premises ONTAP work too?
 
-**A:** PII は Amazon Comprehend を使い、英語・日本語の両方で自動検出されます。検出された PII は：
-1. メタデータに PII タイプと信頼度スコアをフラグ付け
-2. OpenSearch へのインデックス前にマスキング（任意、設定可能）
-3. Athena クエリによるコンプライアンスレポートに利用可能
-
-検出される種類: 氏名、住所、電話番号、メールアドレス、マイナンバー、クレジットカード番号、口座番号など。
+**A:** Yes. Two paths:
+1. **SnapMirror → FSx for ONTAP**: Mirror on-prem volumes to FSx, then apply AI pipeline to the FSx copy. Maintains zero-copy storage advantage.
+2. **AWS DataSync**: Direct file transfer from on-prem to S3 for processing.
 
 ---
 
-## Q: Can my on-premises ONTAP work too?
+## ROI & Business Case
 
-**A:** Yes. Two integration paths:
-1. **SnapMirror to FSx for ONTAP**: Mirror on-prem volumes to FSx, then use the AI pipeline against the FSx copy. Near real-time sync with minimal network overhead.
-2. **AWS DataSync**: Direct transfer of specific files/directories from on-prem ONTAP to S3 for processing.
+### Q: What's the ROI?
 
-The SnapMirror approach maintains the zero-copy advantage since files on FSx are accessed via S3 Access Point.
+**A:** Using conservative estimates (50% adoption, 10 min/day search reduction, ¥4,000/hr rate):
+- **Monthly net benefit**: ~$3,500 (100K files, 50 users)
+- **Payback period**: ~10 days
+- **Annual ROI**: ~3,000%
 
-**Q: オンプレミスの ONTAP でも使えますか？**
+These are conservative figures. See [ROI Calculator](./roi-calculator.md) for moderate and optimistic scenarios, plus all assumptions listed.
 
-**A:** はい。2 つの統合パスがあります：
-1. **SnapMirror → FSx for ONTAP**: オンプレミスのボリュームを FSx にミラーリングし、FSx 上のコピーに対して AI パイプラインを実行。最小限のネットワーク負荷でほぼリアルタイム同期。
-2. **AWS DataSync**: オンプレミス ONTAP から S3 へ特定ファイル/ディレクトリを直接転送。
-
-SnapMirror 方式では FSx 上のファイルが S3 Access Point 経由でアクセスされるため、ゼロコピーの利点を維持できます。
+**Key assumptions:**
+- Users actually adopt the search interface (change management required)
+- Freed search time is productively reused
+- Classification accuracy is sufficient for the use case
 
 ---
 
-## Q: What about multi-region deployment?
+### Q: How long does a PoC take?
 
-**A:** Multi-region architecture is supported through:
-- **SnapMirror**: Cross-region volume replication (FSx for ONTAP built-in)
-- **Catalog rebinding**: Metadata tables can be replicated or re-pointed across regions
-- **Design documented**: Full multi-region DR architecture is documented in `integrations/iceberg-metadata-catalog/dr/`
+**A:** 1–2 weeks for full validation:
+- Week 1: Infrastructure deploy + AI pipeline configuration + initial classification
+- Week 2: Accuracy tuning + dashboard setup + user acceptance testing
 
-This enables both disaster recovery and geo-distributed search scenarios.
-
-**Q: マルチリージョン展開はどうなっていますか？**
-
-**A:** マルチリージョンアーキテクチャは以下でサポートされています：
-- **SnapMirror**: クロスリージョンボリュームレプリケーション（FSx for ONTAP 標準機能）
-- **カタログリバインディング**: メタデータテーブルのリージョン間レプリケーションまたは再ポインティング
-- **設計文書化済み**: マルチリージョン DR アーキテクチャの全体像は `integrations/iceberg-metadata-catalog/dr/` に文書化
-
-これにより災害復旧と地理分散検索の両シナリオに対応できます。
+A minimal "Quick Win" demo runs in **30 minutes** using CloudFormation and sample data.
 
 ---
 
