@@ -1,0 +1,38 @@
+# Telecommunications — Schema Extension
+# Extends: use-cases/_shared/base-schema.yaml
+
+industry: telecom
+extends: _shared/base-schema.yaml
+
+additional_fields:
+  - name: tower_id
+    type: string
+    description: "Cell tower or site identifier"
+
+  - name: region_code
+    type: string
+    description: "Network region code"
+
+  - name: document_type
+    type: string
+    description: "Document category (config, contract, inspection, compliance)"
+
+  - name: equipment_vendor
+    type: string
+    description: "Equipment manufacturer (Ericsson, Nokia, etc.)"
+
+  - name: frequency_band
+    type: string
+    description: "Spectrum band (700MHz, 3.5GHz, mmWave, etc.)"
+
+  - name: inspection_result
+    type: string
+    description: "Inspection outcome (pass, fail, requires_followup)"
+
+classification_categories:
+  - network_config
+  - customer_contract
+  - tower_inspection
+  - compliance_filing
+  - capacity_plan
+  - technical_spec
