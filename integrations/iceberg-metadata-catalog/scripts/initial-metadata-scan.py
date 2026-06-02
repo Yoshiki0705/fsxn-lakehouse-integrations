@@ -12,8 +12,8 @@ This script is used for:
 
 Usage:
     python initial-metadata-scan.py \
-        --access-point-arn arn:aws:s3:ap-northeast-1:178625946981:accesspoint/fsxn-ap \
-        --table-bucket-arn arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog \
+        --access-point-arn arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/fsxn-ap \
+        --table-bucket-arn arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog \
         --namespace metadata \
         --table-name unstructured_files \
         --max-files 1000

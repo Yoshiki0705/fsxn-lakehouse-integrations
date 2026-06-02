@@ -133,7 +133,7 @@ def parse_fpolicy_event(sqs_body: str) -> dict:
         "timestamp": "2026-06-01T10:00:00Z",
         "svm_name": "svm1",
         "volume_name": "vol1",
-        "access_point_arn": "arn:aws:s3:ap-northeast-1:178625946981:accesspoint/fsxn-ap"
+        "access_point_arn": "arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/fsxn-ap"
     }
     """
     try:

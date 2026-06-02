@@ -12,7 +12,7 @@ Architecture:
 Usage:
     python sync-embeddings.py \
         --collection-endpoint https://xxxxxxxx.ap-northeast-1.aoss.amazonaws.com \
-        --table-bucket-arn arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog \
+        --table-bucket-arn arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog \
         --full-sync          # First run: index all records
         --incremental-sync   # Subsequent: only new/updated records
 

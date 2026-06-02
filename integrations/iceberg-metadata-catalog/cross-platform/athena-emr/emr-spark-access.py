@@ -32,7 +32,7 @@ def main():
         .config("spark.sql.catalog.s3tables", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.s3tables.catalog-impl", "org.apache.iceberg.rest.RESTCatalog")
         .config("spark.sql.catalog.s3tables.uri", "https://s3tables.ap-northeast-1.amazonaws.com/iceberg")
-        .config("spark.sql.catalog.s3tables.warehouse", "arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog")
+        .config("spark.sql.catalog.s3tables.warehouse", "arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog")
         .config("spark.sql.catalog.s3tables.rest.sigv4-enabled", "true")
         .config("spark.sql.catalog.s3tables.rest.signing-region", "ap-northeast-1")
         .config("spark.sql.catalog.s3tables.rest.signing-name", "s3tables")

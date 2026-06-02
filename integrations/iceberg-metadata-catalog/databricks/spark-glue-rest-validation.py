@@ -22,7 +22,7 @@
 spark.conf.set("spark.sql.catalog.s3tables", "org.apache.iceberg.spark.SparkCatalog")
 spark.conf.set("spark.sql.catalog.s3tables.catalog-impl", "org.apache.iceberg.rest.RESTCatalog")
 spark.conf.set("spark.sql.catalog.s3tables.uri", "https://glue.ap-northeast-1.amazonaws.com/iceberg")
-spark.conf.set("spark.sql.catalog.s3tables.warehouse", "178625946981:s3tablescatalog/fsxn-metadata-catalog")
+spark.conf.set("spark.sql.catalog.s3tables.warehouse", "<ACCOUNT_ID>:s3tablescatalog/fsxn-metadata-catalog")
 spark.conf.set("spark.sql.catalog.s3tables.rest.sigv4-enabled", "true")
 spark.conf.set("spark.sql.catalog.s3tables.rest.signing-region", "ap-northeast-1")
 spark.conf.set("spark.sql.catalog.s3tables.rest.signing-name", "glue")
