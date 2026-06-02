@@ -13,7 +13,7 @@ Track remaining validation items identified through expert review. Items are gro
 | A-1 | Fresh account / fresh region reproduction (CloudFormation end-to-end) | High | TBD |
 | A-2 | Minimum IAM permissions documentation | High | TBD |
 | A-3 | ap-northeast-1 vs us-east-1 differences (S3 Tables, Bedrock, OpenSearch NextGen, Glue REST) | Medium | TBD |
-| A-4 | S3 Tables direct REST vs Glue Iceberg REST: PyIceberg, Spark, Athena, Lake Formation | Medium | ✅ Verified (Athena + PyIceberg) |
+| A-4 | S3 Tables direct REST vs Glue Iceberg REST: PyIceberg, Spark, Athena, Lake Formation | Medium | ✅ Verified: Athena ✅, PyIceberg ✅, EMR Spark 7.13.0 ✅ (full SELECT + time travel), Glue REST credential vending ❌ (not implemented) |
 
 ## B. Databricks Validation
 
@@ -22,21 +22,26 @@ Track remaining validation items identified through expert review. Items are gro
 | B-1 | Spark cluster + AWS Glue Iceberg REST: read, append, time travel | High | ❌ Blocked by Unity Catalog (spark.conf.set and cluster Spark config both ineffective; UC controls catalog registration) |
 | B-2 | Lake Formation credential vending via Glue REST from Databricks | High | TBD |
 | B-3 | S3 Tables metadata table access ($history, $manifests) from Spark | Medium | TBD |
-| B-4 | Unity Catalog Foreign Iceberg: S3 Tables direct REST | Medium | TBD |
-| B-5 | Unity Catalog Foreign Iceberg: Glue Iceberg REST | Medium | TBD |
+| B-4 | Unity Catalog Foreign Iceberg: S3 Tables direct REST | High | Follow-up submitted to Databricks support (2026-06-01) |
+| B-5 | Unity Catalog Foreign Iceberg: Glue Iceberg REST | High | Follow-up submitted to Databricks support (2026-06-01) |
 | B-6 | Databricks SQL Warehouse: CREATE CONNECTION TYPE iceberg_rest | Low | Observed limitation (2026-05-31) |
 | B-7 | UC audit logging for external Iceberg REST access | Low | ✅ Confirmed (2026-06-01) |
+| B-8 | Delta Sharing via S3 Access Point (session policy bypass) | Low | ❌ Confirmed not supported (2026-06-01). Sharing server uses same UC storage credentials. |
+| B-9 | NFS mount path as UC External Volume | Low | ❌ Confirmed not supported (2026-06-01). Cloud storage URIs only. Internal AHA exists for EFS/NFS. |
 
 ## C. Snowflake Validation
 
 | # | Validation | Priority | Status |
 |---|-----------|:---:|:---:|
-| C-1 | CATALOG INTEGRATION (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS): credential vending | High | 🔄 In progress (support case active) |
-| C-2 | CREATE ICEBERG TABLE + SELECT query | High | Blocked by C-1 |
-| C-3 | AUTO_REFRESH behavior (Iceberg snapshot detection) | Medium | Blocked by C-1 |
+| C-1 | CATALOG INTEGRATION (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS): credential vending | High | ❌ **Confirmed incompatible** (2026-06-02): Snowflake Support confirmed loadTable must return s3.access-key-id/secret/token. Glue REST does not return these. No known Snowflake-side issue — AWS Glue REST simply does not vend credentials. |
+| C-2 | CREATE ICEBERG TABLE + SELECT query | High | ❌ Blocked by C-1 (fundamental incompatibility confirmed by both Snowflake Support and our loadTable evidence) |
+| C-3 | AUTO_REFRESH behavior (Iceberg snapshot detection) | Medium | ❌ Blocked by C-1 |
 | C-4 | Snowflake Open Catalog / Polaris as alternative catalog | Medium | TBD |
 | C-5 | Metadata sync to Snowflake managed table for Cortex Search | Medium | TBD |
 | C-6 | Horizon governance (Row Access Policy) on synced metadata | Low | TBD |
+| C-7 | Object Store catalog integration (read metadata file directly) | High | Pending — proposed by Snowflake Support as workaround (2026-06-02) |
+| C-8 | TO_FILE with string literal syntax on S3 AP stage | Medium | Pending retest — syntax issue identified by Support (2026-06-02, Case #01359474) |
+| C-9 | SYSTEM$VERIFY_CATALOG_INTEGRATION('S3TABLES_GLUE_REST_INT') | Medium | Pending |
 
 ## D. ONTAP / FSx Validation
 

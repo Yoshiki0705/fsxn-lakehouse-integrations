@@ -1,0 +1,185 @@
+# =============================================================================
+# Lakehouse Tool Compatibility Matrix
+# =============================================================================
+# Purpose: Track which engines can access S3 Tables metadata via Iceberg REST
+# Last updated: 2026-06-01
+# =============================================================================
+
+access_paths:
+  s3_tables_direct_rest:
+    endpoint: "https://s3tables.<region>.amazonaws.com/iceberg"
+    governance: "IAM + S3 Tables permissions"
+    signing: "SigV4 (s3tables)"
+  glue_iceberg_rest:
+    endpoint: "https://glue.<region>.amazonaws.com/iceberg"
+    governance: "IAM + Lake Formation"
+    signing: "SigV4 (glue)"
+    reference: "https://docs.aws.amazon.com/glue/latest/dg/connect-glu-iceberg-rest.html"
+
+engines:
+  athena:
+    name: "Amazon Athena"
+    access_path: "Glue federated catalog (s3tablescatalog)"
+    status: "verified"
+    tested_date: "2026-05-31"
+    capabilities:
+      read: verified
+      write: "not tested via Athena"
+      time_travel: verified
+      lake_formation: verified
+      latest_record_view: verified
+
+  pyiceberg:
+    name: "PyIceberg (Lambda/local)"
+    access_path: "S3 Tables REST + Glue REST"
+    status: "verified"
+    tested_date: "2026-06-01"
+    capabilities:
+      read: verified
+      write: verified
+      time_travel: verified
+
+  emr_spark:
+    name: "Amazon EMR Spark"
+    access_path: "Glue Iceberg REST (EMR 7.13.0+)"
+    status: "verified"
+    tested_date: "2026-06-02"
+    validation_priority: "high"
+    notes: |
+      EMR Serverless Spark 7.13.0: ALL operations SUCCEEDED.
+      - SHOW NAMESPACES: ✅ (3801ms)
+      - SHOW TABLES: ✅ (636ms)
+      - SELECT * LIMIT 5: ✅ (4758ms)
+      - SELECT COUNT(*): ✅ (1340ms) — 170 rows
+      - Snapshot history: ✅ (1216ms) — 5 snapshots visible
+      EMR 7.5.0 has a bug where credential resolution fails on S3 Tables warehouse format.
+      Requires EMR 7.13.0+ (confirmed by AWS support case 178031980800349).
+      Config: type=rest, warehouse=<accountId>:s3tablescatalog/<bucket>, sigv4-enabled=true, signing-name=glue.
+    reference: "https://docs.aws.amazon.com/glue/latest/dg/connect-glu-iceberg-rest.html"
+    validation_items:
+      - "SHOW NAMESPACES ✅"
+      - "SHOW TABLES ✅"
+      - "SELECT with data read ✅"
+      - "COUNT(*) ✅"
+      - "Snapshot history / time travel ✅"
+      - "Lake Formation governance (verified separately)"
+
+  trino:
+    name: "Trino / Starburst"
+    access_path: "Glue Iceberg REST or S3 Tables REST"
+    status: "partially_validated"
+    validation_priority: "high"
+    tested_date: "2026-06-01"
+    notes: |
+      OSS Trino 481 (Docker): Iceberg REST connector uses NoopAuthManager — cannot sign requests with SigV4 for Glue REST.
+      EMR Trino: Expected to work (EMR handles SigV4 automatically).
+      Starburst Enterprise: Expected to work (AWS integration built-in).
+      Glue REST API itself is confirmed functional (tested via PyIceberg/botocore SigV4).
+    reference: "https://trino.io/docs/current/connector/iceberg.html"
+    validation_doc: "trino-glue-rest-validation.md"
+    validation_items:
+      - "EMR Trino with Glue Iceberg REST (SigV4 handled by EMR)"
+      - "Starburst Enterprise with Glue Iceberg REST"
+      - "OSS Trino SigV4 plugin or custom AuthManager"
+      - "Lake Formation behavior via EMR"
+      - "Case-sensitivity handling"
+
+  starburst:
+    name: "Starburst Enterprise"
+    access_path: "Glue Iceberg REST"
+    status: "expected_not_validated"
+    validation_priority: "high"
+    notes: "AWS blog describes Starburst + S3 Tables integration via Glue Iceberg REST."
+    reference: "https://docs.starburst.io/latest/connector/iceberg.html"
+
+  dremio:
+    name: "Dremio"
+    access_path: "Glue catalog or Iceberg REST"
+    status: "expected_not_validated"
+    validation_priority: "medium"
+    notes: "Dremio supports AWS Glue and Iceberg REST catalogs."
+    reference: "https://docs.dremio.com/"
+
+  redshift_spectrum:
+    name: "Amazon Redshift Spectrum"
+    access_path: "Glue catalog (external schema)"
+    status: "expected_not_validated"
+    validation_priority: "medium"
+    notes: "Redshift can query Iceberg tables via Glue catalog. Validate external schema, LF permissions, Glue statistics separately from Athena."
+    reference: "https://docs.aws.amazon.com/redshift/latest/dg/c-spectrum-external-tables.html"
+    validation_items:
+      - "External schema creation for s3tablescatalog"
+      - "Lake Formation permissions"
+      - "Glue statistics for query planning"
+      - "Latest-record view performance"
+
+  starrocks:
+    name: "StarRocks"
+    access_path: "Glue Iceberg REST"
+    status: "expected_not_validated"
+    validation_priority: "medium"
+    notes: "StarRocks docs describe Iceberg REST Catalog with AWS Glue endpoint for S3 Tables."
+    reference: "https://docs.starrocks.io/"
+
+  flink:
+    name: "Apache Flink"
+    access_path: "Glue Iceberg REST"
+    status: "expected_not_validated"
+    validation_priority: "low"
+    notes: "Flink supports Iceberg with Glue catalog. Streaming metadata updates require careful commit coordination."
+    validation_items:
+      - "Streaming append to Iceberg"
+      - "Commit frequency vs small files"
+      - "Exactly-once semantics"
+      - "Compaction delegation"
+
+  dbt_athena:
+    name: "dbt (via dbt-athena)"
+    access_path: "Athena + Glue catalog"
+    status: "expected_not_validated"
+    validation_priority: "medium"
+    notes: "dbt-athena supports Iceberg table materialization. Good for governed marts and latest-record views."
+    reference: "https://dbt-athena.github.io/"
+    validation_items:
+      - "Iceberg materialization"
+      - "Incremental models"
+      - "Latest-record view as dbt model"
+      - "dbt tests on metadata quality"
+
+  nifi:
+    name: "Apache NiFi"
+    access_path: "Iceberg REST or Polaris"
+    status: "expected_not_validated"
+    validation_priority: "low"
+    notes: "NiFi 2.7+ has Iceberg REST catalog support. Good for event-driven ingestion."
+
+  databricks:
+    name: "Databricks"
+    access_path: "UC Foreign Catalog (pending)"
+    status: "blocked_by_uc"
+    tested_date: "2026-06-01"
+    notes: "spark.conf.set blocked by UC. Foreign Catalog is required path. Follow-up submitted."
+
+  snowflake:
+    name: "Snowflake"
+    access_path: "Glue REST + vended credentials"
+    status: "blocked"
+    tested_date: "2026-06-02"
+    notes: |
+      VENDED_CREDENTIALS mode confirmed incompatible with Glue Iceberg REST (2026-06-02).
+      Snowflake Support confirmed: loadTable response must include s3.access-key-id,
+      s3.secret-access-key, s3.session-token. Glue REST does not provide these.
+      Error 004174 is the expected behavior when credentials are absent.
+      ALTERNATIVES:
+      - Object Store catalog (read metadata file directly, manual refresh)
+      - Metadata sync to Snowflake managed table (for Cortex Search/Intelligence)
+      - Wait for AWS to add credential vending to Glue REST
+      TO_FILE on S3 AP stage: syntax issue identified (string literal required),
+      retest pending (Case #01359474).
+    validation_doc: "glue-rest-vended-credentials-validation.md"
+
+catalog_authority_rule: |
+  For each Iceberg table, define exactly one authoritative catalog for metadata
+  pointer and commit coordination. Do not operate multiple catalogs as independent
+  writers for the same table. Federation (one writer, many readers) is safe.
+  Dual-write causes split-brain and potential data corruption.

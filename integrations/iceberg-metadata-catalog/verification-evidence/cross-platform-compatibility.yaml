@@ -48,7 +48,7 @@ platforms:
       - name: "AWS Glue Iceberg REST endpoint (glue.<region>.amazonaws.com/iceberg)"
         result: "verified"
         tested_date: "2026-06-01"
-        notes: "Successfully connected via PyIceberg. warehouse='178625946981:s3tablescatalog/fsxn-metadata-catalog'. Recommended for production with Lake Formation."
+        notes: "Successfully connected via PyIceberg. warehouse='<ACCOUNT_ID>:s3tablescatalog/fsxn-metadata-catalog'. Recommended for production with Lake Formation."
 
   databricks:
     tested_paths:
@@ -60,16 +60,31 @@ platforms:
         result: "verified"
         tested_date: "2026-06-01"
         status: "confirmed"
-        notes: "External engine access logged in system.access.audit under uniformIcebergRestCatalog. Credential vending logged as loadTableCredentials. Confirmed by Databricks support case #00928295."
+        notes: "External engine access logged in system.access.audit under uniformIcebergRestCatalog. Credential vending logged as loadTableCredentials. Confirmed by Databricks support."
       - name: "Spark cluster + Iceberg REST catalog + SigV4 to S3 Tables"
         result: "NO_SUCH_CATALOG_EXCEPTION"
         tested_date: "2026-06-01"
         status: "blocked_by_unity_catalog"
         notes: "Unity Catalog controls catalog registration. spark.conf.set and cluster Spark config both fail. UC Foreign Catalog is the required path."
+      - name: "Delta Sharing via S3 Access Point"
+        result: "not_supported"
+        tested_date: "2026-06-01"
+        status: "confirmed_limitation"
+        notes: "Delta Sharing server uses the same UC storage credentials. Cannot bypass S3 AP session policy. Confirmed by Databricks support."
+      - name: "Delta Sharing via DataSync → S3 → UC External Delta Table"
+        result: "supported"
+        tested_date: "2026-06-01"
+        status: "confirmed_workaround"
+        notes: "DataSync to standard S3 bucket → UC External Location → External Delta Table → Share. Delta format required (Parquet/ORC must be converted). Not applicable to Iceberg tables without conversion."
+      - name: "NFS mount path as UC External Volume"
+        result: "not_supported"
+        tested_date: "2026-06-01"
+        status: "confirmed_limitation"
+        notes: "UC External Volumes require cloud storage URIs (s3://, abfss://, gs://). NFS/FUSE mount paths not supported. Internal feature request (AHA) exists for EFS/NFS via UC. Confirmed by Databricks support."
       - name: "Unity Catalog Foreign Iceberg for S3 Tables"
         result: "not_tested"
         status: "track_support"
-        notes: "UC supports Foreign Iceberg; verify compatibility with S3 Tables storage path"
+        notes: "UC supports Foreign Iceberg; verify compatibility with S3 Tables via Glue REST. Follow-up question submitted to Databricks support (2026-06-01). NOTE: Databricks docs state 'Credential vending on Foreign Iceberg tables is not supported' and tables are not auto-refreshed. Catalog federation with AWS Glue (Hive Metastore type) is also available."
       - name: "AWS Glue Catalog Federation with Databricks UC"
         result: "not_tested"
         status: "strategic_alternative"
@@ -82,10 +97,28 @@ platforms:
         status: "observed_limitation"
         notes: "S3 Tables REST is not in Snowflake's supported catalog type list"
       - name: "Glue Iceberg REST integration (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS)"
-        result: "partially_verified"
-        tested_date: "2026-06-01"
-        status: "in_progress"
-        notes: "CATALOG INTEGRATION created successfully. DESCRIBE returns valid IAM credentials. CREATE ICEBERG TABLE fails with credential vending error. Resolving with Snowflake + AWS support."
+        result: "confirmed_incompatible"
+        tested_date: "2026-06-02"
+        status: "blocked"
+        notes: |
+          CATALOG INTEGRATION created successfully. DESCRIBE returns valid IAM credentials.
+          CREATE ICEBERG TABLE fails with Error 004174 (credential vending).
+          ROOT CAUSE CONFIRMED by both sides (2026-06-02):
+          - Snowflake Support confirmed: VENDED_CREDENTIALS requires loadTable response to include
+            s3.access-key-id, s3.secret-access-key, s3.session-token in config map.
+          - Our loadTable test confirmed: these fields are ABSENT from Glue REST response
+            (even with X-Iceberg-Access-Delegation: vended-credentials header).
+          - Glue REST /credentials endpoint returns UnknownOperationException.
+          - Snowflake states no known Snowflake-side issues — problem is AWS Glue REST not vending credentials.
+          ALTERNATIVE: Object Store catalog integration (read metadata file directly, manual refresh).
+      - name: "Object Store catalog integration (read metadata file directly)"
+        result: "not_tested"
+        tested_date: "2026-06-02"
+        status: "alternative_proposed"
+        notes: |
+          Proposed by Snowflake support as workaround. Uses External Volume to read Iceberg
+          metadata file directly without credential vending. Read-only, requires manual refresh
+          when metadata pointer changes. Requires knowing current metadata.json path.
       - name: "Snowflake Open Catalog (Polaris) as Iceberg catalog"
         result: "not_tested"
         status: "strategic_alternative"
