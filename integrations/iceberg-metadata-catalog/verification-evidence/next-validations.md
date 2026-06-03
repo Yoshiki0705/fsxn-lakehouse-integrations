@@ -21,10 +21,10 @@ Track remaining validation items identified through expert review. Items are gro
 | # | Validation | Priority | Status |
 |---|-----------|:---:|:---:|
 | B-1 | Spark cluster + AWS Glue Iceberg REST: read, append, time travel | High | ❌ Blocked by Unity Catalog (spark.conf.set and cluster Spark config both ineffective; UC controls catalog registration) |
-| B-2 | Lake Formation credential vending via Glue REST from Databricks | High | TBD |
-| B-3 | S3 Tables metadata table access ($history, $manifests) from Spark | Medium | TBD |
-| B-4 | Unity Catalog Foreign Iceberg: S3 Tables direct REST | High | Follow-up submitted to Databricks support (2026-06-01) |
-| B-5 | Unity Catalog Foreign Iceberg: Glue Iceberg REST | High | Follow-up submitted to Databricks support (2026-06-01) |
+| B-2 | Lake Formation credential vending via Glue REST from Databricks | High | ❌ S3 Tables not supported in Databricks (confirmed 2026-06-02) |
+| B-3 | S3 Tables metadata table access ($history, $manifests) from Spark | Medium | ❌ S3 Tables not supported in Databricks |
+| B-4 | Unity Catalog Foreign Iceberg: S3 Tables direct REST | High | ❌ **Not supported** (2026-06-02): S3 Tables is not supported in Databricks. Internal product request DB-I-15824 tracking. |
+| B-5 | Unity Catalog Foreign Iceberg: Glue Iceberg REST | High | ❌ **Not supported** (2026-06-02): No UC connection type for Iceberg REST catalogs exists today. Glue foreign catalog support is via Glue catalog/metastore APIs only. |
 | B-6 | Databricks SQL Warehouse: CREATE CONNECTION TYPE iceberg_rest | Low | Observed limitation (2026-05-31) |
 | B-7 | UC audit logging for external Iceberg REST access | Low | ✅ Confirmed (2026-06-01) |
 | B-8 | Delta Sharing via S3 Access Point (session policy bypass) | Low | ❌ Confirmed not supported (2026-06-01). Sharing server uses same UC storage credentials. |
