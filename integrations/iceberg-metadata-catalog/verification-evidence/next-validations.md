@@ -34,7 +34,7 @@ Track remaining validation items identified through expert review. Items are gro
 
 | # | Validation | Priority | Status |
 |---|-----------|:---:|:---:|
-| C-1 | CATALOG INTEGRATION (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS): credential vending | High | ❌ **Confirmed incompatible** (2026-06-02): Snowflake Support confirmed loadTable must return s3.access-key-id/secret/token. Glue REST does not return these. No known Snowflake-side issue — AWS Glue REST simply does not vend credentials. |
+| C-1 | CATALOG INTEGRATION (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS): credential vending | High | ✅ **Credential vending RESOLVED** (2026-06-03): Missing `register-resource --with-federation` was the root cause. After LF S3 Tables integration setup, loadTable returns s3.access-key-id/secret/token. However, CREATE ICEBERG TABLE fails at data access: S3 Tables internal buckets reject ListObjectsV2 (MethodNotAllowed). GetObject works with vended creds. Snowflake requires ListObjectsV2 during table creation — fundamental incompatibility with S3 Tables internal bucket API. |
 | C-2 | CREATE ICEBERG TABLE + SELECT query | High | ❌ Blocked by C-1 (fundamental incompatibility confirmed by both Snowflake Support and our loadTable evidence) |
 | C-3 | AUTO_REFRESH behavior (Iceberg snapshot detection) | Medium | ❌ Blocked by C-1 |
 | C-4 | Snowflake Open Catalog / Polaris as alternative catalog | Medium | TBD |
