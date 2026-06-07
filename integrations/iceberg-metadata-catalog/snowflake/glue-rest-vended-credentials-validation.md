@@ -91,7 +91,7 @@ CREATE ICEBERG TABLE test_metadata
 
 **Confirmed 2026-06-01**: The AWS Glue Iceberg REST endpoint does NOT implement the Iceberg REST `/credentials` endpoint. Calling `POST /v1/.../credentials` returns `UnknownOperationException`. The `X-Iceberg-Access-Delegation: vended-credentials` header in `loadTable` also does not return storage credentials in the response config.
 
-**Snowflake's expected credential format (officially confirmed by Snowflake Support 2026-06-02, Case #01364260)**:
+**Snowflake's expected credential format (officially confirmed by Snowflake Support 2026-06-02, Snowflake support confirmation)**:
 When `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS`, Snowflake expects the Iceberg REST `loadTable` response to include the standard Apache Iceberg credential fields within the response configuration map:
 - `s3.access-key-id` (required)
 - `s3.secret-access-key` (required)
@@ -172,7 +172,7 @@ CREATE ICEBERG TABLE FSXN_LAKEHOUSE.PUBLIC.s3tables_metadata
 | Provide loadTable response evidence to Snowflake | Customer (us) | ✅ Done (2026-06-02) |
 | Run SYSTEM$VERIFY_CATALOG_INTEGRATION | Customer (us) | Pending |
 | Evaluate Object Store catalog as workaround | Customer (us) | Pending |
-| Determine if credential vending will be added to Glue REST | AWS | Open (case 178031980800349) |
+| Determine if credential vending will be added to Glue REST | AWS | Open (AWS support investigation) |
 | Snowflake product team tracking | Snowflake | Asked (2026-06-02) |
 
 ## References

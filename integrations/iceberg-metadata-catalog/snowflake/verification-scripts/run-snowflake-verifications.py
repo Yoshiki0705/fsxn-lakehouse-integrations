@@ -85,7 +85,7 @@ def test_to_file_string_literal(cursor):
     """Test 2: TO_FILE with string literal stage name (support-recommended syntax)."""
     print("\n" + "=" * 70)
     print("TEST 2: TO_FILE with string literal syntax")
-    print("  Recommended by Snowflake Support (Case #01359474)")
+    print("  Recommended by Snowflake Support (Snowflake support guidance)")
     print("=" * 70)
 
     query = """

@@ -187,7 +187,7 @@ AS
 
 最適用途: External Table ソースからの継続的変換パイプライン。**最も Snowflake ネイティブなアプローチ** — 宣言的、自動管理、SELECT 句で Cortex AI 関数をサポート（2025年9月 GA）。
 
-> **サポート確認済み（2026年5月、Case #01359983）**: External Table ソースの Dynamic Table は `REFRESH_MODE = FULL` でサポート。最小 `TARGET_LAG` は 60 秒。External Table は change tracking 非対応のため増分リフレッシュは利用不可。
+> **サポート確認済み（2026年5月、Snowflake support case）**: External Table ソースの Dynamic Table は `REFRESH_MODE = FULL` でサポート。最小 `TARGET_LAG` は 60 秒。External Table は change tracking 非対応のため増分リフレッシュは利用不可。
 
 ```sql
 -- Dynamic Table: External Table から読み取り、内部として実体化

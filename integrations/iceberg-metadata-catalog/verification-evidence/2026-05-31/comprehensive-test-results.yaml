@@ -342,4 +342,4 @@ final_summary:
     - "7 PII entities detected (NAME, EMAIL, PHONE, ADDRESS, SSN, CREDIT_CARD, DATE_TIME)"
     - "All PII correctly redacted to [REDACTED] in output document"
     - "Databricks SQL Warehouse: iceberg_rest connection NOT SUPPORTED"
-    - "Snowflake: Cannot directly read S3 Tables as External Iceberg (Case #01364260 filed)"
+    - "Snowflake: Cannot directly read S3 Tables as External Iceberg (filed with Snowflake support)"

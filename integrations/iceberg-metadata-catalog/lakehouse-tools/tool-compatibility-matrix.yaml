@@ -53,7 +53,7 @@ engines:
       - SELECT COUNT(*): ✅ (1340ms) — 170 rows
       - Snapshot history: ✅ (1216ms) — 5 snapshots visible
       EMR 7.5.0 has a bug where credential resolution fails on S3 Tables warehouse format.
-      Requires EMR 7.13.0+ (confirmed by AWS support case 178031980800349).
+      Requires EMR 7.13.0+ (confirmed by AWS AWS support verification).
       Config: type=rest, warehouse=<accountId>:s3tablescatalog/<bucket>, sigv4-enabled=true, signing-name=glue.
     reference: "https://docs.aws.amazon.com/glue/latest/dg/connect-glu-iceberg-rest.html"
     validation_items:
@@ -175,7 +175,7 @@ engines:
       - Metadata sync to Snowflake managed table (for Cortex Search/Intelligence)
       - Wait for AWS to add credential vending to Glue REST
       TO_FILE on S3 AP stage: syntax issue identified (string literal required),
-      retest pending (Case #01359474).
+      retest pending (Snowflake support investigation).
     validation_doc: "glue-rest-vended-credentials-validation.md"
 
 catalog_authority_rule: |
