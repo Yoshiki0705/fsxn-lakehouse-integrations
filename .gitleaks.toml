@@ -141,4 +141,9 @@ paths = [
   '''cdk\.context\.json\..*$''',
   '''test-jwt.*\.js$''',
   '''lambda/permissions/''',
+  '''\.playwright-mcp/''',
+  '''\.tmp/''',
+  '''\.kiro/settings/''',
+  '''\.private/''',
+  '''integrations/trino-starburst/config/''',
 ]
