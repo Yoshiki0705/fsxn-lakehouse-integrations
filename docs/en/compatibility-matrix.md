@@ -183,7 +183,7 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | Vendor | Request | Status | Case Reference |
 |--------|---------|--------|---------------|
 | Databricks | Add `iceberg_rest` as supported CONNECTION TYPE | Filed (May 2026) | Support case pending |
-| Snowflake | Support S3 Tables Iceberg REST endpoint as External Catalog source | Filed (May 2026) | Case #01364260 |
+| Snowflake | Support S3 Tables Iceberg REST endpoint as External Catalog source | Filed (May 2026) | Snowflake support case (May 2026) |
 | AWS | Lake Formation column-level permissions on S3 Tables federated catalog | Identified (May 2026) | To be filed |
 
 ---
@@ -210,7 +210,7 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | Bedrock Knowledge Base + Document Read | Functional Verified | Per AWS official tutorial. |
 | Snowflake + External Stage (LIST) | **API Verified** | LIST @stage succeeds (files visible). |
 | Snowflake + External Stage (GetObject) | **Blocked** | Session policy does not recognize S3 AP ARN format. Support case 01357726 filed. |
-| Snowflake + TO_FILE on S3 AP Stage | **Blocked** | `TO_FILE` rejects S3 AP-backed stage at SQL compilation time (different validation path from `BUILD_SCOPED_FILE_URL`/`PARSE_DOCUMENT` which succeed). Engineering request filed (Case #01359474, May 2026). Workaround: `COPY FILES` to internal stage → `TO_FILE` on internal stage. |
+| Snowflake + TO_FILE on S3 AP Stage | **Blocked** | `TO_FILE` rejects S3 AP-backed stage at SQL compilation time (different validation path from `BUILD_SCOPED_FILE_URL`/`PARSE_DOCUMENT` which succeed). Engineering request filed (Snowflake support case (May 2026), May 2026). Workaround: `COPY FILES` to internal stage → `TO_FILE` on internal stage. |
 | Snowflake + BUILD_SCOPED_FILE_URL on S3 AP Stage | **Functional Verified** | Works correctly on FSx S3 AP external stage. |
 | Snowflake + PARSE_DOCUMENT on S3 AP Stage | **Functional Verified** | Works correctly on FSx S3 AP external stage. |
 | Snowflake + Managed Iceberg Table (COPY INTO from S3 AP Stage) | **Functional Verified** | COPY INTO from FSx S3 AP External Stage → Managed Iceberg Table confirmed. 64-day deduplication works. Horizon REST Catalog exposes to external engines with governance enforcement. |

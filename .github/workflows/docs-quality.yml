@@ -1,0 +1,121 @@
+name: Documentation Quality
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.md'
+      - '**/*.yaml'
+      - '**/*.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.md'
+      - '**/*.yaml'
+      - '**/*.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  doc-quality:
+    name: Documentation Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Check for AWS Account IDs in tracked files
+        run: |
+          echo "🔍 Scanning for hardcoded AWS Account IDs..."
+          HITS=$(git ls-files -- '*.md' '*.yaml' '*.yml' '*.py' '*.sql' '*.sh' | \
+            xargs grep -Pn '\b178625946981\b' 2>/dev/null | \
+            grep -v '<ACCOUNT_ID>' | \
+            grep -v '# Contains account ID for reference' || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::Hardcoded AWS Account ID (178625946981) found in tracked files. Use <ACCOUNT_ID> placeholder."
+            echo "$HITS"
+            exit 1
+          fi
+          echo "✓ No hardcoded AWS Account IDs"
+
+      - name: Check EN/JA pair completeness
+        run: |
+          echo "🔍 Checking EN/JA document pairs..."
+          MISSING=0
+          # Check demo scenarios
+          for f in integrations/iceberg-metadata-catalog/demo/scenarios/industry-*.md; do
+            if [[ "$f" == *"-ja.md" ]]; then continue; fi
+            JA="${f%.md}-ja.md"
+            if [[ ! -f "$JA" ]]; then
+              echo "::warning::Missing JA pair: $JA"
+              MISSING=$((MISSING+1))
+            fi
+          done
+          # Check sales enablement
+          for f in docs/sales-enablement/*.md; do
+            if [[ "$f" == *"-ja.md" ]]; then continue; fi
+            BASE=$(basename "$f" .md)
+            JA="docs/sales-enablement/${BASE}-ja.md"
+            if [[ ! -f "$JA" ]] && [[ "$BASE" != "README" ]]; then
+              echo "::warning::Missing JA pair: $JA"
+              MISSING=$((MISSING+1))
+            fi
+          done
+          if [[ $MISSING -gt 0 ]]; then
+            echo "::warning::$MISSING documents missing JA translations"
+          fi
+          echo "✓ EN/JA pair check complete ($MISSING missing)"
+
+      - name: Check for broken internal links
+        run: |
+          echo "🔍 Checking internal markdown links..."
+          BROKEN=0
+          git ls-files -- '*.md' | while read -r mdfile; do
+            dir=$(dirname "$mdfile")
+            grep -oP '\[.*?\]\(\K[^)]+' "$mdfile" 2>/dev/null | \
+              grep -v '^http' | grep -v '^#' | grep -v '^mailto' | \
+              while read -r link; do
+                # Remove anchors
+                target="${link%%#*}"
+                if [[ -z "$target" ]]; then continue; fi
+                resolved="$dir/$target"
+                if [[ ! -e "$resolved" ]] && [[ ! -e "$target" ]]; then
+                  echo "::warning file=$mdfile::Broken link: $link"
+                  BROKEN=$((BROKEN+1))
+                fi
+              done
+          done || true
+          echo "✓ Link check complete"
+
+      - name: Validate YAML syntax
+        run: |
+          echo "🔍 Validating YAML files..."
+          pip install -q pyyaml
+          ERRORS=0
+          git ls-files -- '*.yaml' '*.yml' | while read -r yamlfile; do
+            python3 -c "import yaml; yaml.safe_load(open('$yamlfile'))" 2>&1 || {
+              echo "::error file=$yamlfile::Invalid YAML syntax"
+              ERRORS=$((ERRORS+1))
+            }
+          done
+          echo "✓ YAML validation complete"
+
+      - name: Check for support case numbers in tracked files
+        run: |
+          echo "🔍 Scanning for support case numbers..."
+          PATTERNS='01359474\|01364260\|01359983\|178031980800349\|178029069700204\|178023542200745\|00928287\|00921422'
+          HITS=$(git ls-files -- '*.md' '*.yaml' '*.yml' '*.py' '*.sql' | \
+            xargs grep -n "$PATTERNS" 2>/dev/null | \
+            grep -v '\.github/workflows/' || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::Support case numbers found in tracked files. Remove before pushing."
+            echo "$HITS"
+            exit 1
+          fi
+          echo "✓ No support case numbers in tracked files"

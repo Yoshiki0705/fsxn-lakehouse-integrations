@@ -391,7 +391,7 @@ Horizon Iceberg REST Catalog 経由の外部エンジンアクセスは `SNOWFLA
 
 ### Snowflake Horizon Iceberg REST Catalog — 外部エンジンへのガバナンス適用（2026年5月確認）
 
-> **Snowflake サポート確認（Case #01359983, 2026年5月）**: Snowflake Horizon Catalog は外部エンジンアクセスに対してもガバナンスポリシーを強制する — Databricks Unity Catalog との重要な差別化ポイント。
+> **Snowflake サポート確認（Snowflake サポート確認, 2026年5月）**: Snowflake Horizon Catalog は外部エンジンアクセスに対してもガバナンスポリシーを強制する — Databricks Unity Catalog との重要な差別化ポイント。
 
 | 観点 | Snowflake Horizon Catalog | Databricks Unity Catalog |
 |------|--------------------------|--------------------------|

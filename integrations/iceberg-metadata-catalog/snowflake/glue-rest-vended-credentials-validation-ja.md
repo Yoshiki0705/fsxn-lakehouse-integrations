@@ -72,7 +72,7 @@ Error 004174 はこれらのフィールドがレスポンスに存在しない�
 3. Snowflake は vended credentials の代わりに External Volume（独自のストレージ credentials）を使用する必要がある可能性
 4. Snowflake と AWS の両サポートに確認された相互運用性ギャップとして報告すべき
 
-**Snowflake サポートによる正式確認 (2026-06-02, Case #01364260)**:
+**Snowflake サポートによる正式確認 (2026-06-02, Snowflake support confirmation)**:
 `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` の場合、Snowflake は Iceberg REST `loadTable` レスポンスの config マップに標準 Apache Iceberg credential フィールドが含まれることを期待します:
 - `s3.access-key-id`（必須）
 - `s3.secret-access-key`（必須）
@@ -122,7 +122,7 @@ CREATE ICEBERG TABLE FSXN_LAKEHOUSE.PUBLIC.s3tables_metadata
 | loadTable レスポンス証拠を Snowflake に提供 | 顧客（我々） | ✅ 完了 (2026-06-02) |
 | SYSTEM$VERIFY_CATALOG_INTEGRATION 実行 | 顧客（我々） | 未実行 |
 | Object Store catalog ワークアラウンドの評価 | 顧客（我々） | 未実行 |
-| Glue REST に credential vending が追加される予定か確認 | AWS | オープン (case 178031980800349) |
+| Glue REST に credential vending が追加される予定か確認 | AWS | オープン (AWS support investigation) |
 | Snowflake プロダクトチームのトラッキング | Snowflake | 質問済み (2026-06-02) |
 
 ## 参考資料

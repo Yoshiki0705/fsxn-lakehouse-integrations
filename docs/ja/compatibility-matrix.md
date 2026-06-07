@@ -155,7 +155,7 @@ FSx S3 Access Points 上の分析ワークロードを計画する際：
 | ベンダー | リクエスト内容 | 状態 | ケース参照 |
 |---------|-------------|------|----------|
 | Databricks | `iceberg_rest` を CONNECTION TYPE としてサポート追加 | 提出済み (2026年5月) | サポートケース保留中 |
-| Snowflake | S3 Tables Iceberg REST endpoint を External Catalog ソースとしてサポート | 提出済み (2026年5月) | Case #01364260 |
+| Snowflake | S3 Tables Iceberg REST endpoint を External Catalog ソースとしてサポート | 提出済み (2026年5月) | Snowflake support case (May 2026) |
 | AWS | S3 Tables フェデレーテッドカタログで Lake Formation 列レベル権限対応 | 特定済み (2026年5月) | 提出予定 |
 
 ---
@@ -179,7 +179,7 @@ FSx S3 Access Points 上の分析ワークロードを計画する際：
 | Bedrock Knowledge Base + ドキュメント読み取り | 機能検証済み | AWS 公式チュートリアルが RAG インジェストを検証 |
 | Databricks + Parquet 読み取り | API 検証済み | External Location の登録と読み取りを確認 |
 | Snowflake + Parquet 読み取り | API 検証済み | External Stage の作成とクエリを確認 |
-| Snowflake + TO_FILE（S3 AP ステージ） | **ブロック** | `TO_FILE` が SQL コンパイル時に S3 AP ステージを拒否（`BUILD_SCOPED_FILE_URL`/`PARSE_DOCUMENT` とは異なる検証パス）。エンジニアリングリクエスト提出済み（Case #01359474, 2026年5月）。ワークアラウンド: `COPY FILES` → 内部ステージ → `TO_FILE`。 |
+| Snowflake + TO_FILE（S3 AP ステージ） | **ブロック** | `TO_FILE` が SQL コンパイル時に S3 AP ステージを拒否（`BUILD_SCOPED_FILE_URL`/`PARSE_DOCUMENT` とは異なる検証パス）。エンジニアリングリクエスト提出済み（Snowflake support case (May 2026), 2026年5月）。ワークアラウンド: `COPY FILES` → 内部ステージ → `TO_FILE`。 |
 | Snowflake + BUILD_SCOPED_FILE_URL（S3 AP ステージ） | **機能検証済み** | FSx S3 AP External Stage で正常動作。 |
 | Snowflake + PARSE_DOCUMENT（S3 AP ステージ） | **機能検証済み** | FSx S3 AP External Stage で正常動作。 |
 | Snowflake + Managed Iceberg Table（S3 AP Stage から COPY INTO） | **機能検証済み** | FSx S3 AP External Stage → Managed Iceberg Table への COPY INTO 確認。64日間重複排除動作。Horizon REST Catalog が外部エンジンにガバナンス強制付きで公開。 |

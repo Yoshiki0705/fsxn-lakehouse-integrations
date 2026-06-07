@@ -187,7 +187,7 @@ Reference: [Snowpipe REST API](https://docs.snowflake.com/en/user-guide/data-loa
 
 Best for: Continuous transformation pipeline from external table source. **This is the most Snowflake-native approach** — declarative, auto-managed, and supports Cortex AI functions in the SELECT clause (GA since September 2025).
 
-> **Support Confirmed (May 2026, Case #01359983)**: Dynamic Tables with External Table source are supported with `REFRESH_MODE = FULL`. Minimum `TARGET_LAG` is 60 seconds. Incremental refresh is not available because External Tables do not support change tracking.
+> **Support Confirmed (May 2026, Snowflake support case)**: Dynamic Tables with External Table source are supported with `REFRESH_MODE = FULL`. Minimum `TARGET_LAG` is 60 seconds. Incremental refresh is not available because External Tables do not support change tracking.
 
 ```sql
 -- Dynamic Table reads from External Table, materializes as internal
