@@ -52,7 +52,7 @@ cd demo/scripts
 | **Phase 1** | ✅ Verified | S3 Tables + PyIceberg schema + initial scan | 40 files in 3s |
 | **Phase 2** | ✅ Verified | FPolicy → SQS → Lambda pipeline | E2E verified, DLQ = 0 |
 | **Phase 3** | ✅ Verified | AI enrichment (Bedrock Vision + Titan Embeddings) | invoice classified at 0.95 confidence |
-| **Phase 4** | ⚠️ Partial | Cross-platform (Athena ✅, Databricks ⚠️, Snowflake ⚠️) | Tested paths documented |
+| **Phase 4** | ✅ Verified | Cross-platform (Athena ✅, EMR Spark ✅, Snowflake ✅, Databricks ⚠️) | Tested paths documented |
 | **Phase 5** | ✅ Verified | OpenSearch Serverless NextGen (scale-to-zero, kNN) | Score 0.67, cold start 10-30s |
 | **Phase 6** | ✅ Verified | PII anonymization (Comprehend EN + Bedrock Claude JA) | 7/7 entities detected |
 
@@ -121,22 +121,24 @@ integrations/iceberg-metadata-catalog/
 
 > For production, use the **AWS Glue Iceberg REST endpoint** with Lake Formation. See [docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables-integrating-glue-endpoint.html).
 
-## Cross-Platform Status (Tested 2026-05-31, Updated 2026-06-01)
+## Cross-Platform Status (Updated 2026-06-08)
 
 | Platform | Status | Path |
 |----------|:------:|------|
 | Athena | ✅ | Glue federated catalog |
 | PyIceberg | ✅ | S3 Tables REST + Glue REST |
 | EMR Spark | ✅ Verified | Glue Iceberg REST via EMR Serverless 7.13.0; SHOW NAMESPACES/TABLES/SELECT all work |
+| Snowflake (Glue REST + VENDED_CREDENTIALS) | ✅ Verified | Explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` + no External Volume; CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH + Time Travel all working (2026-06-05) |
+| Snowflake (S3 Tables direct) | ⚠️ | Not a supported catalog type — use Glue REST instead |
+| Snowflake External Stage | ✅ | FSx S3 AP works (LIST, SELECT, COPY, TO_FILE + Cortex AI all verified) |
 | Databricks SQL Warehouse | ⚠️ | `iceberg_rest` connection type not supported in tested path |
 | Databricks UC Audit | ✅ | External engine access fully logged in `system.access.audit` |
 | Databricks Spark | ❌ | UC blocks external catalog registration via spark.conf.set; UC Foreign Catalog required |
-| Databricks UC Foreign Catalog | 🔄 | Follow-up submitted to support (2026-06-01); required path for governed access |
+| Databricks UC Foreign Catalog | ❌ | S3 Tables not supported in Databricks (confirmed 2026-06-02); internal product request tracking |
 | Databricks Delta Sharing | ❌ | Sharing server uses same UC credentials; cannot bypass S3 AP session policy |
-| Databricks NFS → UC Volume | ❌ | Cloud storage URIs only; NFS/FUSE mount paths not supported |
-| Snowflake (Glue REST + VENDED_CREDENTIALS) | ✅ Verified | Explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` + no External Volume; CREATE TABLE + SELECT working (2026-06-05) |
-| Snowflake (S3 Tables direct) | ⚠️ | Not a supported catalog type — use Glue REST instead |
-| Snowflake External Stage | ✅ | FSx S3 AP works (LIST, SELECT, COPY, TO_FILE + Cortex AI all verified) |
+| Databricks NFS → UC Volume | ❌ | Cloud storage URIs only; NFS/FUSE mount paths not supported; internal feature request exists |
+
+> **Snowflake governance note**: Lake Formation column-level filtering is NOT enforced via VENDED_CREDENTIALS path. Use Snowflake Horizon (Row Access Policy / Dynamic Data Masking) for column governance.
 
 Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platform-compatibility.yaml)
 
