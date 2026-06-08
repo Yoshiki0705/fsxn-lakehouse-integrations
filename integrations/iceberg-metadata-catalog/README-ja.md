@@ -52,7 +52,7 @@ cd demo/scripts
 | **Phase 1** | ✅ 検証済み | S3 Tables + PyIceberg スキーマ + 初期スキャン | 40 ファイルを 3 秒で |
 | **Phase 2** | ✅ 検証済み | FPolicy → SQS → Lambda パイプライン | E2E 検証、DLQ = 0 |
 | **Phase 3** | ✅ 検証済み | AI エンリッチメント (Bedrock Vision + Titan Embeddings) | invoice を信頼度 0.95 で分類 |
-| **Phase 4** | ⚠️ 部分的 | クロスプラットフォーム (Athena ✅、Databricks ⚠️、Snowflake ⚠️) | テスト済みパスを文書化 |
+| **Phase 4** | ✅ 検証済み | クロスプラットフォーム (Athena ✅、EMR Spark ✅、Snowflake ✅、Databricks ⚠️) | テスト済みパスを文書化 |
 | **Phase 5** | ✅ 検証済み | OpenSearch Serverless NextGen (scale-to-zero、kNN) | スコア 0.67、コールドスタート 10-30 秒 |
 | **Phase 6** | ✅ 検証済み | PII 匿名化 (Comprehend EN + Bedrock Claude JA) | 7/7 エンティティ検出 |
 
@@ -112,22 +112,24 @@ integrations/iceberg-metadata-catalog/
 
 > 本番環境では **AWS Glue Iceberg REST エンドポイント** + Lake Formation を使用してください。[ドキュメント](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-tables-integrating-glue-endpoint.html) 参照。
 
-## クロスプラットフォーム状況 (2026-05-31 テスト、2026-06-01 更新)
+## クロスプラットフォーム状況 (2026-06-08 更新)
 
 | プラットフォーム | 状態 | パス |
 |-------------|:----:|------|
 | Athena | ✅ | Glue フェデレーテッドカタログ |
 | PyIceberg | ✅ | S3 Tables REST + Glue REST |
 | EMR Spark | ✅ 検証済み | Glue Iceberg REST via EMR Serverless 7.13.0; SHOW NAMESPACES/TABLES/SELECT 全て動作 |
+| Snowflake (Glue REST + VENDED_CREDENTIALS) | ✅ 検証済み | 明示的 `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` + External Volume なし; CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH + Time Travel 動作 (2026-06-05) |
+| Snowflake External Stage | ✅ | FSx S3 AP 動作確認済み（LIST、SELECT、COPY、TO_FILE + Cortex AI すべて検証済み） |
+| Snowflake (S3 Tables 直接 REST) | ⚠️ | 対応カタログタイプではない — Glue REST を使用 |
 | Databricks SQL Warehouse | ⚠️ | テスト済みパスで `iceberg_rest` 接続タイプ非対応 |
 | Databricks UC 監査 | ✅ | 外部エンジンアクセスが `system.access.audit` に完全記録 |
 | Databricks Spark | ❌ | UC が spark.conf.set による外部カタログ登録をブロック; UC Foreign Catalog が必要 |
-| Databricks UC Foreign Catalog | 🔄 | サポートにフォローアップ送信済み (2026-06-01); ガバナンス付きアクセスの必須パス |
+| Databricks UC Foreign Catalog | ❌ | S3 Tables は Databricks で非サポート (2026-06-02 確認); 内部プロダクトリクエスト追跡中 |
 | Databricks Delta Sharing | ❌ | Sharing server は同じ UC credentials を使用; S3 AP session policy を bypass 不可 |
-| Databricks NFS → UC Volume | ❌ | クラウドストレージ URI のみ; NFS/FUSE マウントパス非対応 |
-| Snowflake (Glue REST) | ❌ ブロック | Glue REST は credential vending を実装していない（`/credentials` が UnknownOperationException を返す） |
-| Snowflake (S3 Tables 直接) | ⚠️ | テスト済みパスで対応カタログタイプではない |
-| Snowflake External Stage | ✅ | FSx S3 AP 動作確認済み（LIST、SELECT、COPY、TO_FILE + Cortex AI すべて検証済み） |
+| Databricks NFS → UC Volume | ❌ | クラウドストレージ URI のみ; NFS/FUSE マウントパス非対応; 内部機能リクエストあり |
+
+> **Snowflake ガバナンス制約**: Lake Formation カラムレベルフィルタリングは VENDED_CREDENTIALS パスでは適用されない（AllowFullTableExternalDataAccess=false で全アクセスがブロック）。カラムレベルガバナンスは Snowflake Horizon（Row Access Policy / Dynamic Data Masking）で対応。
 
 詳細: [cross-platform-compatibility.yaml](verification-evidence/cross-platform-compatibility.yaml)
 
