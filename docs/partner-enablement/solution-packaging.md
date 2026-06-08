@@ -2,6 +2,8 @@
 
 ## Offer Summary
 
+**One-liner**: Make enterprise NAS data searchable, governable, and AI-ready without bulk-copying raw files to S3.
+
 | Field | Value |
 |-------|-------|
 | Offer name | AI-powered Metadata Catalog for Enterprise NAS |

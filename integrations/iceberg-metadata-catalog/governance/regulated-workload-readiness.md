@@ -99,3 +99,28 @@ Per [AWS Bedrock data protection](https://docs.aws.amazon.com/bedrock/latest/use
 | Audit retention policy | Security + Legal | Define retention periods |
 | Incident response plan | Security | Define breach notification SLA |
 | Third-party access review | Security | Snowflake/Databricks data flow review |
+
+## Production Approval Gates
+
+Before production deployment in regulated environments, complete the following gates in order:
+
+1. **Data owner approval** — Confirm which data is in scope, classification levels, and acceptable AI processing
+2. **Security architecture review** — IAM, network, encryption, access boundaries validated
+3. **Legal / compliance review** — Data processing agreement, AI usage terms, cross-border assessment
+4. **AI evaluation sign-off** — Classification accuracy, PII detection false negative rate, human review acceptance rate meet defined thresholds
+5. **Operations readiness review** — Runbooks, alerting, DR procedure, cost model validated
+6. **Deletion / retention SLA approval** — Snapshot expiration, metadata retention, audit evidence retention aligned with policy
+
+## Evidence Mapping
+
+For audit and compliance reporting, map evidence to the following categories:
+
+| Evidence Category | Source | Location |
+|------------------|--------|----------|
+| Access control | CloudTrail + Lake Formation logs | CloudTrail Lake / S3 Trail bucket |
+| AI evaluation | Labeled validation set results | `verification-evidence/ai-evaluation/` |
+| PII redaction | Before/after redaction samples | `verification-evidence/pii-redaction/` |
+| Deletion | Snapshot expiration logs + raw file deletion audit | ONTAP audit logs + S3 Tables settings |
+| Cross-platform access | Athena / Snowflake / EMR screenshots + query logs | `snowflake/screenshots/`, CloudTrail |
+| Governance changes | Lake Formation grant/revoke logs | CloudTrail |
+| Performance baseline | Demo execution logs, latency measurements | `verification-evidence/2026-05-31/` |
