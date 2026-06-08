@@ -1,5 +1,7 @@
 # Apache Iceberg Spec vs AWS S3 Tables Service Behavior
 
+🌐 English | [日本語](standards-vs-service-behavior-ja.md)
+
 ## Purpose
 
 This document clarifies the boundary between the open Apache Iceberg specification and AWS S3 Tables service-specific behavior. Readers should not assume that all Iceberg spec features are available or behave identically on S3 Tables.
