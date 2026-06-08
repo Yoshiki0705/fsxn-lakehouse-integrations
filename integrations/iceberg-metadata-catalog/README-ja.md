@@ -145,8 +145,8 @@ integrations/iceberg-metadata-catalog/
 | デモガイド | [EN](demo/docs/demo-guide.md) | [JA](demo/docs/demo-guide-ja.md) |
 | デモシナリオ（23 業種） | [EN](demo/scenarios/README.md) | [JA](demo/scenarios/README-ja.md) |
 | S3 のみクイックスタート | [EN](demo/docs/quickstart-s3-only.md) | [JA](demo/docs/quickstart-s3-only-ja.md) |
-| Iceberg 仕様 vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | — |
-| メンテナンス Runbook | [EN](ops/iceberg-maintenance-runbook.md) | — |
+| Iceberg 仕様 vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | [JA](docs/standards-vs-service-behavior-ja.md) |
+| メンテナンス Runbook | [EN](ops/iceberg-maintenance-runbook.md) | [JA](ops/iceberg-maintenance-runbook-ja.md) |
 | Snowflake トラブルシューティング | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
 
 ## ブログシリーズ

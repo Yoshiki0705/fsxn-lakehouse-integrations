@@ -1,5 +1,7 @@
 # Iceberg Table Maintenance Runbook
 
+🌐 English | [日本語](iceberg-maintenance-runbook-ja.md)
+
 ## Purpose
 
 Maintain the `metadata.unstructured_files` Iceberg table on S3 Tables for optimal query performance and storage efficiency.
