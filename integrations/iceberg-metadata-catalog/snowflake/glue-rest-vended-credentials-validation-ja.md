@@ -14,9 +14,9 @@ S3 Tables アクセスのための vended credentials を使用した AWS Glue I
 | DESCRIBE CATALOG INTEGRATION | ✅ | 有効な IAM credentials を返す |
 | CREATE ICEBERG TABLE | ✅ | 成功 (5.9s) — 2026-06-05 |
 | SELECT * LIMIT 5 | ✅ | 5行返却 (1.6s) — 2026-06-05 |
-| COUNT(*) | ✅ | 170行 (141ms) — 2026-06-08 |
-| Time travel (AT/BEFORE TIMESTAMP) | ⚠️ | Snowflake ドキュメントで利用可能確認済み。新規作成テーブルでは過去スナップなし（想定通り） |
-| AUTO_REFRESH | ✅ | 有効化成功 (131ms)、30秒間隔 — 2026-06-08 |
+| COUNT(*) | ✅ | 171行 (215ms) — AUTO_REFRESH 検証済み (PyIceberg append 170→171) |
+| Time travel (AT/BEFORE TIMESTAMP) | ✅ | **検証済み**: AT(OFFSET => -1200) で 170 (追加前スナップショット) を取得 |
+| AUTO_REFRESH | ✅ | **実動作確認済み**: PyIceberg append を 30秒以内に自動反映 (170→171) |
 | Lake Formation カラムレベル権限 | ❌ | **VENDED_CREDENTIALS では非サポート** (2026-06-08)。AllowFullTableExternalDataAccess=false で全アクセスがブロックされる |
 | サポートケース | ✅ | Case #01364260 — クローズ確認済み |
 
@@ -33,6 +33,14 @@ S3 Tables アクセスのための vended credentials を使用した AWS Glue I
 ![SHOW ICEBERG TABLES — UNMANAGED タイプ](screenshots/03-show-iceberg-tables-v2.png)
 
 ![SELECT * LIMIT 5](screenshots/04-select-star-limit5-v2.png)
+
+### AUTO_REFRESH + Time Travel エビデンス (2026-06-08)
+
+![AUTO_REFRESH 検証: PyIceberg append 後 COUNT(*) = 171](screenshots/05-auto-refresh-count-171-v2.png)
+*AUTO_REFRESH: PyIceberg で 1レコード追加 → Snowflake の COUNT(*) が 30秒以内に 170→171 に自動反映*
+
+![Time Travel: AT(OFFSET => -1200) で 170 を取得](screenshots/07-time-travel-offset-1200-v2.png)
+*Time Travel: AT(OFFSET => -1200) で 170 を返す — append 操作前のスナップショット*
 
 ### 以前の失敗の根本原因
 
@@ -148,9 +156,9 @@ CREATE OR REPLACE CATALOG INTEGRATION s3tables_glue_rest_int
 | CREATE ICEBERG TABLE | ✅ | 成功 (5.9s) |
 | SELECT * クエリ | ✅ | 5行返却 (1.6s) |
 | SYSTEM$VERIFY_CATALOG_INTEGRATION | ✅ | "Statement executed successfully" |
-| COUNT(*) | ✅ | 170行 (141ms) — 2026-06-08 |
-| Time travel (AT/BEFORE TIMESTAMP) | ⚠️ | 利用可能（スナップショット保持依存）。新規テーブルでは過去スナップなし |
-| AUTO_REFRESH | ✅ | 有効化成功 (131ms)、30秒間隔 — 2026-06-08 |
+| COUNT(*) | ✅ | 171行 (215ms) — AUTO_REFRESH 実動作確認 (170→171) |
+| Time travel (AT/BEFORE TIMESTAMP) | ✅ | **検証済み**: AT(OFFSET => -1200) で 170 (過去スナップショット) を取得 |
+| AUTO_REFRESH | ✅ | **実動作確認済み**: 30秒以内に新スナップショット検出 |
 | Lake Formation カラムレベル権限 | ❌ | **VENDED_CREDENTIALS では非サポート** (2026-06-08) |
 
 ## 仮説の履歴（解決済み）

@@ -42,11 +42,13 @@ FSx for ONTAP (実ファイル: PDF、画像、CAD、動画)
 ┌─────────────────────────────────────────────┐
 │  クエリエンジン                               │
 │  • Athena: 2秒未満クエリ ✅ 検証済み           │
-│  • EMR Spark: Iceberg REST ✅ 想定動作       │
-│  • Databricks: Spark クラスター ⚠️ 回避策      │
-│  • Snowflake: COPY INTO パス ⚠️ 回避策        │
+│  • EMR Spark 7.13.0+: Glue REST ✅ 検証済み  │
+│  • Snowflake: VENDED_CREDENTIALS ✅ 検証済み   │
+│  • Databricks: UC 対応待ち ⚠️ (DataSync 代替) │
 └─────────────────────────────────────────────┘
 ```
+
+> **検索時間スケーリングの注記**: Part 1 の ListObjectsV2 レイテンシ比較は、40ファイルの実測値から線形外挿した namespace スキャンの推定です。スケール時のアーキテクチャ価値を示していますが、FSx for ONTAP S3 Access Point サービス性能のベンチマークではありません。本番の S3 AP スループットは FSx プロビジョニング容量、リクエスト並行数、ファイル分布、ONTAP キャッシュ状態に依存します。
 
 ## 現時点で動作確認済みの機能
 
@@ -91,7 +93,7 @@ FSx for ONTAP (実ファイル: PDF、画像、CAD、動画)
 | 制約 | 影響 | 回避策 | 状態 |
 |------|------|--------|------|
 | Databricks SQL Warehouse が S3 Tables を直接クエリ不可 | Spark クラスターまたは Athena が必要 | Spark クラスター設定 or Athena | 機能リクエスト提出済み |
-| Snowflake が S3 Tables を External Iceberg として読み取り不可 | COPY INTO が必要 | COPY INTO → Managed Iceberg | 機能リクエスト提出済み |
+| Snowflake が S3 Tables を VENDED_CREDENTIALS で直接クエリ可能 | ✅ 解決済み (2026-06-05) | Glue REST + ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS | AUTO_REFRESH / Time Travel 検証済み |
 | Lake Formation 列レベル制御が S3 Tables フェデレーテッドカタログで未サポート | 特定カラムを非表示にできない | Athena View | AWS ケース提出済み |
 | Lambda 並行書き込みで Iceberg commit conflict | 一部書き込みがリトライ | reserved_concurrency=1 | 設計推奨 |
 

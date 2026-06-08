@@ -14,9 +14,9 @@ Document the validation of Snowflake CATALOG INTEGRATION with AWS Glue Iceberg R
 | DESCRIBE CATALOG INTEGRATION | ✅ | Returns valid IAM credentials |
 | CREATE ICEBERG TABLE | ✅ | Success (5.9s) — 2026-06-05 |
 | SELECT * LIMIT 5 | ✅ | 5 rows returned (1.6s) — 2026-06-05 |
-| COUNT(*) | ✅ | 170 rows (66ms) — 2026-06-08 |
-| Time travel (AT/BEFORE TIMESTAMP) | ⚠️ | Available (snapshot-dependent; no past data on newly created table) |
-| AUTO_REFRESH | ✅ | Enabled (131ms), 30s interval — 2026-06-08 |
+| COUNT(*) | ✅ | 171 rows (215ms) — 2026-06-08; AUTO_REFRESH verified (170→171) |
+| Time travel (AT/BEFORE TIMESTAMP) | ✅ | **VERIFIED**: AT(OFFSET => -1200) returns 170 (pre-append), current returns 171 |
+| AUTO_REFRESH | ✅ | **VERIFIED**: PyIceberg append detected within 30s (170→171 auto-reflected) |
 | Lake Formation column-level | ❌ | NOT enforced via VENDED_CREDENTIALS (2026-06-08) |
 | Support case | ✅ | Case #01364260 — closed |
 
@@ -33,6 +33,14 @@ Document the validation of Snowflake CATALOG INTEGRATION with AWS Glue Iceberg R
 ![SHOW ICEBERG TABLES — UNMANAGED type](screenshots/03-show-iceberg-tables-v2.png)
 
 ![SELECT * LIMIT 5](screenshots/04-select-star-limit5-v2.png)
+
+### AUTO_REFRESH + Time Travel Evidence (2026-06-08)
+
+![AUTO_REFRESH verified: COUNT(*) = 171 after PyIceberg append](screenshots/05-auto-refresh-count-171-v2.png)
+*AUTO_REFRESH: PyIceberg appended 1 record → Snowflake COUNT(*) automatically changed from 170 to 171 within 30 seconds*
+
+![Time Travel: AT(OFFSET => -1200) returns 170](screenshots/07-time-travel-offset-1200-v2.png)
+*Time Travel: AT(OFFSET => -1200) returns 170 — the count before the append operation*
 
 ### Root Cause of Previous Failures
 
@@ -106,6 +114,32 @@ In VENDED_CREDENTIALS mode:
 4. Snowflake uses these credentials to access data files directly
 5. **No ListObjectsV2 is required** — Snowflake reads files by exact path from Iceberg metadata
 
+### IAM Trust Policy (Required)
+
+The IAM role's trust policy must allow Snowflake's IAM user to assume it:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::465774455528:user/<snowflake-user-id>"
+      },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringEquals": {
+          "sts:ExternalId": "<external-id-from-describe-output>"
+        }
+      }
+    }
+  ]
+}
+```
+
+> Get `<snowflake-user-id>` from `API_AWS_IAM_USER_ARN` and `<external-id>` from `API_AWS_EXTERNAL_ID` in `DESCRIBE CATALOG INTEGRATION` output. `465774455528` is Snowflake's shared infrastructure account (same for all customers).
+
 ## Historical Configuration (Before Fix)
 
 > **Note**: The configuration below was from initial testing that FAILED.
@@ -167,9 +201,9 @@ CREATE OR REPLACE ICEBERG TABLE test_metadata
 | CREATE ICEBERG TABLE | ✅ | Success (5.9s) |
 | SELECT * query | ✅ | 5 rows returned (1.6s) |
 | SYSTEM$VERIFY_CATALOG_INTEGRATION | ✅ | "Statement executed successfully" |
-| COUNT(*) | ✅ | 170 rows (141ms) — 2026-06-08 |
-| Time travel (AT/BEFORE TIMESTAMP) | ⚠️ | Available per Snowflake docs; returns "not available" on newly created table (expected — no prior snapshots) |
-| AUTO_REFRESH | ✅ | Enabled (131ms), 30s interval — 2026-06-08 |
+| COUNT(*) | ✅ | 171 rows (215ms) — AUTO_REFRESH verified (PyIceberg append 170→171) |
+| Time travel (AT/BEFORE TIMESTAMP) | ✅ | **VERIFIED**: AT(OFFSET => -1200) returns 170 (prior snapshot) |
+| AUTO_REFRESH | ✅ | **VERIFIED**: 30s interval detected new Iceberg snapshot automatically |
 | Lake Formation column-level permissions | ❌ | **NOT SUPPORTED** via VENDED_CREDENTIALS (2026-06-08). AllowFullTableExternalDataAccess=false blocks all access. |
 
 ## Debugging Steps
@@ -283,7 +317,7 @@ CREATE ICEBERG TABLE FSXN_LAKEHOUSE.PUBLIC.s3tables_metadata
 | Run SYSTEM$VERIFY_CATALOG_INTEGRATION | Customer (us) | ✅ Done — "Statement executed successfully" |
 | Test with explicit VENDED_CREDENTIALS + no External Volume | Customer (us) | ✅ Done — **SUCCESS** (2026-06-05) |
 | Report success to Snowflake Support | Customer (us) | ✅ Done (2026-06-08) |
-| Validate AUTO_REFRESH, time travel, column-level | Customer (us) | 🔄 Pending (asked in follow-up) |
+| Validate AUTO_REFRESH, time travel, column-level | Customer (us) | ✅ Done (2026-06-08): AUTO_REFRESH ✅, Time Travel ✅, column-level ❌ |
 | Snowflake Support response to follow-up questions | Snowflake | 🔄 Pending |
 | Documentation improvement (KB article for S3 Tables + VENDED_CREDENTIALS) | Snowflake | 🔄 Requested (2026-06-08) |
 
