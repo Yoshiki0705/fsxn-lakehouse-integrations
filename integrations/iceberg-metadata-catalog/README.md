@@ -134,7 +134,7 @@ integrations/iceberg-metadata-catalog/
 | Databricks SQL Warehouse | ⚠️ | `iceberg_rest` connection type not supported in tested path |
 | Databricks UC Audit | ✅ | External engine access fully logged in `system.access.audit` |
 | Databricks Spark | ❌ | UC blocks external catalog registration via spark.conf.set; UC Foreign Catalog required |
-| Databricks UC Foreign Catalog | ❌ | S3 Tables not supported in Databricks (confirmed 2026-06-02); internal product request tracking |
+| Databricks UC Foreign Catalog | ❌ | S3 Tables not supported in Databricks (confirmed 2026-06-02); retested post-GA 2026-06-09 — still blocked (S3 Tables internal bucket rejects standard S3 API validation) |
 | Databricks Delta Sharing | ❌ | Sharing server uses same UC credentials; cannot bypass S3 AP session policy |
 | Databricks NFS → UC Volume | ❌ | Cloud storage URIs only; NFS/FUSE mount paths not supported; internal feature request exists |
 
