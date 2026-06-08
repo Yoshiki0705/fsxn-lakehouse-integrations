@@ -190,3 +190,4 @@ logs/
 ehthumbs.db
 Desktop.ini
 .private-evidence-record.yaml
+integrations/iceberg-metadata-catalog/snowflake/screenshots/raw/

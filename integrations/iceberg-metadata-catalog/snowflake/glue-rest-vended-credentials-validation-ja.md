@@ -24,6 +24,16 @@ S3 Tables アクセスのための vended credentials を使用した AWS Glue I
 
 **Query ID**: `01c4e515-0003-ee3c-0003-6a86002d62b2`
 
+### 検証エビデンス スクリーンショット
+
+![COUNT(*) = 170行](screenshots/01-count-star-v2.png)
+
+![DESCRIBE TABLE — 23カラム](screenshots/02-describe-table-v2.png)
+
+![SHOW ICEBERG TABLES — UNMANAGED タイプ](screenshots/03-show-iceberg-tables-v2.png)
+
+![SELECT * LIMIT 5](screenshots/04-select-star-limit5-v2.png)
+
 ### 以前の失敗の根本原因
 
 `ACCESS_DELEGATION_MODE` は明示指定しない場合 `EXTERNAL_VOLUME_CREDENTIALS` がデフォルト。このモードでは Snowflake が External Volume パスでストレージアクセスを検証し、S3 Tables 内部バケットに対して `ListObjectsV2` を発行 — `MethodNotAllowed` で失敗。
