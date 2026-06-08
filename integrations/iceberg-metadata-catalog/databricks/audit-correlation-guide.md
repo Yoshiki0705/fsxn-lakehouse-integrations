@@ -105,3 +105,45 @@ Databricks UC audit logs record **credential issuance**, not individual S3 file 
 - [Databricks system.access.audit](https://docs.databricks.com/aws/en/admin/system-tables/audit)
 - [AWS CloudTrail](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/)
 - [Lake Formation audit logging](https://docs.aws.amazon.com/lake-formation/latest/dg/cloudtrail-logging.html)
+
+## Evidence Correlation Matrix
+
+For compliance reporting and incident investigation, map evidence across platforms:
+
+### Metadata Access Evidence
+
+| Evidence | Databricks Source | AWS Source | Correlation Key |
+|----------|-----------------|------------|-----------------|
+| Who queried metadata | `system.access.audit` (user_identity) | CloudTrail (userIdentity.arn) | email → IAM role mapping |
+| What object was accessed | UC object name (request_params) | Glue GetTable (requestParameters.tableName) | table_name |
+| When | event_time | CloudTrail eventTime | ±5 min window |
+| Credential vending | loadTableCredentials action | AssumeRole / GetTemporaryCredentials | role ARN + session name |
+
+### Raw File Access Evidence
+
+| Evidence | Source | Key Field |
+|----------|--------|-----------|
+| S3 Access Point access | S3 access logs / CloudTrail data events | access_point_arn + key |
+| ONTAP file-system identity | ONTAP audit logs | SVM + volume + path |
+| IAM principal | CloudTrail | userIdentity.arn |
+| Network source | CloudTrail / VPC flow logs | sourceIPAddress |
+
+### Reconciliation Fields
+
+| Field | Purpose | Available In |
+|-------|---------|-------------|
+| metadata `file_id` | Link metadata record to raw file | Iceberg table + Athena |
+| `iceberg_snapshot_id` | Point-in-time metadata state | Iceberg $history + OpenSearch |
+| Databricks `query_id` / `statement_id` | Specific query execution | system.access.audit |
+| CloudTrail `eventID` | Specific AWS API call | CloudTrail logs |
+| `scan_run_id` | Specific metadata scan operation | Iceberg table metadata |
+
+### Cross-Platform Deletion Evidence
+
+| Deletion Target | Evidence Source | Verification Method |
+|----------------|----------------|---------------------|
+| Iceberg metadata record | Athena query (is_deleted=true) | SELECT WHERE file_id = X |
+| Iceberg snapshot expiration | S3 Tables service logs | Verify snapshot no longer accessible |
+| OpenSearch index entry | OpenSearch API response | GET document by file_id |
+| Snowflake synced copy | Snowflake query_history | Verify row removed or Time Travel expired |
+| Raw file on FSx | ONTAP audit log | File deletion event logged |
