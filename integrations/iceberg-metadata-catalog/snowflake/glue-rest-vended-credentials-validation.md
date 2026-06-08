@@ -14,15 +14,25 @@ Document the validation of Snowflake CATALOG INTEGRATION with AWS Glue Iceberg R
 | DESCRIBE CATALOG INTEGRATION | ✅ | Returns valid IAM credentials |
 | CREATE ICEBERG TABLE | ✅ | Success (5.9s) — 2026-06-05 |
 | SELECT * LIMIT 5 | ✅ | 5 rows returned (1.6s) — 2026-06-05 |
-| COUNT(*) | 🔄 | Pending validation |
-| Time travel (AT/BEFORE TIMESTAMP) | 🔄 | Pending validation |
-| AUTO_REFRESH | 🔄 | Asked Snowflake Support |
-| Lake Formation column-level | 🔄 | Asked Snowflake Support |
-| Support case | ✅ | Case #01364260 — resolved, follow-up questions pending |
+| COUNT(*) | ✅ | 170 rows (66ms) — 2026-06-08 |
+| Time travel (AT/BEFORE TIMESTAMP) | ⚠️ | Available (snapshot-dependent; no past data on newly created table) |
+| AUTO_REFRESH | ✅ | Enabled (131ms), 30s interval — 2026-06-08 |
+| Lake Formation column-level | ❌ | NOT enforced via VENDED_CREDENTIALS (2026-06-08) |
+| Support case | ✅ | Case #01364260 — closed |
 
 ## ✅ BREAKTHROUGH: VENDED_CREDENTIALS Working (2026-06-05)
 
 **Query ID**: `01c4e515-0003-ee3c-0003-6a86002d62b2`
+
+### Evidence Screenshots
+
+![COUNT(*) = 170 rows](screenshots/01-count-star-v2.png)
+
+![DESCRIBE TABLE — 23 columns](screenshots/02-describe-table-v2.png)
+
+![SHOW ICEBERG TABLES — UNMANAGED type](screenshots/03-show-iceberg-tables-v2.png)
+
+![SELECT * LIMIT 5](screenshots/04-select-star-limit5-v2.png)
 
 ### Root Cause of Previous Failures
 
