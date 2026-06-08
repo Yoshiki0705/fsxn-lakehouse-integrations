@@ -24,7 +24,11 @@ A phased approach to deploying the AI-powered metadata catalog, from minimal via
 - Lake Formation table-level governance
 
 **Entry criteria**: FSx for ONTAP with S3 Access Point configured.
-**Exit criteria**: All files in target volume cataloged, Athena query returns results.
+**Exit criteria**:
+- 95%+ files in target volume inventoried
+- Latest-record view available and validated
+- Basic Athena query returns correct results
+- Lake Formation table-level grant/revoke tested
 
 ## Level 2: AI Enrichment (Selective)
 
@@ -36,7 +40,12 @@ A phased approach to deploying the AI-powered metadata catalog, from minimal via
 - Evaluate classification accuracy on labeled sample
 
 **Entry criteria**: Level 1 complete + Bedrock access enabled.
-**Exit criteria**: >80% classification accuracy on labeled sample, <5% error rate.
+**Exit criteria**:
+- Selected file types enriched (images, PDFs, or configured types)
+- Classification accuracy >80% on labeled sample
+- Model/prompt version recorded in metadata
+- Failed enrichment retry queue available and operational
+- Error rate <5%
 
 ## Level 3: Human Review Workflow
 
@@ -48,7 +57,11 @@ A phased approach to deploying the AI-powered metadata catalog, from minimal via
 - Business owner approval workflow
 
 **Entry criteria**: Level 2 complete + defined accuracy targets.
-**Exit criteria**: Human review acceptance rate >90%, PII false negative rate <5%.
+**Exit criteria**:
+- Human review workflow operational (queue → review → approve/reject)
+- False positive / false negative rates measured and documented
+- Business owner approval process defined and tested
+- PII detection false negative rate <5% on representative sample
 
 ## Level 4: Governed Search / BI Activation
 
@@ -60,7 +73,11 @@ A phased approach to deploying the AI-powered metadata catalog, from minimal via
 - Snowflake Horizon / UC governance policies applied
 
 **Entry criteria**: Level 3 complete + search quality validated.
-**Exit criteria**: Business users can search metadata from their primary platform with governance enforced.
+**Exit criteria**:
+- Governed search exposed to business users on their primary platform
+- PII/path-sensitive views separated from general access
+- Audit evidence retained for all metadata access
+- Search relevance (nDCG@5) meets defined threshold
 
 ## Level 5: Business Workflow Integration
 
@@ -72,7 +89,11 @@ A phased approach to deploying the AI-powered metadata catalog, from minimal via
 - Cross-department collaboration via governed metadata sharing
 
 **Entry criteria**: Level 4 complete + business workflows defined.
-**Exit criteria**: Measurable business KPI improvement (discovery time, compliance coverage, audit readiness).
+**Exit criteria**:
+- Integrated with at least one business workflow (search, routing, or approval)
+- KPI improvement measured (discovery time, compliance coverage, or audit readiness)
+- Operational ownership transferred to designated team
+- Cost model validated against actual usage
 
 ## Progression Guidance
 
