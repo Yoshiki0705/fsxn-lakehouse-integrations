@@ -35,7 +35,7 @@
 - [ ] Athena クエリ互換性（SELECT, COUNT, タイムトラベル）
 - [ ] EMR Spark 互換性（7.13.0+ 必須）
 - [ ] Snowflake 互換性（VENDED_CREDENTIALS, AUTO_REFRESH, タイムトラベル）
-- [ ] Databricks 互換性ステータスを文書化（Foreign Iceberg GA 再検証）
+- [ ] Databricks 互換性ステータスを文書化（2026-06-09 再テスト: 依然ブロック）
 
 ### コスト
 - [ ] メタデータストレージコスト（S3 Tables）
