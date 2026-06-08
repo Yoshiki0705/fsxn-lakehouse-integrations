@@ -67,8 +67,8 @@ python shared/scripts/validate-access.py --access-point-alias $AP_ALIAS --region
 | Athena | `integrations/athena/` | ✅ セキュリティ検証済み |
 | Glue | `integrations/glue/` | ✅ 機能検証済み |
 | Delta Lake OSS | `integrations/delta-lake-oss/` | ✅ 読み取り検証済み / ❌ 書き込み非サポート |
-| Databricks | `integrations/databricks/` | ⚠️ ブロック（セッションポリシー） |
-| Snowflake | `integrations/snowflake/` | ⚠️ ブロック（セッションポリシー） |
+| Databricks | `integrations/databricks/` | ⚠️ ブロック（UC が S3 Tables 未対応） |
+| Snowflake | `integrations/snowflake/` | ✅ 検証済み（Glue REST + VENDED_CREDENTIALS で Iceberg 読み取り; S3 AP 経由 External Stage） |
 
 各ベンダーの `README.md` と `docs/ja/setup-guide.md` を参照してください。
 

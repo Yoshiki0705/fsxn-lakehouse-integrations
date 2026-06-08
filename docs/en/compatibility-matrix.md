@@ -164,7 +164,8 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE iceberg_rest` | ❌ Not Supported | `CONNECTION_TYPE_NOT_SUPPORTED` — iceberg_rest not in supported types | Use Spark cluster with manual catalog config |
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE GLUE` | ❌ Not Applicable | GLUE type requires host/httpPath/PAT (Databricks-to-Databricks only) | — |
 | **Databricks Spark Cluster** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ Expected | Not yet tested; technically same as EMR | Configure `spark.sql.catalog.s3tables` in cluster config |
-| **Snowflake** | External Iceberg Table (`CATALOG = 'ICEBERG_REST'`) | ❌ Not Supported | S3 Tables REST endpoint not a supported catalog type | COPY INTO → Managed Iceberg Table |
+| **Snowflake** | External Iceberg Table (`CATALOG = 'ICEBERG_REST'`) | ❌ Not Supported | S3 Tables REST endpoint not a supported catalog type | Use Glue Iceberg REST instead |
+| **Snowflake** | Glue Iceberg REST + VENDED_CREDENTIALS | ✅ Verified (2026-06-05) | Explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` in REST_CONFIG; schema with no default External Volume | CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH all working. LF column-level not enforced. |
 | **Snowflake** | External Volume (direct S3 read) | ✅ Verified | External Volume `s3tables_metadata_vol` created successfully | Requires column schema for Managed Iceberg Table |
 | **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ Expected | Documented path: Export → Stage → COPY INTO | Production-ready pattern |
 | **Redshift Spectrum** | Glue Federated Catalog | ✅ Expected | Same as Athena (Glue Catalog backend) | — |
@@ -209,8 +210,8 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | EMR Serverless + Parquet Read/Write | Functional Verified | Per AWS official tutorial. |
 | Bedrock Knowledge Base + Document Read | Functional Verified | Per AWS official tutorial. |
 | Snowflake + External Stage (LIST) | **API Verified** | LIST @stage succeeds (files visible). |
-| Snowflake + External Stage (GetObject) | **Blocked** | Session policy does not recognize S3 AP ARN format. Support case 01357726 filed. |
-| Snowflake + TO_FILE on S3 AP Stage | **Blocked** | `TO_FILE` rejects S3 AP-backed stage at SQL compilation time (different validation path from `BUILD_SCOPED_FILE_URL`/`PARSE_DOCUMENT` which succeed). Engineering request filed (Snowflake support case (May 2026), May 2026). Workaround: `COPY FILES` to internal stage → `TO_FILE` on internal stage. |
+| Snowflake + External Stage (GetObject) | **Verified** | Resolved (2026-06-02). Session policy issue was due to syntax error. GetObject works correctly with S3 AP External Stage. |
+| Snowflake + TO_FILE on S3 AP Stage | **Verified** | Resolved (2026-06-02). `TO_FILE` works with string literal syntax and correct file path. Original failures were (a) identifier syntax, (b) non-existent file path. Cortex COMPLETE multimodal can read files from FSx for ONTAP via S3 AP. |
 | Snowflake + BUILD_SCOPED_FILE_URL on S3 AP Stage | **Functional Verified** | Works correctly on FSx S3 AP external stage. |
 | Snowflake + PARSE_DOCUMENT on S3 AP Stage | **Functional Verified** | Works correctly on FSx S3 AP external stage. |
 | Snowflake + Managed Iceberg Table (COPY INTO from S3 AP Stage) | **Functional Verified** | COPY INTO from FSx S3 AP External Stage → Managed Iceberg Table confirmed. 64-day deduplication works. Horizon REST Catalog exposes to external engines with governance enforcement. |
@@ -428,15 +429,16 @@ This explains the observed behavior where LIST operations succeed but GetObject/
 
 | Platform | Read (LIST) | Read (GetObject) | Write | Governance Path |
 |----------|:-----------:|:-----------------:|:-----:|:---------------:|
-| Databricks (Unity Catalog) | ✅ | ❌ Blocked | ❌ Blocked | Blocked |
+| Databricks (Unity Catalog) | ✅ | ❌ Blocked | ❌ Blocked | Blocked (session policy) |
 | Databricks (Instance Profile + boto3) | ✅ | ✅ | ✅ | Bypasses UC |
-| Snowflake (External Stage) | ✅ | ❌ Blocked | N/A (read-only) | Blocked |
+| Snowflake (External Stage) | ✅ | ✅ Verified | N/A (read-only) | Working (2026-06-02) |
+| Snowflake (Iceberg via Glue REST) | ✅ | ✅ Verified | N/A (external catalog) | VENDED_CREDENTIALS (2026-06-05) |
 
 ### Resolution Path
 
-1. **Vendor session policy update**: Both vendors need to update their session policies to support S3 Access Point ARN format (`arn:aws:s3:region:account:accesspoint/name/object/*`)
-2. **Timeline**: Unknown — depends on vendor roadmap prioritization
-3. **Interim recommendation**: For Databricks, use Instance Profile + boto3 for PoC/demo purposes (not production). For Snowflake, no workaround available.
+1. **Databricks**: UC does not support S3 Tables. Internal product request DB-I-15824 tracking. Use Instance Profile + boto3 for PoC/demo (not production).
+2. **Snowflake**: ✅ Fully resolved. External Stage (GetObject, TO_FILE, PARSE_DOCUMENT, BUILD_SCOPED_FILE_URL) and Iceberg via Glue REST + VENDED_CREDENTIALS both working.
+3. **Interim recommendation**: For Databricks, use DataSync → S3 → UC External Table pattern. For Snowflake, use Glue REST + VENDED_CREDENTIALS for Iceberg metadata and External Stage for file access.
 
 ### AWS Support Confirmation
 

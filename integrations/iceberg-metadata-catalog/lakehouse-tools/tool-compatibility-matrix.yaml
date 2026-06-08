@@ -2,7 +2,7 @@
 # Lakehouse Tool Compatibility Matrix
 # =============================================================================
 # Purpose: Track which engines can access S3 Tables metadata via Iceberg REST
-# Last updated: 2026-06-01
+# Last updated: 2026-06-08
 # =============================================================================
 
 access_paths:
@@ -162,20 +162,21 @@ engines:
 
   snowflake:
     name: "Snowflake"
-    access_path: "Glue REST + vended credentials"
-    status: "blocked"
-    tested_date: "2026-06-02"
+    access_path: "Glue REST + VENDED_CREDENTIALS"
+    status: "verified"
+    tested_date: "2026-06-05"
     notes: |
-      VENDED_CREDENTIALS mode confirmed incompatible with Glue Iceberg REST (2026-06-02).
-      Snowflake Support confirmed: loadTable response must include s3.access-key-id,
-      s3.secret-access-key, s3.session-token. Glue REST does not provide these.
-      Error 004174 is the expected behavior when credentials are absent.
-      ALTERNATIVES:
-      - Object Store catalog (read metadata file directly, manual refresh)
-      - Metadata sync to Snowflake managed table (for Cortex Search/Intelligence)
-      - Wait for AWS to add credential vending to Glue REST
-      TO_FILE on S3 AP stage: syntax issue identified (string literal required),
-      retest pending (Snowflake support investigation).
+      ✅ FULLY WORKING as of 2026-06-05.
+      CREATE ICEBERG TABLE: Success (5.9s)
+      SELECT * LIMIT 5: Success, 5 rows returned (1.6s)
+      Query ID: 01c4e515-0003-ee3c-0003-6a86002d62b2
+
+      CRITICAL: ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS must be explicit in REST_CONFIG.
+      Default (EXTERNAL_VOLUME_CREDENTIALS) fails because ListObjectsV2 is blocked on S3 Tables.
+      Table must be in schema with NO default EXTERNAL_VOLUME.
+      AWS side requires: register-resource --with-federation for S3 Tables ARN.
+
+      PENDING: AUTO_REFRESH, time travel, column-level permissions.
     validation_doc: "glue-rest-vended-credentials-validation.md"
 
 catalog_authority_rule: |

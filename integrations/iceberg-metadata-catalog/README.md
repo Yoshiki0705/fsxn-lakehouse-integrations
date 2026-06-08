@@ -134,8 +134,8 @@ integrations/iceberg-metadata-catalog/
 | Databricks UC Foreign Catalog | 🔄 | Follow-up submitted to support (2026-06-01); required path for governed access |
 | Databricks Delta Sharing | ❌ | Sharing server uses same UC credentials; cannot bypass S3 AP session policy |
 | Databricks NFS → UC Volume | ❌ | Cloud storage URIs only; NFS/FUSE mount paths not supported |
-| Snowflake (Glue REST) | ❌ Blocked | Glue REST does not implement credential vending (`/credentials` returns UnknownOperationException) |
-| Snowflake (S3 Tables direct) | ⚠️ | Not a supported catalog type in tested path |
+| Snowflake (Glue REST + VENDED_CREDENTIALS) | ✅ Verified | Explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` + no External Volume; CREATE TABLE + SELECT working (2026-06-05) |
+| Snowflake (S3 Tables direct) | ⚠️ | Not a supported catalog type — use Glue REST instead |
 | Snowflake External Stage | ✅ | FSx S3 AP works (LIST, SELECT, COPY, TO_FILE + Cortex AI all verified) |
 
 Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platform-compatibility.yaml)

@@ -10,14 +10,98 @@ Document the validation of Snowflake CATALOG INTEGRATION with AWS Glue Iceberg R
 
 | Step | Status | Notes |
 |---|---|---|
-| CATALOG INTEGRATION created | ✅ | `ICEBERG_REST` + `AWS_GLUE` + `VENDED_CREDENTIALS` |
+| CATALOG INTEGRATION created | ✅ | `ICEBERG_REST` + `AWS_GLUE` + `VENDED_CREDENTIALS` (explicit) |
 | DESCRIBE CATALOG INTEGRATION | ✅ | Returns valid IAM credentials |
-| CREATE ICEBERG TABLE | ❌ | "Failed to retrieve credentials from the Catalog" |
-| Support case active | 🔄 | Snowflake + AWS support engaged |
+| CREATE ICEBERG TABLE | ✅ | Success (5.9s) — 2026-06-05 |
+| SELECT * LIMIT 5 | ✅ | 5 rows returned (1.6s) — 2026-06-05 |
+| COUNT(*) | 🔄 | Pending validation |
+| Time travel (AT/BEFORE TIMESTAMP) | 🔄 | Pending validation |
+| AUTO_REFRESH | 🔄 | Asked Snowflake Support |
+| Lake Formation column-level | 🔄 | Asked Snowflake Support |
+| Support case | ✅ | Case #01364260 — resolved, follow-up questions pending |
 
-## Configuration
+## ✅ BREAKTHROUGH: VENDED_CREDENTIALS Working (2026-06-05)
 
-### Catalog Integration
+**Query ID**: `01c4e515-0003-ee3c-0003-6a86002d62b2`
+
+### Root Cause of Previous Failures
+
+`ACCESS_DELEGATION_MODE` defaults to `EXTERNAL_VOLUME_CREDENTIALS` when not explicitly specified. In this mode, Snowflake validates storage access through the External Volume path, which triggers `ListObjectsV2` against S3 Tables internal buckets — an operation that returns `MethodNotAllowed`.
+
+### Working Configuration
+
+**Key requirements:**
+1. `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` must be **explicitly** specified in `REST_CONFIG`
+2. Table must be created in a schema with **no default EXTERNAL_VOLUME**
+3. `CREATE TABLE` must **not** include `EXTERNAL_VOLUME` parameter
+
+```sql
+-- 1. Catalog Integration (explicit VENDED_CREDENTIALS)
+CREATE OR REPLACE CATALOG INTEGRATION s3tables_glue_rest_int
+  CATALOG_SOURCE = ICEBERG_REST
+  TABLE_FORMAT = ICEBERG
+  CATALOG_NAMESPACE = 'metadata'
+  REST_CONFIG = (
+    CATALOG_URI = 'https://glue.ap-northeast-1.amazonaws.com/iceberg'
+    CATALOG_API_TYPE = AWS_GLUE
+    CATALOG_NAME = '<ACCOUNT_ID>:s3tablescatalog/fsxn-metadata-catalog'
+    ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS
+  )
+  REST_AUTHENTICATION = (
+    TYPE = SIGV4
+    SIGV4_IAM_ROLE = 'arn:aws:iam::<ACCOUNT_ID>:role/fsxn-snowflake-verification-role'
+    SIGV4_SIGNING_REGION = 'ap-northeast-1'
+  )
+  ENABLED = TRUE;
+
+-- 2. Schema WITHOUT default EXTERNAL_VOLUME
+CREATE SCHEMA FSXN_LAKEHOUSE.S3TABLES_VENDED;
+USE SCHEMA FSXN_LAKEHOUSE.S3TABLES_VENDED;
+
+-- 3. Table WITHOUT EXTERNAL_VOLUME parameter
+CREATE ICEBERG TABLE s3tables_vended_creds_test
+  CATALOG = 's3tables_glue_rest_int'
+  CATALOG_TABLE_NAME = 'unstructured_files';
+
+-- 4. Query — SUCCESS
+SELECT * FROM s3tables_vended_creds_test LIMIT 5;
+-- Returns: FILE_ID, FILE_PATH, FILE_NAME, FILE_TYPE, FILE_SIZE, CREATED_AT, MODIFIED_AT
+```
+
+### AWS-Side Prerequisites
+
+```bash
+# Register S3 Tables resource with Lake Formation (--with-federation is REQUIRED)
+aws lakeformation register-resource \
+  --resource-arn "arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog" \
+  --role-arn "arn:aws:iam::<ACCOUNT_ID>:role/S3TablesRoleForLakeFormation" \
+  --with-federation
+
+# IAM role policy must include:
+# - glue:GetTable, glue:GetDatabase, glue:GetCatalog
+# - lakeformation:GetDataAccess
+# - s3tables:GetTableBucket, s3tables:GetTable, s3tables:GetNamespace
+# - s3tables:GetTableData, s3tables:GetTableMetadataLocation
+
+# IAM trust policy must include Snowflake's External ID
+# (obtained from DESCRIBE CATALOG INTEGRATION output)
+```
+
+### How VENDED_CREDENTIALS Works (Confirmed)
+
+In VENDED_CREDENTIALS mode:
+1. Snowflake calls Glue REST `loadTable` with appropriate delegation headers
+2. Lake Formation (via `GetTemporaryGlueTableCredentials`) returns temporary storage credentials
+3. These credentials are included in the `loadTable` response config map
+4. Snowflake uses these credentials to access data files directly
+5. **No ListObjectsV2 is required** — Snowflake reads files by exact path from Iceberg metadata
+
+## Historical Configuration (Before Fix)
+
+> **Note**: The configuration below was from initial testing that FAILED.
+> See "✅ BREAKTHROUGH" section above for the working configuration.
+
+### Original Catalog Integration (FAILED — missing explicit ACCESS_DELEGATION_MODE)
 
 ```sql
 CREATE OR REPLACE CATALOG INTEGRATION s3tables_glue_rest_int
@@ -63,11 +147,20 @@ CREATE OR REPLACE ICEBERG TABLE test_metadata
 | IAM role has Glue permissions (GetCatalog, GetDatabase, GetTable, etc.) | ✅ | Policy attached |
 | IAM role has S3 Tables permissions | ✅ | s3tables:* granted |
 | IAM role has Lake Formation permissions | ✅ | lakeformation:GetDataAccess |
+| Lake Formation resource registered with --with-federation | ✅ | Required for credential vending |
 | Lake Formation AllowFullTableExternalDataAccess = true | ✅ | Set for testing |
 | Glue REST endpoint responds to Snowflake | ✅ | DESCRIBE returns credentials |
-| Credential vending returns storage credentials | ❌ | This is the failure point |
-| SYSTEM$LIST_NAMESPACES_FROM_CATALOG | TBD | Not yet tested |
-| SYSTEM$LIST_ICEBERG_TABLES_FROM_CATALOG | TBD | Not yet tested |
+| ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS explicit | ✅ | Critical fix |
+| Schema has no default EXTERNAL_VOLUME | ✅ | S3TABLES_VENDED schema |
+| CREATE TABLE without EXTERNAL_VOLUME parameter | ✅ | Working |
+| Credential vending returns storage credentials | ✅ | **CONFIRMED WORKING 2026-06-05** |
+| CREATE ICEBERG TABLE | ✅ | Success (5.9s) |
+| SELECT * query | ✅ | 5 rows returned (1.6s) |
+| SYSTEM$VERIFY_CATALOG_INTEGRATION | ✅ | "Statement executed successfully" |
+| COUNT(*) | ✅ | 170 rows (141ms) — 2026-06-08 |
+| Time travel (AT/BEFORE TIMESTAMP) | ⚠️ | Available per Snowflake docs; returns "not available" on newly created table (expected — no prior snapshots) |
+| AUTO_REFRESH | ✅ | Enabled (131ms), 30s interval — 2026-06-08 |
+| Lake Formation column-level permissions | ❌ | **NOT SUPPORTED** via VENDED_CREDENTIALS (2026-06-08). AllowFullTableExternalDataAccess=false blocks all access. |
 
 ## Debugging Steps
 
@@ -87,9 +180,15 @@ CREATE ICEBERG TABLE test_metadata
   CATALOG_TABLE_NAME = 'unstructured_files';
 ```
 
-## Hypothesis: Failure Point
+## Hypothesis History (Resolved)
 
-**Confirmed 2026-06-01**: The AWS Glue Iceberg REST endpoint does NOT implement the Iceberg REST `/credentials` endpoint. Calling `POST /v1/.../credentials` returns `UnknownOperationException`. The `X-Iceberg-Access-Delegation: vended-credentials` header in `loadTable` also does not return storage credentials in the response config.
+### Original Hypothesis (CONFIRMED then RESOLVED)
+
+**Initial finding (2026-06-01)**: The AWS Glue Iceberg REST endpoint does NOT implement the Iceberg REST `/credentials` endpoint. Calling `POST /v1/.../credentials` returns `UnknownOperationException`.
+
+**Resolution (2026-06-05)**: This finding remains true, but is NOT the blocker. Lake Formation credential vending works through a proprietary mechanism (`GetTemporaryGlueTableCredentials`) that is triggered when `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` is explicitly set. The credentials are returned within the `loadTable` response config map, not via a separate `/credentials` endpoint.
+
+**Key insight**: The previous failures were caused by `ACCESS_DELEGATION_MODE` defaulting to `EXTERNAL_VOLUME_CREDENTIALS`, NOT by missing credential vending capability. When explicitly set to `VENDED_CREDENTIALS`, the Glue REST + Lake Formation stack correctly vends temporary credentials to Snowflake.
 
 **Snowflake's expected credential format (officially confirmed by Snowflake Support 2026-06-02, Snowflake support confirmation)**:
 When `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS`, Snowflake expects the Iceberg REST `loadTable` response to include the standard Apache Iceberg credential fields within the response configuration map:
@@ -126,13 +225,14 @@ Lake Formation **does** support credential vending for S3 Tables — but through
 - **Standard Glue tables (non-S3 Tables)**: Snowflake + Lake Formation works in **public preview** with `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` [ref: Snowflake docs]. However, this does NOT extend to S3 Tables accessed via `s3tablescatalog`.
 - **Feature request**: Submitted to AWS Glue/Lake Formation team for standard Iceberg REST `/credentials` endpoint implementation.
 
-**Strategic paths for Snowflake + S3 Tables**:
-| Timeline | Path | Description |
-|---|---|---|
-| Now | Metadata sync | PyIceberg export → S3 → Snowflake COPY INTO |
-| Now | External Stage + TO_FILE | File AI analysis (confirmed working) |
-| Medium-term | ETL to standard Glue table | S3 Tables → standard Glue Iceberg on S3 → Snowflake VENDED_CREDENTIALS (public preview + Lake Formation) |
-| Long-term | AWS implements `/credentials` | Feature request submitted; no public ETA |
+**Strategic paths for Snowflake + S3 Tables (UPDATED 2026-06-05)**:
+| Timeline | Path | Status | Description |
+|---|---|---|---|
+| ✅ NOW | Glue REST + VENDED_CREDENTIALS | **WORKING** | Direct Iceberg query with explicit ACCESS_DELEGATION_MODE |
+| ✅ NOW | External Stage + TO_FILE | **WORKING** | File AI analysis via S3 AP (Cortex COMPLETE) |
+| Superseded | Metadata sync | Available but less needed | PyIceberg export → S3 → Snowflake COPY INTO |
+| Superseded | ETL to standard Glue table | Available but less needed | Direct access now works |
+| N/A | AWS implements `/credentials` | Not needed | Lake Formation proprietary mechanism works |
 
 **Previous hypothesis** (now confirmed):
 ~~1. Glue REST `/v1/credentials` endpoint not returning expected format for S3 Tables federated catalog~~
@@ -165,15 +265,17 @@ CREATE ICEBERG TABLE FSXN_LAKEHOUSE.PUBLIC.s3tables_metadata
 
 **Challenge for S3 Tables**: The S3 Tables internal bucket path format may require additional investigation to determine if Snowflake's External Volume can resolve the internal S3 paths correctly.
 
-### 2. Next Steps for Resolution
+### 2. Resolution Status (Updated 2026-06-08)
 
 | Action | Owner | Status |
 |---|---|---|
 | Provide loadTable response evidence to Snowflake | Customer (us) | ✅ Done (2026-06-02) |
-| Run SYSTEM$VERIFY_CATALOG_INTEGRATION | Customer (us) | Pending |
-| Evaluate Object Store catalog as workaround | Customer (us) | Pending |
-| Determine if credential vending will be added to Glue REST | AWS | Open (AWS support investigation) |
-| Snowflake product team tracking | Snowflake | Asked (2026-06-02) |
+| Run SYSTEM$VERIFY_CATALOG_INTEGRATION | Customer (us) | ✅ Done — "Statement executed successfully" |
+| Test with explicit VENDED_CREDENTIALS + no External Volume | Customer (us) | ✅ Done — **SUCCESS** (2026-06-05) |
+| Report success to Snowflake Support | Customer (us) | ✅ Done (2026-06-08) |
+| Validate AUTO_REFRESH, time travel, column-level | Customer (us) | 🔄 Pending (asked in follow-up) |
+| Snowflake Support response to follow-up questions | Snowflake | 🔄 Pending |
+| Documentation improvement (KB article for S3 Tables + VENDED_CREDENTIALS) | Snowflake | 🔄 Requested (2026-06-08) |
 
 ## References
 

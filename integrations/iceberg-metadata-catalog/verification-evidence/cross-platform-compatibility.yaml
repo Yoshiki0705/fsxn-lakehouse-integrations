@@ -5,13 +5,13 @@
 # This separates "platform capability" from "our tested path"
 # =============================================================================
 
-tested_date: "2026-05-31"
+tested_date: "2026-06-08"
 region: "ap-northeast-1"
 
 review_policy:
   revalidate_after_days: 90
-  last_reviewed: "2026-06-01"
-  next_review_due: "2026-08-30"
+  last_reviewed: "2026-06-08"
+  next_review_due: "2026-09-06"
   reason: "Databricks/Snowflake/S3 Tables interoperability evolves rapidly"
 
 platforms:
@@ -92,65 +92,75 @@ platforms:
 
   snowflake:
     tested_paths:
+      - name: "Glue Iceberg REST + VENDED_CREDENTIALS (correct configuration)"
+        result: "verified"
+        tested_date: "2026-06-05"
+        status: "verified"
+        notes: |
+          ✅ FULLY WORKING as of 2026-06-05.
+          CREATE ICEBERG TABLE: Success (5.9s)
+          SELECT * LIMIT 5: Success, 5 rows returned (1.6s)
+          Query ID: 01c4e515-0003-ee3c-0003-6a86002d62b2
+
+          CRITICAL CONFIGURATION:
+          - ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS must be EXPLICIT in REST_CONFIG
+          - Table must be created in a schema with NO default EXTERNAL_VOLUME
+          - CREATE TABLE must NOT specify EXTERNAL_VOLUME parameter
+
+          AWS PREREQUISITES:
+          - aws lakeformation register-resource --with-federation (for S3 Tables ARN)
+          - IAM role: glue:GetTable, glue:GetDatabase, lakeformation:GetDataAccess, s3tables:*
+          - Lake Formation data location registration
+
+          ROOT CAUSE OF PREVIOUS FAILURES:
+          ACCESS_DELEGATION_MODE defaults to EXTERNAL_VOLUME_CREDENTIALS when not specified.
+          This causes Snowflake to validate storage via External Volume path, which triggers
+          ListObjectsV2 against S3 Tables internal buckets (MethodNotAllowed).
+          VENDED_CREDENTIALS mode uses loadTable response credentials directly, bypassing ListObjectsV2.
+
+          PENDING VALIDATION:
+          - Lake Formation column-level enforcement (confirmed NOT working via VENDED_CREDENTIALS - 2026-06-08)
+
+          ADDITIONAL VALIDATIONS COMPLETED (2026-06-08):
+          - COUNT(*): 170 rows (141ms) ✅
+          - DESCRIBE TABLE: 23 columns (70ms) ✅
+          - AUTO_REFRESH = TRUE: enabled (131ms) ✅
+          - SHOW ICEBERG TABLES: UNMANAGED type confirmed ✅
+          - Time Travel: available (snapshot-dependent, no past snapshot on newly created table)
+          - Lake Formation column-level: NOT SUPPORTED. AllowFullTableExternalDataAccess=false
+            blocks VENDED_CREDENTIALS path entirely regardless of explicit grants.
       - name: "External Iceberg Table with S3 Tables REST endpoint as catalog"
         result: "not_supported_catalog_type"
         status: "observed_limitation"
-        notes: "S3 Tables REST is not in Snowflake's supported catalog type list"
-      - name: "Glue Iceberg REST integration (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS)"
-        result: "confirmed_incompatible"
-        tested_date: "2026-06-02"
-        status: "blocked"
-        notes: |
-          CATALOG INTEGRATION created successfully. DESCRIBE returns valid IAM credentials.
-          CREATE ICEBERG TABLE fails with Error 004174 (credential vending).
-          ROOT CAUSE CONFIRMED by both sides (2026-06-02):
-          - Snowflake Support confirmed: VENDED_CREDENTIALS requires loadTable response to include
-            s3.access-key-id, s3.secret-access-key, s3.session-token in config map.
-          - Our loadTable test confirmed: these fields are ABSENT from Glue REST response
-            (even with X-Iceberg-Access-Delegation: vended-credentials header).
-          - Glue REST /credentials endpoint returns UnknownOperationException.
-          - Snowflake states no known Snowflake-side issues — problem is AWS Glue REST not vending credentials.
-          ALTERNATIVE: Object Store catalog integration (read metadata file directly, manual refresh).
+        notes: "S3 Tables REST is not in Snowflake's supported catalog type list. Use Glue REST instead."
       - name: "Object Store catalog integration (read metadata file directly)"
         result: "access_denied"
         tested_date: "2026-06-02"
         status: "blocked"
         notes: |
-          Tested with correct S3 Tables internal bucket path and External Volume.
-          AssumeRole succeeds but Snowflake receives 'access denied' when attempting
-          to read metadata file. IAM role can read the file directly (verified via CLI),
-          but Snowflake's access pattern (likely includes ListBucket or other operations)
-          is blocked by S3 Tables internal bucket restrictions.
-          S3 Tables internal buckets block ListObjectsV2 (MethodNotAllowed) — Snowflake
-          likely requires this operation during table creation/metadata resolution.
-          CONCLUSION: Object Store catalog is NOT viable for S3 Tables internal buckets.
-          Metadata must be exported to a standard S3 bucket first.
-      - name: "Glue REST + EXTERNAL_VOLUME_CREDENTIALS"
+          S3 Tables internal buckets block ListObjectsV2 (MethodNotAllowed).
+          Object Store catalog is NOT viable for S3 Tables internal buckets.
+          USE INSTEAD: Glue REST + VENDED_CREDENTIALS (verified working).
+      - name: "Glue REST + EXTERNAL_VOLUME_CREDENTIALS (default mode)"
         result: "access_denied"
         tested_date: "2026-06-02"
         status: "blocked"
         notes: |
-          Tested per Snowflake Support recommendation (2026-06-02).
-          Catalog Integration recreated without ACCESS_DELEGATION_MODE (defaults to
-          EXTERNAL_VOLUME_CREDENTIALS). IAM trust policy updated with new External ID.
-          Same 'access denied' error as Object Store path.
-          Query ID: 01c4c702-0003-a2c8-0003-6a860025f20a
-          CONCLUSION: The blocker is NOT credential vending mode — it is the S3 Tables
-          internal bucket itself rejecting Snowflake's storage access pattern.
-          All three catalog paths (VENDED_CREDENTIALS, Object Store, EXTERNAL_VOLUME_CREDENTIALS)
-          are blocked by the same S3 Tables internal bucket restriction.
+          EXTERNAL_VOLUME_CREDENTIALS mode triggers ListObjectsV2 against S3 Tables
+          internal buckets, which returns MethodNotAllowed.
+          USE INSTEAD: Explicit ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS (verified working).
       - name: "Snowflake Open Catalog (Polaris) as Iceberg catalog"
         result: "not_tested"
         status: "strategic_alternative"
-        notes: "Polaris is GA. Could serve as catalog for new metadata tables"
+        notes: "Polaris is GA. Could serve as catalog for new metadata tables. Less urgent now that Glue REST + VENDED_CREDENTIALS works."
       - name: "COPY INTO from S3 export of metadata"
         result: "available"
-        status: "workaround"
-        notes: "Works but negates zero-copy for metadata. Raw files stay on FSx"
+        status: "workaround_superseded"
+        notes: "Works but no longer needed for metadata access — Glue REST + VENDED_CREDENTIALS provides zero-copy access."
       - name: "Metadata sync to Snowflake for Cortex Search / Intelligence"
         result: "not_tested"
         status: "recommended_activation_pattern"
-        notes: "Sync redacted metadata only; raw files remain on FSx"
+        notes: "May still be useful for Cortex Search indexing; but direct Iceberg query now available."
       - name: "TO_FILE with S3 Access Point-backed External Stage"
         result: "verified"
         tested_date: "2026-06-02"

@@ -67,8 +67,8 @@ python shared/scripts/validate-access.py --access-point-alias $AP_ALIAS --region
 | Athena | `integrations/athena/` | ✅ Security Verified |
 | Glue | `integrations/glue/` | ✅ Functional Verified |
 | Delta Lake OSS | `integrations/delta-lake-oss/` | ✅ Read Verified / ❌ Write |
-| Databricks | `integrations/databricks/` | ⚠️ Blocked (session policy) |
-| Snowflake | `integrations/snowflake/` | ⚠️ Blocked (session policy) |
+| Databricks | `integrations/databricks/` | ⚠️ Blocked (UC does not support S3 Tables) |
+| Snowflake | `integrations/snowflake/` | ✅ Verified (Iceberg via Glue REST + VENDED_CREDENTIALS; External Stage via S3 AP) |
 
 See each vendor's `README.md` and `docs/en/setup-guide.md` for details.
 
