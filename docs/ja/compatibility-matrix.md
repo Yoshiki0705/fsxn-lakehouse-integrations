@@ -136,7 +136,8 @@ FSx S3 Access Points 上の分析ワークロードを計画する際：
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE iceberg_rest` | ❌ 未サポート | `CONNECTION_TYPE_NOT_SUPPORTED` — iceberg_rest がサポートタイプに含まれない | Spark クラスターで手動カタログ設定 |
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE GLUE` | ❌ 非該当 | GLUE タイプは host/httpPath/PAT が必要 (Databricks-to-Databricks 用) | — |
 | **Databricks Spark クラスター** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ 想定動作 | 未テスト; 技術的には EMR と同じ | クラスター設定で `spark.sql.catalog.s3tables` を設定 |
-| **Snowflake** | External Iceberg Table (`CATALOG = 'ICEBERG_REST'`) | ❌ 未サポート | S3 Tables REST endpoint はサポートされるカタログタイプではない | COPY INTO → Managed Iceberg Table |
+| **Snowflake** | External Iceberg Table (`CATALOG = 'ICEBERG_REST'`) | ❌ 未サポート | S3 Tables REST endpoint はサポートされるカタログタイプではない | Glue Iceberg REST を使用 |
+| **Snowflake** | Glue Iceberg REST + VENDED_CREDENTIALS | ✅ 検証済み (2026-06-05) | REST_CONFIG に明示的 `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS`; デフォルト External Volume なしのスキーマ | CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH 全動作。LF カラムレベル非適用。 |
 | **Snowflake** | External Volume (直接 S3 読み取り) | ✅ 検証済み | External Volume `s3tables_metadata_vol` 作成成功 | Managed Iceberg Table にはカラムスキーマ指定が必要 |
 | **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ 想定動作 | 設計ドキュメント記載のパス: エクスポート → Stage → COPY INTO | 本番対応パターン |
 | **Redshift Spectrum** | Glue Federated Catalog | ✅ 想定動作 | Athena と同じ (Glue Catalog バックエンド) | — |
@@ -179,7 +180,7 @@ FSx S3 Access Points 上の分析ワークロードを計画する際：
 | Bedrock Knowledge Base + ドキュメント読み取り | 機能検証済み | AWS 公式チュートリアルが RAG インジェストを検証 |
 | Databricks + Parquet 読み取り | API 検証済み | External Location の登録と読み取りを確認 |
 | Snowflake + Parquet 読み取り | API 検証済み | External Stage の作成とクエリを確認 |
-| Snowflake + TO_FILE（S3 AP ステージ） | **ブロック** | `TO_FILE` が SQL コンパイル時に S3 AP ステージを拒否（`BUILD_SCOPED_FILE_URL`/`PARSE_DOCUMENT` とは異なる検証パス）。エンジニアリングリクエスト提出済み（Snowflake support case (May 2026), 2026年5月）。ワークアラウンド: `COPY FILES` → 内部ステージ → `TO_FILE`。 |
+| Snowflake + TO_FILE（S3 AP ステージ） | **検証済み** | 解決済み (2026-06-02)。文字列リテラル構文 + 正しいファイルパスで `TO_FILE` が正常動作。元の失敗は (a) 識別子構文エラー (b) 存在しないファイルパスが原因。Cortex COMPLETE マルチモーダルで FSx for ONTAP 上のファイルを S3 AP 経由で読み取り可能。 |
 | Snowflake + BUILD_SCOPED_FILE_URL（S3 AP ステージ） | **機能検証済み** | FSx S3 AP External Stage で正常動作。 |
 | Snowflake + PARSE_DOCUMENT（S3 AP ステージ） | **機能検証済み** | FSx S3 AP External Stage で正常動作。 |
 | Snowflake + Managed Iceberg Table（S3 AP Stage から COPY INTO） | **機能検証済み** | FSx S3 AP External Stage → Managed Iceberg Table への COPY INTO 確認。64日間重複排除動作。Horizon REST Catalog が外部エンジンにガバナンス強制付きで公開。 |

@@ -34,14 +34,14 @@ Track remaining validation items identified through expert review. Items are gro
 
 | # | Validation | Priority | Status |
 |---|-----------|:---:|:---:|
-| C-1 | CATALOG INTEGRATION (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS): credential vending | High | ✅ **Credential vending RESOLVED** (2026-06-03): Missing `register-resource --with-federation` was the root cause. After LF S3 Tables integration setup, loadTable returns s3.access-key-id/secret/token. However, CREATE ICEBERG TABLE fails at data access: S3 Tables internal buckets reject ListObjectsV2 (MethodNotAllowed). GetObject works with vended creds. Snowflake requires ListObjectsV2 during table creation — fundamental incompatibility with S3 Tables internal bucket API. |
-| C-2 | CREATE ICEBERG TABLE + SELECT query | High | ❌ Blocked by C-1 (fundamental incompatibility confirmed by both Snowflake Support and our loadTable evidence) |
-| C-3 | AUTO_REFRESH behavior (Iceberg snapshot detection) | Medium | ❌ Blocked by C-1 |
+| C-1 | CATALOG INTEGRATION (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS): credential vending | High | ✅ **FULLY WORKING** (2026-06-05): Explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` + schema with no default EXTERNAL_VOLUME + no EXTERNAL_VOLUME in CREATE TABLE. Previous failures were due to default mode (EXTERNAL_VOLUME_CREDENTIALS) triggering ListObjectsV2. AWS prerequisite: `register-resource --with-federation`. |
+| C-2 | CREATE ICEBERG TABLE + SELECT query | High | ✅ **VERIFIED** (2026-06-05): CREATE SUCCESS (5.9s), SELECT * LIMIT 5 SUCCESS (1.6s), 5 rows returned. Query ID: 01c4e515-0003-ee3c-0003-6a86002d62b2 |
+| C-3 | AUTO_REFRESH behavior (Iceberg snapshot detection) | Medium | ✅ **VERIFIED** (2026-06-08): `ALTER ICEBERG TABLE ... SET AUTO_REFRESH = TRUE` succeeds (131ms). Snowflake Support confirmed 30s refresh interval. SHOW ICEBERG TABLES shows UNMANAGED type. |
 | C-4 | Snowflake Open Catalog / Polaris as alternative catalog | Medium | TBD |
 | C-5 | Metadata sync to Snowflake managed table for Cortex Search | Medium | TBD |
 | C-6 | Horizon governance (Row Access Policy) on synced metadata | Low | TBD |
 | C-7 | Object Store catalog integration (read metadata file directly) | High | ❌ **Access Denied** (2026-06-02): AssumeRole succeeds but Snowflake's access pattern (includes ListBucket) is blocked by S3 Tables internal bucket restrictions. Metadata must be exported to standard S3 bucket first. |
-| C-10 | Glue REST + EXTERNAL_VOLUME_CREDENTIALS | High | ❌ **Access Denied** (2026-06-02): Tested per Snowflake Support recommendation. Same S3 Tables internal bucket restriction. Blocker is NOT credential mode — it's the storage layer itself. |
+| C-10 | Glue REST + EXTERNAL_VOLUME_CREDENTIALS | High | ❌ **Root cause identified** (2026-06-05): EXTERNAL_VOLUME_CREDENTIALS is the DEFAULT mode. Triggers ListObjectsV2 which S3 Tables rejects. **RESOLUTION**: Use explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` instead (verified working). |
 | C-8 | TO_FILE with string literal syntax on S3 AP stage | Medium | ✅ **Verified** (2026-06-02): TO_FILE works with S3 AP stage using string literal syntax + correct file path. Original issues were (1) syntax error (identifier vs string literal) and (2) non-existent file path. NOT an S3 AP-specific limitation. |
 | C-9 | SYSTEM$VERIFY_CATALOG_INTEGRATION('S3TABLES_GLUE_REST_INT') | Medium | ✅ Healthy (2026-06-02): "Statement executed successfully" — connectivity confirmed |
 | C-11 | ETL S3 Tables → standard Glue Iceberg → Snowflake VENDED_CREDENTIALS | Medium | ❌ **Root Cause Found** (2026-06-03): Glue Iceberg REST endpoint ONLY supports loadTable for `s3tablescatalog` federated catalogs. Standard Glue Data Catalog tables return 403 even with admin credentials. This is NOT a permissions issue — it is a service scope limitation. ETL to standard Glue does NOT resolve Snowflake access via Glue Iceberg REST. The endpoint is designed exclusively for S3 Tables. |
@@ -62,7 +62,7 @@ Track remaining validation items identified through expert review. Items are gro
 
 | # | Validation | Priority | Status |
 |---|-----------|:---:|:---:|
-| E-1 | Lake Formation column-level: alternative registration path | High | TBD |
+| E-1 | Lake Formation column-level: alternative registration path | High | ❌ **Not supported via VENDED_CREDENTIALS** (2026-06-08): When `AllowFullTableExternalDataAccess=false`, VENDED_CREDENTIALS path is completely blocked regardless of explicit column/table-level grants or ExternalDataFilteringAllowList. Column-level governance must be implemented via Snowflake Horizon (Row Access Policy / Column Masking) or separate Iceberg tables. |
 | E-2 | LF-Tags taxonomy deployment and testing | Medium | ✅ Verified (tags created, assigned, grant succeeded) |
 | E-3 | Data perimeter: VPC endpoint + SCP enforcement | Medium | Pattern documented |
 | E-4 | Bedrock private connectivity (VPC endpoints) | Medium | Pattern documented |

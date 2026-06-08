@@ -10,14 +10,98 @@ S3 Tables アクセスのための vended credentials を使用した AWS Glue I
 
 | ステップ | 状態 | 備考 |
 |---|---|---|
-| CATALOG INTEGRATION 作成 | ✅ | `ICEBERG_REST` + `AWS_GLUE` + `VENDED_CREDENTIALS` |
+| CATALOG INTEGRATION 作成 | ✅ | `ICEBERG_REST` + `AWS_GLUE` + `VENDED_CREDENTIALS`（明示指定） |
 | DESCRIBE CATALOG INTEGRATION | ✅ | 有効な IAM credentials を返す |
-| CREATE ICEBERG TABLE | ❌ | "Failed to retrieve credentials from the Catalog" |
-| サポートケース対応中 | 🔄 | Snowflake + AWS サポートに連絡済み |
+| CREATE ICEBERG TABLE | ✅ | 成功 (5.9s) — 2026-06-05 |
+| SELECT * LIMIT 5 | ✅ | 5行返却 (1.6s) — 2026-06-05 |
+| COUNT(*) | ✅ | 170行 (141ms) — 2026-06-08 |
+| Time travel (AT/BEFORE TIMESTAMP) | ⚠️ | Snowflake ドキュメントで利用可能確認済み。新規作成テーブルでは過去スナップなし（想定通り） |
+| AUTO_REFRESH | ✅ | 有効化成功 (131ms)、30秒間隔 — 2026-06-08 |
+| Lake Formation カラムレベル権限 | ❌ | **VENDED_CREDENTIALS では非サポート** (2026-06-08)。AllowFullTableExternalDataAccess=false で全アクセスがブロックされる |
+| サポートケース | ✅ | Case #01364260 — クローズ確認済み |
 
-## 設定
+## ✅ ブレイクスルー: VENDED_CREDENTIALS 動作確認 (2026-06-05)
 
-### Catalog Integration
+**Query ID**: `01c4e515-0003-ee3c-0003-6a86002d62b2`
+
+### 以前の失敗の根本原因
+
+`ACCESS_DELEGATION_MODE` は明示指定しない場合 `EXTERNAL_VOLUME_CREDENTIALS` がデフォルト。このモードでは Snowflake が External Volume パスでストレージアクセスを検証し、S3 Tables 内部バケットに対して `ListObjectsV2` を発行 — `MethodNotAllowed` で失敗。
+
+### 動作する設定
+
+**重要要件:**
+1. `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` を `REST_CONFIG` に**明示的に**指定
+2. テーブルを**デフォルト EXTERNAL_VOLUME なし**のスキーマで作成
+3. `CREATE TABLE` に `EXTERNAL_VOLUME` パラメータを**含めない**
+
+```sql
+-- 1. Catalog Integration（VENDED_CREDENTIALS 明示指定）
+CREATE OR REPLACE CATALOG INTEGRATION s3tables_glue_rest_int
+  CATALOG_SOURCE = ICEBERG_REST
+  TABLE_FORMAT = ICEBERG
+  CATALOG_NAMESPACE = 'metadata'
+  REST_CONFIG = (
+    CATALOG_URI = 'https://glue.ap-northeast-1.amazonaws.com/iceberg'
+    CATALOG_API_TYPE = AWS_GLUE
+    CATALOG_NAME = '<ACCOUNT_ID>:s3tablescatalog/fsxn-metadata-catalog'
+    ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS
+  )
+  REST_AUTHENTICATION = (
+    TYPE = SIGV4
+    SIGV4_IAM_ROLE = 'arn:aws:iam::<ACCOUNT_ID>:role/fsxn-snowflake-verification-role'
+    SIGV4_SIGNING_REGION = 'ap-northeast-1'
+  )
+  ENABLED = TRUE;
+
+-- 2. デフォルト EXTERNAL_VOLUME なしのスキーマ
+CREATE SCHEMA FSXN_LAKEHOUSE.S3TABLES_VENDED;
+USE SCHEMA FSXN_LAKEHOUSE.S3TABLES_VENDED;
+
+-- 3. EXTERNAL_VOLUME パラメータなしのテーブル
+CREATE ICEBERG TABLE s3tables_vended_creds_test
+  CATALOG = 's3tables_glue_rest_int'
+  CATALOG_TABLE_NAME = 'unstructured_files';
+
+-- 4. クエリ — 成功
+SELECT * FROM s3tables_vended_creds_test LIMIT 5;
+-- 返却: FILE_ID, FILE_PATH, FILE_NAME, FILE_TYPE, FILE_SIZE, CREATED_AT, MODIFIED_AT
+```
+
+### AWS 側の前提条件
+
+```bash
+# S3 Tables リソースを Lake Formation に登録（--with-federation は必須）
+aws lakeformation register-resource \
+  --resource-arn "arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog" \
+  --role-arn "arn:aws:iam::<ACCOUNT_ID>:role/S3TablesRoleForLakeFormation" \
+  --with-federation
+
+# IAM ロールポリシーに必要:
+# - glue:GetTable, glue:GetDatabase, glue:GetCatalog
+# - lakeformation:GetDataAccess
+# - s3tables:GetTableBucket, s3tables:GetTable, s3tables:GetNamespace
+# - s3tables:GetTableData, s3tables:GetTableMetadataLocation
+
+# IAM trust policy に Snowflake の External ID を含める
+# （DESCRIBE CATALOG INTEGRATION の出力から取得）
+```
+
+### VENDED_CREDENTIALS の動作メカニズム（確認済み）
+
+VENDED_CREDENTIALS モードでは:
+1. Snowflake が適切な delegation ヘッダー付きで Glue REST `loadTable` を呼び出す
+2. Lake Formation（`GetTemporaryGlueTableCredentials` 経由）が一時ストレージ credentials を返す
+3. これらの credentials が `loadTable` レスポンスの config マップに含まれる
+4. Snowflake がこれらの credentials でデータファイルに直接アクセス
+5. **ListObjectsV2 は不要** — Snowflake は Iceberg メタデータからの正確なパスでファイルを読み取る
+
+## 過去の設定（修正前）
+
+> **注意**: 以下の設定は初期テストで**失敗**したものです。
+> 動作する設定は上記「✅ ブレイクスルー」セクションを参照してください。
+
+### 元の Catalog Integration（失敗 — ACCESS_DELEGATION_MODE の明示指定なし）
 
 ```sql
 CREATE OR REPLACE CATALOG INTEGRATION s3tables_glue_rest_int
@@ -44,13 +128,30 @@ CREATE OR REPLACE CATALOG INTEGRATION s3tables_glue_rest_int
 | IAM ロールに Glue 権限あり | ✅ | ポリシーアタッチ済み |
 | IAM ロールに S3 Tables 権限あり | ✅ | s3tables:* 付与 |
 | IAM ロールに Lake Formation 権限あり | ✅ | lakeformation:GetDataAccess |
+| Lake Formation リソース登録 (--with-federation) | ✅ | credential vending に必須 |
 | Lake Formation AllowFullTableExternalDataAccess = true | ✅ | テスト用に設定 |
 | Glue REST エンドポイントが Snowflake に応答 | ✅ | DESCRIBE が credentials を返す |
-| Credential vending がストレージ credentials を返す | ❌ | これが失敗ポイント |
+| ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS 明示指定 | ✅ | 重要な修正点 |
+| スキーマにデフォルト EXTERNAL_VOLUME なし | ✅ | S3TABLES_VENDED スキーマ |
+| CREATE TABLE に EXTERNAL_VOLUME パラメータなし | ✅ | 動作確認 |
+| Credential vending がストレージ credentials を返す | ✅ | **2026-06-05 動作確認** |
+| CREATE ICEBERG TABLE | ✅ | 成功 (5.9s) |
+| SELECT * クエリ | ✅ | 5行返却 (1.6s) |
+| SYSTEM$VERIFY_CATALOG_INTEGRATION | ✅ | "Statement executed successfully" |
+| COUNT(*) | ✅ | 170行 (141ms) — 2026-06-08 |
+| Time travel (AT/BEFORE TIMESTAMP) | ⚠️ | 利用可能（スナップショット保持依存）。新規テーブルでは過去スナップなし |
+| AUTO_REFRESH | ✅ | 有効化成功 (131ms)、30秒間隔 — 2026-06-08 |
+| Lake Formation カラムレベル権限 | ❌ | **VENDED_CREDENTIALS では非サポート** (2026-06-08) |
 
-## 仮説: 失敗ポイント
+## 仮説の履歴（解決済み）
 
-**2026-06-01 確認済み**: AWS Glue Iceberg REST エンドポイントは Iceberg REST `/credentials` エンドポイントを実装していません。`POST /v1/.../credentials` を呼び出すと `UnknownOperationException` が返されます。`loadTable` の `X-Iceberg-Access-Delegation: vended-credentials` ヘッダーもレスポンス config にストレージ credentials を返しません。
+### 元の仮説（確認後に解決）
+
+**初期発見 (2026-06-01)**: AWS Glue Iceberg REST エンドポイントは Iceberg REST `/credentials` エンドポイントを実装していない。`POST /v1/.../credentials` は `UnknownOperationException` を返す。
+
+**解決 (2026-06-05)**: この発見自体は正しいが、ブロッカーではなかった。Lake Formation の credential vending は独自メカニズム（`GetTemporaryGlueTableCredentials`）で動作し、`ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` が明示的に設定されている場合にトリガーされる。Credentials は `loadTable` レスポンスの config マップに含まれ、別の `/credentials` エンドポイント経由ではない。
+
+**核心的な知見**: 以前の失敗は credential vending 機能の欠如ではなく、`ACCESS_DELEGATION_MODE` が `EXTERNAL_VOLUME_CREDENTIALS` にデフォルト設定されていたことが原因。`VENDED_CREDENTIALS` を明示的に設定すると、Glue REST + Lake Formation スタックは Snowflake に正しく一時 credentials を返す。
 
 **Snowflake が期待する credential 形式（サポートにより 2026-06-02 確認）**:
 `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` の場合、Snowflake は loadTable レスポンスの config に以下を期待:
@@ -115,15 +216,17 @@ CREATE ICEBERG TABLE FSXN_LAKEHOUSE.PUBLIC.s3tables_metadata
 
 **S3 Tables に対する課題**: S3 Tables 内部バケットのパス形式が Snowflake の External Volume で正しく解決できるか追加調査が必要。
 
-### 2. 解決に向けた次のステップ
+### 2. 解決ステータス（2026-06-08 更新）
 
 | アクション | 担当 | 状態 |
 |---|---|---|
 | loadTable レスポンス証拠を Snowflake に提供 | 顧客（我々） | ✅ 完了 (2026-06-02) |
-| SYSTEM$VERIFY_CATALOG_INTEGRATION 実行 | 顧客（我々） | 未実行 |
-| Object Store catalog ワークアラウンドの評価 | 顧客（我々） | 未実行 |
-| Glue REST に credential vending が追加される予定か確認 | AWS | オープン (AWS support investigation) |
-| Snowflake プロダクトチームのトラッキング | Snowflake | 質問済み (2026-06-02) |
+| SYSTEM$VERIFY_CATALOG_INTEGRATION 実行 | 顧客（我々） | ✅ 完了 — "Statement executed successfully" |
+| VENDED_CREDENTIALS 明示指定 + External Volume なしでテスト | 顧客（我々） | ✅ 完了 — **成功** (2026-06-05) |
+| Snowflake サポートに成功報告 | 顧客（我々） | ✅ 完了 (2026-06-08) |
+| AUTO_REFRESH、time travel、カラムレベル権限の検証 | 顧客（我々） | 🔄 フォローアップで質問済み |
+| Snowflake サポートのフォローアップ質問回答 | Snowflake | 🔄 待ち |
+| ドキュメント改善（S3 Tables + VENDED_CREDENTIALS の KB 記事） | Snowflake | 🔄 リクエスト済み (2026-06-08) |
 
 ## 参考資料
 
