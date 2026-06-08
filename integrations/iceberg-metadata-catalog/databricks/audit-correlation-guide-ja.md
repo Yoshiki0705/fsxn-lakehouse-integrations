@@ -76,3 +76,45 @@ Databricks UC 監査ログは **credential 発行** を記録するが、credent
 - [Databricks system.access.audit](https://docs.databricks.com/aws/en/admin/system-tables/audit)
 - [AWS CloudTrail](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/)
 - [Lake Formation 監査ログ](https://docs.aws.amazon.com/lake-formation/latest/dg/cloudtrail-logging.html)
+
+## エビデンス相関マトリクス
+
+コンプライアンスレポートとインシデント調査のため、プラットフォーム間でエビデンスをマッピング：
+
+### メタデータアクセスエビデンス
+
+| エビデンス | Databricks ソース | AWS ソース | 相関キー |
+|----------|-----------------|------------|----------|
+| 誰がメタデータをクエリしたか | `system.access.audit` (user_identity) | CloudTrail (userIdentity.arn) | email → IAM ロールマッピング |
+| 何がアクセスされたか | UC オブジェクト名 (request_params) | Glue GetTable (requestParameters.tableName) | table_name |
+| いつ | event_time | CloudTrail eventTime | ±5分ウィンドウ |
+| Credential vending | loadTableCredentials アクション | AssumeRole / GetTemporaryCredentials | ロール ARN + セッション名 |
+
+### 生ファイルアクセスエビデンス
+
+| エビデンス | ソース | キーフィールド |
+|----------|--------|-------------|
+| S3 Access Point アクセス | S3 アクセスログ / CloudTrail データイベント | access_point_arn + key |
+| ONTAP ファイルシステム ID | ONTAP 監査ログ | SVM + ボリューム + パス |
+| IAM プリンシパル | CloudTrail | userIdentity.arn |
+| ネットワークソース | CloudTrail / VPC フローログ | sourceIPAddress |
+
+### 照合フィールド
+
+| フィールド | 目的 | 利用可能な場所 |
+|----------|------|-------------|
+| metadata `file_id` | メタデータレコードを生ファイルにリンク | Iceberg テーブル + Athena |
+| `iceberg_snapshot_id` | ポイントインタイムのメタデータ状態 | Iceberg $history + OpenSearch |
+| Databricks `query_id` / `statement_id` | 特定クエリ実行 | system.access.audit |
+| CloudTrail `eventID` | 特定 AWS API コール | CloudTrail ログ |
+| `scan_run_id` | 特定メタデータスキャン操作 | Iceberg テーブルメタデータ |
+
+### クロスプラットフォーム削除エビデンス
+
+| 削除対象 | エビデンスソース | 検証方法 |
+|---------|-------------|---------|
+| Iceberg メタデータレコード | Athena クエリ (is_deleted=true) | SELECT WHERE file_id = X |
+| Iceberg スナップショット有効期限 | S3 Tables サービスログ | スナップショットがアクセス不可を確認 |
+| OpenSearch インデックスエントリ | OpenSearch API レスポンス | file_id でドキュメント GET |
+| Snowflake 同期コピー | Snowflake query_history | 行が削除済みまたは Time Travel 期限切れを確認 |
+| FSx 上の生ファイル | ONTAP 監査ログ | ファイル削除イベントがログされている |
