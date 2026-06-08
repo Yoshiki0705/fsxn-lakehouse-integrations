@@ -35,7 +35,7 @@
 - [ ] Athena query compatibility (SELECT, COUNT, time travel)
 - [ ] EMR Spark compatibility (7.13.0+ required)
 - [ ] Snowflake compatibility (VENDED_CREDENTIALS, AUTO_REFRESH, time travel)
-- [ ] Databricks compatibility status documented (Foreign Iceberg GA revalidation)
+- [ ] Databricks compatibility status documented (retested 2026-06-09: still blocked)
 
 ### Cost
 - [ ] Metadata storage cost (S3 Tables)
