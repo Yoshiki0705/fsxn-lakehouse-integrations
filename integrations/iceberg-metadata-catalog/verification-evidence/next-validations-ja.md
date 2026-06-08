@@ -25,6 +25,7 @@
 | B-3 | Spark からの S3 Tables metadata table アクセス（$history、$manifests） | 中 | ❌ S3 Tables は Databricks で非サポート |
 | B-4 | Unity Catalog Foreign Iceberg: S3 Tables direct REST | 高 | ❌ **非サポート** (2026-06-02): S3 Tables は Databricks で非サポート。内部プロダクトリクエスト DB-I-15824 で追跡中。 |
 | B-5 | Unity Catalog Foreign Iceberg: Glue Iceberg REST | 高 | ❌ **非サポート** (2026-06-02): Iceberg REST カタログ用の UC connection type は現時点で存在しない。Glue foreign catalog サポートは Glue catalog/metastore API 経由のみ。 |
+| B-10 | Foreign Iceberg GA 後の再検証: HMS Federation + S3 Tables | 高 | ❌ **依然ブロック** (2026-06-09): Foreign Iceberg + Credential Vending GA (2026-05-28) 後に再テスト。Glue Connection ✅、Service Credential ✅、Storage Credential ✅ まで成功。しかし External Location 作成で `AWSBadRequestException` — S3 Tables 内部バケットが標準 S3 API (HeadBucket/ListBucket) を拒否。External Location なしでは Foreign Catalog の `authorized_paths` を満たせない。根本原因は Snowflake と同一（S3 Tables 内部バケットの API 制約）だが、Snowflake は VENDED_CREDENTIALS で回避、Databricks は回避策なし。 |
 | B-6 | Databricks SQL Warehouse: CREATE CONNECTION TYPE iceberg_rest | 低 | 制限確認済み (2026-05-31) |
 | B-7 | 外部 Iceberg REST アクセスの UC 監査ログ | 低 | ✅ 確認済み (2026-06-01) |
 | B-8 | S3 Access Point 経由の Delta Sharing（session policy bypass） | 低 | ❌ 非対応確認済み (2026-06-01)。Sharing server は同じ UC storage credentials を使用。 |

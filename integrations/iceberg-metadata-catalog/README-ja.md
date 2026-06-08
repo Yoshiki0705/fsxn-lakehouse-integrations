@@ -125,7 +125,7 @@ integrations/iceberg-metadata-catalog/
 | Databricks SQL Warehouse | ⚠️ | テスト済みパスで `iceberg_rest` 接続タイプ非対応 |
 | Databricks UC 監査 | ✅ | 外部エンジンアクセスが `system.access.audit` に完全記録 |
 | Databricks Spark | ❌ | UC が spark.conf.set による外部カタログ登録をブロック; UC Foreign Catalog が必要 |
-| Databricks UC Foreign Catalog | ❌ | S3 Tables は Databricks で非サポート (2026-06-02 確認); 内部プロダクトリクエスト追跡中 |
+| Databricks UC Foreign Catalog | ❌ | S3 Tables は Databricks で非サポート (2026-06-02 確認); Foreign Iceberg GA 後に再テスト (2026-06-09) — S3 Tables 内部バケットが標準 S3 API validation を拒否するため依然ブロック |
 | Databricks Delta Sharing | ❌ | Sharing server は同じ UC credentials を使用; S3 AP session policy を bypass 不可 |
 | Databricks NFS → UC Volume | ❌ | クラウドストレージ URI のみ; NFS/FUSE マウントパス非対応; 内部機能リクエストあり |
 
