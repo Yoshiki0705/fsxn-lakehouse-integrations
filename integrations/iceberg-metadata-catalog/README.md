@@ -150,19 +150,25 @@ Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platfor
 | **Industry Use Cases** | [EN](docs/industry-use-cases.md) | [JA](docs/industry-use-cases-ja.md) |
 | PoC Results Summary | [EN](docs/poc-results-summary.md) | [JA](docs/poc-results-summary-ja.md) |
 | PoC Guide | [EN](docs/poc-guide.md) | [JA](docs/poc-guide-ja.md) |
+| Iceberg Adoption Validation | [EN](docs/iceberg-adoption-validation-checklist.md) | [JA](docs/iceberg-adoption-validation-checklist-ja.md) |
 | Infrastructure Request | [EN](docs/infrastructure-request-template.md) | [JA](docs/infrastructure-request-template-ja.md) |
 | Demo Guide | [EN](demo/docs/demo-guide.md) | [JA](demo/docs/demo-guide-ja.md) |
 | Demo Scenarios (23 industries) | [EN](demo/scenarios/README.md) | [JA](demo/scenarios/README-ja.md) |
 | S3-Only Quickstart | [EN](demo/docs/quickstart-s3-only.md) | [JA](demo/docs/quickstart-s3-only-ja.md) |
-| Iceberg Spec vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | — |
-| Maintenance Runbook | [EN](ops/iceberg-maintenance-runbook.md) | — |
+| Iceberg Spec vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | [JA](docs/standards-vs-service-behavior-ja.md) |
+| Maintenance Runbook | [EN](ops/iceberg-maintenance-runbook.md) | [JA](ops/iceberg-maintenance-runbook-ja.md) |
+| Production Maturity Model | [EN](genai/production-maturity-model.md) | [JA](genai/production-maturity-model-ja.md) |
+| Regulated Workload Readiness | [EN](governance/regulated-workload-readiness.md) | [JA](governance/regulated-workload-readiness-ja.md) |
+| FSx S3 AP Production Checklist | [EN](storage/fsx-s3ap-production-checklist.md) | [JA](storage/fsx-s3ap-production-checklist-ja.md) |
+| Partner Solution Packaging | [EN](../../docs/partner-enablement/solution-packaging.md) | [JA](../../docs/partner-enablement/solution-packaging-ja.md) |
 | Snowflake Troubleshooting | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
+| Snowflake VENDED_CREDENTIALS | [EN](snowflake/glue-rest-vended-credentials-validation.md) | [JA](snowflake/glue-rest-vended-credentials-validation-ja.md) |
 
 ## Blog Series
 
 - **Part 1**: Architecture & PoC Results — From Hours to Seconds
 - **Part 2**: AI Enrichment Pipeline — Bedrock Vision + OpenSearch NextGen
-- **Part 3**: Governance & Cross-Platform Access
+- **Part 3**: Governance & Cross-Platform Access — Lake Formation, PII Anonymization, and Multi-Engine Reality for S3 Tables
 
 ## Key Constraints
 

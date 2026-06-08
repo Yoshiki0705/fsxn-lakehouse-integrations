@@ -141,19 +141,25 @@ integrations/iceberg-metadata-catalog/
 | **業種別ユースケース** | [EN](docs/industry-use-cases.md) | [JA](docs/industry-use-cases-ja.md) |
 | PoC 結果サマリー | [EN](docs/poc-results-summary.md) | [JA](docs/poc-results-summary-ja.md) |
 | PoC ガイド | [EN](docs/poc-guide.md) | [JA](docs/poc-guide-ja.md) |
+| Iceberg 採用検証チェックリスト | [EN](docs/iceberg-adoption-validation-checklist.md) | [JA](docs/iceberg-adoption-validation-checklist-ja.md) |
 | インフラ依頼テンプレート | [EN](docs/infrastructure-request-template.md) | [JA](docs/infrastructure-request-template-ja.md) |
 | デモガイド | [EN](demo/docs/demo-guide.md) | [JA](demo/docs/demo-guide-ja.md) |
 | デモシナリオ（23 業種） | [EN](demo/scenarios/README.md) | [JA](demo/scenarios/README-ja.md) |
 | S3 のみクイックスタート | [EN](demo/docs/quickstart-s3-only.md) | [JA](demo/docs/quickstart-s3-only-ja.md) |
 | Iceberg 仕様 vs S3 Tables | [EN](docs/standards-vs-service-behavior.md) | [JA](docs/standards-vs-service-behavior-ja.md) |
 | メンテナンス Runbook | [EN](ops/iceberg-maintenance-runbook.md) | [JA](ops/iceberg-maintenance-runbook-ja.md) |
+| 本番化成熟度モデル | [EN](genai/production-maturity-model.md) | [JA](genai/production-maturity-model-ja.md) |
+| 規制ワークロード対応 | [EN](governance/regulated-workload-readiness.md) | [JA](governance/regulated-workload-readiness-ja.md) |
+| FSx S3 AP 本番チェックリスト | [EN](storage/fsx-s3ap-production-checklist.md) | [JA](storage/fsx-s3ap-production-checklist-ja.md) |
+| パートナーソリューションパッケージング | [EN](../../docs/partner-enablement/solution-packaging.md) | [JA](../../docs/partner-enablement/solution-packaging-ja.md) |
 | Snowflake トラブルシューティング | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
+| Snowflake VENDED_CREDENTIALS 検証 | [EN](snowflake/glue-rest-vended-credentials-validation.md) | [JA](snowflake/glue-rest-vended-credentials-validation-ja.md) |
 
 ## ブログシリーズ
 
 - **Part 1**: アーキテクチャ & PoC 結果 — 数時間から 2 秒へ
 - **Part 2**: AI エンリッチメントパイプライン — Bedrock Vision + OpenSearch NextGen
-- **Part 3**: ガバナンス & クロスプラットフォームアクセス
+- **Part 3**: ガバナンス & クロスプラットフォームアクセス — Lake Formation、PII 匿名化、S3 Tables のマルチエンジン現状
 
 ## 主要な制約事項
 
