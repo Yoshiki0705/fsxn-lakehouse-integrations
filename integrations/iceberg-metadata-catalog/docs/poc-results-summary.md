@@ -42,11 +42,13 @@ FSx for ONTAP (actual files: PDF, images, CAD, video)
 ┌─────────────────────────────────────────────┐
 │  Query Engines                              │
 │  • Athena: < 2 sec queries ✅ Verified      │
-│  • EMR Spark: Iceberg REST ✅ Expected      │
-│  • Databricks: Spark cluster ⚠️ Workaround  │
-│  • Snowflake: COPY INTO path ⚠️ Workaround  │
+│  • EMR Spark 7.13.0+: Glue REST ✅ Verified │
+│  • Snowflake: VENDED_CREDENTIALS ✅ Verified │
+│  • Databricks: UC pending ⚠️ (DataSync alt) │
 └─────────────────────────────────────────────┘
 ```
+
+> **Search time scaling note**: The ListObjectsV2 latency comparison in Part 1 is a namespace-scan projection extrapolated linearly from a 40-file measured sample. It demonstrates architectural value at scale but is NOT a benchmark of FSx for ONTAP S3 Access Point service performance. Production S3 AP throughput depends on FSx provisioned capacity, request concurrency, file distribution, and ONTAP cache state.
 
 ## What Works Today
 
@@ -91,7 +93,7 @@ FSx for ONTAP (actual files: PDF, images, CAD, video)
 | Limitation | Impact | Workaround | Status |
 |-----------|--------|-----------|--------|
 | Databricks SQL Warehouse can't query S3 Tables directly | Must use Spark cluster or Athena | Spark cluster config or Athena | Feature request submitted |
-| Snowflake can't read S3 Tables as External Iceberg | Must use COPY INTO | COPY INTO → Managed Iceberg | Feature request submitted |
+| Snowflake S3 Tables: direct Iceberg query via VENDED_CREDENTIALS | ✅ Resolved (2026-06-05) | Glue REST + explicit ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS | AUTO_REFRESH + Time Travel verified |
 | Lake Formation column-level control: observed limitation on S3 Tables federated catalog path | Can't hide specific columns via this path | Athena Views; AWS docs describe column-level support — investigate alternative registration | AWS case filed |
 | Concurrent Lambda writes cause Iceberg commit conflicts | Some writes retry | reserved_concurrency=1 | Design recommendation |
 

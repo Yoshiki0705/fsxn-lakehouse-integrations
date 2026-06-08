@@ -36,7 +36,7 @@ Track remaining validation items identified through expert review. Items are gro
 |---|-----------|:---:|:---:|
 | C-1 | CATALOG INTEGRATION (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS): credential vending | High | ✅ **FULLY WORKING** (2026-06-05): Explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` + schema with no default EXTERNAL_VOLUME + no EXTERNAL_VOLUME in CREATE TABLE. Previous failures were due to default mode (EXTERNAL_VOLUME_CREDENTIALS) triggering ListObjectsV2. AWS prerequisite: `register-resource --with-federation`. |
 | C-2 | CREATE ICEBERG TABLE + SELECT query | High | ✅ **VERIFIED** (2026-06-05): CREATE SUCCESS (5.9s), SELECT * LIMIT 5 SUCCESS (1.6s), 5 rows returned. Query ID: 01c4e515-0003-ee3c-0003-6a86002d62b2 |
-| C-3 | AUTO_REFRESH behavior (Iceberg snapshot detection) | Medium | ✅ **VERIFIED** (2026-06-08): `ALTER ICEBERG TABLE ... SET AUTO_REFRESH = TRUE` succeeds (131ms). Snowflake Support confirmed 30s refresh interval. SHOW ICEBERG TABLES shows UNMANAGED type. |
+| C-3 | AUTO_REFRESH behavior (Iceberg snapshot detection) | Medium | ✅ **FULLY VERIFIED** (2026-06-08): AUTO_REFRESH enabled (131ms). **Real-world test**: PyIceberg appended 1 record → Snowflake COUNT(*) changed 170→171 within 30s automatically. Time Travel also verified: AT(OFFSET => -1200) returns 170 (prior snapshot). |
 | C-4 | Snowflake Open Catalog / Polaris as alternative catalog | Medium | TBD |
 | C-5 | Metadata sync to Snowflake managed table for Cortex Search | Medium | TBD |
 | C-6 | Horizon governance (Row Access Policy) on synced metadata | Low | TBD |

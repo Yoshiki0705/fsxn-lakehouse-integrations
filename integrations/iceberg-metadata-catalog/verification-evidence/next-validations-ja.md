@@ -36,7 +36,7 @@
 |---|---------|:---:|:---:|
 | C-1 | CATALOG INTEGRATION (ICEBERG_REST + AWS_GLUE + VENDED_CREDENTIALS): credential vending | 高 | ✅ **完全動作** (2026-06-05): 明示的 `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` + デフォルト EXTERNAL_VOLUME なしのスキーマ + CREATE TABLE に EXTERNAL_VOLUME 未指定。以前の失敗はデフォルトモード (EXTERNAL_VOLUME_CREDENTIALS) が ListObjectsV2 を発行していたため。AWS前提条件: `register-resource --with-federation`。 |
 | C-2 | CREATE ICEBERG TABLE + SELECT クエリ | 高 | ✅ **検証済み** (2026-06-05): CREATE 成功 (5.9s)、SELECT * LIMIT 5 成功 (1.6s)、5行返却。Query ID: 01c4e515-0003-ee3c-0003-6a86002d62b2 |
-| C-3 | AUTO_REFRESH 動作（Iceberg スナップショット検出） | 中 | ✅ **検証済み** (2026-06-08): `ALTER ICEBERG TABLE ... SET AUTO_REFRESH = TRUE` 成功 (131ms)。Snowflake サポートが 30秒更新間隔を確認。SHOW ICEBERG TABLES で UNMANAGED タイプ表示。 |
+| C-3 | AUTO_REFRESH 動作（Iceberg スナップショット検出） | 中 | ✅ **完全検証済み** (2026-06-08): AUTO_REFRESH 有効化 (131ms)。**実動作テスト**: PyIceberg で 1レコード追加 → Snowflake COUNT(*) が 170→171 に 30秒以内で自動反映。Time Travel も検証: AT(OFFSET => -1200) で 170 (過去スナップショット) を取得。 |
 | C-4 | Snowflake Open Catalog / Polaris を代替カタログとして | 中 | TBD |
 | C-5 | Cortex Search 用に Snowflake マネージドテーブルへメタデータ同期 | 中 | TBD |
 | C-6 | 同期メタデータに対する Horizon ガバナンス（Row Access Policy） | 低 | TBD |
