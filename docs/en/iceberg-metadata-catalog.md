@@ -270,6 +270,58 @@ FSx for ONTAP
 - Bedrock KB RAG also needed → FPolicy + DataSync combined
 - DR requirement → DataSync for cross-region S3 copy + S3 Metadata
 
+### Production Notes: S3 AP I/O and Checkpoint Design
+
+#### S3 Access Point Throughput Impact
+
+FSx for ONTAP S3 Access Point reads consume from the file system's provisioned throughput capacity. Key sizing considerations:
+
+| Scenario | Typical Throughput | Production Impact |
+|----------|-------------------|-------------------|
+| Event-driven metadata scan (this pipeline) | < 10 MB/s | Negligible on NFS/SMB workloads |
+| Backfill (scanning thousands of historical files) | 50-200 MB/s burst | Schedule during off-peak hours |
+| High-frequency polling (sub-minute) | Varies | Set Lambda concurrency limit to prevent thundering herd |
+
+**Mitigations:**
+- Monitor `DataReadBytes` CloudWatch metric for the file system
+- Use Lambda reserved concurrency to cap parallel S3 AP reads
+- For initial backfill, use `burst` throughput mode or schedule off-peak
+
+#### Production Checkpoint: DynamoDB Migration
+
+The PoC uses SSM Parameter Store for scan position checkpointing. For production, migrate to DynamoDB with lease-based locking to prevent duplicate processing under Lambda concurrency:
+
+```
+DynamoDB Table: metadata-scan-checkpoints
+  PK: scan_path (S)          # S3 AP path prefix being scanned
+  Attributes:
+    status:       S           # PENDING | PROCESSING | COMPLETED | FAILED
+    lease_expiry: N           # Unix timestamp — lock auto-releases after this time
+    processor_id: S           # Lambda request ID (unique per invocation)
+    last_offset:  S           # Last processed file path or marker
+    ttl:          N           # Auto-delete COMPLETED records after 7 days
+```
+
+**Conditional write pattern (ghost lock prevention):**
+
+```python
+# Acquire lease — only succeeds if no active processor holds it
+table.put_item(
+    Item={...},
+    ConditionExpression=(
+        'attribute_not_exists(scan_path) OR '  # New scan
+        'status = :failed OR '                  # Previously failed
+        'lease_expiry < :now'                   # Ghost lock expired
+    )
+)
+```
+
+**Key design decisions:**
+- `lease_expiry` = Lambda timeout + 5 min buffer (e.g., 15 min total)
+- CloudWatch alarm on items with `status=PROCESSING` older than 2× lease duration (ghost detection)
+- DynamoDB TTL auto-deletes COMPLETED records after 7 days (cost control)
+- On Lambda crash/timeout: lease auto-expires, next invocation acquires lock
+
 ---
 
 ## AI Enrichment Pipeline

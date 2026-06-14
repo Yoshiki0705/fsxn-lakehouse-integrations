@@ -338,6 +338,58 @@ FSx for ONTAP
 - Bedrock KB で RAG も必要 → FPolicy + DataSync 併用
 - DR 要件あり → DataSync でクロスリージョン S3 コピー + S3 Metadata
 
+### 本番運用ノート: S3 AP I/O とチェックポイント設計
+
+#### S3 Access Point スループット影響
+
+FSx for ONTAP S3 Access Point の読み取りはファイルシステムのプロビジョンドスループットを消費する。
+
+| シナリオ | 典型的なスループット | 本番影響 |
+|---------|-------------------|---------|
+| イベント駆動メタデータスキャン（本パイプライン） | < 10 MB/s | NFS/SMB ワークロードへの影響は無視可能 |
+| バックフィル（数千ファイルの一括スキャン） | 50-200 MB/s バースト | オフピーク時にスケジュール |
+| 高頻度ポーリング（サブ分間隔） | 可変 | Lambda 同時実行制限で制御 |
+
+**緩和策:**
+- CloudWatch `DataReadBytes` メトリクスでファイルシステムを監視
+- Lambda 予約同時実行数で S3 AP 読み取りの並列度を制限
+- 初回バックフィルは `burst` スループットモードまたはオフピーク時にスケジュール
+
+#### 本番チェックポイント: DynamoDB 移行
+
+PoC では SSM Parameter Store でスキャン位置を管理。本番では DynamoDB のリースベースロックで Lambda 同時実行時の二重処理を防止:
+
+```
+DynamoDB テーブル: metadata-scan-checkpoints
+  PK: scan_path (S)          # スキャン対象の S3 AP パスプレフィックス
+  属性:
+    status:       S           # PENDING | PROCESSING | COMPLETED | FAILED
+    lease_expiry: N           # Unix タイムスタンプ — この時刻でロック自動解除
+    processor_id: S           # Lambda リクエスト ID（呼び出しごとに一意）
+    last_offset:  S           # 最後に処理したファイルパスまたはマーカー
+    ttl:          N           # COMPLETED レコードを7日後に自動削除
+```
+
+**条件付き書き込みパターン（ゴーストロック防止）:**
+
+```python
+# リース取得 — アクティブなプロセッサがいない場合のみ成功
+table.put_item(
+    Item={...},
+    ConditionExpression=(
+        'attribute_not_exists(scan_path) OR '  # 新規スキャン
+        'status = :failed OR '                  # 以前失敗
+        'lease_expiry < :now'                   # ゴーストロック失効
+    )
+)
+```
+
+**設計ポイント:**
+- `lease_expiry` = Lambda タイムアウト + 5分バッファ（例: 計15分）
+- `status=PROCESSING` が 2× リース期間を超えた場合に CloudWatch アラーム（ゴースト検出）
+- DynamoDB TTL で COMPLETED レコードを7日後に自動削除（コスト制御）
+- Lambda クラッシュ/タイムアウト時: リースが自動失効し、次の呼び出しがロックを取得
+
 ---
 
 ## AI エンリッチメントパイプライン
