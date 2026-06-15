@@ -3,7 +3,7 @@
 > **Status**: VM host ready; awaiting Instaclustr internal documentation approval + VM images
 > **Date**: 2026-06-15 (updated)
 > **Team**: Japan-Auto/MFG Instaclustr Edge PoC
-> **Instaclustr Contact**: Justin (justing@netapp.com)
+> **Instaclustr Contact**: Instaclustr Solutions Engineer
 
 ---
 
@@ -18,16 +18,16 @@
 | Network | Zero inbound constraints | ✅ Confirmed |
 | Instaclustr Trial Account | Created | ✅ Active |
 | Account ID | 76d65fad-1692-4178-9089-8c0a3f59cbfc | ✅ |
-| Justin invited | justing@netapp.com | ✅ |
+| Instaclustr SE invited | ✅ | ✅ |
 
 ## Pending Items
 
 | Item | Owner | Blocker |
 |------|-------|---------|
-| PoC documentation (specifics tests) | Justin | Internal approval |
-| VM images (pre-configured virtual disks) | Justin | Documentation approval |
-| ONTAP S3 SVM setup (backup target) | Itani | In progress |
-| Gateway server setup | Itani | Needs VM images |
+| PoC documentation (specifics tests) | Instaclustr SE | Internal approval |
+| VM images (pre-configured virtual disks) | Instaclustr SE | Documentation approval |
+| ONTAP S3 SVM setup (backup target) | Lab engineer | In progress |
+| Gateway server setup | Lab engineer | Needs VM images |
 
 ## Timeline
 
@@ -37,7 +37,7 @@
 
 ## Key Decisions
 
-1. **Backup to ONTAP S3** (not NFS) — Justin confirmed S3-compatible storage is acceptable
+1. **Backup to ONTAP S3** (not NFS) — Instaclustr SE confirmed S3-compatible storage is acceptable
 2. **Single-node PoC** — No failure domain topology (acceptable for PoC)
 3. **On-prem only option greyed out** in trial — expected, will be enabled after internal process
 
@@ -45,16 +45,16 @@
 
 | Date | Event |
 |------|-------|
-| Initial | VM host specifications shared with Justin |
+| Initial | VM host specifications shared with Instaclustr SE |
 | Follow-up | Backup protocol changed from NFS to S3 (ONTAP S3) |
-| Follow-up | Justin will write PoC documentation with specific tests |
-| Follow-up | Itani creating new SVM on FAS2750 for ONTAP S3 |
-| Follow-up | Instaclustr trial account created, Justin invited |
-| Follow-up | Account ID shared (76d65fad-...) |
+| Follow-up | Instaclustr SE will write PoC documentation with specific tests |
+| Follow-up | Lab engineer creating new SVM on FAS2750 for ONTAP S3 |
+| Follow-up | Instaclustr trial account created, SE invited |
+| Follow-up | Account ID shared |
 
 ## Next Steps
 
-1. Wait for Justin's PoC documentation (internal approval)
+1. Wait for Instaclustr SE PoC documentation (internal approval)
 2. Complete ONTAP S3 SVM setup on FAS2750
 3. Receive VM images from Instaclustr
 4. Deploy gateway server + Kafka/ClickHouse VMs
@@ -62,4 +62,4 @@
 
 ## Confidentiality Note
 
-No internal team member names, customer names, or company-specific identifiers are included. Only generic role descriptions and publicly available vendor contact information.
+No internal team member names, customer names, or company-specific identifiers are included. Only generic role descriptions are used.

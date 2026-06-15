@@ -2,7 +2,7 @@
 
 > **Status**: MSK Provisioned deployed; ClickPipes "Incompatible" issue — awaiting ClickHouse Support response
 > **Date**: 2026-06-15 (updated)
-> **Case**: ClickHouse Support #00046781
+> **Case**: ClickHouse Support (active)
 > **Priority**: High (PoC blocker)
 
 ---
@@ -44,7 +44,7 @@ MSK manufacturing-poc Multi-VPC endpoint | Ready | Incompatible
 | Date | Action | Result |
 |------|--------|--------|
 | 2026-06-07 | MSK Serverless tested | ❌ DNS not resolvable from ClickHouse |
-| 2026-06-07 | ClickHouse Support Case #00046781 opened | Louné shared KB article |
+| 2026-06-07 | ClickHouse support case opened | Support engineer shared KB article |
 | 2026-06-07 | MSK Provisioned (t3.small) created | ❌ t3.small doesn't support Multi-VPC |
 | 2026-06-08 | MSK upgraded to kafka.m5.large | ✅ Multi-VPC enabled |
 | 2026-06-15 | SASL/SCRAM credentials associated | ✅ Custom KMS key |

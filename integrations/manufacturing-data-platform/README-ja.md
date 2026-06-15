@@ -28,7 +28,7 @@
 ## クイックスタート (Phase A — AWS)
 
 > **現在のステータス (2026-06-15):** MSK Provisioned は ACTIVE。ClickHouse Cloud ClickPipes が
-> Multi-VPC エンドポイントを "Incompatible" と表示 — ClickHouse サポート回答待ち (Case #00046781)。
+> Multi-VPC エンドポイントを "Incompatible" と表示 — ClickHouse サポート回答待ち (ClickHouse support case pending)。
 > オンプレミス Instaclustr セットアップは並行進行中（VM ホスト準備完了、VM イメージ待ち）。
 
 ```bash

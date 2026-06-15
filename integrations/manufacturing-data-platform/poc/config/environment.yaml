@@ -37,23 +37,23 @@ kafka:
     bootstrap_servers_iam: "b-1.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9098,b-2.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9098"
     bootstrap_servers_scram: "b-1.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9096,b-2.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9096"
     bootstrap_servers_multi_vpc_scram: "b-1.scram.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:14001,b-2.scram.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:14002"
-    cluster_arn: "arn:aws:kafka:ap-northeast-1:178625946981:cluster/manufacturing-poc-msk-prov/f3a0fc3c-e4df-4a62-86ea-c8478657d898-3"
+    cluster_arn: "arn:aws:kafka:ap-northeast-1:<ACCOUNT_ID>:cluster/manufacturing-poc-msk-prov/f3a0fc3c-e4df-4a62-86ea-c8478657d898-3"
     instance_type: kafka.m5.large  # Required for Multi-VPC connectivity
     broker_count: 2
     kafka_version: "3.6.0"
     security_protocol: SASL_SSL
     sasl_mechanism: SCRAM-SHA-512  # Primary for ClickHouse; IAM also available
     auth_type: scram  # SCRAM for ClickHouse, IAM for Databricks
-    scram_secret_arn: "arn:aws:secretsmanager:ap-northeast-1:178625946981:secret:AmazonMSK_manufacturing-poc/clickhouse-user-v3-JHjpZE"
+    scram_secret_arn: "arn:aws:secretsmanager:ap-northeast-1:<ACCOUNT_ID>:secret:AmazonMSK_manufacturing-poc/clickhouse-user-v3-JHjpZE"
     scram_kms_key_id: "b2c763f5-2533-491b-a373-20744d3a3ded"
     multi_vpc_connectivity: true
     auto_create_topics: true
     # ClickPipes connectivity status (2026-06-15):
     # Multi-VPC endpoint shows "Ready | Incompatible" in ClickPipes UI
-    # ClickHouse Support Case #00046781 — awaiting response
+    # ClickHouse support case — awaiting response
     clickpipes_status: "blocked_incompatible_endpoint"
     # Legacy MSK Serverless (to be deleted after PoC validation):
-    legacy_serverless_arn: "arn:aws:kafka:ap-northeast-1:178625946981:cluster/manufacturing-poc-msk/c714b61e-8613-409f-badc-df9fea65d0c6-s1"
+    legacy_serverless_arn: "arn:aws:kafka:ap-northeast-1:<ACCOUNT_ID>:cluster/manufacturing-poc-msk/c714b61e-8613-409f-badc-df9fea65d0c6-s1"
 
   # --- Phase B: Instaclustr on-premises ---
   phase_b:
