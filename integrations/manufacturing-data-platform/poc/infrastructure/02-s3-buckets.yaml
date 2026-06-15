@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Manufacturing Data Platform PoC — S3 Buckets and KMS Keys
+  Creates S3 buckets for Delta Lake, streaming checkpoints, and audit logs.
+  All buckets encrypted with KMS, no public access.
+  
+  Architecture Reference: SEC-004 (Encryption), DES-006 (Delta tables on native S3)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: poc
+
+Resources:
+
+  # --- KMS Keys ---
+  DeltaLakeKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Encryption key for Delta Lake tables
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: EnableRootAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+      Tags:
+        - Key: Project
+          Value: manufacturing-data-platform-poc
+
+  DeltaLakeKMSKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub 'alias/manufacturing-${Environment}-delta-key'
+      TargetKeyId: !Ref DeltaLakeKMSKey
+
+  AuditKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Encryption key for audit logs
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: EnableRootAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Sid: AllowCloudTrailEncrypt
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action:
+              - 'kms:GenerateDataKey*'
+              - 'kms:DescribeKey'
+            Resource: '*'
+      Tags:
+        - Key: Project
+          Value: manufacturing-data-platform-poc
+
+  AuditKMSKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub 'alias/manufacturing-${Environment}-audit-key'
+      TargetKeyId: !Ref AuditKMSKey
+
+  # --- S3 Buckets ---
+  DeltaLakeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'manufacturing-${Environment}-delta-lake-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: !Ref DeltaLakeKMSKey
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: CleanupIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      Tags:
+        - Key: Project
+          Value: manufacturing-data-platform-poc
+        - Key: Purpose
+          Value: delta-lake-tables
+
+  CheckpointBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'manufacturing-${Environment}-checkpoints-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: !Ref DeltaLakeKMSKey
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldCheckpoints
+            Status: Enabled
+            ExpirationInDays: 90
+          - Id: CleanupIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 3
+      Tags:
+        - Key: Project
+          Value: manufacturing-data-platform-poc
+        - Key: Purpose
+          Value: streaming-checkpoints
+
+  AuditLogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'manufacturing-${Environment}-audit-logs-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: !Ref AuditKMSKey
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToIA
+            Status: Enabled
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 30
+          - Id: ExpireAfter90Days
+            Status: Enabled
+            ExpirationInDays: 90
+      Tags:
+        - Key: Project
+          Value: manufacturing-data-platform-poc
+        - Key: Purpose
+          Value: audit-logs
+
+  # Bucket policy for CloudTrail
+  AuditLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AuditLogBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: 's3:GetBucketAcl'
+            Resource: !GetAtt AuditLogBucket.Arn
+          - Sid: AllowCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: 's3:PutObject'
+            Resource: !Sub '${AuditLogBucket.Arn}/AWSLogs/${AWS::AccountId}/*'
+            Condition:
+              StringEquals:
+                's3:x-amz-acl': 'bucket-owner-full-control'
+
+Outputs:
+  DeltaLakeBucketName:
+    Description: S3 bucket for Delta Lake tables
+    Value: !Ref DeltaLakeBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-DeltaLakeBucket'
+
+  DeltaLakeBucketArn:
+    Description: Delta Lake bucket ARN
+    Value: !GetAtt DeltaLakeBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-DeltaLakeBucketArn'
+
+  CheckpointBucketName:
+    Description: S3 bucket for streaming checkpoints
+    Value: !Ref CheckpointBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-CheckpointBucket'
+
+  AuditLogBucketName:
+    Description: S3 bucket for audit logs
+    Value: !Ref AuditLogBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-AuditLogBucket'
+
+  DeltaLakeKMSKeyArn:
+    Description: KMS key ARN for Delta Lake encryption
+    Value: !GetAtt DeltaLakeKMSKey.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-DeltaLakeKMSKeyArn'

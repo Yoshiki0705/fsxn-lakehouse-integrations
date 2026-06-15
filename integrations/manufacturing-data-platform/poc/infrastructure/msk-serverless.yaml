@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Manufacturing Data Platform PoC — MSK Serverless Cluster
+  Creates a minimal MSK Serverless cluster with IAM authentication for the PoC.
+  
+  Architecture Reference: ADR-001 (Kafka as factory event backbone)
+  All resource names are generic — no customer/partner names.
+  
+  SYNTHETIC PoC infrastructure — not for production use.
+
+# ---------------------------------------------------------------------------
+# Parameters
+# ---------------------------------------------------------------------------
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where MSK Serverless will be deployed
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: At least 2 private subnets in different AZs
+
+  ClusterName:
+    Type: String
+    Default: manufacturing-poc-msk
+    Description: MSK Serverless cluster name
+    AllowedPattern: '^[a-zA-Z0-9-]+$'
+    MaxLength: 64
+
+  Environment:
+    Type: String
+    Default: poc
+    AllowedValues: [poc, dev, staging]
+    Description: Environment tag
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # Security Group for MSK Serverless
+  MSKSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for MSK Serverless cluster (PoC)
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Allow Kafka protocol from within VPC
+        - IpProtocol: tcp
+          FromPort: 9098
+          ToPort: 9098
+          CidrIp: 10.0.0.0/16
+          Description: Kafka IAM auth port from VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${ClusterName}-sg'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: manufacturing-data-platform-poc
+
+  # MSK Serverless Cluster
+  MSKServerlessCluster:
+    Type: AWS::MSK::ServerlessCluster
+    Properties:
+      ClusterName: !Ref ClusterName
+      ClientAuthentication:
+        Sasl:
+          Iam:
+            Enabled: true
+      VpcConfigs:
+        - SubnetIds: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref MSKSecurityGroup
+      Tags:
+        Environment: !Ref Environment
+        Project: manufacturing-data-platform-poc
+
+  # IAM Policy for Kafka producers/consumers
+  MSKClientPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${ClusterName}-client-policy'
+      Description: IAM policy for MSK Serverless producer/consumer access
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: MSKClusterConnect
+            Effect: Allow
+            Action:
+              - kafka-cluster:Connect
+            Resource:
+              - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}/*'
+          - Sid: MSKTopicReadWrite
+            Effect: Allow
+            Action:
+              - kafka-cluster:ReadData
+              - kafka-cluster:WriteData
+              - kafka-cluster:DescribeTopic
+              - kafka-cluster:CreateTopic
+              - kafka-cluster:AlterTopic
+            Resource:
+              - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:topic/${ClusterName}/*/factory.*'
+          - Sid: MSKGroupManage
+            Effect: Allow
+            Action:
+              - kafka-cluster:AlterGroup
+              - kafka-cluster:DescribeGroup
+            Resource:
+              - !Sub 'arn:aws:kafka:${AWS::Region}:${AWS::AccountId}:group/${ClusterName}/*/*'
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+  ClusterArn:
+    Description: MSK Serverless cluster ARN
+    Value: !Ref MSKServerlessCluster
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterArn'
+
+  SecurityGroupId:
+    Description: MSK security group ID
+    Value: !Ref MSKSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SecurityGroupId'
+
+  ClientPolicyArn:
+    Description: IAM policy ARN for Kafka clients
+    Value: !Ref MSKClientPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-ClientPolicyArn'
+
+  BootstrapNote:
+    Description: |
+      After deployment, retrieve bootstrap servers with:
+      aws kafka get-bootstrap-brokers --cluster-arn <ClusterArn>
+    Value: 'See AWS CLI command in description'

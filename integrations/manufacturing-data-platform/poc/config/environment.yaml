@@ -1,0 +1,293 @@
+# Manufacturing Data Platform — Unified Configuration
+# This file defines all parameters for both Phase A (AWS) and Phase B (Hybrid).
+# Each component section has phase-specific values clearly separated.
+#
+# Usage: Source this configuration in deployment scripts and application code.
+# All placeholder values (marked with <PLACEHOLDER>) must be replaced before use.
+#
+# Architecture Reference: ADR-007 (Phased deployment topology)
+
+---
+# ============================================================
+# Global Settings
+# ============================================================
+global:
+  project_name: manufacturing-data-platform-poc
+  environment: poc  # poc | dev | staging | prod
+  aws_region: ap-northeast-1
+  aws_account_id: "<AWS_ACCOUNT_ID>"  # PLACEHOLDER
+
+# ============================================================
+# Phase Configuration
+# ============================================================
+deployment:
+  current_phase: A  # A = AWS-only, B = Hybrid (on-prem + AWS)
+
+# ============================================================
+# Kafka Configuration
+# ============================================================
+kafka:
+  # --- Phase A: Amazon MSK Provisioned ---
+  # NOTE: Originally planned MSK Serverless (ADR-001), but switched to Provisioned
+  # because Multi-VPC connectivity (required for ClickHouse Cloud ClickPipes) is
+  # only supported on kafka.m5.large or larger instances.
+  # See: docs/support-inquiries/clickhouse-msk-connectivity.md
+  phase_a:
+    type: msk-provisioned
+    bootstrap_servers_iam: "b-1.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9098,b-2.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9098"
+    bootstrap_servers_scram: "b-1.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9096,b-2.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9096"
+    bootstrap_servers_multi_vpc_scram: "b-1.scram.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:14001,b-2.scram.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:14002"
+    cluster_arn: "arn:aws:kafka:ap-northeast-1:178625946981:cluster/manufacturing-poc-msk-prov/f3a0fc3c-e4df-4a62-86ea-c8478657d898-3"
+    instance_type: kafka.m5.large  # Required for Multi-VPC connectivity
+    broker_count: 2
+    kafka_version: "3.6.0"
+    security_protocol: SASL_SSL
+    sasl_mechanism: SCRAM-SHA-512  # Primary for ClickHouse; IAM also available
+    auth_type: scram  # SCRAM for ClickHouse, IAM for Databricks
+    scram_secret_arn: "arn:aws:secretsmanager:ap-northeast-1:178625946981:secret:AmazonMSK_manufacturing-poc/clickhouse-user-v3-JHjpZE"
+    scram_kms_key_id: "b2c763f5-2533-491b-a373-20744d3a3ded"
+    multi_vpc_connectivity: true
+    auto_create_topics: true
+    # ClickPipes connectivity status (2026-06-15):
+    # Multi-VPC endpoint shows "Ready | Incompatible" in ClickPipes UI
+    # ClickHouse Support Case #00046781 — awaiting response
+    clickpipes_status: "blocked_incompatible_endpoint"
+    # Legacy MSK Serverless (to be deleted after PoC validation):
+    legacy_serverless_arn: "arn:aws:kafka:ap-northeast-1:178625946981:cluster/manufacturing-poc-msk/c714b61e-8613-409f-badc-df9fea65d0c6-s1"
+
+  # --- Phase B: Instaclustr on-premises ---
+  phase_b:
+    type: instaclustr-on-prem
+    bootstrap_servers: "<INSTACLUSTR_BOOTSTRAP_SERVERS>"  # PLACEHOLDER
+    security_protocol: SASL_SSL
+    sasl_mechanism: SCRAM-SHA-512
+    auth_type: scram
+    credentials_secret: "manufacturing-poc/kafka/instaclustr-credentials"
+    # Instaclustr management
+    instaclustr_cluster_id: "<INSTACLUSTR_CLUSTER_ID>"  # PLACEHOLDER
+    instaclustr_api_url: "https://api.instaclustr.com"
+
+  # --- Topics (same for both phases) ---
+  topics:
+    sensor_data:
+      name: factory.sensor-data
+      partitions: 12
+      retention_ms: 604800000  # 7 days
+      key: device_id
+    quality_events:
+      name: factory.quality-events
+      partitions: 6
+      retention_ms: 2592000000  # 30 days
+      key: line_id
+    system_alerts:
+      name: factory.system-alerts
+      partitions: 3
+      retention_ms: 7776000000  # 90 days
+      key: source_system
+
+  # --- Kafka Replication (Phase B: on-prem → AWS) ---
+  replication:
+    enabled: false  # Set to true in Phase B
+    type: mirror-maker-2
+    source: phase_b  # On-prem Instaclustr
+    target: phase_a  # AWS MSK
+    topics_pattern: "factory\\..*"
+    consumer_group_prefix: "mm2-"
+    replication_factor: 3
+    sync_interval_seconds: 10
+
+# ============================================================
+# ClickHouse Configuration
+# ============================================================
+clickhouse:
+  # --- Phase A: ClickHouse Cloud ---
+  phase_a:
+    type: clickhouse-cloud
+    service_id: "81dbfcdc-1127-48d5-9d11-8833db8cebb1"
+    host: "<CLICKHOUSE_CLOUD_HOST>"  # Get from Connect dialog in console
+    port: 8443
+    protocol: https
+    region: ap-northeast-1
+    version: "25.12"
+    scaling: "3 replicas, 8 GiB - 236 GiB auto-scale"
+    idling: "15 minutes"
+    database: factory
+    credentials_secret: "manufacturing-poc/clickhouse/admin"
+
+  # --- Phase B: Instaclustr on-premises ---
+  phase_b:
+    type: instaclustr-on-prem
+    host: "<INSTACLUSTR_CLICKHOUSE_HOST>"  # PLACEHOLDER
+    port: 8443
+    protocol: https
+    database: factory
+    credentials_secret: "manufacturing-poc/clickhouse/instaclustr-admin"
+    # On-prem ClickHouse connects to local Kafka (no WAN)
+    kafka_source: local  # Uses phase_b Kafka directly
+
+  # --- Tables (same DDL for both phases) ---
+  tables:
+    setup_script: "../clickhouse/01_setup_tables.sql"
+
+# ============================================================
+# FSx for ONTAP / ONTAP Configuration
+# ============================================================
+ontap:
+  # --- Phase A: FSx for ONTAP (AWS) — both origin and consumer ---
+  phase_a:
+    type: fsx-for-ontap
+    file_system_id: "fs-09ffe72a3b2b7dbbd"  # Existing from iceberg-metadata-catalog project
+    svm_name: svm-factory-poc  # New SVM or use existing (svm-0e5ef72d9b4470f19)
+    svm_id: "svm-0e5ef72d9b4470f19"  # Existing SVM from verification project
+    svm_management_endpoint: "<SVM_MGMT_LIF>"  # Get from: aws fsx describe-storage-virtual-machines
+    nfs_endpoint: "<SVM_NFS_LIF>"  # Get from SVM endpoints
+    s3_endpoint: "https://<SVM_S3_LIF>"  # Configure ONTAP S3 on existing SVM
+    s3_bucket_images: factory-images
+    s3_bucket_clickhouse_cold: factory-clickhouse-cold
+    credentials_secret: "manufacturing-poc/ontap-s3/clickhouse-user"
+    # NOTE: Using existing FSx for ONTAP saves ~$220/month
+    # Volumes (vol-mfg-*) are added to existing file system via deploy.sh volumes
+
+  # --- Phase B: On-premises ONTAP (ORIGIN) ---
+  phase_b:
+    type: ontap-on-prem
+    cluster_name: "<ONPREM_CLUSTER_NAME>"  # PLACEHOLDER
+    svm_name: svm-factory-prod
+    svm_management_endpoint: "<ONPREM_SVM_MGMT_LIF>"  # PLACEHOLDER
+    nfs_endpoint: "<ONPREM_NFS_LIF>"  # PLACEHOLDER
+    s3_endpoint: "https://<ONPREM_S3_LIF>"  # PLACEHOLDER
+    s3_bucket_images: factory-images
+    s3_bucket_clickhouse_cold: factory-clickhouse-cold
+    credentials_secret: "manufacturing-poc/ontap-s3/onprem-user"
+
+  # --- FlexCache (Phase B: AWS caches on-prem origin) ---
+  flexcache:
+    enabled: false  # Set to true in Phase B
+    cache_volume: vol_images_cache
+    origin_svm: svm-factory-prod  # On-prem SVM
+    origin_volume: vol_images
+    cache_svm: svm-factory-poc  # FSx for ONTAP SVM (AWS)
+    cache_size_gb: 100  # LRU eviction when full
+    intercluster_lif: "<INTERCLUSTER_LIF>"  # PLACEHOLDER
+
+  # --- Volumes (same structure for both phases) ---
+  volumes:
+    images:
+      name: vol_images
+      junction_path: /vol_images
+      size_gb: 300
+      security_style: UNIX
+      tiering_policy: AUTO
+      tiering_cooling_days: 31
+      protocols: [NFS, S3]
+    videos:
+      name: vol_videos
+      junction_path: /vol_videos
+      size_gb: 400
+      security_style: UNIX
+      tiering_policy: AUTO
+      tiering_cooling_days: 7
+      protocols: [NFS, SMB]
+    documents:
+      name: vol_documents
+      junction_path: /vol_documents
+      size_gb: 100
+      security_style: MIXED
+      tiering_policy: AUTO
+      tiering_cooling_days: 90
+      protocols: [SMB, NFS]
+    clickhouse_cold:
+      name: vol_clickhouse_cold
+      junction_path: /vol_clickhouse_cold
+      size_gb: 200
+      security_style: UNIX
+      tiering_policy: NONE
+      protocols: [S3]
+
+# ============================================================
+# Databricks Configuration (AWS only — both phases)
+# ============================================================
+databricks:
+  workspace_url: "<DATABRICKS_WORKSPACE_URL>"  # PLACEHOLDER
+  catalog: manufacturing_poc
+  schemas:
+    factory_alpha: factory_alpha
+    factory_beta: factory_beta
+    cross_factory: cross_factory
+    system: _system
+  streaming:
+    checkpoint_bucket: "<CHECKPOINT_BUCKET>"  # PLACEHOLDER
+    trigger_interval: "10 seconds"
+    max_offsets_per_trigger: 100000
+  # In Phase B, Databricks reads from AWS MSK (mirror of on-prem Kafka)
+  kafka_source: phase_a  # Always reads from AWS MSK (replication target)
+
+# ============================================================
+# Edge Device Configuration (Phase B)
+# ============================================================
+edge:
+  # --- Phase A: Synthetic generator (Python on local machine) ---
+  phase_a:
+    type: synthetic
+    script: "../synthetic-data-generator/generate_events.py"
+    kafka_target: phase_a  # Direct to MSK
+
+  # --- Phase B: Raspberry Pi + MQTT + store-and-forward ---
+  phase_b:
+    type: raspberry-pi
+    mqtt_broker:
+      host: localhost  # Mosquitto on the Pi itself
+      port: 1883
+      protocol: mqtt
+    store_and_forward:
+      type: sqlite
+      db_path: /var/lib/edge-gateway/queue.db
+      max_size_gb: 10
+    kafka_producer:
+      kafka_target: phase_b  # Direct to on-prem Instaclustr Kafka
+      enable_idempotence: true
+      acks: all
+      retries: 2147483647
+      delivery_timeout_ms: 3600000
+      compression_type: lz4
+    payload_upload:
+      protocol: nfs  # Write to on-prem ONTAP via NFS
+      mount_point: /mnt/ontap/vol_images
+      retry_max: 10
+      retry_backoff_initial_ms: 1000
+      retry_backoff_max_ms: 60000
+
+# ============================================================
+# Monitoring / Observability
+# ============================================================
+monitoring:
+  # CloudWatch (AWS components)
+  cloudwatch:
+    namespace: ManufacturingPoC
+    alarm_sns_topic: "<SNS_TOPIC_ARN>"  # PLACEHOLDER
+  # ClickHouse metrics
+  clickhouse_metrics:
+    query_log_retention_days: 30
+  # Edge metrics (Phase B)
+  edge_metrics:
+    heartbeat_interval_seconds: 60
+    queue_depth_report_interval_seconds: 300
+
+# ============================================================
+# Network Configuration
+# ============================================================
+network:
+  # --- Phase A: Single VPC ---
+  phase_a:
+    vpc_cidr: "10.0.0.0/16"
+    private_subnet_1: "10.0.1.0/24"
+    private_subnet_2: "10.0.2.0/24"
+
+  # --- Phase B: On-prem + AWS connectivity ---
+  phase_b:
+    onprem_cidr: "192.168.0.0/16"  # PLACEHOLDER — actual factory network
+    connectivity_type: vpn  # vpn | direct-connect
+    vpn_gateway_ip: "<VPN_GATEWAY_IP>"  # PLACEHOLDER
+    bandwidth_mbps: 100  # Minimum for FlexCache + Kafka replication
+    # Intercluster network for FlexCache
+    intercluster_cidr: "10.10.0.0/24"
