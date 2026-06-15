@@ -60,7 +60,7 @@ support_cases:
     subject: "Storage Integration GetObject denied on FSx S3 AP"
     status: "Open"
   - platform: "AWS"
-    case_id: "177949831900431"
+    case_id: "REDACTED"
     subject: "FSx S3 AP - Snowflake GetObject denied (session policy)"
     status: "Open — AWS confirmed denial is from Snowflake session policy"
 

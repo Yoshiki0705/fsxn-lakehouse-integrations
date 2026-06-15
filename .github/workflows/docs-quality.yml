@@ -33,7 +33,7 @@ jobs:
       - name: Check for AWS Account IDs in tracked files
         run: |
           echo "🔍 Scanning for hardcoded AWS Account IDs..."
-          HITS=$(git ls-files -- '*.md' '*.yaml' '*.yml' '*.py' '*.sql' '*.sh' | \
+          HITS=$(git ls-files -- '*.md' '*.yaml' '*.yml' '*.py' '*.sql' '*.sh' '*.json' | \
             xargs grep -Pn '\b178625946981\b' 2>/dev/null | \
             grep -v '<ACCOUNT_ID>' | \
             grep -v '# Contains account ID for reference' || true)
@@ -109,12 +109,17 @@ jobs:
       - name: Check for support case numbers in tracked files
         run: |
           echo "🔍 Scanning for support case numbers..."
-          PATTERNS='01359474\|01364260\|01359983\|178031980800349\|178029069700204\|178023542200745\|00928287\|00921422'
-          HITS=$(git ls-files -- '*.md' '*.yaml' '*.yml' '*.py' '*.sql' | \
-            xargs grep -n "$PATTERNS" 2>/dev/null | \
-            grep -v '\.github/workflows/' || true)
+          # Detect support case numbers by format and by keyword context, rather than a
+          # hardcoded list (which would itself embed sensitive numbers in this file).
+          #   - AWS-style 15-digit case IDs (e.g. 177.../178...)
+          #   - "support case" / "case id|no|number|#" / "サポートケース" adjacent to 6+ digits
+          #     (covers Snowflake/Databricks 8-digit IDs, case_id fields, support-case-* paths)
+          GLOBS=(--  '*.md' '*.yaml' '*.yml' '*.py' '*.sql' '*.json')
+          AWS_HITS=$(git ls-files "${GLOBS[@]}" | xargs grep -nE '\b17[0-9]{13}\b' 2>/dev/null | grep -v '\.github/workflows/' || true)
+          KW_HITS=$(git ls-files "${GLOBS[@]}" | xargs grep -niE '(support[ _-]?case|case[ _-]?(id|no|number|#)|サポートケース)[^0-9]{0,30}[0-9]{6,}' 2>/dev/null | grep -v '\.github/workflows/' || true)
+          HITS=$(printf '%s\n%s\n' "$AWS_HITS" "$KW_HITS" | grep -vE '^[[:space:]]*$' | sort -u || true)
           if [[ -n "$HITS" ]]; then
-            echo "::error::Support case numbers found in tracked files. Remove before pushing."
+            echo "::error::Possible support case numbers found in tracked files. Reference support engagements by topic only — no case numbers or engineer names."
             echo "$HITS"
             exit 1
           fi
