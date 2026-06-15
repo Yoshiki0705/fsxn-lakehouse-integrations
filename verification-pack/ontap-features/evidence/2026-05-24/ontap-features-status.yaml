@@ -29,7 +29,7 @@ snapshot:
   create_test_result: "FAILED"
   error: "Unable to create a snapshot because the volume was not found"
   root_cause: |
-    Likely related to ongoing AWS infrastructure issue (Support Case 177900333300633):
+    Likely related to ongoing AWS infrastructure issue (an AWS infrastructure support engagement):
     Internal security group missing DNS rules for FPolicy, causing SVM-level instability.
     The volume exists (CREATED state) but snapshot operations fail.
   rto_measured: false
