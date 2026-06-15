@@ -1,0 +1,214 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Manufacturing Data Platform PoC — FSx for ONTAP File System
+  Creates Single-AZ FSx for ONTAP with SVM and 4 volumes per ADR-013.
+  
+  Architecture Reference: ADR-003, ADR-013 (FSx for ONTAP sizing and Snapshot policy)
+  SYNTHETIC PoC infrastructure — not for production use.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: poc
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID from 01-vpc-network stack
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Single subnet for Single-AZ deployment (PrivateSubnet1)
+
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: FSx security group from 01-vpc-network stack
+
+  SvmAdminPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 50
+    Description: SVM admin password (store in Secrets Manager after creation)
+
+Resources:
+
+  # --- FSx for ONTAP File System ---
+  FSxONTAPFileSystem:
+    Type: AWS::FSx::FileSystem
+    Properties:
+      FileSystemType: ONTAP
+      StorageCapacity: 1024  # 1 TB SSD (ADR-013)
+      StorageType: SSD
+      SubnetIds:
+        - !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref SecurityGroupId
+      OntapConfiguration:
+        DeploymentType: SINGLE_AZ_1  # PoC cost optimization (ADR-013)
+        ThroughputCapacity: 128  # Minimum tier — 128 MB/s
+        PreferredSubnetId: !Ref SubnetId
+        # Automatic backups
+        DailyAutomaticBackupStartTime: '02:00'
+        AutomaticBackupRetentionDays: 7
+        WeeklyMaintenanceStartTime: '7:03:00'  # Sunday 03:00 UTC
+      Tags:
+        - Key: Name
+          Value: !Sub 'manufacturing-${Environment}-fsxn'
+        - Key: Project
+          Value: manufacturing-data-platform-poc
+        - Key: ADR
+          Value: ADR-013
+
+  # --- Storage Virtual Machine ---
+  FactorySVM:
+    Type: AWS::FSx::StorageVirtualMachine
+    Properties:
+      FileSystemId: !Ref FSxONTAPFileSystem
+      Name: svm-factory-poc
+      RootVolumeSecurityStyle: UNIX
+      SvmAdminPassword: !Ref SvmAdminPassword
+      Tags:
+        - Key: Name
+          Value: !Sub 'manufacturing-${Environment}-svm'
+        - Key: Project
+          Value: manufacturing-data-platform-poc
+
+  # --- Volumes (per ADR-013 design) ---
+
+  # Volume 1: Quality inspection images (NFS + ONTAP S3)
+  VolumeImages:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: vol-images
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: /vol_images
+        StorageVirtualMachineId: !Ref FactorySVM
+        SizeInMegabytes: '307200'  # 300 GB
+        StorageEfficiencyEnabled: 'true'
+        SecurityStyle: UNIX
+        TieringPolicy:
+          Name: AUTO
+          CoolingPeriod: 31  # Tier after 31 days
+        SnapshotPolicy: default  # 6 hourly, 2 daily, 2 weekly
+        CopyTagsToBackups: 'true'
+      Tags:
+        - Key: Name
+          Value: vol-images
+        - Key: Purpose
+          Value: quality-inspection-images
+        - Key: Protocol
+          Value: NFS+S3
+
+  # Volume 2: Process monitoring video (NFS + SMB)
+  VolumeVideos:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: vol-videos
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: /vol_videos
+        StorageVirtualMachineId: !Ref FactorySVM
+        SizeInMegabytes: '409600'  # 400 GB
+        StorageEfficiencyEnabled: 'true'
+        SecurityStyle: UNIX
+        TieringPolicy:
+          Name: AUTO
+          CoolingPeriod: 7  # Tier after 7 days (video accessed less frequently)
+        SnapshotPolicy: default
+        CopyTagsToBackups: 'true'
+      Tags:
+        - Key: Name
+          Value: vol-videos
+        - Key: Purpose
+          Value: process-monitoring-video
+        - Key: Protocol
+          Value: NFS+SMB
+
+  # Volume 3: Quality certificates and reports (SMB + NFS)
+  VolumeDocuments:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: vol-documents
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: /vol_documents
+        StorageVirtualMachineId: !Ref FactorySVM
+        SizeInMegabytes: '102400'  # 100 GB
+        StorageEfficiencyEnabled: 'true'
+        SecurityStyle: MIXED  # SMB + NFS access
+        TieringPolicy:
+          Name: AUTO
+          CoolingPeriod: 90  # Tier after 90 days
+        SnapshotPolicy: default
+        CopyTagsToBackups: 'true'
+      Tags:
+        - Key: Name
+          Value: vol-documents
+        - Key: Purpose
+          Value: quality-certificates-reports
+        - Key: Protocol
+          Value: SMB+NFS
+
+  # Volume 4: ClickHouse cold tier (ONTAP S3 only)
+  VolumeClickHouseCold:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: vol-clickhouse-cold
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: /vol_clickhouse_cold
+        StorageVirtualMachineId: !Ref FactorySVM
+        SizeInMegabytes: '204800'  # 200 GB
+        StorageEfficiencyEnabled: 'true'
+        SecurityStyle: UNIX
+        TieringPolicy:
+          Name: NONE  # Already cold-tier purpose; keep on SSD for consistent S3 access
+        SnapshotPolicy: default
+        CopyTagsToBackups: 'true'
+      Tags:
+        - Key: Name
+          Value: vol-clickhouse-cold
+        - Key: Purpose
+          Value: clickhouse-s3-cold-tier
+        - Key: Protocol
+          Value: ONTAP-S3
+
+Outputs:
+  FileSystemId:
+    Description: FSx for ONTAP File System ID
+    Value: !Ref FSxONTAPFileSystem
+    Export:
+      Name: !Sub '${AWS::StackName}-FileSystemId'
+
+  SVMId:
+    Description: Storage Virtual Machine ID
+    Value: !Ref FactorySVM
+    Export:
+      Name: !Sub '${AWS::StackName}-SVMId'
+
+  VolumeImagesId:
+    Description: Images volume ID
+    Value: !Ref VolumeImages
+
+  VolumeVideosId:
+    Description: Videos volume ID
+    Value: !Ref VolumeVideos
+
+  VolumeDocumentsId:
+    Description: Documents volume ID
+    Value: !Ref VolumeDocuments
+
+  VolumeClickHouseColdId:
+    Description: ClickHouse cold tier volume ID
+    Value: !Ref VolumeClickHouseCold
+
+  Note:
+    Description: Post-deployment steps
+    Value: |
+      After deployment:
+      1. Get SVM endpoints: aws fsx describe-storage-virtual-machines --filters Name=file-system-id,Values=<FileSystemId>
+      2. Configure NFS export policy via ONTAP CLI/REST
+      3. Configure ONTAP S3 via ONTAP CLI/REST (user, bucket, policy)
+      4. Store SVM admin password in Secrets Manager
+      5. Mount NFS: mount -t nfs <nfs-endpoint>:/vol_images /mnt/fsxn/vol_images
