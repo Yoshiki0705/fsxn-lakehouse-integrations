@@ -453,4 +453,4 @@ Snowflake Managed Iceberg Table (curated, governed)
 
 - [Snowflake README](../../README.md) — Full integration status
 - [Analytics & AI Demo Guide](ai-demo-guide.md) — AI/ML capabilities and validation results
-- [Support Case Summary](../../.private/support-case-01357726-summary-en.md) — S3 AP resolution details (private)
+- [Support Case Summary (private)](../../.private/s3ap-resolution-summary-en.md) — S3 AP resolution details (private)

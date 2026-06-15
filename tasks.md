@@ -133,7 +133,7 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task D: Demo Scenario Execution
 
-> ⚠️ **BLOCKED**: Snowflake session policy does not recognize S3 AP ARN format for GetObject. LIST succeeds but SELECT fails. Support case 01357726 filed. See [Known Limitations](../../docs/en/compatibility-matrix.md#known-limitations--platform-session-policy-issues).
+> ⚠️ **BLOCKED**: Snowflake session policy does not recognize S3 AP ARN format for GetObject. LIST succeeds but SELECT fails. Vendor support case filed. See [Known Limitations](../../docs/en/compatibility-matrix.md#known-limitations--platform-session-policy-issues).
 
 **Scenario 1: External Table Query (Pattern A)**
 - [x] Create External Table on Parquet data

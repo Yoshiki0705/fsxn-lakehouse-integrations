@@ -56,7 +56,7 @@ comparison_with_databricks: |
 
 support_cases:
   - platform: "Snowflake"
-    case_id: "01357726"
+    case_id: "REDACTED"
     subject: "Storage Integration GetObject denied on FSx S3 AP"
     status: "Open"
   - platform: "AWS"

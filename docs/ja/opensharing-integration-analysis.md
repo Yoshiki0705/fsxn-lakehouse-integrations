@@ -2,7 +2,7 @@
 
 # OpenSharing × FSx for ONTAP: 統合分析
 
-> **ステータス**: 将来を見据えたアーキテクチャ分析。公開発表（2026-06-10）に基づく。本リポジトリによるベンダー実装の独立検証はまだ実施していない。検証タスクは将来のアクティビティとして管理する。
+> **ステータス**: 将来を見据えたアーキテクチャ分析に、公開 OpenSharing 仕様から直接読み取ったプロトコルレベルの事実を追加（2026-06-16）。本リポジトリによる FSx for ONTAP に対するベンダー実装の独立検証はまだ実施していない。検証タスクは将来のアクティビティとして管理する。
 
 > **レビュー注記**: 本分析は複数レンズによるアーキテクチャレビューで作成した。レビュアーのレンズは**役割のみ**で記述する（個人・所属企業の帰属はしない）。各主張には evidence tier を付す: **Public**（公開ソースで検証可能）、**Archetype**（役割ベースの一般的推論）。
 
@@ -48,6 +48,29 @@ presigned URL は**純粋にクライアント側の SigV4 query-string 署名**
 **ガバナンス粒度の注記**: credential vending（presigned URL / 一時クレデンシャル）は**ストレージの格納場所（prefix）単位**でアクセスを付与し、行・列レベルのポリシーは伝播しない。fine-grained で engine 横断のガバナンス（行フィルタ・列マスク）が必要な場合は、サーバーサイド scan planning を持つ Iceberg REST カタログが適切なレイヤーとなる。テーブル単位の zero-copy 配信と fine-grained ガバナンスは別の仕組みとして扱い、発行するクレデンシャルは対象テーブルの場所に最小権限でスコープすること。
 
 > 本ノートは FSx for ONTAP / ONTAP の機能のみを記述する。挙動は各自の環境・ONTAP バージョンで再検証すること。
+
+## プロトコル仕様面（公開仕様より）
+
+OpenSharing 仕様は公開されている（[OpenSharing-IO/OpenSharing](https://github.com/OpenSharing-IO/OpenSharing)、Apache 2.0）。以下は**公開仕様から直接読み取った**プロトコル詳細（evidence tier: **Public**）であり、FSx for ONTAP バックエンドの統合をどう構築するかを規定する。これらはプロトコル上の事実であり、FSx for ONTAP バックエンドに対する独立検証はまだ行っていない。
+
+**Asset 階層**: `Share → Schema → { Table, Volume, AgentSkill, Model, Agent（提案）, Glossary（提案） }`。1 つの bearer token が share 全体へのアクセスを認可し、share がアクセス制御の単位となる。
+
+**Recipient profile**: JSON profile に `endpoint`（Delta テーブル用）、別フィールドの `icebergEndpoint`（Iceberg テーブル用）、`bearerToken`、任意の `expirationTime` を持つ。Iceberg 専用エンドポイントが cross-engine リーチの鍵。
+
+**Table — 2 つの access mode**: 各テーブルは `accessModes`（`url` / `dir` / 両方）と `format`（`delta` / `iceberg`）を提示する:
+
+| access mode | 機構 | FSx for ONTAP への含意 |
+|-------------|------|----------------------|
+| `url` | presigned URL（クライアント query API） | ネイティブ ONTAP S3 で動作（SigV4）。S3 Access Point は過去検証でクライアント生成 URL が動作 |
+| `dir` | 一時 STS credential によるディレクトリアクセス | recipient は標準 `GetObject` で read — S3 Access Points 対応、presign 論点を回避 |
+
+**標準 REST Catalog による Iceberg**: 仕様は標準 [Iceberg REST Catalog API](https://github.com/apache/iceberg/blob/main/open-api/rest-catalog-open-api.yaml)（`getConfig`, `listNamespaces`, `loadNamespaceMetadata`, `listTables`, `loadTable`, `reportMetrics`）を実装。**含意**: 標準 Iceberg REST クライアント（PyIceberg, Spark Iceberg, Athena）が共有テーブルを直接消費可能。Apache XTable / shallow-clone ブリッジは必須ではなく fallback に降格する。
+
+**Credential vending**: AWS では標準 STS 一時クレデンシャル（`accessKeyId` + `secretAccessKey` + `sessionToken`）を `expirationTime` 付きで発行。Azure（SAS）、GCP（OAuth）、Cloudflare R2 も定義済み。AWS パスは本リポジトリの過去検証済み `GetObject` アクセスと整合する。
+
+**Volumes（非構造化）— proposal 段階**: `Volume` asset はディレクトリの `storageLocation`（例 `s3://bucket/path/`）を共有し、**STS credential のみ**を発行（presigned URL モードなし）。これは FSx for ONTAP の非構造化ペイロード（画像・動画・ドキュメント）の自然な接続点であり、本リポジトリのメタデータカタログの取り組みと接続する。現行の connector はテーブルが先行対応で、volumes は進行中。
+
+> これらは仕様レベルの事実である。FSx for ONTAP バックエンド（S3 Access Point またはネイティブ ONTAP S3）に対して仕様どおり動作するかは、段階的検証アクティビティで確認する。
 
 ## スコープと原則
 
@@ -127,14 +150,54 @@ FSx for ONTAP → OpenSharing Server（共有 + アクセス制御）
 
 ## オープンクエスチョン
 
+公開仕様から解決した項目（FSx for ONTAP に対する検証は引き続き必要）:
+- **Iceberg / Delta の配信** — 両方が仕様化済み。Iceberg は標準 REST Catalog エンドポイント、Delta は Delta Sharing エンドポイントを使う。
+- **アクセス機構** — テーブルは `url`（presigned）/ `dir`（STS credential）に対応。volume は STS credential のみ。
+- **read / write** — 仕様の API は read 中心（list / get / loadTable / temporary-credentials）。明示的な write-back エンドポイントはなく、write-back は実証が必要。
+
+未解決:
 - native 実装は ONTAP S3 / S3 Access Points / 独立パスのどれか？
 - AWS マネージドとオンプレの提供タイミングは？
-- 共有サーバーは read-only か read-write か？
-- column/row ガバナンスポリシーは共有テーブルに travel するか？
+- column/row ガバナンスポリシーは共有テーブルに travel するか（Iceberg REST scan planning 依存）？
 
 ## 次のアクティビティ
 
 段階的な検証アクティビティを定義済み（read → Iceberg IRC → ガバナンス travel → write-back → 非構造化設計 → 公開）。ステータスはリポジトリの Supported Integrations テーブルおよび今後のブログシリーズで更新する。
+
+---
+
+## Persona Review Summary（ペルソナレビューサマリー）
+
+### レビューメタデータ
+- レビュー日: 2026-06-16
+- 対象ドキュメント: `opensharing-integration-analysis.md`（en/ja）、`omnigent-multi-agent-evaluation.md`（en/ja）
+- 範囲: 公開 OpenSharing 仕様からのプロトコル仕様面の追加、Omnigent Phase 0 評価
+- ラウンド数: 2（ラウンド間で指摘を反映）
+
+### Principal Cloud Data Architect
+- 強み: プロトコル上の事実と FSx for ONTAP 検証ステータスを明確に分離。access mode（`url`/`dir`）と credential vending を公開仕様に基づき記述。
+- ラウンド1指摘（反映済み）: Omnigent ドキュメントが「Databricks AI チームと Neon」によるリリースと記載 → 検証不能。Databricks（Matei Zaharia 発表）に修正（エビデンス規律）。
+- 未解決: write-back 未検証、共有サーバーの Tier-1 SPOF をリスクとして明記。
+
+### Manufacturing Edge Data Architect
+- 強み: Volume asset（STS のみ）が非構造化ペイロード共有に整合。メタデータ↔ペイロードリンクは自前責務として維持。
+- 懸念: 新規なし。エッジの順序/重複排除は共有プロトコル範囲外（既記載）。
+
+### Databricks Governance Architect
+- 強み: 標準 Iceberg REST Catalog 実装を正確に特定。credential vending（prefix 単位）と scan planning（行/列）の区別を維持。
+- 検証済み: Agent Bricks Supervisor Agent GA の参照は実在する引用可能なソース。
+
+### NetApp FSx for ONTAP Architect
+- 強み: NetApp を OpenSharing ストレージパートナーの "coming soon" と正確に記述（提供中と過大表現していない）。Snapshot/FlexClone 価値を要検証として提示。
+- 未解決: native 実装が ONTAP S3 / S3 AP / 独立パスのどれに乗るか。
+
+### Public Repository Confidentiality Reviewer
+- ステータス: Pass
+- 検出された機微情報: 公開ドキュメントには無し（サポートケース番号・アカウント ID は gitignore 対象の `.kiro/` ノートのみ）。例示 CIDR（10.0.0.0/16）は RFC1918 のドキュメント例。`Yoshiki0705` は公開リポジトリのオーナーハンドル。
+- 必要な編集: なし。
+
+### 最終推奨
+- APPROVE WITH COMMENTS: 公開リポジトリに適合。将来予測の主張は evidence tier で分類し、FSx for ONTAP 検証（保留中）と区別済み。
 
 ---
 

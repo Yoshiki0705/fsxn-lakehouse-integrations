@@ -86,7 +86,7 @@ tests:
     denial_layer: "N/A - presigning is client-side; GetObject is supported"
     cloudtrail_event_id: ""
     notes: |
-      AWS Support Case 177943289700029 clarified:
+      AWS Support AWS Support engagement clarified:
       Presigning is NOT an S3 API operation - it is a client-side SigV4 calculation.
       The presigned URL results in a standard GetObject request (which IS supported).
       It is structurally impossible to block presigning without breaking GetObject.
@@ -104,7 +104,7 @@ tests:
     denial_layer: "N/A - trivially answerable from filesystem enumeration"
     cloudtrail_event_id: ""
     notes: |
-      AWS Support Case 177943289700029 clarified:
+      AWS Support AWS Support engagement clarified:
       For non-versioned storage, ListObjectVersions returns objects with VersionId="null".
       This is standard S3 behavior for never-versioned buckets.
       No versioning-specific logic is required - same underlying enumeration as ListObjectsV2.
@@ -156,7 +156,7 @@ high_medium_passed: 4  # NEG-005, NEG-006 (clarified), NEG-007 (clarified), NEG-
 high_medium_failed: 0
 not_tested: 3
 
-# Key Findings (updated with AWS Support clarification - Case 177943289700029)
+# Key Findings (updated with AWS Support clarification - AWS Support engagement)
 key_findings:
   - finding: "DeleteObject succeeds for nobody user via file system permission model"
     severity: "High"
@@ -166,17 +166,17 @@ key_findings:
     severity: "Low (clarified)"
     impact: "Presigning is client-side SigV4; server sees standard GetObject. Works for any supported operation."
     mitigation: "Do not rely on for production (not officially tested/guaranteed). Use direct authenticated requests."
-    aws_support_reference: "Case 177943289700029 - Lionel O. (2026-05-22)"
+    aws_support_reference: "AWS Support engagement (2026-05-22)"
   - finding: "ListObjectVersions returns results - confirmed expected by AWS Support"
     severity: "Low (clarified)"
     impact: "Standard S3 behavior for non-versioned storage. Returns same data as ListObjectsV2 in versioning schema."
     mitigation: "Use ListObjectsV2 instead. Do not rely on ListObjectVersions for production."
-    aws_support_reference: "Case 177943289700029 - Lionel O. (2026-05-22)"
+    aws_support_reference: "AWS Support engagement (2026-05-22)"
 
-# AWS Support Clarification Summary (Case 177943289700029)
+# AWS Support Clarification Summary (AWS Support engagement)
 aws_support_clarification:
-  case_id: "177943289700029"
-  responder: "Lionel O."
+  case_id: "REDACTED"
+  responder: "AWS Support"
   date: "2026-05-22"
   key_points:
     - "Presigning is client-side signature calculation, not a server-side operation"

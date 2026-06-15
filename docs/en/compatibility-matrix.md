@@ -17,8 +17,8 @@ Before reviewing the compatibility matrix, understand these fundamental constrai
 | ListObjectsV2 latency | ListObjectsV2 exhibits higher latency than standard S3 (observed 30-80x for small directories). AWS Support confirmed this as a **product-level performance characteristic** (May 2026), not an environmental issue. Feature request submitted with target: <1s for <100 files, <3s for <1000 files. | Validated May 2026 |
 | No S3 Event Notifications | S3 Event Notifications (s3:ObjectCreated, etc.) are not supported. Prevents Snowpipe auto-ingest and Auto Loader file notification mode. Feature request submitted (May 2026). Use FPolicy → Lambda or scheduled polling as alternatives. | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | No SnapMirror S3 | SnapMirror S3 (ONTAP S3 bucket → AWS S3 replication) is **intentionally disabled** on FSx for ONTAP (confirmed by AWS Support, May 2026). `snapmirror object-store` commands and `/api/cloud/targets` REST API are blocked as service-level restrictions. Use AWS DataSync (NFS → S3) as the validated sync mechanism. | Validated May 2026 |
-| Presigned URLs: Not officially supported | Presigning is a client-side signature calculation, not a server-side operation. Presigned URLs for supported operations (e.g., GetObject) work in practice because the server sees a standard signed request. However, AWS lists this as "Not supported" and does not guarantee stability. **Do not rely on for production.** | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html), [AWS Support Case 177943289700029](verified 2026-05-22) |
-| ListObjectVersions: Not officially supported | Returns results with VersionId="null" (same as non-versioned S3 bucket behavior). Functionally equivalent to ListObjectsV2 wrapped in versioning schema. AWS lists as "Not supported" — **use ListObjectsV2 instead.** | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html), [AWS Support Case 177943289700029](verified 2026-05-22) |
+| Presigned URLs: Not officially supported | Presigning is a client-side signature calculation, not a server-side operation. Presigned URLs for supported operations (e.g., GetObject) work in practice because the server sees a standard signed request. However, AWS lists this as "Not supported" and does not guarantee stability. **Do not rely on for production.** | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html), [AWS Support (verified)](verified 2026-05-22) |
+| ListObjectVersions: Not officially supported | Returns results with VersionId="null" (same as non-versioned S3 bucket behavior). Functionally equivalent to ListObjectsV2 wrapped in versioning schema. AWS lists as "Not supported" — **use ListObjectsV2 instead.** | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html), [AWS Support (verified)](verified 2026-05-22) |
 | Storage class: FSX_ONTAP only | Cannot specify other storage classes | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | Encryption: SSE-FSX only | AWS KMS managed, transparent encryption at rest | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | Same region required | Access point must be in same region as FSx for ONTAP volume | [Restrictions](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-point-for-fsxn-restrictions-limitations-naming-rules.html) |
@@ -422,7 +422,7 @@ This explains the observed behavior where LIST operations succeed but GetObject/
 | **Error** | "Failed to access remote file: access denied" |
 | **LIST behavior** | Succeeds (`LIST @stage` returns files correctly) |
 | **Workaround** | None identified — Snowflake does not expose session policy customization |
-| **Support case** | Case 01357726 filed with Snowflake |
+| **Support case** | Filed with Snowflake vendor support |
 | **Evidence** | Same IAM role assumed without Snowflake's session policy → all operations succeed |
 
 ### Impact Assessment
@@ -442,7 +442,7 @@ This explains the observed behavior where LIST operations succeed but GetObject/
 
 ### AWS Support Confirmation
 
-AWS Support Case 177949831900431 confirmed that the denial originates from the **session policy applied by the analytics platform during AssumeRole**, not from the IAM role policy, AP policy, or file system permissions.
+AWS Support (verified) confirmed that the denial originates from the **session policy applied by the analytics platform during AssumeRole**, not from the IAM role policy, AP policy, or file system permissions.
 
 ---
 

@@ -451,4 +451,4 @@ Snowflake Managed Iceberg Table (curated, governed)
 
 - [Snowflake README](../../README.md) — 統合ステータス全体
 - [Analytics & AI デモガイド](ai-demo-guide.md) — AI/ML 機能と検証結果
-- [サポートケースサマリー](../../.private/support-case-01357726-summary-ja.md) — S3 AP 解決の詳細（プライベート）
+- [サポートケースサマリー（プライベート）](../../.private/s3ap-resolution-summary-ja.md) — S3 AP 解決の詳細（プライベート）
