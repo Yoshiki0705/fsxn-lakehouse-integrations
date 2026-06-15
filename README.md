@@ -286,6 +286,7 @@ fsxn-lakehouse-integrations/
 | Governance & Compliance | [ガバナンスとコンプライアンス](docs/ja/governance-and-compliance.md) | [Governance & Compliance](docs/en/governance-and-compliance.md) |
 | Zero-Copy Unstructured Data Governance | [ゼロコピー非構造化データガバナンス](docs/ja/zero-copy-media-governance.md) | [Zero-Copy Unstructured Data Governance](docs/en/zero-copy-media-governance.md) |
 | OpenSharing Integration Analysis | [OpenSharing 統合分析](docs/ja/opensharing-integration-analysis.md) | [OpenSharing Integration Analysis](docs/en/opensharing-integration-analysis.md) |
+| Omnigent Multi-Agent Evaluation | [Omnigent マルチエージェント評価](docs/ja/omnigent-multi-agent-evaluation.md) | [Omnigent Multi-Agent Evaluation](docs/en/omnigent-multi-agent-evaluation.md) |
 | KPI & Validation | [KPI と PoC 検証](docs/ja/kpi-and-validation.md) | [KPI & Validation](docs/en/kpi-and-validation.md) |
 
 ---

@@ -845,4 +845,4 @@ The [OSS Delta Sharing server](https://github.com/delta-io/delta-sharing) suppor
 
 - [Databricks README](../../README.md) — Full integration status and architecture
 - [Analytics & AI Demo Guide](ai-demo-guide.md) — AI/ML capabilities and current status
-- [Support Case Summary](../../.private/support-case-00921422-summary-en.md) — UC + S3 AP limitation details (private)
+- [Support Case Summary (private)](../../.private/uc-s3ap-limitation-summary-en.md) — UC + S3 AP limitation details (private)

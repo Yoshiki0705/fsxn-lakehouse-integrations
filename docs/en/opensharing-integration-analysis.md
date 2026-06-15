@@ -2,7 +2,7 @@
 
 # OpenSharing × FSx for ONTAP: Integration Analysis
 
-> **Status**: Forward-looking architecture analysis. Based on public announcements (2026-06-10). No vendor implementation has been independently validated by this repository yet. Validation tasks are tracked as a future activity.
+> **Status**: Forward-looking architecture analysis, now augmented with protocol-level facts read directly from the public OpenSharing specification (2026-06-16). No vendor implementation has been independently validated against FSx for ONTAP by this repository yet. Validation tasks are tracked as a future activity.
 
 > **Review note**: This analysis was produced through a multi-lens architecture review. Reviewer lenses are described by **role only** (no individual or employer attribution). Each claim is tagged by evidence tier: **Public** (verifiable from public sources), **Archetype** (generic role-based reasoning).
 
@@ -48,6 +48,29 @@ A presigned URL is produced purely by client-side SigV4 query-string signing —
 **Governance granularity note**: Credential vending (presigned URL or temporary credentials) grants access at the storage-location (prefix) level — it does not carry row- or column-level policies. Where fine-grained, cross-engine governance (row filters, column masks) is required, an Iceberg REST catalog with server-side scan planning is the appropriate layer. Treat table-level zero-copy delivery and fine-grained governance as distinct mechanisms, and scope any vended credentials to the specific table location with least privilege.
 
 > This note describes FSx for ONTAP / ONTAP capabilities only. Behavior should be re-validated in your own environment and ONTAP version.
+
+## Protocol Surface (from the Public Specification)
+
+The OpenSharing specification is published openly ([OpenSharing-IO/OpenSharing](https://github.com/OpenSharing-IO/OpenSharing), Apache 2.0). The following protocol details are **read directly from the public spec** (evidence tier: **Public**) and shape how an FSx for ONTAP-backed integration would be built. They are protocol facts, not yet independently validated against an FSx for ONTAP backend.
+
+**Asset hierarchy**: `Share → Schema → { Table, Volume, AgentSkill, Model, Agent (proposal), Glossary (proposal) }`. A single bearer token authorizes access to a whole share; the share is the access-control unit.
+
+**Recipient profile**: A JSON profile carries `endpoint` (Delta tables), a separate `icebergEndpoint` (Iceberg tables), a `bearerToken`, and an optional `expirationTime`. The separate Iceberg endpoint is the key to cross-engine reach.
+
+**Tables — two access modes**: Each table advertises `accessModes` of `url`, `dir`, or both, and a `format` of `delta` and/or `iceberg`:
+
+| Access mode | Mechanism | FSx for ONTAP implication |
+|-------------|-----------|---------------------------|
+| `url` | Presigned URL (client-side query API) | Works on native ONTAP S3 (SigV4); S3 Access Point showed working client-generated URLs in prior testing |
+| `dir` | Directory access via temporary STS credentials | Recipient reads with standard `GetObject` — supported on S3 Access Points, sidesteps the presign question |
+
+**Iceberg via standard REST Catalog**: The spec implements the standard [Iceberg REST Catalog API](https://github.com/apache/iceberg/blob/main/open-api/rest-catalog-open-api.yaml) — `getConfig`, `listNamespaces`, `loadNamespaceMetadata`, `listTables`, `loadTable`, `reportMetrics`. **Implication**: standard Iceberg REST clients (PyIceberg, Spark Iceberg, Athena) can consume shared tables directly. This reduces the need for an Apache XTable / shallow-clone bridge to a fallback rather than a requirement.
+
+**Credential vending**: For AWS, the server vends standard STS temporary credentials (`accessKeyId` + `secretAccessKey` + `sessionToken`) with an `expirationTime`. Azure (SAS), GCP (OAuth), and Cloudflare R2 are also defined. The AWS path aligns with the `GetObject` access already validated in this repository's prior work.
+
+**Volumes (unstructured) — proposal stage**: The `Volume` asset shares a directory `storageLocation` (e.g. `s3://bucket/path/`) and vends **STS credentials only** (no presigned-URL mode). This is the natural connection point for FSx for ONTAP unstructured payloads (images, video, documents) and links to the metadata-catalog work in this repository. The current connectors support tables first; volumes are in progress.
+
+> These are specification-level facts. Whether each behaves as specified against an FSx for ONTAP backend (S3 Access Point or native ONTAP S3) is what the phased validation activity will establish.
 
 ## Scope and Principles
 
@@ -127,14 +150,54 @@ FSx for ONTAP → OpenSharing Server (sharing + access control)
 
 ## Open Questions
 
+Resolved from the public specification (still pending validation against FSx for ONTAP):
+- **Iceberg vs Delta delivery** — both are specified; Iceberg uses a standard REST Catalog endpoint, Delta uses the Delta Sharing endpoint.
+- **Access mechanism** — tables support `url` (presigned) and/or `dir` (STS credentials); volumes use STS credentials only.
+- **Read vs write** — the specified APIs are read-oriented (list / get / loadTable / temporary-credentials); no explicit write-back endpoint is defined, so write-back remains to be tested empirically.
+
+Still open:
 - Does a native implementation sit on ONTAP S3, S3 Access Points, or an independent path?
 - Relative timing of AWS-managed vs on-premises availability?
-- Is the sharing server read-only or read-write?
-- Do column/row governance policies travel to shared tables?
+- Do column/row governance policies travel to shared tables (depends on Iceberg REST scan planning)?
 
 ## Next Activity
 
 A phased validation activity has been defined (read → Iceberg IRC → governance travel → write-back → unstructured design → publication). See the repository's Supported Integrations table and the upcoming blog series for status updates.
+
+---
+
+## Persona Review Summary
+
+### Review Metadata
+- Review Date: 2026-06-16
+- Reviewed Documents: `opensharing-integration-analysis.md` (en/ja), `omnigent-multi-agent-evaluation.md` (en/ja)
+- Review Scope: Protocol-surface additions from public OpenSharing spec; Omnigent Phase 0 evaluation
+- Rounds: 2 (findings applied between rounds)
+
+### Principal Cloud Data Architect
+- Strengths: Protocol facts clearly separated from FSx-for-ONTAP validation status; access modes (`url`/`dir`) and credential vending grounded in the published spec.
+- Round 1 finding (applied): Omnigent doc attributed the release to "the Databricks AI team and Neon" — unverifiable. Corrected to Databricks (announced by Matei Zaharia), per evidence discipline.
+- Open: write-back remains untested; Tier-1 SPOF of a sharing server stated as a risk.
+
+### Manufacturing Edge Data Architect
+- Strengths: Volume asset (STS-only) maps cleanly to unstructured payload sharing; metadata↔payload linkage retained as a custom responsibility.
+- Concerns: none new; edge ordering/dedup remain out of the sharing protocol's scope (already noted).
+
+### Databricks Governance Architect
+- Strengths: Standard Iceberg REST Catalog implementation correctly identified; credential vending (prefix-level) vs scan planning (row/column) distinction preserved.
+- Verified: Agent Bricks Supervisor Agent GA reference is a real, citable source.
+
+### NetApp FSx for ONTAP Architect
+- Strengths: NetApp correctly described as a "coming soon" OpenSharing storage partner — not overstated as available. Snapshot/FlexClone value framed as to-validate.
+- Open: whether a native implementation sits on ONTAP S3, S3 AP, or an independent path.
+
+### Public Repository Confidentiality Reviewer
+- Status: Pass
+- Sensitive Terms Found: none in public docs (support case numbers and account IDs remain only in gitignored `.kiro/` notes). Example CIDRs (10.0.0.0/16) are RFC1918 documentation examples. `Yoshiki0705` is the public repository owner handle.
+- Required Redactions: none.
+
+### Final Recommendation
+- APPROVE WITH COMMENTS: Safe for public repository. Forward-looking claims are tagged by evidence tier and distinguished from FSx-for-ONTAP validation, which remains pending.
 
 ---
 

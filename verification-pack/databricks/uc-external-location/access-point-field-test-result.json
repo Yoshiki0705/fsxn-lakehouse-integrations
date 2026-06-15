@@ -21,14 +21,14 @@
     "url": "s3://fsxn-databricks-dzs58qdtzet6zcuxin9qc8db6zbh1apn1b-ext-s3alias/",
     "credential_name": "fsxn_s3ap_credential",
     "access_point": "arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/fsxn-databricks-lakehouse",
-    "note": "access_point field added per Databricks support case #00921422 recommendation"
+    "note": "access_point field added per Databricks support recommendation"
   },
   "s3_access_point": {
     "name": "fsxn-databricks-lakehouse",
     "alias": "fsxn-databricks-dzs58qdtzet6zcuxin9qc8db6zbh1apn1b-ext-s3alias",
     "arn": "arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/fsxn-databricks-lakehouse",
     "volume_id": "fsvol-0647183905872652c",
-    "volume_name": "kodera_snowflake_testap",
+    "volume_name": "fsxn-lakehouse-testap",
     "network_origin": "Internet",
     "file_system_user": "root"
   },
@@ -57,5 +57,5 @@
     "governance_model": "Full Unity Catalog governance (lineage, fine-grained access control, audit)",
     "article_impact": "This changes the article conclusion from 'UC blocked' to 'UC works with access_point field configuration'"
   },
-  "support_case_reference": "Databricks Support Case #00921422 (Guruprasad B N, 2026-05-21)"
+  "support_case_reference": "Databricks Support engagement (2026-05)"
 }

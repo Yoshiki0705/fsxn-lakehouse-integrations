@@ -128,6 +128,6 @@ kpi_comparison:
 existing_svm_status:
   svm_name: "FSxN_OnPre"
   svm_id: "svm-0d5f81cd0146af242"
-  s3_ap_status: "TIMEOUT (still affected by support case 177900333300633)"
+  s3_ap_status: "TIMEOUT (still affected by an AWS infrastructure support engagement)"
   last_checked: "2026-05-23T07:04:00Z"
   aws_support_response: "Pending (last update was our isolation test submission)"
