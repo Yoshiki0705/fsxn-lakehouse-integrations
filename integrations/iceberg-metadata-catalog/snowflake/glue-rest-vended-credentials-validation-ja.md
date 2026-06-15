@@ -18,7 +18,7 @@ S3 Tables アクセスのための vended credentials を使用した AWS Glue I
 | Time travel (AT/BEFORE TIMESTAMP) | ✅ | **検証済み**: AT(OFFSET => -1200) で 170 (追加前スナップショット) を取得 |
 | AUTO_REFRESH | ✅ | **実動作確認済み**: PyIceberg append を 30秒以内に自動反映 (170→171) |
 | Lake Formation カラムレベル権限 | ❌ | **VENDED_CREDENTIALS では非サポート** (2026-06-08)。AllowFullTableExternalDataAccess=false で全アクセスがブロックされる |
-| サポートケース | ✅ | Case #01364260 — クローズ確認済み |
+| サポートケース | ✅ | Snowflake support case (closed) — クローズ確認済み |
 
 ## ✅ ブレイクスルー: VENDED_CREDENTIALS 動作確認 (2026-06-05)
 

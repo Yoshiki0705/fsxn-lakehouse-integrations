@@ -28,8 +28,8 @@ Payloads (images/video/docs) ──→ ONTAP (on-prem origin)
 ## Quick Start (Phase A — AWS)
 
 > **Current Status (2026-06-15):** MSK Provisioned is ACTIVE. ClickHouse Cloud ClickPipes shows
-> the Multi-VPC endpoint as "Incompatible" — awaiting ClickHouse Support resolution (Case #00046781).
-> On-premises Instaclustr setup is in parallel (VM host ready, awaiting VM images from Justin).
+> the Multi-VPC endpoint as "Incompatible" — awaiting ClickHouse Support resolution (ClickHouse support case pending).
+> On-premises Instaclustr setup is in parallel (VM host ready, awaiting VM images from Instaclustr SE).
 
 ```bash
 # 1. Deploy infrastructure (existing VPC + FSx for ONTAP reused)

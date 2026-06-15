@@ -85,6 +85,19 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 - S3 AP policy for per-consumer access control
 - ONTAP FlexClone for instant logical copies
 
+### Pattern E: OpenSharing (Zero-Copy Governed Access) — Analysis Stage
+
+```
+FSx for ONTAP → OpenSharing Server (sharing + access control)
+                    → Catalog (governance boundary)
+                    → Lakehouse Serverless Compute (in-place query)
+                    → Iceberg IRC clients (cross-engine)
+```
+
+- Forward-looking pattern based on the [OpenSharing announcement](https://www.databricks.com/company/newsroom/press-releases/databricks-announces-opensharing) (2026-06-10), the evolution of Delta Sharing hosted by the Linux Foundation
+- Presigned-URL sharing model may bypass the current Databricks S3 AP ARN limitation (hypothesis under validation)
+- See [OpenSharing Integration Analysis (EN)](docs/en/opensharing-integration-analysis.md) / [統合分析 (JA)](docs/ja/opensharing-integration-analysis.md)
+
 ---
 
 ## Supported Integrations / 対応プラットフォーム
@@ -94,7 +107,7 @@ FSx for ONTAP (Producer) → S3 AP (scoped policy) → Consumer Platform
 | [AWS Athena](integrations/athena/) | ✅ Security Verified | Glue Data Catalog + Serverless | Read-only. [Benchmark: 54.8 MB/s peak, 5M rows in 2s](verification-pack/athena-parquet-read/) |
 | [AWS Glue ETL](integrations/glue/) | ✅ Functional Verified | Crawler + ETL + Medallion | Read + Write-back (Parquet). [64s for 10K row ETL](verification-pack/glue-etl/) |
 | [Delta Lake OSS](integrations/delta-lake-oss/) | ✅ Read Verified / ❌ Write | delta-rs + Spark | Read works. Write returns 501 (conditional writes not supported). |
-| [Databricks](integrations/databricks/) | ⚠️ Blocked | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. |
+| [Databricks](integrations/databricks/) | ⚠️ Blocked | Unity Catalog + Delta Lake | Session policy does not recognize S3 AP ARN format. Support case filed. OpenSharing path under analysis (see [Pattern E](#pattern-e-opensharing-zero-copy-governed-access--analysis-stage)). |
 | [Snowflake](integrations/snowflake/) | ✅ Verified | External Stage + External Table | Works with `AWS_ACCESS_POINT_ARN` stage parameter. SELECT + External Table verified. |
 | [Apache Iceberg](integrations/iceberg/) | ⚠️ Read Experimental / ❌ Write Failed | REST Catalog (vendor-neutral) | Write fails: S3FileIO cannot handle AP alias for metadata. Read of pre-existing tables expected to work. |
 | [Iceberg Metadata Catalog](integrations/iceberg-metadata-catalog/) | ✅ AWS Native Verified / ⚠️ Cross-platform in progress | S3 Tables + PyIceberg + Glue REST + Bedrock | AI-powered metadata catalog. AWS path verified; Databricks/Snowflake paths under validation. [Details](integrations/iceberg-metadata-catalog/docs/poc-results-summary.md) |
@@ -272,6 +285,7 @@ fsxn-lakehouse-integrations/
 | Recovery Semantics | [リカバリセマンティクス](docs/ja/recovery-semantics.md) | [Recovery Semantics](docs/en/recovery-semantics.md) |
 | Governance & Compliance | [ガバナンスとコンプライアンス](docs/ja/governance-and-compliance.md) | [Governance & Compliance](docs/en/governance-and-compliance.md) |
 | Zero-Copy Unstructured Data Governance | [ゼロコピー非構造化データガバナンス](docs/ja/zero-copy-media-governance.md) | [Zero-Copy Unstructured Data Governance](docs/en/zero-copy-media-governance.md) |
+| OpenSharing Integration Analysis | [OpenSharing 統合分析](docs/ja/opensharing-integration-analysis.md) | [OpenSharing Integration Analysis](docs/en/opensharing-integration-analysis.md) |
 | KPI & Validation | [KPI と PoC 検証](docs/ja/kpi-and-validation.md) | [KPI & Validation](docs/en/kpi-and-validation.md) |
 
 ---

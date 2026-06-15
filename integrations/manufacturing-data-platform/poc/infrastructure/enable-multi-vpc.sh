@@ -10,7 +10,7 @@ set -euo pipefail
 #   - Cluster policy already set (allows ClickHouse account 072088201116)
 
 REGION="ap-northeast-1"
-CLUSTER_ARN="arn:aws:kafka:ap-northeast-1:178625946981:cluster/manufacturing-poc-msk-prov/f3a0fc3c-e4df-4a62-86ea-c8478657d898-3"
+CLUSTER_ARN="arn:aws:kafka:ap-northeast-1:<ACCOUNT_ID>:cluster/manufacturing-poc-msk-prov/f3a0fc3c-e4df-4a62-86ea-c8478657d898-3"
 
 echo "[$(date)] Checking cluster state..."
 STATE=$(aws kafka describe-cluster --cluster-arn "$CLUSTER_ARN" --region "$REGION" \

@@ -18,7 +18,7 @@ Document the validation of Snowflake CATALOG INTEGRATION with AWS Glue Iceberg R
 | Time travel (AT/BEFORE TIMESTAMP) | ✅ | **VERIFIED**: AT(OFFSET => -1200) returns 170 (pre-append), current returns 171 |
 | AUTO_REFRESH | ✅ | **VERIFIED**: PyIceberg append detected within 30s (170→171 auto-reflected) |
 | Lake Formation column-level | ❌ | NOT enforced via VENDED_CREDENTIALS (2026-06-08) |
-| Support case | ✅ | Case #01364260 — closed |
+| Support case | ✅ | Snowflake support case (closed) — closed |
 
 ## ✅ BREAKTHROUGH: VENDED_CREDENTIALS Working (2026-06-05)
 
