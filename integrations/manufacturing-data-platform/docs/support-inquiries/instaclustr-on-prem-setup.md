@@ -17,7 +17,7 @@
 | Backup Storage | FAS2750 via ONTAP S3 | 🔄 Setting up new SVM |
 | Network | Zero inbound constraints | ✅ Confirmed |
 | Instaclustr Trial Account | Created | ✅ Active |
-| Account ID | 76d65fad-1692-4178-9089-8c0a3f59cbfc | ✅ |
+| Account ID | `<INSTACLUSTR_ACCOUNT_ID>` | ✅ |
 | Instaclustr SE invited | ✅ | ✅ |
 
 ## Pending Items
