@@ -62,6 +62,7 @@ pytest tests/ -v
 | [パフォーマンス](docs/ja/11_performance_targets_business_metrics.md) | レイテンシ、スループット、ビジネスメトリクス |
 | [セキュリティ](docs/ja/12_security_hardening.md) | 暗号化、シークレット、監査、拒否ポリシー |
 | [エンゲージメント](docs/ja/13_customer_engagement_template.md) | パートナー/SI 再利用テンプレート |
+| [Edge ↔ Lakehouse 同期](docs/ja/14_edge_lakehouse_sync.md) | プロジェクト間設計同期 |
 
 ## Phase A vs Phase B
 
