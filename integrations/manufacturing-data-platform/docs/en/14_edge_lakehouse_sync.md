@@ -149,6 +149,8 @@ cp ${EDGE_REPO}/tests/sample_events/*.json \
 | `docs/*/data-schema-design.md` | `poc/databricks/03_unity_catalog_v2.sql` | Reflected as UC DDL |
 | `synthetic_events.py` | `poc/shared-test-data/` | TBD |
 
+> **Bidirectional navigation (resolved on both repos' `main`)**: The Edge `docs/{ja,en}/databricks-integration.md` now back-links to this document, and this repo links to the Edge project from both the root README and the manufacturing-data-platform README. The `databricks-integration.md` ↔ `14_edge_lakehouse_sync.md` mapping above therefore resolves in both directions on GitHub.
+
 ---
 
 ## 5. Responsibility Matrix
@@ -238,3 +240,4 @@ operator
 | 2026-06-16 | Edge final sync complete. All items confirmed aligned. Added test data import procedure (21 files). |
 | 2026-06-16 | Round 2 improvements: feedback_events, human_label, Kafka error handling, quality_events type fix, Gold training_dataset generation, M1-M6 success metrics (see section 7). |
 | 2026-06-16 | Follow-up: aligned `_synthetic` governance flag to the top-level envelope across ClickHouse and Databricks DLT (bronze.kafka_events.is_synthetic). |
+| 2026-06-16 | Noted bidirectional Edge ↔ Lakehouse navigation now resolves on both repos' main (databricks-integration.md back-link). |
