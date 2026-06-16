@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS manufacturing_poc.bronze.kafka_events (
     lineage_id STRING COMMENT 'Session or batch lineage ID',
     processing_status STRING COMMENT 'pending_analysis | completed | failed',
     metadata STRING COMMENT 'JSON — event-type specific metadata',
+    is_synthetic BOOLEAN DEFAULT false COMMENT 'Governance: top-level synthetic-data flag (false when absent)',
     -- Ingestion metadata
     _kafka_topic STRING COMMENT 'Source Kafka topic',
     _kafka_partition INT COMMENT 'Source Kafka partition',

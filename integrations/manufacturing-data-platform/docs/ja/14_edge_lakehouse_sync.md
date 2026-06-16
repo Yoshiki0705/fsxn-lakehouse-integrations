@@ -274,6 +274,7 @@ operator
 ### 7.4 ガバナンス
 
 - 合成テストデータには `_synthetic: true` フラグを付与（ペルソナレビュー要件）
+- `_synthetic` フラグはイベントエンベロープの **top-level** に存在。ClickHouse は `JSONExtractBool(raw, '_synthetic')` で参照し、Databricks DLT はエンベロープスキーマの top-level フィールドとして取り込み（欠落時は `false`）、`bronze.kafka_events.is_synthetic` → `bronze.feedback_events.is_synthetic` へ伝播。両経路で一貫。
 - ClickHouse / Bronze の `feedback_events.is_synthetic` で本番精度メトリクスから合成データを除外可能
 
 ---
@@ -286,3 +287,4 @@ operator
 | 2026-06-16 | Edge 側同期確認メッセージを受領。責任分担表を追加。export_training_features.sh 反映。 |
 | 2026-06-16 | Edge 側最終同期完了。全項目一致確認。テストデータ 21件の取り込み手順を追記。 |
 | 2026-06-16 | ラウンド2改善反映: feedback_events, human_label, Kafka エラーハンドリング, quality_events 型修正, Gold training_dataset 生成, M1-M6 成功指標 (セクション7参照)。 |
+| 2026-06-16 | フォローアップ: `_synthetic` ガバナンスフラグを top-level エンベロープ基準に統一（ClickHouse / Databricks DLT 両対応、bronze.kafka_events.is_synthetic）。 |
