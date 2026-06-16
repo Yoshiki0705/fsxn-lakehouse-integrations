@@ -30,6 +30,7 @@ Data + AI Summit 2026 で、本評価に直接影響する 2 つの発表があ�
 
 - **Managed Omnigent on Databricks（Beta）**: OSS の Omnigent をそのまま Databricks にマネージドワークフローとしてデプロイ可能。共有履歴・リモートアクセス・コラボレーション・**Lakebox** での分離されたクラウド実行を提供。既存の setup / harness / workflow / skill を再構築なしで実行。([AI Gateway 発表](https://www.databricks.com/blog/ai-governance-data-ai-summit-2026-whats-new-unity-ai-gateway))
 - **Unity AI Gateway**: Unity Catalog ベースのガバナンスレイヤー。モデル・エージェント・MCP サービス・skill をガバナンスし、**Managed Omnigent の全インタラクションをガバナンス**。中央定義のポリシー、コスト制御（ハード spend cap、smart routing）、ランタイム Contextual Service Policies（Beta: allow / deny / require-approval）、組み込みガードレール（PII / prompt injection / jailbreak / unsafe content）、統合エージェントトレーシング（Lakewatch で分析）。([What's new in Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026))
+- **Agent Bricks との関係**: Databricks は Managed Omnigent を **Agent Bricks**（開発者向けの包括的エージェントプラットフォーム）の*一部*として位置づけ。Agent Bricks は Choice（任意のモデル/ハーネス — LangGraph, CrewAI, Claude Code SDK 等 — を Managed Omnigent でオーケストレーション）、Context（Genie Ontology, MCP, agent memory, Document Intelligence）、Control（Unity AI Gateway）の 3 本柱で構成。つまり Agent Bricks = プラットフォーム、Managed Omnigent = そのハーネスオーケストレーション要素、Unity AI Gateway = そのガバナンスレイヤー。([Agent Bricks DAIS 2026](https://www.databricks.com/blog/agent-bricks-dais-2026))
 
 **本評価への示唆**: 「開発 = Omnigent / 本番 = Databricks」の仮説が具体化した。self-hosted OSS Omnigent は開発・マルチベンダー実験向け、**Unity AI Gateway がガバナンスする Managed Omnigent on Databricks** が同一ワークフローの本番パス。以下の比較・設計セクションに反映済み。
 
@@ -220,22 +221,24 @@ Supervisor Agent (Claude Sonnet)
 
 ## 比較: Omnigent vs Databricks Agent Bricks
 
-| 軸 | Omnigent（OSS, self-hosted） | Managed Omnigent on Databricks | Agent Bricks Supervisor Agent |
+| 軸 | Omnigent（OSS, self-hosted） | Managed Omnigent on Databricks | Agent Bricks（開発者エージェントプラットフォーム） |
 |----|------------------------------|-------------------------------|-------------------------------|
-| 管理形態 | Self-hosted (OSS) | Databricks マネージド（Beta, Lakebox 実行） | Databricks マネージド (GA) |
-| ガバナンス | カスタムポリシー (CEL) | Unity AI Gateway（UC ネイティブ runtime policy） | Unity Catalog (ネイティブ) |
-| モデル対応 | マルチベンダー | マルチベンダー + AI Gateway smart routing | Databricks FMAPI 中心 |
-| コラボレーション | URL セッション共有 | 共有履歴 + リモートアクセス | Databricks Apps 内 |
+| 管理形態 | Self-hosted (OSS) | Databricks マネージド（Beta, Lakebox 実行） | Databricks マネージドプラットフォーム |
+| ガバナンス | カスタムポリシー (CEL) | Unity AI Gateway（UC ネイティブ runtime policy） | Unity AI Gateway（Control の柱） |
+| モデル対応 | マルチベンダー | マルチベンダー + AI Gateway smart routing | 任意のモデル/ハーネス（Choice の柱） |
+| コラボレーション | URL セッション共有 | 共有履歴 + リモートアクセス | プラットフォーム統合 |
 | デプロイ | EC2 / ECS / Modal | Lakebox（分離クラウド実行） | Databricks Apps |
-| サンドボックス | OS レベル (Omnibox) | Lakebox 分離 | Compute isolation |
-| 最適用途 | 開発、実験、クロスベンダー | UC データと並ぶ本番エージェントワークフロー | 本番エンタープライズエージェントオーケストレーション |
+| サンドボックス | OS レベル (Omnibox) | Lakebox 分離 | Databricks Sandbox（セキュア VM） |
+| 最適用途 | 開発、実験、クロスベンダー | UC データと並ぶ本番エージェントワークフロー | Databricks 上のエンドツーエンドエージェントプラットフォーム |
+
+> **注**: これらは厳密には排他的ではない — Managed Omnigent は Agent Bricks の*一部*（ハーネスオーケストレーション選択肢）として提供され、両マネージドパスは Unity AI Gateway がガバナンスする。本表は OSS ハーネス・そのマネージド形態・広義のプラットフォームを明確化のため分離している。
 
 **Unity AI Gateway** はマネージドパス共通のガバナンスレイヤー: モデル・エージェント・MCP サービス（Google Drive, Jira, Confluence, Slack, GitHub, SharePoint のマネージドコネクタ + カスタム）・skill を、ハード spend cap・smart routing・Contextual Service Policies（Beta）・ガードレール・統合トレーシングでガバナンスする。
 
 **選定ガイダンス**（Archetype）:
 - **OSS Omnigent**: マルチベンダーモデル実験、開発時オーケストレーション、セッション共有、Databricks 外環境
 - **Managed Omnigent on Databricks**: 同一ワークフローを Unity AI Gateway ガバナンス下で本番運用、UC ガバナンスデータと並走
-- **Agent Bricks**: UC ネイティブのマネージド SLA を伴う本番エンタープライズエージェントオーケストレーション
+- **Agent Bricks**: Databricks 上のエンドツーエンドエージェントプラットフォーム（Managed Omnigent を含むモデル/ハーネス選択、Genie Ontology コンテキスト、Unity AI Gateway 制御）
 
 ---
 
