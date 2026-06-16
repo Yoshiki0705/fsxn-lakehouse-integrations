@@ -17,7 +17,6 @@ import json
 import logging
 import os
 import random
-import sys
 import time
 import uuid
 from datetime import datetime, timezone
@@ -119,7 +118,9 @@ def generate_quality_event(
     """Generate a synthetic quality inspection event with payload reference."""
     event_type = random.choice(QUALITY_EVENT_TYPES)
     pass_fail = event_type in ("PASS", "INSPECTION")
-    measurement_value = round(random.uniform(0.01, 100.0), 4) if event_type == "MEASUREMENT" else None
+    measurement_value = (
+        round(random.uniform(0.01, 100.0), 4) if event_type == "MEASUREMENT" else None
+    )
 
     # Simulate a payload reference (image from quality camera)
     has_payload = random.random() < 0.7  # 70% of quality events have images
@@ -202,7 +203,9 @@ def create_producer_config() -> dict[str, str]:
 
                 def oauth_cb(config_str):
                     auth_token, _ = MSKAuthTokenProvider.generate_auth_token(
-                        KAFKA_BOOTSTRAP_SERVERS.split(":")[0].split(".")[-4]  # extract region
+                        KAFKA_BOOTSTRAP_SERVERS.split(":")[0].split(".")[
+                            -4
+                        ]  # extract region
                     )
                     return auth_token, time.time() + 900  # 15-min expiry
 
@@ -231,6 +234,7 @@ def delivery_callback(err, msg):
 def ensure_topics(config: dict[str, str], topics: list[str], num_partitions: int = 6):
     """Create Kafka topics if they don't exist (best-effort)."""
     from confluent_kafka.admin import AdminClient, NewTopic
+
     try:
         admin = AdminClient(config)
         new_topics = [
@@ -260,7 +264,7 @@ def run_generator(
     num_devices_per_line: int = 5,
 ):
     """Run the synthetic event generator."""
-    logger.info(f"Starting synthetic event generator")
+    logger.info("Starting synthetic event generator")
     logger.info(f"  Kafka: {KAFKA_BOOTSTRAP_SERVERS}")
     logger.info(f"  Rate: {events_per_second} events/sec")
     logger.info(f"  Duration: {duration_seconds} seconds")
@@ -282,6 +286,7 @@ def run_generator(
     ensure_topics(producer_config, topics)
 
     from confluent_kafka import Producer
+
     producer = Producer(producer_config)
 
     # Event generation weights

@@ -18,7 +18,6 @@ import json
 import logging
 import os
 import random
-import sys
 import time
 import uuid
 from datetime import datetime, timezone
@@ -207,7 +206,7 @@ def generate_synthetic_pdf(target_size_mb: float) -> tuple[bytes, str]:
     except ImportError:
         # Fallback: create minimal valid PDF without reportlab
         logger.warning("reportlab not available; generating minimal PDF")
-        content = f"""%PDF-1.4
+        content = """%PDF-1.4
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
 endobj
@@ -260,9 +259,7 @@ def get_s3_client():
     )
 
 
-def upload_via_s3(
-    data: bytes, key: str, content_type: str
-) -> dict[str, str]:
+def upload_via_s3(data: bytes, key: str, content_type: str) -> dict[str, str]:
     """Upload payload to FSx for ONTAP via ONTAP S3 protocol."""
     client = get_s3_client()
 
@@ -357,7 +354,7 @@ def run_payload_generator(
     output_manifest: Optional[str] = None,
 ):
     """Generate and upload synthetic payloads."""
-    logger.info(f"Starting synthetic payload generator")
+    logger.info("Starting synthetic payload generator")
     logger.info(f"  Storage mode: {STORAGE_MODE}")
     logger.info(f"  Count: {count}")
     logger.info(f"  Image ratio: {image_ratio:.0%}")
@@ -397,16 +394,15 @@ def run_payload_generator(
 
             manifest.append(result)
             logger.info(
-                f"  [{i+1}/{count}] Uploaded: {result['uri']} "
+                f"  [{i + 1}/{count}] Uploaded: {result['uri']} "
                 f"({result['size_bytes'] / 1024 / 1024:.1f} MB)"
             )
         except Exception as e:
-            logger.error(f"  [{i+1}/{count}] Failed: {relative_path} — {e}")
+            logger.error(f"  [{i + 1}/{count}] Failed: {relative_path} — {e}")
 
     elapsed = time.time() - start_time
     logger.info(
-        f"Payload generation complete: {len(manifest)}/{count} files "
-        f"in {elapsed:.1f}s"
+        f"Payload generation complete: {len(manifest)}/{count} files in {elapsed:.1f}s"
     )
 
     # Write manifest file

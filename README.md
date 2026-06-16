@@ -114,6 +114,7 @@ FSx for ONTAP → OpenSharing Server (sharing + access control)
 | [EMR + Spark](integrations/emr-spark/) | ✅ Functional Verified | Spark SQL + Iceberg | Read + Write-back verified. [10K rows in 16s total (EMR Serverless)](verification-pack/emr-spark/) |
 | [Redshift Spectrum](integrations/redshift-spectrum/) | ✅ Functional Verified | External Schema | Same pattern as Athena. [5M rows in 4.3s](verification-pack/redshift-spectrum/) |
 | [DuckDB](integrations/duckdb/) | ✅ Functional Verified | Lambda lightweight analytics | Read + Write-back. [5M rows in 779ms, write-back 304ms](integrations/duckdb/) |
+| [Manufacturing Data Platform](integrations/manufacturing-data-platform/) | 🔧 Design + PoC | Kafka + ClickHouse + Databricks (streaming) | Edge-to-cloud streaming pipeline (not S3 AP query). Syncs with the [edge project](#related-projects). [Edge ↔ Lakehouse sync](integrations/manufacturing-data-platform/docs/en/14_edge_lakehouse_sync.md) |
 | [Dremio](integrations/dremio/) | 🔲 Planned | Arctic Catalog | — |
 | [Trino / Starburst](integrations/trino-starburst/) | 🔲 Planned | Hive Connector | — |
 | [BigQuery Omni](integrations/bigquery-omni/) | 🔲 Planned | BigLake | Requires GCP environment |
@@ -321,6 +322,17 @@ AI-powered metadata catalog that makes unstructured files on FSx for ONTAP insta
 **Key results**: 40 files cataloged in 30s, AI classification at $0.01/file, Athena queries < 2s, vector search with scale-to-zero ($0 idle), full demo in 47 seconds for $0.07.
 
 See: [Architecture](docs/en/iceberg-metadata-catalog.md) | [PoC Results](integrations/iceberg-metadata-catalog/docs/poc-results-summary.md) | [Demo Guide](integrations/iceberg-metadata-catalog/demo/docs/demo-guide.md)
+
+---
+
+## Related Projects
+
+| Project | Role | Relationship |
+|---------|------|--------------|
+| [ontap-edge-to-cloud-ai](https://github.com/Yoshiki0705/ontap-edge-to-cloud-ai) | Edge device (Raspberry Pi) → ONTAP → Kafka ingestion | Generates events and payloads consumed by this repo's [Manufacturing Data Platform](integrations/manufacturing-data-platform/). Schema, ClickHouse DDL, and Databricks pipelines are kept in sync — see [Edge ↔ Lakehouse sync](integrations/manufacturing-data-platform/docs/en/14_edge_lakehouse_sync.md). |
+| [FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns) | 17 serverless patterns for FSx for ONTAP S3 Access Points | Companion pattern library for the S3 AP integrations above. |
+
+This repository owns the **Kafka + ClickHouse + Databricks** side of the edge-to-cloud architecture; the edge device side lives in `ontap-edge-to-cloud-ai`.
 
 ---
 

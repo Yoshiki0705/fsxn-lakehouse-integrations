@@ -46,9 +46,14 @@ jobs:
       - name: Check for hardcoded credentials in Python
         run: |
           echo "🔍 Scanning Python files for hardcoded credentials..."
+          # Exclusions:
+          #   os.environ / getenv  — value sourced from environment, not hardcoded
+          #   placeholder / example / <...>  — documented placeholders
+          #   {...}  — f-string interpolation of a runtime variable (e.g.
+          #            f"SET s3_session_token = '{creds.token}'"), not a literal secret
           HITS=$(git ls-files -- '*.py' | \
             xargs grep -Pn '(?:password|secret|token|api_key)\s*=\s*["\x27][^"\x27]{8,}' 2>/dev/null | \
-            grep -v 'os\.environ\|getenv\|placeholder\|example\|<.*>' || true)
+            grep -v 'os\.environ\|getenv\|placeholder\|example\|<.*>\|{.*}' || true)
           if [[ -n "$HITS" ]]; then
             echo "::error::Potential hardcoded credentials in Python files"
             echo "$HITS"

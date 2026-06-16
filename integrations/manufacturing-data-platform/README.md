@@ -62,6 +62,7 @@ pytest tests/ -v
 | [Performance Targets](docs/en/11_performance_targets_business_metrics.md) | Latency, throughput, business metrics |
 | [Security](docs/en/12_security_hardening.md) | Encryption, secrets, audit, deny policies |
 | [Engagement Template](docs/en/13_customer_engagement_template.md) | Partner/SI reusable template |
+| [Edge ↔ Lakehouse Sync](docs/en/14_edge_lakehouse_sync.md) | Cross-project design synchronization |
 
 ## Architecture Decision Records (ADRs)
 
@@ -97,10 +98,11 @@ integrations/manufacturing-data-platform/
 ├── poc/
 │   ├── config/          — Unified Phase A/B configuration
 │   ├── infrastructure/  — CloudFormation + deployment scripts
-│   ├── clickhouse/      — ClickHouse setup SQL
-│   ├── databricks/      — UC catalog + streaming pipeline
+│   ├── clickhouse/      — ClickHouse setup SQL (v1 + v2 Edge-aligned + feedback_events)
+│   ├── databricks/      — UC catalog + DLT + feature import + Gold dataset + success metrics
 │   ├── on-premises/     — Phase B on-prem procedures
 │   ├── edge-device/     — Raspberry Pi setup
+│   ├── shared-test-data/ — Shared test events (synced with Edge project)
 │   └── synthetic-data-generator/ — Test data + 28 unit tests
 └── README.md            — This file
 ```
