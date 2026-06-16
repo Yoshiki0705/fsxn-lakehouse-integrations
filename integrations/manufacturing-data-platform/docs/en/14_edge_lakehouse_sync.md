@@ -224,6 +224,7 @@ operator
 ### 7.4 Governance
 
 - Synthetic test data carries the `_synthetic: true` flag (persona review requirement)
+- The `_synthetic` flag lives at the **top level** of the event envelope. ClickHouse reads it via `JSONExtractBool(raw, '_synthetic')`; the Databricks DLT carries it through `bronze.kafka_events.is_synthetic` (top-level field in the envelope schema, defaulting to `false` when absent) and into `bronze.feedback_events.is_synthetic`. Both paths are consistent.
 - The `feedback_events.is_synthetic` column (ClickHouse / Bronze) allows excluding synthetic data from production accuracy metrics
 
 ---
@@ -236,3 +237,4 @@ operator
 | 2026-06-16 | Edge sync confirmation received. Added responsibility matrix. Reflected export_training_features.sh. |
 | 2026-06-16 | Edge final sync complete. All items confirmed aligned. Added test data import procedure (21 files). |
 | 2026-06-16 | Round 2 improvements: feedback_events, human_label, Kafka error handling, quality_events type fix, Gold training_dataset generation, M1-M6 success metrics (see section 7). |
+| 2026-06-16 | Follow-up: aligned `_synthetic` governance flag to the top-level envelope across ClickHouse and Databricks DLT (bronze.kafka_events.is_synthetic). |

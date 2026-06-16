@@ -40,6 +40,7 @@ from pyspark.sql.types import (
     StringType,
     LongType,
     DoubleType,
+    BooleanType,
     TimestampType,
 )
 
@@ -78,6 +79,9 @@ event_envelope_schema = StructType([
     StructField("lineage_id", StringType(), True),
     StructField("processing_status", StringType(), True),
     StructField("metadata", StringType(), True),
+    # Governance: top-level synthetic-data flag (aligned with ClickHouse
+    # JSONExtractBool(raw, '_synthetic') and the unified event envelope)
+    StructField("_synthetic", BooleanType(), True),
 ])
 
 # COMMAND ----------
@@ -137,7 +141,10 @@ def kafka_events():
         .withColumn("ingest_time", to_timestamp(col("ingest_time")))
         .withColumn("_ingested_at", current_timestamp())
         .withColumn("_event_date", expr("date(event_timestamp)"))
-        .drop("timestamp")
+        # Carry the top-level synthetic flag as a stable column (defaults to
+        # false when absent, matching ClickHouse semantics)
+        .withColumn("is_synthetic", expr("coalesce(_synthetic, false)"))
+        .drop("timestamp", "_synthetic")
     )
 
     return parsed
@@ -322,8 +329,9 @@ def feedback_events():
             to_timestamp(get_json_object(col("metadata"), "$.labeled_at")).alias("labeled_at"),
             get_json_object(col("metadata"), "$.correction_reason").alias("correction_reason"),
             get_json_object(col("metadata"), "$.original_ai_label").alias("original_ai_label"),
-            # Governance: synthetic data flag from event envelope
-            expr("CAST(get_json_object(metadata, '$._synthetic') AS BOOLEAN)").alias("is_synthetic"),
+            # Governance: synthetic flag carried from the top-level envelope
+            # (aligned with ClickHouse top-level JSONExtractBool(raw, '_synthetic'))
+            col("is_synthetic"),
             col("metadata"),
             current_timestamp().alias("_ingested_at"),
             expr("date(event_timestamp)").alias("_event_date"),
