@@ -18,6 +18,11 @@
 # Required pipeline settings:
 #   - Target: manufacturing_poc.bronze
 #   - Catalog: manufacturing_poc (Unity Catalog mode)
+#
+# DAIS 2026 note: Real-Time Mode (RTM) for Spark Declarative Pipelines is now in
+# Public Preview — end-to-end latency as low as 5ms (continuous processing, not
+# microbatch). Evaluate RTM alongside the Lakehouse//RT comparison in Phase B.
+# Current pipeline uses standard microbatch DLT for Phase A stability.
 #   - Configuration:
 #       kafka.bootstrap.servers = <MSK bootstrap>
 #       kafka.security.protocol = SASL_SSL
