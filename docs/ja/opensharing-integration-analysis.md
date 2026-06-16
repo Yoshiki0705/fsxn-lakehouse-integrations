@@ -20,6 +20,7 @@
 | Partner Well-Architected Framework が統合ブループリント（Iceberg を提供する2パス: Delta Shallow Clone / Apache XTable メタデータ変換）を文書化 | [Partner Framework](https://databrickslabs.github.io/partner-architecture/data-collaboration/software-defined-storage) |
 | **DAIS 2026 キーノート（2026-06-16）**: SecureConnect がクラウド間のセキュア接続 + zero-copy 共有を実現。Global Distribution がクラウド・リージョン間の自動レプリケーションを追加 | [What's new with Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026) |
 | **DAIS 2026 キーノート（2026-06-16）**: Iceberg v3 GA / Managed Iceberg GA / Foreign Iceberg GA / 新フェデレーションコネクタ / cross-engine ABAC が利用可能に | 同上 |
+| **DAIS 2026 キーノート（2026-06-16）**: Storage Ecosystem パートナーステータスが精緻化 — MinIO（GA）、Everpure（Private Preview）、Qumulo / VAST Data（Private Preview Soon）。**NetApp、Cohesity、Commvault、Nutanix は年末までに提供確認**。SecureConnect は Databricks マネージドプロキシ（一度設定すれば recipient 追加ごとのファイアウォール変更不要）。外部カタログ（AWS Glue / Hive Metastore / Snowflake Horizon）からのテーブル共有もレプリケーションなしで可能 | [OpenSharing blog](https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era) |
 
 > FSx for ONTAP は、マルチプロトコルアクセス（NFS/SMB/iSCSI/S3）とデータ保護機能（Snapshot、FlexClone、SnapMirror、FabricPool）を持つ AWS マネージドのエンタープライズストレージサービスである。以下では、OpenSharing パターンが本リポジトリの既存 S3 Access Point 統合パターンをどう補完しうるかを評価する。
 
@@ -190,7 +191,7 @@ FSx for ONTAP → OpenSharing Server（共有 + アクセス制御）
 - 検証済み: Agent Bricks Supervisor Agent GA の参照は実在する引用可能なソース。
 
 ### NetApp FSx for ONTAP Architect
-- 強み: NetApp を OpenSharing ストレージパートナーの "coming soon" と正確に記述（提供中と過大表現していない）。Snapshot/FlexClone 価値を要検証として提示。
+- 強み: NetApp を OpenSharing ストレージパートナーの "coming soon"（「年末までに」と公式確認、[OpenSharing blog](https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era)）と正確に記述（提供中と過大表現していない）。Snapshot/FlexClone 価値を要検証として提示。
 - 未解決: native 実装が ONTAP S3 / S3 AP / 独立パスのどれに乗るか。
 
 ### Public Repository Confidentiality Reviewer
