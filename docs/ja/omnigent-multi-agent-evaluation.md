@@ -24,6 +24,15 @@ Omnigent は Databricks が 2026 年 6 月中旬にオープンソース公開�
 
 **ソース**: [Databricks Blog](https://www.databricks.com/blog/introducing-omnigent-meta-harness-combine-control-and-share-your-agents) | [omnigent.ai](https://omnigent.ai/) | [GitHub](https://github.com/omnigent-ai/omnigent)
 
+### DAIS 2026 アップデート（2026-06-16）: Managed Omnigent + Unity AI Gateway
+
+Data + AI Summit 2026 で、本評価に直接影響する 2 つの発表がありました（evidence tier: **Public**）。
+
+- **Managed Omnigent on Databricks（Beta）**: OSS の Omnigent をそのまま Databricks にマネージドワークフローとしてデプロイ可能。共有履歴・リモートアクセス・コラボレーション・**Lakebox** での分離されたクラウド実行を提供。既存の setup / harness / workflow / skill を再構築なしで実行。([AI Gateway 発表](https://www.databricks.com/blog/ai-governance-data-ai-summit-2026-whats-new-unity-ai-gateway))
+- **Unity AI Gateway**: Unity Catalog ベースのガバナンスレイヤー。モデル・エージェント・MCP サービス・skill をガバナンスし、**Managed Omnigent の全インタラクションをガバナンス**。中央定義のポリシー、コスト制御（ハード spend cap、smart routing）、ランタイム Contextual Service Policies（Beta: allow / deny / require-approval）、組み込みガードレール（PII / prompt injection / jailbreak / unsafe content）、統合エージェントトレーシング（Lakewatch で分析）。([What's new in Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026))
+
+**本評価への示唆**: 「開発 = Omnigent / 本番 = Databricks」の仮説が具体化した。self-hosted OSS Omnigent は開発・マルチベンダー実験向け、**Unity AI Gateway がガバナンスする Managed Omnigent on Databricks** が同一ワークフローの本番パス。以下の比較・設計セクションに反映済み。
+
 ---
 
 ## 本リポジトリとの関連性
@@ -103,7 +112,8 @@ Agent (Harness + Model + Tools + Policies, YAML で定義)
 |---------|--------|------|
 | 設計・ライフサイクル | Kiro | Spec（requirements → design → tasks）、Steering、Hooks |
 | ランタイム合成 | Omnigent | マルチエージェントオーケストレーション、ポリシー、サンドボックス、コラボレーション |
-| 本番パイプライン | Databricks Agent Bricks | Unity Catalog ガバナンス、マネージドデプロイ |
+| 本番ガバナンス | Unity AI Gateway | モデル/エージェント/MCP/skill のランタイムポリシー強制、ハード spend cap、ガードレール、エージェントトレーシング |
+| 本番パイプライン | Databricks Agent Bricks / Lakeflow | Unity Catalog ガバナンス、マネージドデプロイ |
 
 Kiro と Omnigent は重複しません。Kiro は**何を構築するか**（spec-driven）を管理。Omnigent は**エージェントをどう協調実行するか**（ランタイム合成）を管理。本番データパイプラインのオーケストレーションには Databricks Workflows / DLT を使用 — Omnigent はパイプラインスケジューリングには使用しません。
 
@@ -210,19 +220,22 @@ Supervisor Agent (Claude Sonnet)
 
 ## 比較: Omnigent vs Databricks Agent Bricks
 
-| 軸 | Omnigent | Agent Bricks Supervisor Agent |
-|----|----------|-------------------------------|
-| 管理形態 | Self-hosted (OSS) | Databricks マネージド (GA) |
-| ガバナンス | カスタムポリシー (CEL) | Unity Catalog (ネイティブ) |
-| モデル対応 | マルチベンダー | Databricks FMAPI 中心 |
-| コラボレーション | URL セッション共有 | Databricks Apps 内 |
-| デプロイ | EC2 / ECS / Modal | Databricks Apps |
-| サンドボックス | OS レベル (Omnibox) | Compute isolation |
-| 最適用途 | 開発、実験、クロスベンダー | 本番エンタープライズ AI |
+| 軸 | Omnigent（OSS, self-hosted） | Managed Omnigent on Databricks | Agent Bricks Supervisor Agent |
+|----|------------------------------|-------------------------------|-------------------------------|
+| 管理形態 | Self-hosted (OSS) | Databricks マネージド（Beta, Lakebox 実行） | Databricks マネージド (GA) |
+| ガバナンス | カスタムポリシー (CEL) | Unity AI Gateway（UC ネイティブ runtime policy） | Unity Catalog (ネイティブ) |
+| モデル対応 | マルチベンダー | マルチベンダー + AI Gateway smart routing | Databricks FMAPI 中心 |
+| コラボレーション | URL セッション共有 | 共有履歴 + リモートアクセス | Databricks Apps 内 |
+| デプロイ | EC2 / ECS / Modal | Lakebox（分離クラウド実行） | Databricks Apps |
+| サンドボックス | OS レベル (Omnibox) | Lakebox 分離 | Compute isolation |
+| 最適用途 | 開発、実験、クロスベンダー | UC データと並ぶ本番エージェントワークフロー | 本番エンタープライズエージェントオーケストレーション |
+
+**Unity AI Gateway** はマネージドパス共通のガバナンスレイヤー: モデル・エージェント・MCP サービス（Google Drive, Jira, Confluence, Slack, GitHub, SharePoint のマネージドコネクタ + カスタム）・skill を、ハード spend cap・smart routing・Contextual Service Policies（Beta）・ガードレール・統合トレーシングでガバナンスする。
 
 **選定ガイダンス**（Archetype）:
-- **Omnigent** を使う場面: マルチベンダーモデル実験、開発時オーケストレーション、セッション共有コラボレーション
-- **Agent Bricks** を使う場面: UC ガバナンス必須の本番ワークロード、マネージド SLA、エンタープライズコンプライアンス
+- **OSS Omnigent**: マルチベンダーモデル実験、開発時オーケストレーション、セッション共有、Databricks 外環境
+- **Managed Omnigent on Databricks**: 同一ワークフローを Unity AI Gateway ガバナンス下で本番運用、UC ガバナンスデータと並走
+- **Agent Bricks**: UC ネイティブのマネージド SLA を伴う本番エンタープライズエージェントオーケストレーション
 
 ---
 
@@ -245,7 +258,7 @@ Layer 3: Application Validation — スキーマ + ビジネスロジック検�
 | Alpha ステータス | API が変更される可能性 | バージョン固定、YAML を最小限に保つ |
 | macOS Intel 非対応 | 旧 Mac で開発不可 | Linux（EC2/Docker）または Apple Silicon を使用 |
 | Bedrock ネイティブ非対応 | Bedrock を直接モデルとして使用不可 | Gateway または Databricks FMAPI ルーティング |
-| 単一サーバーアーキテクチャ | 本番で SPOF | systemd/ECS 自動再起動（PoC: 許容） |
+| 単一サーバーアーキテクチャ | 本番で SPOF | systemd/ECS 自動再起動（PoC）。本番は Managed Omnigent on Databricks（Lakebox）を利用 |
 | Volumes コネクタ未対応 | OpenSharing で非構造化データ共有不可 | コネクタ開発をトラッキング、NFS/S3 AP を直接利用 |
 
 ---
@@ -267,6 +280,8 @@ Layer 3: Application Validation — スキーマ + ビジネスロジック検�
 - [Omnigent 公式サイト](https://omnigent.ai/)
 - [Omnigent GitHub リポジトリ](https://github.com/omnigent-ai/omnigent)
 - [Databricks Blog: Introducing Omnigent](https://www.databricks.com/blog/introducing-omnigent-meta-harness-combine-control-and-share-your-agents)
+- [Unity AI Gateway (DAIS 2026)](https://www.databricks.com/blog/ai-governance-data-ai-summit-2026-whats-new-unity-ai-gateway) — Managed Omnigent on Databricks + AI ガバナンス
+- [What's new with Unity Catalog (DAIS 2026)](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026)
 - [Agent Bricks Supervisor Agent GA](https://www.databricks.com/blog/agent-bricks-supervisor-agent-now-ga-orchestrate-enterprise-agents)
 - [Omnigent Docs: Custom Agents](https://omnigent.ai/docs/use/custom-agents)
 - [Omnigent Docs: Contextual Policies](https://omnigent.ai/docs/policies/overview)

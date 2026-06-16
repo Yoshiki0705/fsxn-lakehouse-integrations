@@ -24,6 +24,15 @@ Omnigent is an open-source (Apache 2.0) **meta-harness** open-sourced by Databri
 
 **Sources**: [Databricks Blog](https://www.databricks.com/blog/introducing-omnigent-meta-harness-combine-control-and-share-your-agents) | [omnigent.ai](https://omnigent.ai/) | [GitHub](https://github.com/omnigent-ai/omnigent)
 
+### DAIS 2026 Update (2026-06-16): Managed Omnigent + Unity AI Gateway
+
+At Data + AI Summit 2026, Databricks announced two developments that directly affect this evaluation (evidence tier: **Public**):
+
+- **Managed Omnigent on Databricks (Beta)**: the same open-source Omnigent, deployable to Databricks as managed workflows with shared history, remote access, collaboration, and isolated cloud execution on **Lakebox**. Existing setups, harnesses, workflows, and skills run without rebuilding. ([AI Gateway announcement](https://www.databricks.com/blog/ai-governance-data-ai-summit-2026-whats-new-unity-ai-gateway))
+- **Unity AI Gateway**: a Unity Catalog–based governance layer that governs models, agents, MCP services, and skills, and **governs every Managed Omnigent interaction** with centrally defined policies, cost controls (hard spend caps, smart routing), runtime Contextual Service Policies (Beta: allow / deny / require-approval), built-in guardrails (PII, prompt injection, jailbreaks, unsafe content), and unified agent tracing (analyzed in Lakewatch). ([What's new in Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026))
+
+**Implication for this evaluation**: the "development = Omnigent / production = Databricks" hypothesis is now concrete. Self-hosted OSS Omnigent suits development and multi-vendor experimentation; **Managed Omnigent on Databricks governed by Unity AI Gateway** is the production path for the same workflows. This is reflected in the comparison and design sections below.
+
 ---
 
 ## Why This Matters for FSx for ONTAP Lakehouse Integrations
@@ -103,7 +112,8 @@ Agent (Harness + Model + Tools + Policies, defined in YAML)
 |-------|------|---------------|
 | Design & Lifecycle | Kiro | Spec (requirements → design → tasks), Steering, Hooks |
 | Runtime Composition | Omnigent | Multi-agent orchestration, policies, sandboxing, collaboration |
-| Production Pipelines | Databricks Agent Bricks | Unity Catalog governance, managed deployment |
+| Production governance | Unity AI Gateway | Runtime policy enforcement, hard spend caps, guardrails, agent tracing for models/agents/MCP/skills |
+| Production Pipelines | Databricks Agent Bricks / Lakeflow | Unity Catalog governance, managed deployment |
 
 Kiro and Omnigent do not overlap. Kiro manages **what to build** (spec-driven). Omnigent manages **how to run agents together** (runtime composition). Production data pipelines use Databricks Workflows / DLT for orchestration — Omnigent is not used for pipeline scheduling.
 
@@ -210,19 +220,22 @@ Integration: Omnigent OpenTelemetry → AWS Distro for OpenTelemetry (ADOT) → 
 
 ## Comparison: Omnigent vs Databricks Agent Bricks
 
-| Dimension | Omnigent | Agent Bricks Supervisor Agent |
-|-----------|----------|-------------------------------|
-| Management | Self-hosted (OSS) | Databricks managed (GA) |
-| Governance | Custom policies (CEL) | Unity Catalog (native) |
-| Model support | Multi-vendor | Databricks FMAPI-centric |
-| Collaboration | URL session sharing | Within Databricks Apps |
-| Deployment | EC2 / ECS / Modal | Databricks Apps |
-| Sandbox | OS-level (Omnibox) | Compute isolation |
-| Best for | Development, experimentation, cross-vendor | Production enterprise AI |
+| Dimension | Omnigent (OSS, self-hosted) | Managed Omnigent on Databricks | Agent Bricks Supervisor Agent |
+|-----------|----------------------------|-------------------------------|-------------------------------|
+| Management | Self-hosted (OSS) | Databricks managed (Beta, runs on Lakebox) | Databricks managed (GA) |
+| Governance | Custom policies (CEL) | Unity AI Gateway (UC-native runtime policies) | Unity Catalog (native) |
+| Model support | Multi-vendor | Multi-vendor + smart routing via AI Gateway | Databricks FMAPI-centric |
+| Collaboration | URL session sharing | Shared history + remote access | Within Databricks Apps |
+| Deployment | EC2 / ECS / Modal | Lakebox (isolated cloud execution) | Databricks Apps |
+| Sandbox | OS-level (Omnibox) | Lakebox isolation | Compute isolation |
+| Best for | Development, experimentation, cross-vendor | Production agent workflows alongside UC data | Production enterprise agent orchestration |
+
+**Unity AI Gateway** is the governance layer common to the managed paths: it governs models, agents, MCP services (managed connectors for Google Drive, Jira, Confluence, Slack, GitHub, SharePoint, plus custom), and skills with hard spend caps, smart routing, Contextual Service Policies (Beta), guardrails, and unified tracing.
 
 **Selection guidance** (Archetype reasoning):
-- Use **Omnigent** for: multi-vendor model experiments, development-time orchestration, session-sharing collaboration
-- Use **Agent Bricks** for: production workloads requiring UC governance, managed SLA, enterprise compliance
+- Use **OSS Omnigent** for: multi-vendor model experiments, development-time orchestration, session-sharing collaboration, environments outside Databricks
+- Use **Managed Omnigent on Databricks** for: running the same workflows in production under Unity AI Gateway governance, alongside UC-governed data
+- Use **Agent Bricks** for: production enterprise agent orchestration with managed SLA built natively on UC
 
 ---
 
@@ -245,7 +258,7 @@ Each layer operates independently. If any layer returns DENY, the output is bloc
 | Alpha status | API may change | Pin version, keep YAML minimal |
 | No macOS Intel support | Cannot develop on older Macs | Use Linux (EC2/Docker) or Apple Silicon |
 | No native Bedrock provider | Cannot use Bedrock directly as model | Gateway or Databricks FMAPI routing |
-| Single-server architecture | SPOF in production | systemd/ECS auto-restart (PoC: acceptable) |
+| Single-server architecture | SPOF in production | systemd/ECS auto-restart (PoC); or use Managed Omnigent on Databricks (Lakebox) for production |
 | Credential vending not yet for Volumes | Cannot share unstructured data via OpenSharing connector | Track connector development, use NFS/S3 AP directly |
 
 ---
@@ -267,6 +280,8 @@ Each layer operates independently. If any layer returns DENY, the output is bloc
 - [Omnigent Official Site](https://omnigent.ai/)
 - [Omnigent GitHub Repository](https://github.com/omnigent-ai/omnigent)
 - [Databricks Blog: Introducing Omnigent](https://www.databricks.com/blog/introducing-omnigent-meta-harness-combine-control-and-share-your-agents)
+- [Unity AI Gateway (DAIS 2026)](https://www.databricks.com/blog/ai-governance-data-ai-summit-2026-whats-new-unity-ai-gateway) — Managed Omnigent on Databricks + AI governance
+- [What's new with Unity Catalog (DAIS 2026)](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026)
 - [Agent Bricks Supervisor Agent GA](https://www.databricks.com/blog/agent-bricks-supervisor-agent-now-ga-orchestrate-enterprise-agents)
 - [Omnigent Docs: Custom Agents](https://omnigent.ai/docs/use/custom-agents)
 - [Omnigent Docs: Contextual Policies](https://omnigent.ai/docs/policies/overview)
