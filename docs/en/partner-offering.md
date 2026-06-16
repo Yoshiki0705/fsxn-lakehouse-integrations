@@ -256,9 +256,9 @@ Discovery → Assessment → PoC → Production → Managed Operations
 
 ---
 
-## Competitive Positioning
+## Architecture Selection Guidance
 
-### When to Use FSx S3 AP vs. Alternatives
+### When to Use FSx for ONTAP S3 Access Points
 
 | Approach | Data Copy? | NAS Impact | Time to Analytics | Governance | AI/RAG | Best For |
 |----------|-----------|-----------|-------------------|-----------|--------|----------|
@@ -543,7 +543,7 @@ Score each candidate partner (1-5 per criterion) to determine engagement priorit
 
 | Session | Duration | Audience | Content |
 |---------|----------|----------|---------|
-| 1. Overview & positioning | 1 hour | All | Business value, competitive positioning, anti-patterns |
+| 1. Overview & positioning | 1 hour | All | Business value, architecture selection guidance, anti-patterns |
 | 2. Technical deep dive | 2 hours | SA / delivery | Architecture, compatibility matrix, security model |
 | 3. Hands-on lab | 4 hours | SA / delivery | Deploy FSx + S3 AP + Athena/Glue end-to-end |
 | 4. Sales play workshop | 1 hour | Sales | Discovery questions, objection handling, pricing |

@@ -77,7 +77,7 @@
 - Need write-back from analytics to storage → S3 AP is used read-only in this pipeline (writes supported)
 - No existing FSx for ONTAP deployment → evaluate FSx adoption cost first
 
-See [Architecture Comparison](./competitive-differentiation.md) for full decision framework.
+See [Architecture Comparison](./architecture-comparison.md) for full decision framework.
 
 ---
 

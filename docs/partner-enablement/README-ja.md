@@ -131,7 +131,7 @@
 | ソリューション概要（JA） | [`docs/sales-enablement/solution-overview-ja.md`](../sales-enablement/solution-overview-ja.md) |
 | お客様 FAQ | [`docs/sales-enablement/customer-faq.md`](../sales-enablement/customer-faq.md) |
 | ROI 計算シート | [`docs/sales-enablement/roi-calculator.md`](../sales-enablement/roi-calculator.md) |
-| 競合差別化ガイド | [`docs/sales-enablement/competitive-differentiation.md`](../sales-enablement/competitive-differentiation.md) |
+| アーキテクチャ比較ガイド | [`docs/sales-enablement/architecture-comparison.md`](../sales-enablement/architecture-comparison.md) |
 | クイックウィンデモ（30 分） | [`integrations/iceberg-metadata-catalog/demo/scenarios/quick-win-30min.md`](../../integrations/iceberg-metadata-catalog/demo/scenarios/quick-win-30min.md) |
 | 製造業デモ（JA） | [`integrations/iceberg-metadata-catalog/demo/scenarios/industry-manufacturing-ja.md`](../../integrations/iceberg-metadata-catalog/demo/scenarios/industry-manufacturing-ja.md) |
 | GitHub リポジトリ | [fsxn-lakehouse-integrations](https://github.com/Yoshiki0705/fsxn-lakehouse-integrations) |
