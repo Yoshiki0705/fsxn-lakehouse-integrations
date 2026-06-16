@@ -191,6 +191,7 @@ S3 Tables ──Iceberg REST endpoint──→ Databricks External Catalog
 > **DAIS 2026 アップデート（2026-06-16, evidence tier: Public）**: Databricks は Iceberg v3 GA / Managed Iceberg GA / Foreign Iceberg GA / 新フェデレーションコネクタ / cross-engine ABAC を発表（[What's new with Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026)）。本アーキテクチャに直結する 2 点:
 > - **FILE type（Beta）**: managed Delta/Iceberg テーブルが非構造化データ（PDF・画像・音声・動画）をネイティブにガバナンス可能に。これは UC テーブル内で非構造化ペイロードを*ガバナンス*するマネージドな選択肢であり、本アーキテクチャの役割（FSx for ONTAP 上に置いたまま、AI エンリッチ済み・クロスエンジンの*ディスカバリ*: 分類・PII 処理・ベクトル類似検索）を**置換するものではなく補完**する。非 Databricks エンジン（Athena・Snowflake・EMR）からのアクセスも維持。UC Volumes（ディレクトリ単位ガバナンス）や OpenSharing Volumes asset とも関連。
 > - **External access to managed Delta tables（Public Preview）** と新フェデレーションコネクタは、上記の S3 AP / S3 Tables アクセス制約に影響する可能性がある。**要再検証**: Foreign Iceberg が S3 Tables 内部バケットを解決できるようになったか（従来のブロッカーは External Location 検証が標準 S3 API を拒否する点）。
+> - **Iceberg v4 / Delta 5.0 統合（ロードマップ）**: Databricks は Delta Lake 5.0 が Iceberg v4 metadata tree をネイティブのコンテンツメタデータとして採用することを提案 — Delta と Iceberg の両クライアントが同一のオンディスク構造を直接 read/write、変換レイヤーもオーバーヘッドもなし（[UC blog](https://www.databricks.com/blog/unity-catalog-and-next-era-apache-icebergtm), [DAIS session](https://www.databricks.com/dataaisummit/session/format-co-evolution-how-iceberg-v4-and-delta-50-share-unified-metadata)）。長期的含意: Delta/Iceberg のフォーマット選択が論点でなくなり、UniForm（現行の変換レイヤー）は不要になり、本アーキテクチャの Iceberg メタデータテーブルへのクロスエンジンアクセスがさらに単純化される。
 
 **Mosaic AI エンリッチメントパイプライン例**:
 ```python
