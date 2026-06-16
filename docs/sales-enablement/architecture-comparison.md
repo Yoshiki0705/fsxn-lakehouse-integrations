@@ -18,8 +18,6 @@ This document compares architectural approaches for connecting unstructured file
 | S3-native + Glue | Born-in-S3 | S3 Events | S3 only | Cloud-native data, new applications |
 | DataSync + S3 | Full copy | Scheduled | Source NAS → S3 | Small file sets, simple one-way sync |
 | Databricks Unity Catalog | S3 copy required | — | S3/ADLS | Structured/semi-structured lakehouse |
-| Pure Storage FlashBlade | Copy to object store | — | NFS/SMB | High-performance compute workloads |
-| Dell PowerScale + ECS | Migration required | — | NFS/SMB/S3 | Dell ecosystem customers |
 
 *Zero-copy storage: S3 Access Point reads files in-place from FSx volumes. Processing requires ephemeral file content access in Lambda memory. File bytes are not persisted outside the source FSx volume.
 
@@ -121,43 +119,6 @@ This document compares architectural approaches for connecting unstructured file
 - Focused on tabular data — limited native support for unstructured file classification
 - Foreign Catalog integration for S3 Tables is still evolving
 - Additional DBU costs for compute
-
----
-
-### Pure Storage FlashBlade
-
-**How it works:**
-- High-performance NAS for unstructured data
-- Analytics requires copying data to S3 or another object store
-- No equivalent to FPolicy for event-driven file detection
-
-**Strengths:**
-- High-performance parallel NFS for compute-intensive workloads (AI training, HPC)
-- Blade-based architecture scales performance independently
-
-**Limitations:**
-- No S3 Access Point equivalent for in-place analytics access
-- No event-driven file detection (requires polling or crawling)
-- AWS analytics integration requires data movement to S3
-
----
-
-### Dell PowerScale (Isilon) + ECS
-
-**How it works:**
-- PowerScale for NAS workloads
-- ECS for object storage and analytics integration
-- DataIQ for metadata management (separate product/license)
-
-**Strengths:**
-- Established enterprise NAS with wide protocol support
-- DataIQ provides metadata indexing and classification
-
-**Limitations:**
-- Requires explicit data migration from PowerScale → ECS for analytics
-- DataIQ is separate licensing and separate infrastructure
-- No native AWS service integration without middleware
-- No real-time event-driven file detection comparable to FPolicy
 
 ---
 

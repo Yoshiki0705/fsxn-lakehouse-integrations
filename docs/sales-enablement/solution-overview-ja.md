@@ -77,7 +77,7 @@
 - 分析からストレージへの書き戻しが必要 → S3 AP は読み取り専用
 - FSx for ONTAP の既存デプロイがない → まず FSx 導入コストを評価
 
-詳細は[アーキテクチャ比較](./competitive-differentiation-ja.md)の判断フレームワーク参照。
+詳細は[アーキテクチャ比較](./architecture-comparison-ja.md)の判断フレームワーク参照。
 
 ---
 
