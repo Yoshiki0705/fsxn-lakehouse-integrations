@@ -15,7 +15,7 @@ sys.modules["confluent_kafka.admin"] = unittest.mock.MagicMock()
 # Add parent to path for import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from generate_events import (
+from generate_events import (  # noqa: E402  (import after sys.path/mock setup)
     FACTORIES,
     LINES,
     SENSOR_TYPES,
@@ -161,7 +161,9 @@ class TestGenerateQualityEvent:
                 assert event["checksum_sha256"] is not None
                 assert len(event["checksum_sha256"]) == 64  # SHA-256 hex
                 return
-        pytest.skip("No payload reference generated in 100 attempts (statistically unlikely)")
+        pytest.skip(
+            "No payload reference generated in 100 attempts (statistically unlikely)"
+        )
 
     def test_payload_size_within_range(self):
         for _ in range(100):
