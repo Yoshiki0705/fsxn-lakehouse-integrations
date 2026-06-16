@@ -56,6 +56,8 @@
 
 **Decision:** ClickHouse selected for sub-second real-time analytics. Strong manufacturing reference cases (REF-030, REF-032). Native Kafka ingestion. Multiple AWS deployment options.
 
+> **DAIS 2026 update (2026-06-16)**: Databricks announced **Lakehouse//RT** (Beta, Reyden engine) — millisecond real-time analytics directly on UC-governed Delta/Iceberg. Decision is unchanged for the PoC (ClickHouse for Phase A); plan is to trial **both** ClickHouse and Lakehouse//RT in the PoC for comparative knowledge and re-evaluate for Phase B. See [ADR-002 DAIS 2026 Update](../adr/ADR-002.md#dais-2026-update-2026-06-16--dais-2026-アップデート).
+
 **Source:** REF-030, REF-031, REF-032, REF-040, REF-041
 
 ---
