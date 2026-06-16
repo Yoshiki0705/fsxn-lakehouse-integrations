@@ -56,6 +56,8 @@
 
 **決定:** サブ秒リアルタイム分析に ClickHouse を選択。強力な製造リファレンスケース（REF-030, REF-032）。ネイティブ Kafka 取り込み。複数の AWS デプロイオプション。
 
+> **DAIS 2026 アップデート（2026-06-16）**: Databricks が **Lakehouse//RT**（Beta、Reyden エンジン）を発表 — UC ガバナンス下の Delta/Iceberg 上で直接ミリ秒リアルタイム分析。PoC の決定は変更なし（Phase A は ClickHouse）。方針は PoC で **ClickHouse と Lakehouse//RT の両方**を試行して比較知見を取得し、Phase B で再評価。詳細は [ADR-002 DAIS 2026 アップデート](../adr/ADR-002.md#dais-2026-update-2026-06-16--dais-2026-アップデート)。
+
 **ソース:** REF-030, REF-031, REF-032, REF-040, REF-041
 
 ---
