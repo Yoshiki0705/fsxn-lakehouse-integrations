@@ -20,6 +20,7 @@ On 2026-06-10, Databricks announced **OpenSharing** — the evolution of the Del
 | Partner Well-Architected Framework documents the integration blueprint, including two paths to serve Iceberg via the protocol (Delta Shallow Clone or Apache XTable metadata translation) | [Partner Framework](https://databrickslabs.github.io/partner-architecture/data-collaboration/software-defined-storage) |
 | **DAIS 2026 keynote (2026-06-16)**: SecureConnect enables secure cross-cloud connectivity with zero-copy data sharing; Global Distribution adds automated replication across clouds and regions | [What's new with Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026) |
 | **DAIS 2026 keynote (2026-06-16)**: Iceberg v3 GA, Managed Iceberg GA, Foreign Iceberg GA, new federation connectors, and cross-engine ABAC are now available | Same |
+| **DAIS 2026 keynote (2026-06-16)**: Storage Ecosystem partner status clarified — MinIO (GA), Everpure (Private Preview), Qumulo and VAST Data (Private Preview Soon); **NetApp, Cohesity, Commvault, and Nutanix confirmed coming by end of year**. SecureConnect is a Databricks-managed proxy (one-time config, no per-recipient firewall changes). Providers can also share from external catalogs (AWS Glue, Hive Metastore, Snowflake Horizon) without replication. | [OpenSharing blog](https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era) |
 
 > FSx for ONTAP is an AWS-managed enterprise storage service with multiprotocol access (NFS/SMB/iSCSI/S3) and data protection features (Snapshot, FlexClone, SnapMirror, FabricPool). The analysis below evaluates how the OpenSharing pattern could complement the existing S3 Access Point integration patterns in this repository.
 
@@ -190,7 +191,7 @@ A phased validation activity has been defined (read → Iceberg IRC → governan
 - Verified: Agent Bricks Supervisor Agent GA reference is a real, citable source.
 
 ### NetApp FSx for ONTAP Architect
-- Strengths: NetApp correctly described as a "coming soon" OpenSharing storage partner — not overstated as available. Snapshot/FlexClone value framed as to-validate.
+- Strengths: NetApp correctly described as a "coming soon" OpenSharing storage partner (confirmed "by end of year" per [OpenSharing blog](https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era)) — not overstated as available. Snapshot/FlexClone value framed as to-validate.
 - Open: whether a native implementation sits on ONTAP S3, S3 AP, or an independent path.
 
 ### Public Repository Confidentiality Reviewer
