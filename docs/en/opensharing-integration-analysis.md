@@ -18,6 +18,8 @@ On 2026-06-10, Databricks announced **OpenSharing** — the evolution of the Del
 | GA / preview launch partners include object-storage and hybrid-storage vendors; additional enterprise storage partners are listed as "coming soon" by end of year | Same |
 | Volumes APIs for unstructured data are explicitly previewed as the next step | Same |
 | Partner Well-Architected Framework documents the integration blueprint, including two paths to serve Iceberg via the protocol (Delta Shallow Clone or Apache XTable metadata translation) | [Partner Framework](https://databrickslabs.github.io/partner-architecture/data-collaboration/software-defined-storage) |
+| **DAIS 2026 keynote (2026-06-16)**: SecureConnect enables secure cross-cloud connectivity with zero-copy data sharing; Global Distribution adds automated replication across clouds and regions | [What's new with Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026) |
+| **DAIS 2026 keynote (2026-06-16)**: Iceberg v3 GA, Managed Iceberg GA, Foreign Iceberg GA, new federation connectors, and cross-engine ABAC are now available | Same |
 
 > FSx for ONTAP is an AWS-managed enterprise storage service with multiprotocol access (NFS/SMB/iSCSI/S3) and data protection features (Snapshot, FlexClone, SnapMirror, FabricPool). The analysis below evaluates how the OpenSharing pattern could complement the existing S3 Access Point integration patterns in this repository.
 
