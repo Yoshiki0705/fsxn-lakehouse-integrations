@@ -189,6 +189,8 @@ cp ${EDGE_REPO}/tests/sample_events/*.json \
 | `docs/*/data-schema-design.md` | `poc/databricks/03_unity_catalog_v2.sql` | UC DDL として反映 |
 | `synthetic_events.py` | `poc/shared-test-data/` | TBD (共有方式検討中) |
 
+> **双方向ナビゲーション（両リポジトリの `main` で解決可能）**: Edge 側の `docs/{ja,en}/databricks-integration.md` から本ドキュメントへのバックリンクが追加され、本リポジトリからは root README と manufacturing-data-platform README の両方から Edge プロジェクトへリンク済み。上表の `databricks-integration.md` ↔ `14_edge_lakehouse_sync.md` マッピングは GitHub 上で双方向に解決する。
+
 ### Lakehouse 固有ファイル
 
 | パス | 説明 |
@@ -288,3 +290,4 @@ operator
 | 2026-06-16 | Edge 側最終同期完了。全項目一致確認。テストデータ 21件の取り込み手順を追記。 |
 | 2026-06-16 | ラウンド2改善反映: feedback_events, human_label, Kafka エラーハンドリング, quality_events 型修正, Gold training_dataset 生成, M1-M6 成功指標 (セクション7参照)。 |
 | 2026-06-16 | フォローアップ: `_synthetic` ガバナンスフラグを top-level エンベロープ基準に統一（ClickHouse / Databricks DLT 両対応、bronze.kafka_events.is_synthetic）。 |
+| 2026-06-16 | Edge ↔ Lakehouse の双方向ナビゲーションが両リポジトリの main で解決可能になった旨を追記（databricks-integration.md バックリンク）。 |
