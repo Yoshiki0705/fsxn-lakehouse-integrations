@@ -18,6 +18,8 @@
 | GA/プレビューの launch partner にオブジェクトストレージ/ハイブリッドストレージのベンダーが含まれ、追加のエンタープライズストレージパートナーが "coming soon"（年内）として記載 | 同上 |
 | 非構造化データ向け Volumes APIs が次ステップとして明示的に予告 | 同上 |
 | Partner Well-Architected Framework が統合ブループリント（Iceberg を提供する2パス: Delta Shallow Clone / Apache XTable メタデータ変換）を文書化 | [Partner Framework](https://databrickslabs.github.io/partner-architecture/data-collaboration/software-defined-storage) |
+| **DAIS 2026 キーノート（2026-06-16）**: SecureConnect がクラウド間のセキュア接続 + zero-copy 共有を実現。Global Distribution がクラウド・リージョン間の自動レプリケーションを追加 | [What's new with Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026) |
+| **DAIS 2026 キーノート（2026-06-16）**: Iceberg v3 GA / Managed Iceberg GA / Foreign Iceberg GA / 新フェデレーションコネクタ / cross-engine ABAC が利用可能に | 同上 |
 
 > FSx for ONTAP は、マルチプロトコルアクセス（NFS/SMB/iSCSI/S3）とデータ保護機能（Snapshot、FlexClone、SnapMirror、FabricPool）を持つ AWS マネージドのエンタープライズストレージサービスである。以下では、OpenSharing パターンが本リポジトリの既存 S3 Access Point 統合パターンをどう補完しうるかを評価する。
 
