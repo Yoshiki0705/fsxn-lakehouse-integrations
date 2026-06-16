@@ -188,6 +188,10 @@ S3 Tables ──Iceberg REST endpoint──→ Databricks External Catalog
 
 **Future outlook — Lakehouse Federation**: Once Databricks Lakehouse Federation natively supports S3 Tables Iceberg REST endpoint, both metadata queries and raw data access can be completed within the Databricks workspace. Unity Catalog 2.0's native Iceberg support (announced 2025) accelerates this direction.
 
+> **DAIS 2026 update (2026-06-16, evidence tier: Public)**: Databricks announced Iceberg v3 GA, Managed Iceberg GA, Foreign Iceberg GA, new federation connectors, and cross-engine ABAC ([What's new with Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026)). Two items relate directly to this architecture:
+> - **FILE type (Beta)**: managed Delta/Iceberg tables can now natively govern unstructured data (PDFs, images, audio, video). This is a managed option for *governing* unstructured payloads inside UC tables — complementary to (not a replacement for) this architecture's role of AI-enriched, cross-engine *discovery* (classification, PII handling, vector similarity) over files that remain on FSx for ONTAP and stay accessible to non-Databricks engines (Athena, Snowflake, EMR). It also relates to UC Volumes (directory-level governance) and the OpenSharing Volumes asset.
+> - **External access to managed Delta tables (Public Preview)** and the new federation connectors may affect the S3 AP / S3 Tables access constraint noted above. **Re-verification needed**: confirm whether Foreign Iceberg can now resolve S3 Tables internal buckets (the prior blocker was External Location validation rejecting the standard S3 API).
+
 ### Snowflake Path (Horizon Catalog + Cortex AI)
 
 **Best for**: Organizations with existing Snowflake investment (Cortex AI, Data Sharing, Horizon).
