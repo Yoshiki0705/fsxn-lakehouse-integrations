@@ -391,7 +391,7 @@ Reference: [Snowflake Open Catalog Sync](https://docs.snowflake.com/en/user-guid
 
 ### Snowflake Horizon Iceberg REST Catalog — Governance on External Engines (Confirmed May 2026)
 
-> **Snowflake Support Confirmation (Snowflake support case (May 2026), May 2026)**: Snowflake Horizon Catalog enforces governance policies on external engine access — a critical differentiator from Databricks Unity Catalog.
+> **Snowflake Support Confirmation (May 2026)**: Snowflake Horizon Catalog enforces governance policies on external engine access (Row Access Policies and Dynamic Data Masking evaluated at the catalog layer).
 
 | Aspect | Snowflake Horizon Catalog | Databricks Unity Catalog |
 |--------|--------------------------|--------------------------|
