@@ -124,3 +124,23 @@ jobs:
             exit 1
           fi
           echo "✓ No support case numbers in tracked files"
+
+      - name: Check for engineer/personal names in support records
+        run: |
+          echo "🔍 Scanning for engineer/personal names in support-record fields..."
+          # Best-effort, low-false-positive heuristic: only flag person-denoting fields
+          # (responder / support_engineer / case_owner / escalation_contact) whose VALUE
+          # is a person-name shape (Firstname + initial(s) or Firstname Lastname).
+          # Case-sensitive on purpose so acronyms like "AWS Support" do NOT match.
+          # General free-text name detection is intentionally NOT attempted (the docs use
+          # "Phase A/B", "Pattern A", "Method C" etc., which would cause false positives);
+          # broader name screening remains a manual confidentiality-review responsibility.
+          HITS=$(git ls-files -- '*.md' '*.yaml' '*.yml' '*.json' | \
+            xargs grep -nE "(responder|support_engineer|case_owner|escalation_contact)[\"' ]*[:：] *[\"'][A-Z][a-z]{2,}( [A-Z]\.| [A-Z] [A-Z]| [A-Z][a-z]+)[\"']" 2>/dev/null | \
+            grep -v '\.github/workflows/' || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::Possible engineer/personal name found in a support-record field. Use a generic value (e.g. \"AWS Support\")."
+            echo "$HITS"
+            exit 1
+          fi
+          echo "✓ No engineer/personal names in support-record fields"
