@@ -151,6 +151,8 @@ In addition to the STS mode (primary), presigned URLs also work empirically:
 
 **Recommendation**: Use STS credential vending as the primary mode (officially supported, prefix-scoped). Presigned URLs work today but lack an official support guarantee and require the regional endpoint workaround.
 
+> **Note on ONTAP S3 native**: The presigned URL test above was performed against FSx for ONTAP **S3 Access Points**. ONTAP S3 native (direct object server, 9.11+) documents presigned URL support (SigV4) officially, but has **not been independently verified** in this repository. The STS credential vending mode applies only to the S3 Access Point path (AWS-managed, supports AWS STS).
+
 ## Scope and Principles
 
 - **Complement, not replacement**: The OpenSharing path complements — it does not replace — the existing AWS-native S3 Access Point patterns (Athena, Glue, EMR, Redshift, SageMaker) already documented in this repository.

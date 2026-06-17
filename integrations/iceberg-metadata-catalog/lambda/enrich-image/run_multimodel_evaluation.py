@@ -78,7 +78,10 @@ def fetch_image_records_from_iceberg(max_files: int = 20) -> list[dict]:
     response = athena.start_query_execution(
         QueryString=query,
         ResultConfiguration={
-            "OutputLocation": f"s3://athena-results-{REGION}/multimodel-eval/"
+            "OutputLocation": os.environ.get(
+                "ATHENA_OUTPUT_LOCATION",
+                "s3://athena-results-placeholder/multimodel-eval/",
+            )
         },
     )
     query_id = response["QueryExecutionId"]

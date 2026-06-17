@@ -151,6 +151,8 @@ STS モード（primary）に加え、presigned URL も実証的に動作する:
 
 **推奨**: STS credential vending を primary mode として使用（公式対応、prefix スコープ）。Presigned URL は現時点で動作するが公式サポート保証がなく、リージョナルエンドポイントのワークアラウンドが必要。
 
+> **ONTAP S3 ネイティブに関する注記**: 上記の presigned URL テストは FSx for ONTAP **S3 Access Points** に対して実施。ONTAP S3 ネイティブ（直接オブジェクトサーバー、9.11+）は presigned URL サポート（SigV4）を公式ドキュメントで記載しているが、本リポジトリでは**独立検証していない**。STS credential vending モードは S3 Access Point パス（AWS マネージド、AWS STS 対応）にのみ適用される。
+
 ## スコープと原則
 
 - **補完であって置換ではない**: OpenSharing パスは、本リポジトリで既に文書化した AWS ネイティブ S3 Access Point パターン（Athena, Glue, EMR, Redshift, SageMaker）を**置き換えるものではなく補完**する。
