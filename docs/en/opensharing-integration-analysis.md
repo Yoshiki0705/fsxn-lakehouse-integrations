@@ -75,6 +75,56 @@ The OpenSharing specification is published openly ([OpenSharing-IO/OpenSharing](
 
 > These are specification-level facts. Whether each behaves as specified against an FSx for ONTAP backend (S3 Access Point or native ONTAP S3) is what the phased validation activity will establish.
 
+## Validated: STS Credential Vending on FSx for ONTAP S3 Access Point (2026-06-17)
+
+The following has been **independently verified** against a live FSx for ONTAP S3 Access Point (evidence tier: **Project-context**).
+
+### What works (verified)
+
+| Test | Result | Implication |
+|------|--------|-------------|
+| Generate scoped STS credentials (prefix-limited) | ✅ | OpenSharing server can vend temporary credentials scoped to a specific table path |
+| `ListObjects` with scoped STS on allowed prefix | ✅ (5 objects) | Recipient can discover files in the shared table |
+| `GetObject` with scoped STS (Parquet, CSV, JSON, PNG, TXT, Delta log, Iceberg metadata) | ✅ All formats | Access mechanism is format-agnostic; works for Table and Volume asset types |
+| `GetObject` on denied prefix with same credentials | ✅ AccessDenied | Least-privilege enforcement works; credentials cannot escape their scope |
+| Credential expiration (15 min) | ✅ | Time-bounded access as specified by the protocol |
+
+### What this means for OpenSharing
+
+The OpenSharing protocol's `dir` access mode (where the server vends temporary AWS credentials instead of presigned URLs) **works on FSx for ONTAP S3 Access Points**. A recipient with vended credentials can:
+- List and read any file within the scoped prefix
+- Read Parquet data files (for Delta/Iceberg Table assets)
+- Read unstructured files (for Volume assets: images, PDFs, video)
+- Cannot access data outside the vended scope
+
+### What this does NOT solve (important distinction)
+
+| Limitation | Remains | Why |
+|-----------|---------|-----|
+| **Delta/Iceberg transactional writes to FSx S3 AP** | ❌ Still blocked | Conditional writes (`If-None-Match`) return 501; atomic rename not supported. This is a product-level FSx S3 AP limitation, unrelated to OpenSharing. |
+| **Foreign Iceberg reading S3 Tables from Databricks** | ❌ Still blocked | External Location validation rejects S3 Tables internal buckets (HeadBucket fails). Unrelated to this credential vending test. |
+| **Databricks UC read from FSx S3 AP** | ✅ Already solved (May 2026) | UC External Location with `access_point` field works. Today's STS test validates the *OpenSharing recipient* path, which is complementary. |
+
+### Architectural clarity
+
+```
+FSx for ONTAP (source of truth for raw data: images, CSV, sensor logs, documents)
+    │
+    │ READ path (verified ✅):
+    │   • UC External Location (Databricks-internal, May 2026)
+    │   • OpenSharing STS credential vending (any recipient, June 2026) ← NEW
+    │   • Direct IAM (Athena, Glue, EMR — existing)
+    │
+    │ WRITE path (NOT on FSx S3 AP):
+    │   • Delta/Iceberg managed tables live on standard S3 or S3 Tables
+    │   • FSx S3 AP cannot host transactional table metadata
+    │
+    ▼
+Analytics engines read raw data from FSx, write governed tables elsewhere
+```
+
+**FSx for ONTAP is the data source; table format management happens on separate storage.** OpenSharing enables governed, zero-copy read distribution of that source data to any recipient.
+
 ## Scope and Principles
 
 - **Complement, not replacement**: The OpenSharing path complements — it does not replace — the existing AWS-native S3 Access Point patterns (Athena, Glue, EMR, Redshift, SageMaker) already documented in this repository.
