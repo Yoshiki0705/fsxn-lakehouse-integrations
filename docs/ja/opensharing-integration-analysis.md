@@ -75,6 +75,56 @@ OpenSharing 仕様は公開されている（[OpenSharing-IO/OpenSharing](https:
 
 > これらは仕様レベルの事実である。FSx for ONTAP バックエンド（S3 Access Point またはネイティブ ONTAP S3）に対して仕様どおり動作するかは、段階的検証アクティビティで確認する。
 
+## 検証済み: FSx for ONTAP S3 Access Point での STS Credential Vending（2026-06-17）
+
+以下は実稼働中の FSx for ONTAP S3 Access Point に対して**独立に検証**した結果である（evidence tier: **Project-context**）。
+
+### 動作確認済み
+
+| テスト | 結果 | 含意 |
+|--------|------|------|
+| prefix 限定の scoped STS credentials 生成 | ✅ | OpenSharing server が特定テーブルパスにスコープした一時認証を発行可能 |
+| 許可 prefix での `ListObjects`（scoped STS） | ✅（5 objects） | recipient が共有テーブル内のファイルを発見可能 |
+| `GetObject`（scoped STS）: Parquet, CSV, JSON, PNG, TXT, Delta log, Iceberg metadata | ✅ 全形式 | アクセス機構はフォーマット非依存。Table asset と Volume asset の両方に適用 |
+| 拒否 prefix での `GetObject`（同一 credentials） | ✅ AccessDenied | 最小権限が機能。credentials はスコープ外にエスケープしない |
+| Credential 有効期限（15 分） | ✅ | プロトコル仕様通りの時限アクセス |
+
+### OpenSharing にとっての意味
+
+OpenSharing プロトコルの `dir` access mode（サーバーが presigned URL ではなく一時 AWS credentials を発行するモード）は **FSx for ONTAP S3 Access Points で動作する**。vended credentials を持つ recipient は:
+- スコープ内の任意ファイルを list / read 可能
+- Parquet データファイル（Delta/Iceberg Table asset 用）を読み取り可能
+- 非構造化ファイル（Volume asset: 画像、PDF、動画）を読み取り可能
+- vended scope 外のデータにはアクセス不可
+
+### 解決されない問題（重要な区別）
+
+| 制限 | 状態 | 理由 |
+|------|------|------|
+| **FSx S3 AP への Delta/Iceberg トランザクショナル write** | ❌ 依然ブロック | Conditional writes（`If-None-Match`）が 501 を返す。atomic rename 非対応。FSx S3 AP の製品レベル制限であり、OpenSharing とは無関係 |
+| **Databricks から S3 Tables の Foreign Iceberg 読み取り** | ❌ 依然ブロック | External Location 検証が S3 Tables 内部バケットを拒否（HeadBucket 失敗）。本 credential vending テストとは無関係 |
+| **Databricks UC による FSx S3 AP の read** | ✅ 解決済み（2026-05） | UC External Location の `access_point` field で動作。本日の STS テストは *OpenSharing recipient* パスの検証であり、これと補完関係 |
+
+### アーキテクチャの明確化
+
+```
+FSx for ONTAP（raw data の source of truth: 画像、CSV、センサーログ、ドキュメント）
+    │
+    │ READ パス（検証済み ✅）:
+    │   • UC External Location（Databricks 内部、2026-05）
+    │   • OpenSharing STS credential vending（任意 recipient、2026-06）← NEW
+    │   • Direct IAM（Athena, Glue, EMR — 既存）
+    │
+    │ WRITE パス（FSx S3 AP 上ではない）:
+    │   • Delta/Iceberg managed tables は標準 S3 または S3 Tables に配置
+    │   • FSx S3 AP はトランザクショナルなテーブルメタデータをホストできない
+    │
+    ▼
+分析エンジンが FSx から raw data を read し、governed tables は別ストレージに write
+```
+
+**FSx for ONTAP はデータソース。テーブルフォーマット管理は別ストレージで行う。** OpenSharing はそのソースデータのガバナンス付き zero-copy read 配信を任意の recipient に対して実現する。
+
 ## スコープと原則
 
 - **補完であって置換ではない**: OpenSharing パスは、本リポジトリで既に文書化した AWS ネイティブ S3 Access Point パターン（Athena, Glue, EMR, Redshift, SageMaker）を**置き換えるものではなく補完**する。
