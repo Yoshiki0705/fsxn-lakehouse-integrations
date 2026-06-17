@@ -165,14 +165,29 @@ Supervisor Agent (Claude Sonnet)
 
 ```
 分類オーケストレータ
-  → 同一画像を 3 モデル（Claude Haiku / Titan / Nova）で分類
-  → 結果比較（Debby ディベートパターン）
-  → 多数決 → 採用
-  → 不一致 → 人間レビューにエスカレーション
+  → 同一画像を 3 モデル（Claude Haiku / Nova Lite / Mistral Large 3）で分類
+  → 結果比較（Debby ディベートパターン / majority vote）
+  → 3/3 一致（unanimous）→ 高信頼度で採用
+  → 2/3 一致（majority）→ 中信頼度で多数派を採用
+  → 0 一致（3-way split）→ 人間レビューにエスカレーション
   → 結果を Iceberg テーブルに記録（UC lineage 保持）
-
-目標: 単一モデルベースラインから F1 スコア +5% 向上
 ```
+
+#### 検証済み結果（2026-06-17, Project-context）
+
+| メトリクス | 結果 |
+|-----------|------|
+| テスト済みモデル | Claude 3 Haiku, Amazon Nova Lite, Mistral Large 3 |
+| 実行方式 | ThreadPoolExecutor（並列、max_workers=3） |
+| レイテンシ | 0.6–0.7s/画像（並列） |
+| コスト倍率 | 単一モデル比 1.2x |
+| Unanimous 信頼度 | 0.94–0.96 |
+| 不一致処理 | 人間レビューキューへ正常エスカレーション |
+| 合意方式 | True majority vote（3 モデル） |
+
+**実装**: `integrations/iceberg-metadata-catalog/lambda/enrich-image/multimodel_classify.py`
+**評価フレームワーク**: `evaluation.py` — accuracy, F1 macro, カテゴリ別 precision/recall, コスト比較
+**エビデンス**: `verification-pack/multimodel-classification/multimodel-classification-evidence.yaml`
 
 ---
 
@@ -268,13 +283,13 @@ Layer 3: Application Validation — スキーマ + ビジネスロジック検�
 
 ## 次のステップ
 
-| Phase | アクティビティ | タイムライン |
-|-------|--------------|------------|
-| 0 | ✅ インストール + 評価 | 完了 |
-| 1 | Kiro Steering 統合ガイド | 2026-06 |
-| 2 | Iceberg マルチモデルディベート PoC | 2026-07 |
-| 3 | 製造マルチエージェント品質設計 | 2026-07 |
-| 4 | 公開ドキュメント最終化 | 2026-07 |
+| Phase | アクティビティ | タイムライン | ステータス |
+|-------|--------------|------------|-----------|
+| 0 | ✅ インストール + 評価 | 完了 | ✅ |
+| 1 | Kiro Steering 統合ガイド | 2026-06 | ✅ |
+| 2 | Iceberg マルチモデルディベート PoC | 2026-06 | ✅ 検証済み (PR #72) |
+| 3 | 製造マルチエージェント品質設計 | 2026-07 | 🔲 ブロック中（インフラ依存） |
+| 4 | 公開ドキュメント最終化 | 2026-07 | 🔄 進行中 |
 
 ---
 
