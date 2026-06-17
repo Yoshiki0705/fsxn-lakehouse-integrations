@@ -293,6 +293,32 @@ Layer 3: Application Validation — スキーマ + ビジネスロジック検�
 
 ---
 
+## 業界事例（Public Evidence、DAIS 2026）
+
+以下は本リポジトリのユースケースに関連する、公開済みの Agent Bricks 導入事例。
+
+### 7-Eleven: メンテナンス技術者向け GenAI アシスタント
+
+| 観点 | 内容 |
+|------|------|
+| 課題 | 13,000+ 店舗にわたる数千の設備マニュアル（PDF、スプレッドシート）。技術者は現場でスマホのみ |
+| 解決策 | RAG + Agent Bricks + ベクトルインデックス。Microsoft Teams 統合 |
+| 成果 | 初回修理成功率 +25%、検索時間 -60%、レイテンシ -40% |
+| 関連性 | 本リポジトリの iceberg-metadata-catalog と同じパターン（非構造化ドキュメント → AI 分類 → 即時検索） |
+
+ソース: [Databricks Blog](https://www.databricks.com/blog/how-7-eleven-transformed-maintenance-technician-knowledge-access-databricks-agent-bricks)
+
+### AstraZeneca: マルチエージェントシステム（10x スケール）
+
+| 観点 | 内容 |
+|------|------|
+| 課題 | 商用チームが治療領域横断で医薬品データにアクセス — 構造化（Genie Spaces）+ 非構造化（40万+ 臨床文書） |
+| 解決策 | Supervisor Agent が治療領域別サブエージェントを coordination。Knowledge Assistant（非構造化）。Vega-Lite で Teams に可視化 |
+| 成果 | エージェント 10x スケール。40万ドキュメントを 60 分未満でコードなし処理 |
+| 関連性 | 本リポジトリの Omnigent Phase 3（製造マルチエージェント品質スーパーバイザー + サブエージェント）の参考アーキテクチャ |
+
+ソース: [DAIS Session](https://www.databricks.com/dataaisummit/session/astrazenecas-multi-agent-system-lessons-scaling-agents-10x-agent-bricks), [Databricks Blog](https://www.databricks.com/blog/bringing-visualizations-life-multi-agent-systems-vega-lite)
+
 ## 参考リンク
 
 - [Omnigent 公式サイト](https://omnigent.ai/)

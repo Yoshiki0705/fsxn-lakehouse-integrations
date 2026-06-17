@@ -293,6 +293,32 @@ Each layer operates independently. If any layer returns DENY, the output is bloc
 
 ---
 
+## Industry Case Studies (Public Evidence, DAIS 2026)
+
+The following are publicly documented Agent Bricks deployments relevant to this repository's use cases.
+
+### 7-Eleven: Maintenance Technician GenAI Assistant
+
+| Aspect | Detail |
+|--------|--------|
+| Problem | Thousands of equipment manuals (PDF, spreadsheets) across 13,000+ stores; technicians use phones in the field |
+| Solution | RAG + Agent Bricks + vector indexing; Microsoft Teams integration |
+| Results | First-time-fix rate +25%, search time -60%, latency -40% |
+| Relevance | Same pattern as this repo's iceberg-metadata-catalog (unstructured docs → AI classification → instant search) |
+
+Source: [Databricks Blog](https://www.databricks.com/blog/how-7-eleven-transformed-maintenance-technician-knowledge-access-databricks-agent-bricks)
+
+### AstraZeneca: Multi-Agent System (10x Scale)
+
+| Aspect | Detail |
+|--------|--------|
+| Problem | Commercial teams need pharmaceutical data across therapeutic areas — structured (Genie Spaces) + unstructured (400K+ clinical docs) |
+| Solution | Supervisor Agent coordinates specialized sub-agents per therapeutic area; Knowledge Assistant for unstructured; Vega-Lite for visualization in Teams |
+| Results | Agents scaled 10x; 400K docs processed in <60 min with no code |
+| Relevance | Reference architecture for this repo's Omnigent Phase 3 (manufacturing multi-agent quality supervisor + sub-agents) |
+
+Source: [DAIS Session](https://www.databricks.com/dataaisummit/session/astrazenecas-multi-agent-system-lessons-scaling-agents-10x-agent-bricks), [Databricks Blog](https://www.databricks.com/blog/bringing-visualizations-life-multi-agent-systems-vega-lite)
+
 ## References
 
 - [Omnigent Official Site](https://omnigent.ai/)
@@ -301,6 +327,9 @@ Each layer operates independently. If any layer returns DENY, the output is bloc
 - [Unity AI Gateway (DAIS 2026)](https://www.databricks.com/blog/ai-governance-data-ai-summit-2026-whats-new-unity-ai-gateway) — Managed Omnigent on Databricks + AI governance
 - [What's new with Unity Catalog (DAIS 2026)](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026)
 - [Agent Bricks Supervisor Agent GA](https://www.databricks.com/blog/agent-bricks-supervisor-agent-now-ga-orchestrate-enterprise-agents)
+- [Omnigent Docs: Custom Agents](https://omnigent.ai/docs/use/custom-agents)
+- [Omnigent Docs: Contextual Policies](https://omnigent.ai/docs/policies/overview)
+- [Omnigent Docs: MCP & Tools](https://omnigent.ai/docs/build/tools)
 - [Omnigent Docs: Custom Agents](https://omnigent.ai/docs/use/custom-agents)
 - [Omnigent Docs: Contextual Policies](https://omnigent.ai/docs/policies/overview)
 - [Omnigent Docs: MCP & Tools](https://omnigent.ai/docs/build/tools)
