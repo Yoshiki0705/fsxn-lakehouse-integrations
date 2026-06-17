@@ -125,6 +125,32 @@ Analytics engines read raw data from FSx, write governed tables elsewhere
 
 **FSx for ONTAP is the data source; table format management happens on separate storage.** OpenSharing enables governed, zero-copy read distribution of that source data to any recipient.
 
+### Reproduction script
+
+A self-contained verification script is provided for anyone to reproduce these results against their own FSx for ONTAP S3 Access Point:
+
+```bash
+cd integrations/iceberg-metadata-catalog/scripts/
+python verify-opensharing-credential-vending.py \
+  --ap-alias <your-ap-alias-ext-s3alias> \
+  --allowed-prefix media/ \
+  --denied-prefix benchmark/
+```
+
+The script tests both modes (STS + presigned URL), outputs pass/fail per format, and saves a JSON evidence file. Prerequisites: `boto3`, `requests`, AWS credentials with `s3:GetObject`, `s3:ListBucket`, `sts:GetFederationToken`.
+
+### Presigned URL mode (supplementary finding)
+
+In addition to the STS mode (primary), presigned URLs also work empirically:
+
+| Condition | Result |
+|-----------|--------|
+| Regional endpoint (`s3.REGION.amazonaws.com`) + SigV4 | ✅ HTTP 200 for all formats |
+| Global endpoint (`s3.amazonaws.com`) | ❌ HTTP 301 (redirect, signature mismatch) |
+| AWS documentation stance | "Not supported" |
+
+**Recommendation**: Use STS credential vending as the primary mode (officially supported, prefix-scoped). Presigned URLs work today but lack an official support guarantee and require the regional endpoint workaround.
+
 ## Scope and Principles
 
 - **Complement, not replacement**: The OpenSharing path complements — it does not replace — the existing AWS-native S3 Access Point patterns (Athena, Glue, EMR, Redshift, SageMaker) already documented in this repository.
