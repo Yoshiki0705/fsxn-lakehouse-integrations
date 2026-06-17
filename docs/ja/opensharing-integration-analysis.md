@@ -125,6 +125,32 @@ FSx for ONTAP（raw data の source of truth: 画像、CSV、センサーログ�
 
 **FSx for ONTAP はデータソース。テーブルフォーマット管理は別ストレージで行う。** OpenSharing はそのソースデータのガバナンス付き zero-copy read 配信を任意の recipient に対して実現する。
 
+### 再現スクリプト
+
+これらの結果を自身の FSx for ONTAP S3 Access Point に対して再現するための検証スクリプトを提供する:
+
+```bash
+cd integrations/iceberg-metadata-catalog/scripts/
+python verify-opensharing-credential-vending.py \
+  --ap-alias <your-ap-alias-ext-s3alias> \
+  --allowed-prefix media/ \
+  --denied-prefix benchmark/
+```
+
+両モード（STS + presigned URL）をテストし、フォーマットごとの pass/fail を出力し、JSON エビデンスファイルを保存する。前提: `boto3`, `requests`, AWS 認証情報（`s3:GetObject`, `s3:ListBucket`, `sts:GetFederationToken`）。
+
+### Presigned URL モード（補足的発見）
+
+STS モード（primary）に加え、presigned URL も実証的に動作する:
+
+| 条件 | 結果 |
+|------|------|
+| リージョナルエンドポイント（`s3.REGION.amazonaws.com`）+ SigV4 | ✅ 全フォーマットで HTTP 200 |
+| グローバルエンドポイント（`s3.amazonaws.com`） | ❌ HTTP 301（リダイレクト、署名不一致） |
+| AWS ドキュメント上の記載 | 「Not supported」 |
+
+**推奨**: STS credential vending を primary mode として使用（公式対応、prefix スコープ）。Presigned URL は現時点で動作するが公式サポート保証がなく、リージョナルエンドポイントのワークアラウンドが必要。
+
 ## スコープと原則
 
 - **補完であって置換ではない**: OpenSharing パスは、本リポジトリで既に文書化した AWS ネイティブ S3 Access Point パターン（Athena, Glue, EMR, Redshift, SageMaker）を**置き換えるものではなく補完**する。
