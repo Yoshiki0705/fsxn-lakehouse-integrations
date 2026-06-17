@@ -87,7 +87,7 @@ On-premises                              Cloud (AWS)
 │ - Sub-5ms alerting   │          │ AI/ML model training     │
 │                      │          │ Cross-plant comparison   │
 │ Payload Storage      │          │                          │
-│ (ONTAP on-prem)      │─ ─ ─ ─ ─│ FSx for ONTAP (cache)   │
+│ (ONTAP on-prem)      │─ ─ ─ ─ ─ │ FSx for ONTAP (cache)    │
 └──────────────────────┘          └──────────────────────────┘
 ```
 
