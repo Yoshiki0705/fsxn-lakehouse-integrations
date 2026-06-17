@@ -1,8 +1,8 @@
 # Support Inquiry: ClickHouse Cloud ClickPipes × MSK Connectivity
 
-> **Status**: MSK Provisioned deployed; ClickPipes "Incompatible" issue — awaiting ClickHouse Support response
-> **Date**: 2026-06-15 (updated)
-> **Case**: ClickHouse Support (active)
+> **Status**: ✅ ClickHouse Support engineer assigned — awaiting PrivateLink guidance
+> **Date**: 2026-06-17 (updated)
+> **Case**: ClickHouse Support (active, follow-up case created)
 > **Priority**: High (PoC blocker)
 
 ---
@@ -50,12 +50,39 @@ MSK manufacturing-poc Multi-VPC endpoint | Ready | Incompatible
 | 2026-06-15 | SASL/SCRAM credentials associated | ✅ Custom KMS key |
 | 2026-06-15 | ClickPipes setup attempted | ❌ "Incompatible" on Reverse Private Endpoint |
 | 2026-06-15 | Reply sent to ClickHouse Support | 🔄 Awaiting response |
+| **2026-06-17** | **ClickHouse Support follow-up case created** | **✅ Engineer assigned, awaiting PrivateLink guidance** |
 
-## Open Questions (Sent to ClickHouse Support 2026-06-15)
+## Updated Questions (2026-06-17)
 
-1. Why does the MSK Multi-VPC endpoint show as "Incompatible" in ClickPipes?
-2. Does ClickPipes require a separate VPC Endpoint Service (NLB-based) instead of MSK's native Multi-VPC connectivity?
-3. Is there a way to resolve this without enabling MSK Public Access?
+ClickHouse Support has confirmed the follow-up and an engineer will provide guidance. The key questions now are:
+
+1. Should we use ClickPipes **"Reverse Private Endpoint"** for AWS PrivateLink to MSK?
+2. If yes:
+   - What **VPC Endpoint Service** configuration is needed on the MSK/customer side?
+   - What **ClickPipes configuration** is required for MSK Provisioned + SCRAM over PrivateLink?
+3. Is MSK's native Multi-VPC connectivity compatible with ClickPipes, or must we use a separate NLB-based VPC Endpoint Service?
+
+## Expected Next Steps (Pending Support Response)
+
+Based on the KB article and "Reverse Private Endpoint" UI, the likely solution path:
+
+```
+Option A: ClickPipes Reverse Private Endpoint (most likely)
+  1. Customer creates NLB targeting MSK broker ENIs
+  2. Customer creates VPC Endpoint Service (NLB-backed)
+  3. ClickHouse creates VPC Endpoint in their VPC → connects to our NLB
+  4. ClickPipes uses the private endpoint for Kafka consumption
+  
+Option B: MSK Multi-VPC native (if supported by ClickPipes)
+  - ClickHouse Support may provide a way to resolve Multi-VPC DNS
+  - Possible: ClickPipes adds MSK Multi-VPC DNS resolution support
+
+Option C: MSK Public Access (workaround, lower security)
+  - Enable public access on MSK with SASL/SCRAM + TLS
+  - Fastest but least secure
+```
+
+**Action when response arrives**: Implement the recommended approach and update this document with configuration details.
 
 ## Workaround Options
 
