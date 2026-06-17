@@ -165,14 +165,29 @@ Design decisions:
 
 ```
 Classifier Orchestrator
-  → Run same image through 3 models (Claude Haiku / Titan / Nova)
-  → Compare results (Debby debate pattern)
-  → Majority vote → accept
-  → Disagreement → escalate to human review
+  → Run same image through 3 models (Claude Haiku / Nova Lite / Mistral Large 3)
+  → Compare results (Debby debate pattern / majority vote)
+  → 3/3 agree (unanimous) → accept with high confidence
+  → 2/3 agree (majority) → accept majority with moderate confidence
+  → 0 agree (3-way split) → escalate to human review
   → Record results to Iceberg table (UC lineage preserved)
-
-Target: +5% F1 score improvement over single-model baseline
 ```
+
+#### Verified Results (2026-06-17, Project-context)
+
+| Metric | Result |
+|--------|--------|
+| Models tested | Claude 3 Haiku, Amazon Nova Lite, Mistral Large 3 |
+| Execution | ThreadPoolExecutor (parallel, max_workers=3) |
+| Latency | 0.6–0.7s per image (parallel) |
+| Cost multiplier | 1.2x vs single-model |
+| Unanimous confidence | 0.94–0.96 |
+| Disagreement handling | Correctly escalated to human review queue |
+| Agreement type | True majority vote (3 models) |
+
+**Implementation**: `integrations/iceberg-metadata-catalog/lambda/enrich-image/multimodel_classify.py`
+**Evaluation framework**: `evaluation.py` — accuracy, F1 macro, per-category precision/recall, cost comparison
+**Evidence**: `verification-pack/multimodel-classification/multimodel-classification-evidence.yaml`
 
 ---
 
@@ -268,13 +283,13 @@ Each layer operates independently. If any layer returns DENY, the output is bloc
 
 ## Next Steps
 
-| Phase | Activity | Timeline |
-|-------|----------|----------|
-| 0 | ✅ Installation + evaluation | Complete |
-| 1 | Kiro Steering integration guide | 2026-06 |
-| 2 | Iceberg Multi-Model Debate PoC | 2026-07 |
-| 3 | Manufacturing Multi-Agent Quality design | 2026-07 |
-| 4 | Public documentation finalization | 2026-07 |
+| Phase | Activity | Timeline | Status |
+|-------|----------|----------|--------|
+| 0 | ✅ Installation + evaluation | Complete | ✅ |
+| 1 | Kiro Steering integration guide | 2026-06 | ✅ |
+| 2 | Iceberg Multi-Model Debate PoC | 2026-06 | ✅ Verified (PR #72) |
+| 3 | Manufacturing Multi-Agent Quality design | 2026-07 | 🔲 Blocked (infra dependency) |
+| 4 | Public documentation finalization | 2026-07 | 🔄 In progress |
 
 ---
 
