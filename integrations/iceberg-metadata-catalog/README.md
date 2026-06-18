@@ -163,6 +163,7 @@ Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platfor
 | Partner Solution Packaging | [EN](../../docs/partner-enablement/solution-packaging.md) | [JA](../../docs/partner-enablement/solution-packaging-ja.md) |
 | Snowflake Troubleshooting | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
 | Snowflake VENDED_CREDENTIALS | [EN](snowflake/glue-rest-vended-credentials-validation.md) | [JA](snowflake/glue-rest-vended-credentials-validation-ja.md) |
+| S3 Annotations Governance Eval (Databricks UC × FSx S3 AP) | [EN](../../docs/en/s3-annotations-governance-evaluation.md) | [JA](../../docs/ja/s3-annotations-governance-evaluation.md) |
 
 ## Blog Series
 

@@ -154,6 +154,7 @@ integrations/iceberg-metadata-catalog/
 | パートナーソリューションパッケージング | [EN](../../docs/partner-enablement/solution-packaging.md) | [JA](../../docs/partner-enablement/solution-packaging-ja.md) |
 | Snowflake トラブルシューティング | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
 | Snowflake VENDED_CREDENTIALS 検証 | [EN](snowflake/glue-rest-vended-credentials-validation.md) | [JA](snowflake/glue-rest-vended-credentials-validation-ja.md) |
+| S3 Annotations ガバナンス評価 (Databricks UC × FSx S3 AP) | [EN](../../docs/en/s3-annotations-governance-evaluation.md) | [JA](../../docs/ja/s3-annotations-governance-evaluation.md) |
 
 ## ブログシリーズ
 

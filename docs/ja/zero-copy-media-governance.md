@@ -380,9 +380,9 @@ WHERE asset_type = 'document'
 
 | ペルソナ | 主要推奨 |
 |---------|---------|
-| **Snowflake PMM（高橋さん）** | Horizon Catalog で外部エンジンへのガバナンス強制が可能。非構造化データの AI-Ready 化には Cortex Search + Data Sharing が最短パス。Databricks 環境でも Horizon 経由で Snowflake ガバナンスを適用できる。Managed Iceberg Table → Horizon REST Catalog で Databricks/Spark からも読み取り可能（閉じた世界ではない）。 |
-| **Databricks SA（倉光さん）** | UC Volumes + Delta Sharing が正解。Mosaic AI で非構造化データのタグ自動付与を実現。S3 コスト削減には FSx for ONTAP を戦略的に推奨。将来的には Lakehouse Federation で FSx S3 AP 上のデータを仮想的に参照するパスも検討対象。 |
-| **AWS Iceberg SA（疋田さん）** | FSx for ONTAP S3 AP + Lake Formation で S3 コピー廃止 + 全エンジンガバナンス。Bedrock KB が FSx S3 AP を直接参照できるのは AWS ネイティブの強み。Glue Catalog + Iceberg 形式での保存パスも Open Table Format の選択肢として有効。 |
+| **Snowflake PMM** | Horizon Catalog で外部エンジンへのガバナンス強制が可能。非構造化データの AI-Ready 化には Cortex Search + Data Sharing が最短パス。Databricks 環境でも Horizon 経由で Snowflake ガバナンスを適用できる。Managed Iceberg Table → Horizon REST Catalog で Databricks/Spark からも読み取り可能（閉じた世界ではない）。 |
+| **Databricks SA** | UC Volumes + Delta Sharing が正解。Mosaic AI で非構造化データのタグ自動付与を実現。S3 コスト削減には FSx for ONTAP を戦略的に推奨。将来的には Lakehouse Federation で FSx S3 AP 上のデータを仮想的に参照するパスも検討対象。 |
+| **AWS Iceberg SA** | FSx for ONTAP S3 AP + Lake Formation で S3 コピー廃止 + 全エンジンガバナンス。Bedrock KB が FSx S3 AP を直接参照できるのは AWS ネイティブの強み。Glue Catalog + Iceberg 形式での保存パスも Open Table Format の選択肢として有効。 |
 | **Storage Specialist** | ONTAP 重複排除が根本解決。同一ファイルの複数コピー（バージョン違い、部門別コピー）に対して最も効果的。画像/動画の「類似ファイル」間の dedup 効果は限定的（同一ブロックがある場合のみ）。 |
 | **Partner SA** | NetApp Console + DataSync → FSx マイグレーションが確立されたパス（10TB / Direct Connect 1Gbps で約22時間）。FlexCache S3 AP はハイブリッド環境のゲームチェンジャー。 |
 | **Public Sector SA** | データ主権要件では Option C（オンプレ ONTAP + SnapMirror）が必須。医療画像(DICOM)や監視映像は PII/PHI に該当する可能性があり、匿名化パイプラインの検討が必要。 |
