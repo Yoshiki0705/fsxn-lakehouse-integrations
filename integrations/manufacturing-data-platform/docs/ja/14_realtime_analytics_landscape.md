@@ -315,3 +315,4 @@ LTAP/Lakebase は structured/operational データの統合だが、FSx for ONTA
 - [Databricks: AWS and Databricks at DAIS 2026](https://www.databricks.com/blog/aws-and-databricks-data-ai-summit-2026-accelerating-real-world-ai-innovation) (2026-06-09)
 - [ClickHouse vs Databricks: Join Performance](https://clickhouse.com/blog/join-me-if-you-can-clickhouse-vs-databricks-snowflake-join-performance) (2025)
 - [ClickHouse: Real-Time Analytics Platforms Comparison](https://clickhouse.com/resources/engineering/real-time-analytics-platforms-a-practical-comparison) (2025)
+- 本リポジトリ: [Kafka/ClickHouse → Unity Catalog 接続（通信経路・ポート視点、ストレージとは別観点）](../../../../docs/ja/kafka-clickhouse-unity-catalog-connectivity.md)
