@@ -311,3 +311,4 @@ Zerobus Ingest → Delta direct (Kafka bypass, Databricks-only) 🆕 Under evalu
 - [repost.aws: FSxN S3 AP as Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w)
 - [Amazon S3 Vectors GA](https://aws.amazon.com/blogs/aws/amazon-s3-vectors-now-generally-available-with-increased-scale-and-performance/)
 - [Amazon Bedrock Managed Knowledge Base](https://aws.amazon.com/about-aws/whats-new/2026/06/amazon-bedrock-managed-knowledge-base/)
+- Related analysis in this repo: [S3 Annotations governance evaluation](./s3-annotations-governance-evaluation.md) (applying S3 Annotations/Metadata to the Databricks UC × FSx for ONTAP S3 AP challenge, 2026-06-18)
