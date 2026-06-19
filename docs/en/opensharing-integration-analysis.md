@@ -1,5 +1,7 @@
 🌐 **English** | [日本語](../ja/opensharing-integration-analysis.md)
 
+> 📖 **FAQ**: For questions like "Can OpenSharing connect directly to FSx for ONTAP?" see the [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) FAQ section (Q1, Q6).
+
 # OpenSharing × FSx for ONTAP: Integration Analysis
 
 > **Status**: Forward-looking architecture analysis, now augmented with protocol-level facts read directly from the public OpenSharing specification (2026-06-16). No vendor implementation has been independently validated against FSx for ONTAP by this repository yet. Validation tasks are tracked as a future activity.

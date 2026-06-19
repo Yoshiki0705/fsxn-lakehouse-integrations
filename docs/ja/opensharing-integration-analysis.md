@@ -1,5 +1,7 @@
 🌐 [English](../en/opensharing-integration-analysis.md) | **日本語**
 
+> 📖 **FAQ**: 「OpenSharing で FSx for ONTAP に直接つなげるのか？」等の疑問は [UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) の FAQ セクション (Q1, Q6) で回答しています。
+
 # OpenSharing × FSx for ONTAP: 統合分析
 
 > **ステータス**: 将来を見据えたアーキテクチャ分析に、公開 OpenSharing 仕様から直接読み取ったプロトコルレベルの事実を追加（2026-06-16）。本リポジトリによる FSx for ONTAP に対するベンダー実装の独立検証はまだ実施していない。検証タスクは将来のアクティビティとして管理する。

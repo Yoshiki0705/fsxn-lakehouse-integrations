@@ -1,5 +1,7 @@
 🌐 **English** | [日本語](../ja/datasync-to-s3-guide.md)
 
+> 📖 **Comprehensive guide**: For a full overview of all FSx for ONTAP → Databricks UC connection paths, see the [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md). This document focuses on the DataSync path detailed procedures.
+
 # AWS DataSync: FSx for ONTAP → S3 Sync Guide
 
 > **Status**: Reference architecture — DataSync is the only validated sync mechanism from FSx for ONTAP to standard S3 buckets (SnapMirror S3 is [not available on FSx for ONTAP](../../verification-pack/snapmirror-s3/evidence/2026-05-26/evidence-record.yaml)).
