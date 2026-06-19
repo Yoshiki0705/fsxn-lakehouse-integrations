@@ -2,7 +2,7 @@
 
 # 実機検証 Phase 計画: ClickHouse `DataLakeCatalog` → Unity Catalog (Beta) + ネットワーク (NCC / SG / エンドポイント)
 
-> **ステータス**: 計画（2026-06-18）。未実施（実機リソース確保後に着手）。
+> **ステータス**: 計画（2026-06-18）。Phase A0/B0 ゲートチェックを**読み取り専用で実行済み**（2026-06-18）→ 大半が **BLOCKED**（ClickHouse Cloud / Databricks の資格情報なし）。A1 以降・B1 以降は資格情報確保後に着手。
 > **対象**: [接続性ドキュメント](./kafka-clickhouse-unity-catalog-connectivity.md) の未検証項目を Phase 化。
 > **方針**: 各 Phase に 目的 / 前提 / ゲート / 手順 / 期待結果 / エビデンス / コスト / クリーンアップ。reproducible-evidence 慣習に準拠。
 > **注意**: 個人名・社名は記載しない。account ID / workspace URL / SG ID 等は **placeholder**（`<...>`）で記載。CLI/SQL は **テンプレート**であり、Beta 機能は現行公式ドキュメントで構文を確認しながら調整する。
@@ -163,6 +163,22 @@
 ## エビデンス記録
 
 各 Phase の結果は `integrations/manufacturing-data-platform/verification-evidence/<YYYY-MM-DD>/` に YAML で記録（既存慣習に準拠）。記録項目: 日時、環境（リージョン/バージョン）、手順、期待結果、実結果（成功/失敗/制限）、ログ抜粋、クリーンアップ確認。
+
+### 再現可能なゲートチェック（読み取り専用）
+
+Phase A0/B0 のゲート充足状況は、再現可能なスクリプトで確認できる（読み取り専用・資格情報不要・課金リソース未作成）:
+
+```bash
+# 既定リージョン ap-northeast-1。各種ヒントは環境変数で渡せる。
+bash integrations/manufacturing-data-platform/poc/infrastructure/gate-check-uc-connectivity.sh
+```
+
+- 各ゲートを `MET` / `NOT MET / BLOCKED` で表示し、BLOCKED 件数を集計。
+- 出力するのは「ツール有無・接続ヒントの有無・MSK/エンドポイントの存在数」のみ（アカウント固有 ID はスクリプトにハードコードしない）。
+
+**実行済み記録（2026-06-18）**: `verification-evidence/2026-06-18/gate-check-clickhouse-uc-connectivity.yaml`
+- Track A = **BLOCKED**（ClickHouse Cloud + Databricks 認証なし）。
+- Track B = **PARTIAL**（既存 MSK クラスタ ACTIVE・SASL/IAM+SCRAM・private のみ・転送時 TLS、S3 Gateway エンドポイント 5 件を読み取り確認。ただし NCC/疎通テストは Databricks serverless 未確保のため未実行）。
 
 ---
 

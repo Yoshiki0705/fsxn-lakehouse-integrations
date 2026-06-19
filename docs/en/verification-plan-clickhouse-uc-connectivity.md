@@ -2,7 +2,7 @@
 
 # Live Verification Phase Plan: ClickHouse `DataLakeCatalog` → Unity Catalog (Beta) + Network (NCC / SG / endpoints)
 
-> **Status**: Plan (2026-06-18). Not yet executed (starts once live resources are provisioned).
+> **Status**: Plan (2026-06-18). Phase A0/B0 gate check **executed read-only** (2026-06-18) → mostly **BLOCKED** (no ClickHouse Cloud / Databricks credentials). A1+ and B1+ start once credentials are available.
 > **Scope**: phases the unverified items from the [connectivity document](./kafka-clickhouse-unity-catalog-connectivity.md).
 > **Approach**: each phase has Objective / Prerequisites / Gate / Steps / Expected result / Evidence / Cost / Cleanup. Follows the reproducible-evidence convention.
 > **Note**: no individual or company names. Account ID / workspace URL / SG ID, etc., are **placeholders** (`<...>`). CLI/SQL are **templates**; for Beta features, confirm syntax against current official docs.
@@ -163,6 +163,22 @@
 ## Evidence recording
 
 Record each phase's results as YAML under `integrations/manufacturing-data-platform/verification-evidence/<YYYY-MM-DD>/` (per existing convention). Fields: timestamp, environment (region/version), steps, expected result, actual result (pass/fail/limitation), log excerpts, cleanup confirmation.
+
+### Reproducible gate check (read-only)
+
+Phase A0/B0 gate satisfaction can be checked with a reproducible script (read-only, no credentials required, no billable resources created):
+
+```bash
+# Default region ap-northeast-1. Connection hints can be passed via env vars.
+bash integrations/manufacturing-data-platform/poc/infrastructure/gate-check-uc-connectivity.sh
+```
+
+- Prints each gate as `MET` / `NOT MET / BLOCKED` and counts the blocked ones.
+- Outputs only "tool presence / connection-hint presence / MSK & endpoint counts" (no account-specific IDs are hardcoded in the script).
+
+**Recorded run (2026-06-18)**: `verification-evidence/2026-06-18/gate-check-clickhouse-uc-connectivity.yaml`
+- Track A = **BLOCKED** (no ClickHouse Cloud + no Databricks auth).
+- Track B = **PARTIAL** (existing MSK cluster ACTIVE, SASL/IAM+SCRAM, private-only, TLS in transit; 5 S3 Gateway endpoints confirmed read-only — but NCC/connectivity tests not run because no Databricks serverless workspace).
 
 ---
 

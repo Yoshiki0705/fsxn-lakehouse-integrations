@@ -261,13 +261,20 @@ Zerobus Ingest → Delta direct (Kafka bypass, Databricks-only) 🆕 Under evalu
 | Schema compatibility | v3 event schema (JSON) → Lakebase table schema mapping | both repos | 🔲 Design pending |
 | Write → query latency | Time from Lakebase write to query availability (including via Lakehouse//RT) | this repo | 🔲 After Lakehouse//RT Preview validation |
 | ACL integration | Whether Lakebase tables can hold FSx for ONTAP-derived ACL metadata | this repo | 🔲 Design pending |
-| Lakebase ap-northeast-1 availability | Confirm Lakebase GA is not region-limited; verify availability in ap-northeast-1 | this repo | 🔲 Not confirmed |
-| Lakebase Private Link connectivity | Whether Private Link (port 5432) is available for Lakebase access from VPC (announced GA at DAIS 2026) | this repo | 🔲 Confirm ap-northeast-1 availability |
+| Lakebase ap-northeast-1 availability | Confirm Lakebase GA is not region-limited; verify availability in ap-northeast-1 | this repo | ⚠️ **Not available confirmed** (2026-06-18) |
+| Lakebase Private Link connectivity | Whether Private Link (port 5432) is available for Lakebase access from VPC (announced GA at DAIS 2026). Note: moot in ap-northeast-1 until Lakebase itself is available | this repo | ⚠️ Blocked by Lakebase region constraint |
 | Zerobus Ingest alternative path | Whether Zerobus Ingest (Private Link supported) can write directly to Lakebase as Kafka alternative. Prerequisite: confirm whether external sources (MSK/Kafka Producer) can push to Zerobus Ingest endpoint | edge repo | 🔲 Spec confirmation pending |
 | Real-Time Mode GA evaluation | After Real-Time Mode (Spark Declarative Pipelines, DBR 18.1.3) reaches GA, evaluate Path A latency improvement (sec–min → ~5ms). Verify whether it applies to existing Path A via trigger-mode change alone, and whether it can cover some Path D (Lakebase/LTAP) use cases | edge repo + this repo | 🔲 Public Preview (evaluate after GA) |
 | Zerobus Ingest SDK validation (gRPC/Python) | Validate Zerobus Ingest SDK (gRPC / Python) direct Delta writes. Confirm push method from external sources, throughput, Private Link route, and schema definition method | edge repo | 🔲 Awaiting SDK validation |
 
 > ⚠️ **Validation Required**: The Kafka → Lakebase direct write path has no published connector specification. Do not make PoC adoption decisions until all validation items above are confirmed.
+
+> ⚠️ **Region constraint confirmed (2026-06-18)**: Lakebase Autoscaling is **not available in ap-northeast-1 (Tokyo)** ([official docs](https://docs.databricks.com/en/resources/feature-region-support.html)). Available APAC regions: ap-south-1 (Mumbai), ap-southeast-1 (Singapore), ap-southeast-2 (Sydney). For Path D validation on an ap-northeast-1-based architecture, options are:
+> 1. **Validate in a Lakebase-supported region** — PoC in us-east-1 or ap-southeast-1
+> 2. **Wait for ap-northeast-1 support** — track Databricks region expansion
+> 3. **Deprioritize Path D** — continue with existing Path A (Structured Streaming → Delta)
+>
+> Zerobus Ingest is available in ap-northeast-1. The Lakebase limitation affects the Zerobus → Lakebase path specifically. Zerobus → Delta (Structured Streaming) path works in ap-northeast-1.
 
 **Future integration**: Validate LTAP (Kafka → Lakebase) path integrated with `ontap-edge-to-cloud-ai` edge → cloud flows. Re-evaluate at Lakehouse//RT GA.
 

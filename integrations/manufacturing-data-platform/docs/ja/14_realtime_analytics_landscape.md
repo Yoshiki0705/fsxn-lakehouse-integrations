@@ -158,13 +158,13 @@ LTAP/Lakebase は structured/operational データの統合だが、FSx for ONTA
                         ▼                      ▼
               ┌─────────────────┐    ┌─────────────────────┐
               │ エッジ: 専用 RT   │    │ クラウドのみ？        │
-              │ (ClickHouse 等)  │    │ Databricks 既存？    │
+              │ (ClickHouse 等)  │    │ Databricks 既存？   │
               └─────────┬───────┘    └──────────┬──────────┘
                         │                       │
                         │              Yes ┌────┴────┐ No
                         │                  ▼         ▼
                         │    ┌──────────────────┐ ┌─────────────────┐
-                        │    │ LTAP 統合を検討   │ │ 要件に応じて選択  │
+                        │    │ LTAP 統合を検討    │ │ 要件に応じて選択   │
                         │    │ (Layer 2+3 統合)  │ │                 │
                         │    └──────────────────┘ └─────────────────┘
                         │
@@ -172,7 +172,7 @@ LTAP/Lakebase は structured/operational データの統合だが、FSx for ONTA
               ┌─────────────────────────────────┐
               │ ハイブリッド:                     │
               │ Edge = 専用 RT                   │
-              │ Cloud = LTAP (Lakehouse//RT +    │
+              │ Cloud = LTAP (Lakehouse//RT +   │
               │         Lakebase) に移行検討      │
               └─────────────────────────────────┘
 ```
@@ -267,7 +267,7 @@ LTAP/Lakebase は structured/operational データの統合だが、FSx for ONTA
 
 ### 推奨
 
-- **Phase A (AWS)**: ClickHouse Cloud でリアルタイム検証を継続。Lakehouse//RT GA + 価格確定後に再評価。**LTAP ビジョンに基づき、Kafka → Lakebase 直接書き込みの PoC パスを並行して設計**（Lakebase は GA のため検証可能）。
+- **Phase A (AWS)**: ClickHouse Cloud でリアルタイム検証を継続。Lakehouse//RT GA + 価格確定後に再評価。**LTAP ビジョンに基づき、Kafka → Lakebase 直接書き込みの PoC パスを並行して設計**（Lakebase は GA だが ap-northeast-1 非対応 — us-east-1 or ap-southeast-1 で検証）。
 - **Phase B (オンプレ)**: ClickHouse オンプレは影響なし。LTAP / Lakehouse//RT にオンプレオプションなし。
 - **長期**: LTAP が Layer 2+3 を統合する方向性を前提に、クラウド側アーキテクチャの簡素化パスを設計しておく。エッジ側は独立して進化させる。
 - **FSx for ONTAP 連携**: Lakebase レコードと FSx for ONTAP ペイロードのリンク設計（S3 AP URI をメタデータカラムに保持）を Phase A の早期に検証する。
@@ -279,6 +279,13 @@ LTAP/Lakebase は structured/operational データの統合だが、FSx for ONTA
 > - **Lakeflow Real-Time Mode (Spark Declarative Pipelines)**: Structured Streaming のレイテンシを秒〜分から ~5ms まで短縮する実行モード（Public Preview, DBR 18.1.3）。上記「専用 RT DB vs Lakehouse//RT」比較表のインジェスト遅延（秒〜分, Structured Streaming）を改善するパス。**Lakehouse//RT（クエリエンジン）とは別機能**で、`ontap-edge-to-cloud-ai` の Path A 改善として評価予定（本番採用は GA 後）。([Lakeflow blog](https://www.databricks.com/blog/lakeflow-new-era-agentic-data-engineering))
 > - **Lakebase Private Link (GA)**: VPC 内から Lakebase への Private Link 接続（port 5432）が利用可能。エージェント → Lakebase アクセスのネットワーク経路にパブリックインターネットを経由しない設計が可能。([Security blog](https://www.databricks.com/blog/whats-new-databricks-platform-security-and-compliance-data-ai-summit-2026))
 > - **AIM (Automatic Identity Management) for Entra ID — GA on AWS**: ユーザー/グループの Databricks ワークスペースへの ID 同期を自動化。エージェントが属するグループメンバーシップの自動反映に寄与し、ACL ベースのアクセス制御設計を簡素化する可能性。
+
+> ⚠️ **リージョン制約確認済み (2026-06-18)**: [公式ドキュメント](https://docs.databricks.com/en/resources/feature-region-support.html)により、**Lakebase Autoscaling は ap-northeast-1 (Tokyo) で利用不可**であることを確認。本プロジェクトが ap-northeast-1 前提の場合、LTAP Path D (Kafka → Lakebase) の検証は以下のいずれかで対応:
+> - Lakebase 対応リージョン（us-east-1 / ap-southeast-1 / ap-southeast-2）で技術検証のみ実施
+> - ap-northeast-1 対応を待つ（Databricks リージョン拡大時期不明）
+> - Path A (Kafka → Structured Streaming → Delta) を継続し、Path D を長期候補に留める
+>
+> Zerobus Ingest は ap-northeast-1 対応済みのため、Zerobus → Delta (Structured Streaming) パスは利用可能。
 
 ---
 
