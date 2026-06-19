@@ -1,0 +1,123 @@
+---
+# =============================================================================
+# Gate-Check Evidence — ClickHouse DataLakeCatalog -> Unity Catalog (Beta)
+#                        + Network (NCC / SG / VPC Endpoint)
+# =============================================================================
+# Plan: docs/{ja,en}/verification-plan-clickhouse-uc-connectivity.md
+# Phases executed: A0 (Track A gate), B0 (Track B gate) — read-only only.
+# Outcome: Most gates NOT met in this environment. No live connectivity test
+#          was executed. Read-only AWS-native grounding recorded below.
+# Confidentiality: account-specific IDs (VPC / endpoint) are placeholdered.
+# =============================================================================
+
+verification_metadata:
+  date: "2026-06-18"
+  environment: "Local CLI (boto3 / AWS CLI) — no Databricks workspace, no ClickHouse Cloud"
+  region: "ap-northeast-1"
+  account: "<ACCOUNT-ID>"            # redacted for committable record
+  principal: "iam-user (yoshiki0705)"
+  evidence_tier: "Verified (read-only gate check)"
+  scope: "Gate / prerequisite checks only. No provisioning. No SG/IAM/UC changes."
+
+# ---------------------------------------------------------------------------
+# Track A — ClickHouse DataLakeCatalog (Beta) -> Unity Catalog
+# ---------------------------------------------------------------------------
+track_a_clickhouse_uc:
+  overall_status: "BLOCKED"
+  gates:
+    - gate: "ClickHouse client / ClickHouse Cloud access"
+      required: "ClickHouse Cloud version+region supporting DataLakeCatalog (catalog_type='unity', Beta)"
+      observed: "clickhouse-client NOT installed locally; no ClickHouse env vars; no ClickHouse Cloud credentials"
+      status: "NOT MET"
+    - gate: "Databricks UC external data access enabled (CN-B3)"
+      required: "Metastore external data access ON + credential vending"
+      observed: "Cannot verify — no Databricks workspace access"
+      status: "NOT MET (unverifiable)"
+    - gate: "Auth principal + UC grants (SELECT + EXTERNAL USE SCHEMA)"
+      required: "Service principal or PAT with grants"
+      observed: "databricks CLI NOT installed; no Databricks env vars; no PAT"
+      status: "NOT MET"
+  phases_executed:
+    A0: "Gate check — BLOCKED (see gates above)"
+    A1_A6: "NOT STARTED (blocked at A0)"
+  conclusion: >
+    Track A cannot be executed in this environment. Requires (1) ClickHouse Cloud
+    credentials with DataLakeCatalog Beta enabled, and (2) Databricks workspace
+    auth with UC external data access enabled. Neither is present.
+
+# ---------------------------------------------------------------------------
+# Track B — Network (NCC / SG / VPC Endpoint)
+# ---------------------------------------------------------------------------
+track_b_network:
+  overall_status: "PARTIAL (grounding only; no connectivity test executed)"
+  gates:
+    - gate: "Databricks serverless workspace + account CLI"
+      required: "databricks account CLI auth to create/assign NCC; serverless compute"
+      observed: "databricks CLI NOT installed; no Databricks account auth"
+      status: "NOT MET"
+    - gate: "SG / endpoint modification permission"
+      required: "ec2:AuthorizeSecurityGroupIngress on MSK broker SG, etc."
+      observed: "Not exercised (no SG change attempted — requires Databricks egress CIDR which is unavailable)"
+      status: "NOT EXERCISED"
+  read_only_grounding:
+    aws_caller_identity:
+      verified: true
+      account: "<ACCOUNT-ID>"
+      region: "ap-northeast-1"
+    msk_cluster:
+      verified: true
+      note: "Existing provisioned MSK cluster present — Track B Kafka source does NOT need to be built."
+      name: "<MSK-CLUSTER-NAME>"        # redacted (existing PoC cluster)
+      state: "ACTIVE"
+      type: "PROVISIONED"
+      kafka_version: "3.6.0"
+      broker_count: 2
+      auth:
+        sasl_iam: true
+        sasl_scram: true
+        tls_mutual_auth: false
+        unauthenticated: false
+      public_access: "DISABLED"          # brokers are private (VPC-only)
+      encryption_in_transit_client_broker: "TLS"
+      private_ports_reference: "IAM 9098 / SCRAM 9096 / TLS 9094 (per MSK port-info)"
+    s3_gateway_vpc_endpoints:
+      verified: true
+      service: "com.amazonaws.ap-northeast-1.s3"
+      type: "Gateway"
+      count: 5
+      all_available: true
+      ids: "<VPCE-IDS-REDACTED>"         # 5 endpoints across 5 VPCs (account-specific IDs withheld)
+  phases_executed:
+    B0: "Gate check — Databricks gate NOT MET; MSK + S3 endpoints grounded (read-only)"
+    B1: "NOT STARTED (needs Databricks serverless workspace + NCC)"
+    B2: "PARTIAL — S3 Gateway endpoints confirmed to exist; ClickHouse->S3 routing NOT tested (no ClickHouse instance)"
+    B3: "NOT RUN — broker ports are private; this host is outside the MSK VPC, so 'nc -zv' to private brokers is not meaningful"
+    B4: "N/A (no changes made; nothing to clean up)"
+  conclusion: >
+    Track B network grounding is confirmed (MSK cluster active with SASL/IAM+SCRAM,
+    private-only, TLS in transit; 5 S3 Gateway endpoints available). However, the
+    actual private-path connectivity test (Kafka -> Databricks via NCC, and
+    ClickHouse -> S3 via endpoint) cannot be executed without a Databricks
+    serverless workspace and (for B2) a ClickHouse instance inside the VPC.
+
+# ---------------------------------------------------------------------------
+# What is needed to unblock (handed back to operator)
+# ---------------------------------------------------------------------------
+unblock_requirements:
+  track_a:
+    - "ClickHouse Cloud: API/SQL access with DataLakeCatalog (unity, Beta) enabled in a supported version/region"
+    - "Databricks: workspace URL + token (or service principal); install databricks CLI; enable UC external data access"
+  track_b:
+    - "Databricks serverless workspace + account-level CLI auth (for NCC create/assign)"
+    - "Databricks stable egress CIDR (to author the MSK broker SG ingress rule for port 9098)"
+    - "For B2 self-managed ClickHouse path: an EC2/compute inside a VPC with the S3 Gateway endpoint"
+
+safety_notes:
+  - "Only read-only describe/list calls were made (sts, kafka list/describe, ec2 describe-vpc-endpoints)."
+  - "No security groups modified. No NCC/PrivateLink created. No UC/ClickHouse objects created."
+  - "No billable resources provisioned during this gate check."
+
+next_steps:
+  - "Operator to provide ClickHouse Cloud + Databricks credentials, or confirm a contained subset to run."
+  - "Once credentials exist: execute Track A (A1->A6) and Track B (B1->B4) per the plan, recording per-phase YAML here."
+  - "Beta features (DataLakeCatalog, UC external data access) -> production decision deferred until GA."

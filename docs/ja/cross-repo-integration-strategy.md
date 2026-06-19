@@ -261,13 +261,20 @@ Zerobus Ingest → Delta 直接 (Kafka バイパス、Databricks 専用) 🆕 �
 | スキーマ互換性 | v3 イベントスキーマ（JSON）→ Lakebase テーブルスキーマへのマッピング | 両リポジトリ | 🔲 設計待ち |
 | write → query レイテンシ | Lakebase 書き込み後のクエリ可能時間（Lakehouse//RT 経由含む） | 本リポジトリ | 🔲 Lakehouse//RT Preview 検証後 |
 | ACL 連携 | Lakebase テーブルに FSx for ONTAP 由来の ACL メタデータを保持可能か | 本リポジトリ | 🔲 設計待ち |
-| Lakebase ap-northeast-1 可用性 | Lakebase GA がリージョン限定でないことの確認。ap-northeast-1 で利用可能か | 本リポジトリ | 🔲 未確認 |
-| Lakebase Private Link 接続 | VPC 内からの Lakebase アクセスに Private Link (port 5432) が利用可能か（DAIS 2026 で GA 発表済み） | 本リポジトリ | 🔲 ap-northeast-1 での利用可否確認 |
+| Lakebase ap-northeast-1 可用性 | Lakebase GA がリージョン限定でないことの確認。ap-northeast-1 で利用可能か | 本リポジトリ | ⚠️ **非対応確認済み** (2026-06-18) |
+| Lakebase Private Link 接続 | VPC 内からの Lakebase アクセスに Private Link (port 5432) が利用可能か（DAIS 2026 で GA 発表済み）。注: Lakebase 自体が ap-northeast-1 で非対応のため、Lakebase リージョン拡大まで保留 | 本リポジトリ | ⚠️ Lakebase リージョン制約によりブロック |
 | Zerobus Ingest 代替パス | Kafka 以外に Zerobus Ingest (Private Link 対応) からの直接 Lakebase 書き込みが可能か。前提: 外部ソース（MSK/Kafka Producer）から Zerobus Ingest endpoint への Push が可能かを先に確認 | edge repo | 🔲 仕様確認待ち |
 | Real-Time Mode GA 評価 | Real-Time Mode (Spark Declarative Pipelines, DBR 18.1.3) GA 到達後、Path A のレイテンシ改善（秒〜分 → ~5ms）を評価。トリガーモード変更だけで既存 Path A に適用可能か、また Path D (Lakebase/LTAP) の一部ユースケースをカバーし得るかを検証 | edge repo + 本リポジトリ | 🔲 Public Preview（GA 後評価） |
 | Zerobus Ingest SDK 検証 (gRPC/Python) | Zerobus Ingest SDK (gRPC / Python) による Delta 直接書き込みの検証。外部ソースからの Push 方式、スループット、Private Link 経路、スキーマ定義方法を確認 | edge repo | 🔲 SDK 検証待ち |
 
 > ⚠️ **Validation Required**: Kafka → Lakebase の直接書き込みパスはコネクタ仕様が未公開であり、上記検証項目すべてが確認されるまで PoC 採用判断を行わないこと。
+
+> ⚠️ **リージョン制約確認済み (2026-06-18)**: Lakebase Autoscaling は **ap-northeast-1 (Tokyo) で利用不可**（[公式ドキュメント](https://docs.databricks.com/en/resources/feature-region-support.html)）。APAC で利用可能なリージョンは ap-south-1 (Mumbai), ap-southeast-1 (Singapore), ap-southeast-2 (Sydney)。Path D を ap-northeast-1 ベースのアーキテクチャで検証する場合、以下の選択肢がある:
+> 1. **Lakebase 対応リージョンで検証** — us-east-1 or ap-southeast-1 等で PoC 実行
+> 2. **ap-northeast-1 対応待ち** — Databricks のリージョン拡大を待つ
+> 3. **Path D を低優先化** — 既存 Path A (Structured Streaming → Delta) を継続
+>
+> Zerobus Ingest は ap-northeast-1 対応済みであり、Lakebase 未対応は Zerobus → Lakebase パスに影響する。Zerobus → Delta (Structured Streaming) パスは ap-northeast-1 で利用可能。
 
 **今後の連携**: LTAP (Kafka → Lakebase) パスの検証を `ontap-edge-to-cloud-ai` のエッジ → クラウドフローと統合して設計。Lakehouse//RT GA 時に再評価。
 
