@@ -1,5 +1,7 @@
 🌐 [English](../en/datasync-to-s3-guide.md) | **日本語**
 
+> 📖 **総合ガイド**: FSx for ONTAP → Databricks UC の全接続パスを俯瞰するには [UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) を参照してください。本ドキュメントは DataSync パスの詳細手順に特化しています。
+
 # AWS DataSync: FSx for ONTAP → S3 同期ガイド
 
 > **ステータス**: リファレンスアーキテクチャ — DataSync は FSx for ONTAP から標準 S3 バケットへの唯一の検証済み同期メカニズムです（SnapMirror S3 は [FSx for ONTAP で利用不可](../../verification-pack/snapmirror-s3/evidence/2026-05-26/evidence-record.yaml)）。
