@@ -15,6 +15,8 @@
 
 ## Overview
 
+> 📖 **Looking for a comprehensive connection guide?** See the [FSx for ONTAP → Databricks Unity Catalog Connection Guide](../../docs/en/fsxn-to-databricks-unity-catalog-guide.md) ([日本語](../../docs/ja/fsxn-to-databricks-unity-catalog-guide.md)) for all available paths, file format support, FAQ, and recommendations. This README documents the S3 Access Point validation experiment specifically.
+
 This is an experimental validation package exploring integration paths between
 Amazon FSx for NetApp ONTAP (FSx for ONTAP) and Databricks via S3 Access Points.
 

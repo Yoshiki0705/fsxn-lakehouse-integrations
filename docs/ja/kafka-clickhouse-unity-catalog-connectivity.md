@@ -1,5 +1,7 @@
 🌐 [English](../en/kafka-clickhouse-unity-catalog-connectivity.md) | **日本語**
 
+> 📖 **総合ガイド**: FSx for ONTAP → Databricks UC の全接続パスを俯瞰するには [UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) を参照してください。本ドキュメントはストリーミング/カタログ接続の技術詳細に特化しています。
+
 # Kafka / ClickHouse から Databricks Unity Catalog への接続: 通信経路・ポート視点の解説
 
 > **ステータス**: 初版（2026-06-18）。公開ドキュメントに基づく整理。
