@@ -268,7 +268,7 @@ On-premises                              Cloud (AWS)
 
 ### Recommendation
 
-- **Phase A (AWS)**: Continue ClickHouse Cloud for real-time validation. Re-evaluate after Lakehouse//RT GA + pricing. **Based on the LTAP vision, design a parallel PoC path for Kafka → Lakebase direct writes** (Lakebase is GA and testable now).
+- **Phase A (AWS)**: Continue ClickHouse Cloud for real-time validation. Re-evaluate after Lakehouse//RT GA + pricing. **Based on the LTAP vision, design a parallel PoC path for Kafka → Lakebase direct writes** (Lakebase is GA but not in ap-northeast-1 — validate in us-east-1 or ap-southeast-1).
 - **Phase B (On-premises)**: ClickHouse on-prem is unaffected. LTAP / Lakehouse//RT have no on-premises option.
 - **Long-term**: Assume LTAP will unify Layer 2+3 in the cloud; design cloud-side architecture simplification path accordingly. Edge-side evolves independently.
 - **FSx for ONTAP integration**: Validate Lakebase record ↔ FSx for ONTAP payload linking design (S3 AP URI as metadata column) early in Phase A.
@@ -280,6 +280,13 @@ On-premises                              Cloud (AWS)
 > - **Lakeflow Real-Time Mode (Spark Declarative Pipelines)**: An execution mode that reduces Structured Streaming latency from seconds–minutes to ~5ms (Public Preview, DBR 18.1.3). It improves the ingestion latency (seconds–minutes, Structured Streaming) shown in the "Dedicated RT DB vs Lakehouse//RT" comparison above. **Distinct from Lakehouse//RT (query engine)**; being evaluated as a Path A improvement in `ontap-edge-to-cloud-ai` (production adoption after GA). ([Lakeflow blog](https://www.databricks.com/blog/lakeflow-new-era-agentic-data-engineering))
 > - **Lakebase Private Link (GA)**: Private Link connectivity to Lakebase from VPC (port 5432) now available. Enables agent → Lakebase access without traversing public internet. ([Security blog](https://www.databricks.com/blog/whats-new-databricks-platform-security-and-compliance-data-ai-summit-2026))
 > - **AIM (Automatic Identity Management) for Entra ID — GA on AWS**: Automates user/group identity sync to Databricks workspaces. May simplify ACL-based access control design by automatically reflecting group memberships that agents belong to.
+
+> ⚠️ **Region constraint confirmed (2026-06-18)**: Per [official docs](https://docs.databricks.com/en/resources/feature-region-support.html), **Lakebase Autoscaling is not available in ap-northeast-1 (Tokyo)**. If this project targets ap-northeast-1, LTAP Path D (Kafka → Lakebase) validation requires one of:
+> - Validate in a Lakebase-supported region (us-east-1 / ap-southeast-1 / ap-southeast-2) for tech validation only
+> - Wait for ap-northeast-1 support (Databricks region expansion timeline unknown)
+> - Continue with Path A (Kafka → Structured Streaming → Delta) and keep Path D as a long-term candidate
+>
+> Zerobus Ingest is available in ap-northeast-1, so the Zerobus → Delta (Structured Streaming) path is usable.
 
 ---
 
