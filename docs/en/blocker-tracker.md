@@ -128,8 +128,9 @@
 
 **Workarounds**:
 1. **Databricks Spark cluster with manual catalog config** — Set `spark.sql.catalog.s3tables` at cluster scope (outside UC governance)
-2. **Query via Athena / EMR** — AWS native engines work normally via `s3tablescatalog`
-3. **Data copy** — Export from S3 Tables to regular S3 bucket → UC External Location
+2. **Glue HMS Federation (recommended)** — Use `CREATE CONNECTION TYPE glue` to reference S3 Tables Iceberg tables via Glue Federated Catalog as a Foreign Catalog. UC governance applicable. [Execution Guide](../../integrations/iceberg-metadata-catalog/databricks/foreign-iceberg-execution-guide.md)
+3. **Query via Athena / EMR** — AWS native engines work normally via `s3tablescatalog`
+4. **Iceberg on standard S3** — Create Iceberg tables on standard S3 buckets (not S3 Tables) and expose via Glue Catalog → UC Foreign Catalog (most reliable)
 
 **Evidence**: [Compatibility Matrix](./compatibility-matrix.md) (S3 Tables Iceberg REST Endpoint section)
 
