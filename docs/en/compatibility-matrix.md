@@ -389,8 +389,8 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 
 1. **Athena is the only "zero-config" SQL access path** to S3 Tables via Glue Federated Catalog
 2. **Spark-based engines** (EMR, Glue ETL, Databricks clusters) can access via Iceberg REST Catalog configuration
-3. **Databricks SQL Warehouse** does not support `iceberg_rest` connection type (feature request filed)
-4. **Snowflake** cannot directly read existing S3 Tables Iceberg tables; requires COPY INTO for data ingestion
+3. **Databricks SQL Warehouse** does not support `iceberg_rest` connection type (feature request filed). However, **Glue HMS Federation** (`TYPE glue`) provides a GA path to reference S3 Tables Iceberg tables as Foreign Catalogs ([Execution Guide](../../integrations/iceberg-metadata-catalog/databricks/foreign-iceberg-execution-guide.md))
+4. **Snowflake** verified via Glue Iceberg REST + VENDED_CREDENTIALS (2026-06-05)
 5. **Lake Formation column-level control** is not supported on S3 Tables federated catalogs (table-level only)
 
 ### Feature Requests Filed
