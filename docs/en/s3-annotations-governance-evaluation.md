@@ -159,6 +159,23 @@ Annotation pipeline requires access to:
 
 > **Traceability design** (Manufacturing Traceability Specialist lens): For automotive manufacturing traceability annotations, include the following fields to meet IATF 16949 requirements: `lot_id`, `serial_number`, `production_order`, `work_center`, `inspection_result`, `defect_category` (when applicable), `operator_shift`, `equipment_id`. This accelerates root-cause tracking (8D report creation) when quality issues arise.
 
+## Verification Status Summary
+
+| Item | Status | Verified | Evidence |
+|------|--------|----------|----------|
+| S3 Annotations attach/roundtrip (PutObjectAnnotation) | ✅ **Verified** | 2026-06-18 | §4 script execution, ap-northeast-1 |
+| S3 Annotations — ACL-hint storage | ✅ **Verified** | 2026-06-18 | §4 Case 2 (owner/group/acl_hash roundtrip confirmed) |
+| Direct annotation on FSx for ONTAP S3 AP | ❌ **Confirmed impossible** | 2026-06-18 | §3 structural constraint (ONTAP S3 outside S3 namespace) |
+| Annotation table enablement + Athena query | ⚠️ **Path confirmed via official docs** | 2026-06 | AWS official docs confirmed. Not live-run due to backfill delay |
+| Query from AWS native engines (Athena/Trino/Spark) | ✅ **Official support confirmed** | 2026-06 | Via `s3tablescatalog` (§6) |
+| Databricks UC reference to annotation table | ❌ **Blocked** | 2026-06 | `iceberg_rest` connection not supported |
+| AI classification pipeline (Bedrock → auto-annotate) | 🔲 **Design only** | — | Planned for Phase 3 |
+| ACL-hint + permission-aware RAG authorization chain | 🔲 **Design only** | — | Planned for Phase 4 |
+| Source change/deletion annotation re-sync | 🔲 **Design only** | — | FPolicy trigger design pending |
+| Annotation schema versioning | 🔲 **Design only** | — | `schema_version` field included from Phase 1 |
+
+---
+
 ## Related Documents
 
 This evaluation is connected to:
