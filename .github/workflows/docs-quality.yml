@@ -144,3 +144,76 @@ jobs:
             exit 1
           fi
           echo "✓ No engineer/personal names in support-record fields"
+
+      - name: Check JA/EN section count parity
+        run: |
+          echo "🔍 Checking JA/EN section count parity (docs/ja vs docs/en)..."
+          MISMATCHES=0
+          for ja_file in docs/ja/*.md; do
+            basename=$(basename "$ja_file")
+            en_file="docs/en/$basename"
+            if [[ ! -f "$en_file" ]]; then
+              echo "::warning file=$ja_file::No EN pair found: $en_file"
+              continue
+            fi
+            JA_SECTIONS=$(grep -c '^##' "$ja_file" 2>/dev/null || echo 0)
+            EN_SECTIONS=$(grep -c '^##' "$en_file" 2>/dev/null || echo 0)
+            if [[ "$JA_SECTIONS" -ne "$EN_SECTIONS" ]]; then
+              echo "::warning file=$ja_file::Section count mismatch: JA=$JA_SECTIONS EN=$EN_SECTIONS ($basename)"
+              MISMATCHES=$((MISMATCHES+1))
+            fi
+          done
+          if [[ $MISMATCHES -gt 0 ]]; then
+            echo "::warning::$MISMATCHES documents have JA/EN section count mismatches"
+          else
+            echo "✓ All docs/ja + docs/en pairs have matching section counts"
+          fi
+
+      - name: Check document freshness (warn if >90 days stale)
+        run: |
+          echo "🔍 Checking document freshness (>90 days = stale warning)..."
+          STALE=0
+          THRESHOLD=$(date -d "90 days ago" +%s 2>/dev/null || date -v-90d +%s 2>/dev/null || echo 0)
+          if [[ "$THRESHOLD" -eq 0 ]]; then
+            echo "::warning::Cannot determine date threshold on this platform, skipping freshness check"
+            exit 0
+          fi
+          for mdfile in docs/ja/*.md docs/en/*.md; do
+            if [[ ! -f "$mdfile" ]]; then continue; fi
+            LAST_MODIFIED=$(git log -1 --format="%ct" -- "$mdfile" 2>/dev/null || echo 0)
+            if [[ "$LAST_MODIFIED" -lt "$THRESHOLD" ]] && [[ "$LAST_MODIFIED" -gt 0 ]]; then
+              DAYS_AGO=$(( ($(date +%s) - LAST_MODIFIED) / 86400 ))
+              echo "::warning file=$mdfile::Stale document: last modified $DAYS_AGO days ago (threshold: 90 days)"
+              STALE=$((STALE+1))
+            fi
+          done
+          if [[ $STALE -gt 0 ]]; then
+            echo "::warning::$STALE documents are stale (>90 days since last update)"
+          else
+            echo "✓ All documents updated within 90 days"
+          fi
+
+      - name: Check verification status table in technical docs
+        run: |
+          echo "🔍 Checking for verification status tables in technical reference docs..."
+          # Technical reference docs that should have a verification status section
+          EXPECTED_DOCS=(
+            "docs/ja/datasync-to-s3-guide.md"
+            "docs/ja/s3-annotations-governance-evaluation.md"
+            "docs/ja/compatibility-matrix.md"
+            "docs/ja/fsxn-to-databricks-unity-catalog-guide.md"
+            "docs/ja/kafka-clickhouse-unity-catalog-connectivity.md"
+          )
+          MISSING=0
+          for doc in "${EXPECTED_DOCS[@]}"; do
+            if [[ ! -f "$doc" ]]; then continue; fi
+            if ! grep -qE '検証ステータス|Verification Status|検証レベル' "$doc"; then
+              echo "::warning file=$doc::Missing verification status section"
+              MISSING=$((MISSING+1))
+            fi
+          done
+          if [[ $MISSING -gt 0 ]]; then
+            echo "::warning::$MISSING technical docs missing verification status section"
+          else
+            echo "✓ All technical reference docs have verification status sections"
+          fi
