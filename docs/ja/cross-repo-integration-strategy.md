@@ -166,7 +166,7 @@ Omnigent (マルチエージェントオーケストレーション)
 | C | ONTAP S3 → External Location → Unity Catalog | — | 設計済み |
 | **D** | **Kafka → Lakebase (LTAP)** | **ミリ秒〜秒（想定）** | **🆕 設計検討中 (2026-06-18 追加)** |
 
-> **Path A 改善（2026-06-18 追加）**: Lakeflow Real-Time Mode (Spark Declarative Pipelines, Public Preview, DBR 18.1.3) により、Path A の Structured Streaming レイテンシ（秒〜分）を ~5ms まで短縮できる可能性がある。新パスではなく、トリガーモード変更による既存 Path A の改善。本番採用判断は GA 後。詳細は後述の[「Lakeflow 評価」](#lakeflow-評価-zerobus-ingest--real-time-modedais-2026--2026-06-18-同期)を参照。
+> **Path A 改善（2026-06-18 追加、2026-06-20 更新）**: Lakeflow Real-Time Mode (Spark Declarative Pipelines) は **GA（2025-12）**。Path A の Structured Streaming レイテンシ（秒〜分）を ~5ms まで短縮可能。新パスではなく、トリガーモード変更による既存 Path A の改善。即適用可能。詳細は後述の[「Lakeflow 評価」](#lakeflow-評価-zerobus-ingest--real-time-modedais-2026--2026-06-18-同期)を参照。
 
 ### Path D: Kafka → Lakebase (LTAP) — 詳細
 
@@ -215,14 +215,14 @@ DAIS 2026 で発表された Lakeflow 関連機能を、本エコシステムの
 | 機能 | ステータス | 本エコシステムでの位置づけ |
 |------|-----------|--------------------------|
 | Zerobus Ingest | GA | Databricks 専用取り込みの**追加オプション**。Kafka をバイパスして Delta に直接書き込むが、Kafka の代替ではない（下記「主要な設計判断」参照） |
-| Real-Time Mode (Spark Declarative Pipelines) | Public Preview (DBR 18.1.3) | **Path A のレイテンシ改善パス**。Structured Streaming の秒〜分を ~5ms まで短縮し得る |
+| Real-Time Mode (Spark Declarative Pipelines) | ✅ GA (2025-12) | **Path A のレイテンシ改善パス**。Structured Streaming の秒〜分を ~5ms まで短縮し得る |
 | Lakeflow Connect (100+ コネクタ) | GA（コネクタ依存） | マネージドコネクタ群。ONTAP/NFS 直接接続コネクタの有無は要確認 |
 | Agentic Data Engineering | Preview | データ品質 × エージェントの接点。API 公開待ち |
 
 #### 主要な設計判断
 
 - **Kafka は汎用イベントバスとして継続**: 本エコシステムの Kafka は ClickHouse・Lambda・Databricks など複数コンシューマに配信している。Zerobus Ingest は Databricks 単一シンクへの取り込みインターフェースであり、複数コンシューマ配信を担う Kafka の代替にはならない。Zerobus は「Databricks 専用取り込みニーズが顕在化した場合の追加経路」として扱う。
-- **Real-Time Mode は Path A の改善**: Real-Time Mode は新しいパスではなく、既存 Path A（Kafka → Structured Streaming → Delta）のトリガーモード変更によるレイテンシ改善。GA 到達後、Path A のレイテンシ要件が顕在化した場合に評価する。Path D (Lakebase/LTAP) の一部ユースケース（ミリ秒レイテンシ）をカバーし得る。
+- **Real-Time Mode は Path A の改善**: Real-Time Mode は新しいパスではなく、既存 Path A（Kafka → Structured Streaming → Delta）のトリガーモード変更によるレイテンシ改善。**GA 到達済み（2025-12）**。Path A のレイテンシ要件が顕在化した場合に即適用可能。Path D (Lakebase/LTAP) の一部ユースケース（ミリ秒レイテンシ）をカバーし得る。
 - **エッジ側変更なし**: Kafka Producer 設計（v3 イベントスキーマ、トピック設計）はそのまま。影響範囲はクラウド側の受信・取り込みのみ。
 - **オンプレ非対応**: Lakeflow は Databricks マネージド機能であり、オンプレ/エッジ展開のオプションはない。エッジ層のリアルタイム分析（ClickHouse 等）は引き続き必要。
 
@@ -231,7 +231,7 @@ DAIS 2026 で発表された Lakeflow 関連機能を、本エコシステムの
 ```
 Kafka (汎用イベントバス、複数コンシューマ)
  ├── Path A 現行 (Structured Streaming, 秒〜分) ✅ 検証済み
- │     └── Path A 改善 (Real-Time Mode, ~5ms) 🆕 評価対象 (Public Preview)
+ │     └── Path A 改善 (Real-Time Mode, ~5ms) ✅ GA (即適用可能)
  ├── Path D 将来 (Lakebase/LTAP, ミリ秒〜秒) 🔄 設計検討中
  └── (その他コンシューマ: ClickHouse, Lambda)
 
@@ -243,7 +243,7 @@ Zerobus Ingest → Delta 直接 (Kafka バイパス、Databricks 専用) 🆕 �
 | 機能 | ゲート条件 |
 |------|-----------|
 | Zerobus Ingest | エッジの Databricks 専用取り込みニーズが顕在化し、Kafka 多重配信が不要なユースケースが特定されること |
-| Real-Time Mode | GA 到達 + 既存 Path A では満たせないレイテンシ要件が顕在化すること（本番採用判断は GA 後） |
+| Real-Time Mode | ~~GA 到達~~ ✅ GA 済み（2025-12）。既存 Path A では満たせないレイテンシ要件が顕在化した時点で即適用 |
 | Lakeflow Connect | ONTAP/NFS 直接接続コネクタの公開 |
 | Agentic Data Engineering | API 公開 + データ品質ワークフローへの適用ユースケース特定 |
 
@@ -264,7 +264,7 @@ Zerobus Ingest → Delta 直接 (Kafka バイパス、Databricks 専用) 🆕 �
 | Lakebase ap-northeast-1 可用性 | Lakebase GA がリージョン限定でないことの確認。ap-northeast-1 で利用可能か | 本リポジトリ | ⚠️ **非対応確認済み** (2026-06-18) |
 | Lakebase Private Link 接続 | VPC 内からの Lakebase アクセスに Private Link (port 5432) が利用可能か（DAIS 2026 で GA 発表済み）。注: Lakebase 自体が ap-northeast-1 で非対応のため、Lakebase リージョン拡大まで保留 | 本リポジトリ | ⚠️ Lakebase リージョン制約によりブロック |
 | Zerobus Ingest 代替パス | Kafka 以外に Zerobus Ingest (Private Link 対応) からの直接 Lakebase 書き込みが可能か。前提: 外部ソース（MSK/Kafka Producer）から Zerobus Ingest endpoint への Push が可能かを先に確認 | edge repo | 🔲 仕様確認待ち |
-| Real-Time Mode GA 評価 | Real-Time Mode (Spark Declarative Pipelines, DBR 18.1.3) GA 到達後、Path A のレイテンシ改善（秒〜分 → ~5ms）を評価。トリガーモード変更だけで既存 Path A に適用可能か、また Path D (Lakebase/LTAP) の一部ユースケースをカバーし得るかを検証 | edge repo + 本リポジトリ | 🔲 Public Preview（GA 後評価） |
+| Real-Time Mode GA 評価 | Real-Time Mode (Spark Declarative Pipelines) **GA 到達済み（2025-12）**。Path A のレイテンシ改善（秒〜分 → ~5ms）を評価可能。トリガーモード変更だけで既存 Path A に適用可能か、また Path D (Lakebase/LTAP) の一部ユースケースをカバーし得るかを検証 | edge repo + 本リポジトリ | 🔄 GA 確認済み・実環境検証待ち |
 | Zerobus Ingest SDK 検証 (gRPC/Python) | Zerobus Ingest SDK (gRPC / Python) による Delta 直接書き込みの検証。外部ソースからの Push 方式、スループット、Private Link 経路、スキーマ定義方法を確認 | edge repo | 🔲 SDK 検証待ち |
 
 > ⚠️ **Validation Required**: Kafka → Lakebase の直接書き込みパスはコネクタ仕様が未公開であり、上記検証項目すべてが確認されるまで PoC 採用判断を行わないこと。
@@ -302,7 +302,7 @@ Zerobus Ingest → Delta 直接 (Kafka バイパス、Databricks 専用) 🆕 �
 | **P2** | Managed KB × Omnigent 連携設計 | 本リポジトリ | ✅ 設計完了 | `omnigent-multi-agent-evaluation.md` セクション 4 に追加 |
 | **P2** | 公式 RAG チュートリアルリンク | Agentic-RAG repo + 本リポジトリ | ✅ 両リポジトリ完了 | Agentic-RAG repo README に「AWS 公式リソース」セクション追加済み |
 | **P2** | ontap-edge-to-cloud-ai との LTAP 統合設計 | 本リポジトリ + edge repo | 🔄 設計検討中 | edge repo 側 Path D 追加済み（2026-06-18）。Lakebase GA / コネクタ仕様公開待ち |
-| **P2** | Lakeflow Real-Time Mode / Zerobus Ingest 評価 | 本リポジトリ + edge repo | 🔄 評価記録済み・検証待ち | 評価結果を本ドキュメント[「Lakeflow 評価」](#lakeflow-評価-zerobus-ingest--real-time-modedais-2026--2026-06-18-同期)に記録（2026-06-18）。次ゲート: Real-Time Mode GA 評価 / Zerobus Ingest SDK 検証 (gRPC/Python) |
+| **P2** | Lakeflow Real-Time Mode / Zerobus Ingest 評価 | 本リポジトリ + edge repo | 🔄 Real-Time Mode GA 確認済み・実環境検証待ち | Real-Time Mode GA（2025-12）。edge repo 側で反映済み。次ゲート: 実環境レイテンシ検証 / Zerobus Ingest SDK 検証 (gRPC/Python) |
 | **P3** | AWS Context GA 後の FSx for ONTAP 自動カタログ検証 | 本リポジトリ | 🔲 | AWS Context GA 待ち |
 | **P3** | 監査ログ統合クエリパターン | observability repo | ✅ 設計完了（PR #22） | 実装はエージェント基盤構築後 |
 
