@@ -388,8 +388,8 @@ FSx for ONTAP S3 Access Points 上の分析ワークロードを計画する際�
 
 1. **Athena が唯一の「ゼロ設定」SQL アクセスパス** — Glue Federated Catalog 経由で S3 Tables に直接クエリ可能
 2. **Spark ベースエンジン** (EMR, Glue ETL, Databricks クラスター) は Iceberg REST Catalog 設定でアクセス可能
-3. **Databricks SQL Warehouse** は `iceberg_rest` Connection タイプを未サポート（機能リクエスト提出済み）
-4. **Snowflake** は既存の S3 Tables Iceberg テーブルを直接読み取り不可; データ取り込みには COPY INTO が必要
+3. **Databricks SQL Warehouse** は `iceberg_rest` Connection タイプを未サポート（機能リクエスト提出済み）。ただし **Glue HMS Federation**（`TYPE glue`）経由で Foreign Catalog として参照可能な経路が存在（[検証ガイド](../../integrations/iceberg-metadata-catalog/databricks/foreign-iceberg-execution-guide.md)）
+4. **Snowflake** は Glue Iceberg REST + VENDED_CREDENTIALS で読み取り検証済み（2026-06-05）
 5. **Lake Formation 列レベル制御** は S3 Tables フェデレーテッドカタログで未サポート（テーブルレベルのみ）
 
 ### 提出済み機能リクエスト
