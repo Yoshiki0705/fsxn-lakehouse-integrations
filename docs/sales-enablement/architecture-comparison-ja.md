@@ -19,7 +19,7 @@
 | DataSync + S3 | フルコピー | スケジュール | ソース NAS → S3 | 少量ファイル、シンプルな一方向同期 |
 | Databricks Unity Catalog | S3 コピー必須 | — | S3/ADLS | 構造化/半構造化レイクハウス |
 
-*ゼロコピーストレージ: S3 Access Point が FSx ボリュームからファイルをその場で読み取ります。処理時には Lambda メモリ内で一時的にファイルコンテンツにアクセスします。ファイルバイトはソース FSx ボリューム外に永続化されません。
+*ゼロコピーストレージ: S3 Access Point が FSx for ONTAP ボリュームからファイルをその場で読み取ります。処理時には Lambda メモリ内で一時的にファイルコンテンツにアクセスします。ファイルバイトはソース FSx for ONTAP ボリューム外に永続化されません。
 
 ---
 
@@ -41,7 +41,7 @@
 - ONTAP 機能（SnapMirror、FlexClone、ストレージ効率化）がそのまま利用可能
 
 **制限事項 & 考慮事項:**
-- S3 AP はこのパイプラインでは読み取り専用で使用（**書き込みもサポート**） — 分析ツールから FSx ボリュームへの書き戻しは不可
+- S3 AP はこのパイプラインでは読み取り専用で使用（**書き込みもサポート**） — 分析ツールから FSx for ONTAP ボリュームへの書き戻しは不可
 - S3 Access Point は **S3 Event Notifications をサポートしない**（Snowpipe、EventBridge ルール等の自動トリガー不可）
 - FPolicy は NAS クライアントに対し ~1–5ms のレイテンシオーバーヘッドを追加
 - Lambda 処理: ファイルコンテンツは Lambda メモリを通過（一時的、永続化されないが、処理レイヤーでは「ゼロデータ移動」ではない）
@@ -131,9 +131,9 @@
 | データが S3 で生まれた（NAS 起源なし） | S3 ネイティブ + Glue | データが既に S3 にあればゼロコピーストレージのメリットなし |
 | オブジェクトネイティブワークロード（大容量メディア、追記のみログ） | S3 + S3 Events | S3 Event Notifications で Snowpipe/EventBridge トリガー可能 |
 | 少量ファイル（<5,000 件、低頻度変更） | DataSync + S3 | DataSync の方が運用がシンプル。イベント駆動検知は不要 |
-| 分析からストレージへの書き戻しが必要 | S3 Standard | S3 AP は読み取り専用。FSx への結果書き戻し不可 |
+| 分析からストレージへの書き戻しが必要 | S3 Standard | S3 AP は読み取り専用。FSx for ONTAP への結果書き戻し不可 |
 | 構造化/表形式データのみ | Databricks / Glue | Unity Catalog や Glue Data Catalog が AI 分類なしで表形式データを処理 |
-| FSx for ONTAP の既存デプロイがない | まず FSx 導入コストを評価 | 本ソリューションは FSx for ONTAP が導入済みまたは計画中を前提 |
+| FSx for ONTAP の既存デプロイがない | まず FSx for ONTAP 導入コストを評価 | 本ソリューションは FSx for ONTAP が導入済みまたは計画中を前提 |
 
 ---
 
@@ -180,7 +180,7 @@ FSx for ONTAP は既にデプロイ済み（または計画中）？
 
 | 項目 | 詳細 |
 |------|------|
-| S3 AP 読み取り専用 | 分析サービスから S3 AP 経由で FSx ボリュームへの書き戻し不可 |
+| S3 AP 読み取り専用 | 分析サービスから S3 AP 経由で FSx for ONTAP ボリュームへの書き戻し不可 |
 | S3 Event Notifications 非対応 | S3 AP 経由で Snowpipe、EventBridge ルール、S3 バケット通知のトリガー不可 |
 | FPolicy レイテンシ | NAS クライアントへのファイル操作ごとに ~1–5ms 追加 |
 | Lambda 一時的アクセス | 処理中にファイルコンテンツが Lambda メモリを通過。永続化されないが「ゼロデータ移動」ではない |

@@ -26,7 +26,7 @@
         └──────────────── Files do not move (zero-copy storage principle) ──────────────────────────┘
 ```
 
-**Zero-copy storage**: S3 Access Point reads files in-place from FSx volumes. Processing requires ephemeral file content access in Lambda memory. File bytes are not persisted outside the source FSx volume.
+**Zero-copy storage**: S3 Access Point reads files in-place from FSx for ONTAP volumes. Processing requires ephemeral file content access in Lambda memory. File bytes are not persisted outside the source FSx for ONTAP volume.
 
 ---
 
@@ -58,7 +58,7 @@
 
 | Item | Detail |
 |------|--------|
-| S3 AP is used read-only in this pipeline (writes are supported) | Analytics services cannot write back to FSx volumes |
+| S3 AP is used read-only in this pipeline (writes are supported) | Analytics services cannot write back to FSx for ONTAP volumes |
 | No S3 Event Notifications via S3 AP | Cannot trigger Snowpipe, EventBridge, or bucket notifications |
 | FPolicy latency | Adds ~1–5ms per file operation to NAS clients |
 | Lambda ephemeral processing | File content passes through Lambda memory — not persisted, but not "zero data movement" at the processing layer |
@@ -75,7 +75,7 @@
 - Small file sets (<5,000 files) with infrequent changes → DataSync is simpler
 - Need S3 Event Notifications for downstream automation → S3 AP does not support them
 - Need write-back from analytics to storage → S3 AP is used read-only in this pipeline (writes supported)
-- No existing FSx for ONTAP deployment → evaluate FSx adoption cost first
+- No existing FSx for ONTAP deployment → evaluate FSx for ONTAP adoption cost first
 
 See [Architecture Comparison](./architecture-comparison.md) for full decision framework.
 

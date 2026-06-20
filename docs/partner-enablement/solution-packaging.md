@@ -15,8 +15,8 @@
 
 | Model | Duration | Scope | Output |
 |-------|----------|-------|--------|
-| Assessment | 2 weeks | Data landscape review, FSx configuration, governance requirements | Architecture recommendation + cost estimate |
-| PoC | 4 weeks | Deploy metadata catalog on customer FSx environment, validate with sample data | Working demo + measured KPIs |
+| Assessment | 2 weeks | Data landscape review, FSx for ONTAP configuration, governance requirements | Architecture recommendation + cost estimate |
+| PoC | 4 weeks | Deploy metadata catalog on customer FSx for ONTAP environment, validate with sample data | Working demo + measured KPIs |
 | Production Pilot | 8-12 weeks | Production volume coverage, AI enrichment, governance integration, monitoring | Production-grade deployment |
 | Managed Service | Ongoing | Partner-operated catalog with SLA | Metadata freshness + search availability |
 

@@ -2,7 +2,7 @@
 
 🌐 [日本語](../ja/zero-copy-media-governance.md) | English
 
-## Customer Challenge
+## Challenge and Background
 
 | # | Challenge | Root Cause |
 |---|-----------|-----------|
@@ -64,7 +64,7 @@ Problems:
 
 ### Option D: FlexCache S3 Access Points (Future Roadmap)
 
-> **Status**: FlexCache S3 AP support on FSx for ONTAP is expected soon (FSx availability timeline TBD).
+> **Status**: FlexCache S3 AP support on FSx for ONTAP is expected soon (FSx for ONTAP availability timeline TBD).
 >
 > **Rationale**: NetApp ONTAP 9.18.1 officially supports S3 protocol access to FlexCache volumes (`-is-s3-enabled` option). This capability is already available on on-premises ONTAP, and FSx for ONTAP deployment builds on this technically established foundation.
 >
@@ -101,7 +101,7 @@ Problems:
 ### AI Path: Mosaic AI (Vision), Vector Search (RAG), Model Serving (Whisper)
 
 ### Constraints
-- UC Volume requires S3 backend (cannot register FSx S3 AP directly)
+- UC Volume requires S3 backend (cannot register FSx for ONTAP S3 AP directly)
 - UC Row Filter / Column Mask NOT enforced on external engines
 - Lake Formation required for external engine governance
 
@@ -115,13 +115,13 @@ Problems:
 
 ### AI Path: Cortex Search (RAG), Cortex AI Vision, PARSE_DOCUMENT
 
-### Key Differentiator
+### Key Characteristics
 - **Horizon Iceberg REST Catalog enforces governance on external engines** (Row Access Policy + Masking)
 - All editions supported (billing starts H2 2026)
 - Zero-copy Data Sharing (no data duplication for recipients)
 
 ### Constraints
-- TO_FILE fails on FSx S3 AP stages (engineering investigation in progress)
+- TO_FILE fails on FSx for ONTAP S3 AP stages (engineering investigation in progress)
 - Only Vision AI (via TO_FILE) requires COPY FILES to internal stage. Cortex AI functions (COMPLETE, SUMMARIZE) and Cortex Search work directly on Managed Iceberg Tables (no internal table needed)
 - AUTO_REFRESH not supported (Task + ALTER STAGE REFRESH workaround)
 
@@ -135,10 +135,10 @@ Problems:
 
 ### AI Path: Bedrock KB (RAG), Textract, Transcribe, SageMaker
 
-### Key Differentiator
-- **FSx S3 AP direct access** from Athena and Bedrock (no S3 copy needed)
+### Key Characteristics
+- **FSx for ONTAP S3 AP direct access** from Athena and Bedrock (no S3 copy needed)
 - **Lake Formation enforces governance across all engines** (Athena, Redshift, EMR)
-- Bedrock Knowledge Base can use FSx S3 AP as direct data source
+- Bedrock Knowledge Base can use FSx for ONTAP S3 AP as direct data source
 
 ### Constraints
 - Athena cannot access VPC-origin APs (Internet-origin required)
@@ -151,7 +151,7 @@ Problems:
 
 | Aspect | Databricks | Snowflake | AWS Native |
 |--------|-----------|-----------|------------|
-| **FSx S3 AP direct access** | ❌ (UC session policy) | ⚠️ (LIST only) | ✅ (Athena, Bedrock) |
+| **FSx for ONTAP S3 AP direct access** | ❌ (UC session policy) | ⚠️ (LIST only) | ✅ (Athena, Bedrock) |
 | **Governance model** | UC Tags + Row Filter | Row Access Policy + Masking | Lake Formation LF-Tags |
 | **Governance on external engines** | ❌ | ✅ (Horizon Catalog) | ✅ (Lake Formation) |
 | **Cross-org sharing** | Delta Sharing (open protocol) | Secure Data Sharing (zero-copy) | LF Cross-account + RAM |
@@ -173,17 +173,17 @@ Problems:
 
 ---
 
-## Persona Summary
+## Selection Guidance (Per-Path Summary)
 
-| Persona | Key Recommendation |
-|---------|-------------------|
-| **Snowflake PMM** | Horizon Catalog enforces governance on external engines. Cortex Search + Data Sharing is the fastest path to AI-Ready unstructured data. Managed Iceberg Table → Horizon REST Catalog enables Databricks/Spark to read the same data (not a closed ecosystem). |
-| **Databricks SA** | UC Volumes + Delta Sharing. Mosaic AI for automated tagging. FSx for ONTAP as strategic cost solution. Future: Lakehouse Federation may enable virtual access to FSx S3 AP data. |
-| **AWS Iceberg SA** | FSx for ONTAP S3 AP + Lake Formation eliminates S3 copies + provides all-engine governance. Bedrock KB direct FSx S3 AP access is AWS-native advantage. Glue Catalog + Iceberg format is also a viable Open Table Format option. |
-| **Storage Specialist** | ONTAP dedup is the root-cause fix. Most effective for identical file copies (versions, department copies). Limited effect on "similar" files (dedup operates at block level). |
-| **Partner SA** | [NetApp Console](https://console.netapp.com/) + DataSync → FSx migration is established (10TB / Direct Connect 1Gbps ≈ 22 hours). FlexCache S3 AP is a game-changer for hybrid. |
-| **Public Sector SA** | Data sovereignty may require Option C (on-prem ONTAP + SnapMirror). Medical images (DICOM) and surveillance footage may be PII/PHI — anonymization pipeline needed. |
-| **Outcome SA** | Customer goal: "cost reduction + governed cross-org sharing." Phased adoption (Phase 1→2→3) minimizes investment risk. Success KPIs: storage cost reduction, data discovery time, share-request-to-access time. Industry examples: Manufacturing (design document reuse), Finance (contract compliance search), Healthcare (DICOM research sharing). |
+| Path / Aspect | Key points |
+|---------------|-----------|
+| **Snowflake path** | Horizon Catalog can apply governance to external engines. Cortex Search + Data Sharing for AI use of unstructured data. Managed Iceberg Table → Horizon REST Catalog enables Databricks/Spark to read the same data. |
+| **Databricks path** | UC Volumes + Delta Sharing. Mosaic AI for automated tagging of unstructured data. Use FSx for ONTAP for S3 cost reduction. Future: Lakehouse Federation may enable virtual access to FSx for ONTAP S3 AP data. |
+| **AWS-native path** | FSx for ONTAP S3 AP + Lake Formation reduces S3 copies + provides all-engine governance. Bedrock KB can read FSx for ONTAP S3 AP directly. Glue Catalog + Iceberg format is another Open Table Format option. |
+| **Storage optimization** | ONTAP dedup is effective for identical file copies (versions, department copies). For similar image/video files, effective only where identical blocks exist. |
+| **Migration / hybrid** | DataSync → FSx for ONTAP is an established path (10TB / Direct Connect 1Gbps ≈ 22 hours). FlexCache + FSx for ONTAP S3 AP is effective for hybrid environments. |
+| **Data sovereignty** | Data sovereignty requirements may call for Option C (on-prem ONTAP + SnapMirror). Medical images (DICOM) and surveillance footage may be PII/PHI — consider an anonymization pipeline. |
+| **Outcome metrics** | Goal: "cost reduction + governed cross-org sharing." Phased adoption (Phase 1→2→3) limits investment risk. Example metrics: storage cost reduction, data discovery time, share-request-to-access time. Industry examples: Manufacturing (design document reuse), Finance (contract compliance search), Healthcare (DICOM research sharing). |
 
 ---
 
@@ -201,7 +201,7 @@ For Observability and Security Monitoring (SIEM) of the architectures proposed i
 | Metric | Target | Alert Condition Example |
 |--------|--------|------------------------|
 | DataSync / SnapMirror sync lag | Sync pipeline | lag > 1 hour |
-| FSx S3 AP latency | S3 API response time | p99 > 5s |
+| FSx for ONTAP S3 AP latency | S3 API response time | p99 > 5s |
 | FlexCache hit rate | Cache efficiency | hit rate < 80% |
 | Storage utilization / dedup ratio | Cost optimization | utilization > 85% |
 | Access denied events | Security | AccessDenied > 10/10min |

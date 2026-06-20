@@ -140,7 +140,7 @@ Connectivity differences for FSx for ONTAP S3 AP:
 |-----------|-----------|-----------------|--------|
 | External Table (S3 AP) | ✅ Works | ❌ Blocked | Snowflake resolves S3 AP via `AWS_ACCESS_POINT_ARN`. UC session policy doesn't handle S3 AP |
 | Directory Table / Volume | ✅ Works | ❌ Blocked | Same (External Location dependency) |
-| Event-driven Snowpipe / Auto Loader | ⚠️ Via FPolicy | ❌ Blocked | S3 Event Notifications not available on FSx S3 AP. Both need FPolicy alternative |
+| Event-driven Snowpipe / Auto Loader | ⚠️ Via FPolicy | ❌ Blocked | S3 Event Notifications not available on FSx for ONTAP S3 AP. Both need FPolicy alternative |
 | Zero-copy read | ✅ | ❌ | UC requires standard S3 buckets only |
 | Governance (Tags, Masking) | ✅ | ✅ (after S3 ingestion) | UC governance applies to S3-resident tables |
 | AI/ML capabilities | Cortex AI (limited) | Mosaic AI (full) | ML training / Feature Store stronger on Databricks |
@@ -238,7 +238,7 @@ aws datasync update-task --task-arn <TASK> \
 
 > **IAM least privilege** (IAM Security Architect findings): Restrict the DataSync execution IAM Role to:
 > - S3 destination: `s3:PutObject`, `s3:DeleteObject`, `s3:GetBucketLocation` only (resource ARN constrained to specific bucket/prefix)
-> - FSx source: `fsx:DescribeFileSystems`, `datasync:*` minimum required
+> - FSx for ONTAP source: `fsx:DescribeFileSystems`, `datasync:*` minimum required
 > - Wildcard permissions (`s3:*`, `fsx:*`) are prohibited
 
 ```sql
@@ -480,7 +480,7 @@ SELECT * FROM uc_delta.catalog.schema.sensor_data LIMIT 10;
 | **Unity AI Gateway** | ❌ Not related | Agent/model governance. Not a storage connector |
 | **Agent Bricks** | ❌ Not related | Agent execution platform. Not a storage connector |
 | **UC Foreign Iceberg GA** | ✅ **Indirect resolution candidate** | Can expose FSx-derived Iceberg tables to UC via Glue REST (validating) |
-| **OpenSharing SecureConnect** | ⚠️ Indirectly usable | Secures external sharing of UC tables. No per-recipient FW changes needed (one-time provider setup). Strengthens security for FSx data → S3 → UC → external organization sharing path |
+| **OpenSharing SecureConnect** | ⚠️ Indirectly usable | Secures external sharing of UC tables. No per-recipient FW changes needed (one-time provider setup). Strengthens security for FSx for ONTAP data → S3 → UC → external organization sharing path |
 
 ---
 
@@ -813,11 +813,11 @@ Paths for using FSx for ONTAP data with Databricks AI/ML features (AI/GenAI Spec
 
 | Path | Storage Cost | Compute Cost | Operational Overhead |
 |------|-------------|--------------|---------------------|
-| DataSync → S3 → UC | FSx + S3 (duplicate) | DataSync transfer + Databricks | Medium (schedule management) |
-| Kafka → SS → UC | FSx (metadata only in Kafka) | MSK + Databricks Streaming | High (pipeline management) |
-| Glue/EMR ETL | FSx + S3 (duplicate) | Glue/EMR job execution | Medium (job scheduling) |
-| Athena (outside UC) | FSx only | Query scan-based billing | Low (serverless) |
-| boto3 PoC | FSx only | Databricks cluster | Low (no governance) ⚠️ Data exfiltration risk |
+| DataSync → S3 → UC | FSx for ONTAP + S3 (duplicate) | DataSync transfer + Databricks | Medium (schedule management) |
+| Kafka → SS → UC | FSx for ONTAP (metadata only in Kafka) | MSK + Databricks Streaming | High (pipeline management) |
+| Glue/EMR ETL | FSx for ONTAP + S3 (duplicate) | Glue/EMR job execution | Medium (job scheduling) |
+| Athena (outside UC) | FSx for ONTAP only | Query scan-based billing | Low (serverless) |
+| boto3 PoC | FSx for ONTAP only | Databricks cluster | Low (no governance) ⚠️ Data exfiltration risk |
 
 > **boto3 PoC security warning** (Data Exfiltration Prevention Engineer findings): The boto3 PoC path completely bypasses UC governance, creating risk of users downloading data locally and exfiltrating externally. If used:
 > - Enable Databricks workspace **egress controls** (S3 bucket policy + VPC endpoint policy to restrict destinations)
@@ -831,6 +831,7 @@ Paths for using FSx for ONTAP data with Databricks AI/ML features (AI/GenAI Spec
 
 | Document | Content |
 |----------|---------|
+| [Industry Solution Catalog](./industry-solution-catalog.md) | **Paired with this guide**. Per-industry use case → recommended path → governance mapping |
 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | Detailed DataSync procedures and schedule design |
 | [Kafka-ClickHouse-UC Connectivity Guide](./kafka-clickhouse-unity-catalog-connectivity.md) | Streaming + catalog connectivity technical details |
 | [Databricks Integration README](../../integrations/databricks/README.md) | S3 AP verification results, error evidence, recommended patterns |
@@ -855,12 +856,3 @@ Paths for using FSx for ONTAP data with Databricks AI/ML features (AI/GenAI Spec
 | OpenSharing Volumes connector | 🔲 Design phase | Databricks development + FSx for ONTAP support |
 | Lakebase × FSx for ONTAP | ⚠️ Lakebase not in ap-northeast-1 | Databricks region expansion |
 
----
-
-## Persona Review Status
-
-- [x] Cloud Data Architect: Path coverage confirmation
-- [x] Manufacturing Edge Data Architect: Kafka path appropriateness
-- [x] Databricks Governance Architect: UC constraint accuracy
-- [x] FSx for ONTAP Architect: No ONTAP feature overstatement
-- [x] Confidentiality Reviewer: No sensitive information

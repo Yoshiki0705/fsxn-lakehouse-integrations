@@ -8,9 +8,9 @@
 
 ### Q: Do I need to copy my files?
 
-**A:** No. The solution uses FSx for ONTAP's S3 Access Point to read file content in-place (zero-copy storage). Files never leave the FSx volume. Only extracted metadata is stored externally in S3 Tables.
+**A:** No. The solution uses FSx for ONTAP's S3 Access Point to read file content in-place (zero-copy storage). Files never leave the FSx for ONTAP volume. Only extracted metadata is stored externally in S3 Tables.
 
-**Clarification on "zero-copy storage":** File bytes are not duplicated to another storage location. However, during AI processing, file content is temporarily accessed in Lambda memory (ephemeral — not persisted outside the source FSx volume).
+**Clarification on "zero-copy storage":** File bytes are not duplicated to another storage location. However, during AI processing, file content is temporarily accessed in Lambda memory (ephemeral — not persisted outside the source FSx for ONTAP volume).
 
 ---
 
@@ -62,7 +62,7 @@ We recommend a 1–2 week PoC with your actual files to validate accuracy for yo
 
 | Limitation | Impact |
 |-----------|--------|
-| S3 AP is used read-only in this pipeline (writes are supported) | Analytics tools cannot write results back to FSx volumes |
+| S3 AP is used read-only in this pipeline (writes are supported) | Analytics tools cannot write results back to FSx for ONTAP volumes |
 | No S3 Event Notifications via S3 AP | Cannot auto-trigger Snowpipe, EventBridge rules, or bucket notifications |
 | FPolicy adds latency | ~1–5ms per file operation on NAS clients |
 | Lambda ephemeral processing | File content passes through Lambda memory (not truly "zero data movement" at the processing layer) |
@@ -72,9 +72,9 @@ We recommend a 1–2 week PoC with your actual files to validate accuracy for yo
 
 ---
 
-### Q: Can analytics tools write back to FSx through S3 Access Point?
+### Q: Can analytics tools write back to FSx for ONTAP through S3 Access Point?
 
-**A:** No. S3 Access Point on FSx for ONTAP is **read-only**. If your analytics workflow requires writing results back to storage, those results must be written to a separate S3 bucket or other storage. The source FSx volume is not writable via S3 AP.
+**A:** No. S3 Access Point on FSx for ONTAP is **read-only**. If your analytics workflow requires writing results back to storage, those results must be written to a separate S3 bucket or other storage. The source FSx for ONTAP volume is not writable via S3 AP.
 
 ---
 
@@ -161,7 +161,7 @@ All models run within your AWS account. No data leaves your account or region.
 ### Q: Can on-premises ONTAP work too?
 
 **A:** Yes. Two paths:
-1. **SnapMirror → FSx for ONTAP**: Mirror on-prem volumes to FSx, then apply AI pipeline to the FSx copy. Maintains zero-copy storage advantage.
+1. **SnapMirror → FSx for ONTAP**: Mirror on-prem volumes to FSx, then apply AI pipeline to the FSx for ONTAP copy. Maintains zero-copy storage advantage.
 2. **AWS DataSync**: Direct file transfer from on-prem to S3 for processing.
 
 ---

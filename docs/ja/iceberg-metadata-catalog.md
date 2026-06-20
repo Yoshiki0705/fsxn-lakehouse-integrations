@@ -151,7 +151,7 @@ FSx for ONTAP ──S3 AP──→ Bedrock KB (RAG, Vision)
 ```
 
 **主な利点**:
-- FSx S3 AP から Athena と Bedrock への直接アクセス（読み取りに S3 コピー不要）
+- FSx for ONTAP S3 AP から Athena と Bedrock への直接アクセス（読み取りに S3 コピー不要）
 - Lake Formation が全 AWS 分析エンジンにガバナンスを適用
 - S3 Tables の自動コンパクションでテーブルメンテナンス不要
 - Bedrock Knowledge Base がメタデータをインデックスし自然言語検索を実現
@@ -243,7 +243,7 @@ FSx for ONTAP ──S3 AP Stage──→ COPY INTO → Managed Iceberg Table
 
 **Cortex AI エンリッチメントパイプライン例**:
 ```sql
--- FSx S3 AP Stage からドキュメントを処理し、メタデータを生成
+-- FSx for ONTAP S3 AP Stage からドキュメントを処理し、メタデータを生成
 -- Step 1: COPY FILES で内部ステージに転送 (TO_FILE 制約回避)
 COPY FILES INTO @internal_processing_stage
   FROM @fsxn_ap_stage/new_documents/
@@ -662,16 +662,16 @@ def detect_pii(text: str, language: str) -> list:
 | Bedrock スロットリング | CloudWatch (Bedrock) | ThrottlingException > 0 | リクエストレート調整、バックオフ |
 | S3 AP AccessDenied | CloudTrail | > 10/10分 | IAM/AP ポリシー確認 |
 
-### NetApp Console 統合
+### ストレージ層メトリクス統合
 
-[NetApp Console](https://console.netapp.com/) から以下のストレージ層メトリクスを監視し、メタデータカタログの健全性と合わせて確認:
+Amazon FSx for NetApp ONTAP の CloudWatch メトリクスおよび ONTAP REST API から以下のストレージ層メトリクスを監視し、メタデータカタログの健全性と合わせて確認:
 
-| メトリクス | 確認ポイント | メタデータカタログとの関連 |
-|----------|-----------|----------------------|
-| ボリューム使用率 | 85% 超でアラート | 新規ファイル追加が停止 → メタデータ同期も停止 |
-| 重複排除率 | 期待値との乖離 | 重複ファイルの特定 → メタデータで可視化 |
-| FabricPool 階層化率 | コールドデータ比率 | AI 処理対象ファイルのアクセスレイテンシに影響 |
-| Snapshot 使用量 | 予期しない増加 | AI バッチ処理用 Snapshot の削除忘れ |
+| メトリクス | ソース | 確認ポイント | メタデータカタログとの関連 |
+|----------|--------|-----------|----------------------|
+| ボリューム使用率 | CloudWatch (FSx) / ONTAP REST API | 85% 超でアラート | 新規ファイル追加が停止 → メタデータ同期も停止 |
+| 重複排除率 | ONTAP REST API | 期待値との乖離 | 重複ファイルの特定 → メタデータで可視化 |
+| FabricPool 階層化率 | ONTAP REST API | コールドデータ比率 | AI 処理対象ファイルのアクセスレイテンシに影響 |
+| Snapshot 使用量 | CloudWatch (FSx) / ONTAP REST API | 予期しない増加 | AI バッチ処理用 Snapshot の削除忘れ |
 
 詳細なオブザーバビリティパイプラインは [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations) を参照。
 
@@ -711,7 +711,7 @@ def detect_pii(text: str, language: str) -> list:
 
 | コンポーネント | 所在地 | リージョン間転送 |
 |-------------|--------|---------------|
-| 生ファイル (FSx for ONTAP) | FSx ファイルシステムと同一リージョン | なし (S3 AP は同一リージョンのみ) |
+| 生ファイル (FSx for ONTAP) | FSx for ONTAP ファイルシステムと同一リージョン | なし (S3 AP は同一リージョンのみ) |
 | メタデータテーブル (S3 Tables) | 同一リージョン (設定可能) | なし (クエリ結果もリージョン内) |
 | AI 処理 (Bedrock/Lambda) | 同一リージョン | なし (リージョン内処理) |
 | ガバナンス (Lake Formation) | 同一リージョン | クロスアカウント可能 (同一リージョン) |
@@ -804,7 +804,7 @@ FPolicy 非同期モードは極端な高負荷時（10,000+ イベント/秒の
 ```
 EventBridge スケジュール (毎日 02:00 UTC)
   → Step Functions: FullScanReconciliation
-    → Lambda: FSx S3 AP で ListObjectsV2 (ページネーション)
+    → Lambda: FSx for ONTAP S3 AP で ListObjectsV2 (ページネーション)
     → Lambda: Metadata_Table と比較 (anti-join)
     → Lambda: 欠落レコードを INSERT (enrichment_status = "pending")
     → CloudWatch メトリクス: reconciliation_gap_count
@@ -927,20 +927,20 @@ AI ベースの PII 検出は 100% 正確ではない。偽陰性（PII 見逃�
 
 | アンチパターン | なぜ問題か | 正しいアプローチ |
 |-------------|----------|--------------|
-| FSx S3 AP に直接 Iceberg テーブルを書き込む | conditional writes 未サポートで commit 失敗 | メタデータは S3 Tables に、実データは FSx に分離 |
+| FSx for ONTAP S3 AP に直接 Iceberg テーブルを書き込む | conditional writes 未サポートで commit 失敗 | メタデータは S3 Tables に、実データは FSx for ONTAP に分離 |
 | 全ファイルを S3 にコピーしてから S3 Metadata を使う | 本アーキテクチャの「S3 コピー排除」の価値を否定 | FPolicy パイプラインでメタデータのみ同期 |
 | embedding を DynamoDB に格納する | kNN 検索が非効率、Iceberg エコシステムと分断 | S3 Tables の BINARY カラム or OpenSearch Serverless |
 | 全ファイルを AI 処理する（フィルタなし） | コスト爆発（100K ファイル × $0.05 = $5,000/回） | 新規/変更ファイルのみ処理、file_type でフィルタ |
-| メタデータテーブルに実データ（バイナリ）を格納 | テーブルサイズ爆発、クエリ性能劣化 | file_path 参照のみ格納、実データは FSx に残す |
+| メタデータテーブルに実データ（バイナリ）を格納 | テーブルサイズ爆発、クエリ性能劣化 | file_path 参照のみ格納、実データは FSx for ONTAP に残す |
 | 単一の巨大 Lambda で全処理を実行 | タイムアウト、デバッグ困難、リトライ粒度が粗い | Step Functions で処理を分割、ファイルタイプ別 Lambda |
 | ガバナンスなしでメタデータを公開 | 機密ファイルのパスが漏洩 → 実データへの不正アクセス | Lake Formation / Horizon で列/行レベル制御を必ず適用 |
 
 | 制約 | 影響 | 緩和策 |
 |------|------|--------|
-| FSx S3 AP: conditional writes 未サポート | FSx S3 AP に直接 Iceberg テーブルを書き込めない | メタデータは S3 Tables に格納（FSx ではなく）; 生ファイルは FSx に格納 |
-| FSx S3 AP: S3 Event Notifications 未サポート | ネイティブ S3 イベントで変更検知不可 | FPolicy が同等のリアルタイム検知を提供 |
-| FSx S3 AP: ListObjectsV2 レイテンシ | ディレクトリ一覧が遅い (ネイティブ S3 比 30-80x) | メタデータテーブルにより LIST 操作が不要に |
-| Databricks: Session policy が S3 AP をブロック | UC から FSx ファイルに直接アクセス不可 | メタデータは Iceberg REST 経由; ファイルは Bedrock/Lambda 経由 |
+| FSx for ONTAP S3 AP: conditional writes 未サポート | FSx for ONTAP S3 AP に直接 Iceberg テーブルを書き込めない | メタデータは S3 Tables に格納（FSx for ONTAP ではなく）; 生ファイルは FSx for ONTAP に格納 |
+| FSx for ONTAP S3 AP: S3 Event Notifications 未サポート | ネイティブ S3 イベントで変更検知不可 | FPolicy が同等のリアルタイム検知を提供 |
+| FSx for ONTAP S3 AP: ListObjectsV2 レイテンシ | ディレクトリ一覧が遅い (ネイティブ S3 比 30-80x) | メタデータテーブルにより LIST 操作が不要に |
+| Databricks: Session policy が S3 AP をブロック | UC から FSx for ONTAP ファイルに直接アクセス不可 | メタデータは Iceberg REST 経由; ファイルは Bedrock/Lambda 経由 |
 | Databricks: SQL Warehouse が S3 Tables 未対応 | `CREATE CONNECTION TYPE iceberg_rest` 未サポート (2026年5月検証) | Spark クラスターで Iceberg REST Catalog 設定、または Athena 経由 |
 | Snowflake: TO_FILE が S3 AP で失敗 | Vision AI に内部ステージ回避策が必要 | COPY FILES で内部ステージに転送; PARSE_DOCUMENT は直接動作 |
 | Snowflake: S3 Tables 直接読み取り不可 | `CATALOG = 'ICEBERG_REST'` 未サポート (2026年5月検証) | COPY INTO → Managed Iceberg Table; External Volume 作成は成功 |

@@ -122,10 +122,10 @@ Amazon S3 は FSx for ONTAP ボリュームに接続された全アクセスポ�
 
 | ログソース | キャプチャ対象 | 保持期間 | 用途 |
 |-----------|-------------|---------|------|
-| **AWS CloudTrail** | FSx API コール（CreateAccessPoint 等）、S3 データイベント（AP 経由の GetObject、PutObject） | 設定可能（コンプライアンスには 1 年以上推奨） | 誰が何にいつどこからアクセスしたか |
+| **AWS CloudTrail** | FSx for ONTAP API コール（CreateAccessPoint 等）、S3 データイベント（AP 経由の GetObject、PutObject） | 設定可能（コンプライアンスには 1 年以上推奨） | 誰が何にいつどこからアクセスしたか |
 | **FSx for ONTAP 監査ログ** | NFS/SMB ファイルアクセスイベント（ONTAP fpolicy/audit 経由） | ONTAP 上で設定可能 | S3 AP を経由しない直接ファイルシステムアクセス |
 | **Lakehouse 監査ログ** | クエリ履歴、テーブル変更（プラットフォーム固有） | プラットフォーム依存 | 分析アクティビティ追跡 |
-| **VPC フローログ** | FSx ENI へ/からのネットワークトラフィック | 設定可能 | ネットワークレベルのアクセス検証 |
+| **VPC フローログ** | FSx for ONTAP ENI へ/からのネットワークトラフィック | 設定可能 | ネットワークレベルのアクセス検証 |
 | **S3 Access Point アクセスログ** | CloudTrail 経由の S3 データイベント | CloudTrail と同じ | S3 API レベルのアクセス監査 |
 
 ### S3 Access Point の S3 データイベント有効化
@@ -148,7 +148,7 @@ Amazon S3 は FSx for ONTAP ボリュームに接続された全アクセスポ�
 
 | レイヤー | メカニズム | 鍵管理 | 備考 |
 |---------|----------|--------|------|
-| **保存時** | SSE-FSX（自動） | AWS KMS マネージド | 全 FSx ファイルシステムがデフォルトで暗号化。アプリケーションに透過的 |
+| **保存時** | SSE-FSX（自動） | AWS KMS マネージド | 全 FSx for ONTAP ファイルシステムがデフォルトで暗号化。アプリケーションに透過的 |
 | **転送中（S3 API）** | TLS 1.2+ | AWS マネージド | S3 API コールに HTTPS 強制 |
 | **転送中（NFS）** | Kerberos 暗号化（オプション） | 顧客管理 | 同じデータにアクセスする NFS クライアント用 |
 | **転送中（SMB）** | SMB 暗号化（オプション） | 顧客管理 | 同じデータにアクセスする SMB クライアント用 |
@@ -160,18 +160,18 @@ Amazon S3 は FSx for ONTAP ボリュームに接続された全アクセスポ�
 | 観点 | 保証 |
 |------|------|
 | 保存データ | FSx for ONTAP がデプロイされた AWS リージョンに留まる |
-| S3 Access Point | FSx ボリュームと同じリージョンに作成必須（[ソース](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-point-for-fsxn-restrictions-limitations-naming-rules.html)） |
+| S3 Access Point | FSx for ONTAP ボリュームと同じリージョンに作成必須（[ソース](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-point-for-fsxn-restrictions-limitations-naming-rules.html)） |
 | DR レプリケーション | 指定された DR リージョンへの SnapMirror（顧客制御） |
 | クエリ結果 | 顧客指定の S3 バケットに書き込み（同一または異なるリージョン） |
 | バックアップストレージ | ファイルシステムと同じリージョン、複数 AZ にまたがる冗長性 |
 
 ## 責任分界マトリクス（RACI）
 
-| 責任 | AWS | FSx 管理者 | Lakehouse 管理者 | データオーナー |
+| 責任 | AWS | FSx for ONTAP 管理者 | Lakehouse 管理者 | データオーナー |
 |------|-----|-----------|-----------------|-------------|
 | 物理インフラセキュリティ | **R** | — | — | — |
-| FSx ファイルシステム保存時暗号化 | **R** | — | — | — |
-| FSx ファイルシステムプロビジョニング | I | **R** | — | — |
+| FSx for ONTAP ファイルシステム保存時暗号化 | **R** | — | — | — |
+| FSx for ONTAP ファイルシステムプロビジョニング | I | **R** | — | — |
 | S3 Access Point 作成・ポリシー | I | **R** | C | — |
 | 分析用 IAM ロール/ポリシー | I | C | **R** | — |
 | ファイルシステムユーザー権限 | I | **R** | C | A |
@@ -324,7 +324,7 @@ Components:
 | **何に答えるか** | 「システムは技術的に安全か？」 | 「なぜ安全なのかをステークホルダーに説明できるか？」 |
 | **対象者** | セキュリティエンジニア、監査人 | CxO、コンプライアンス担当者、患者、規制当局 |
 | **エビデンス** | 設定、テスト結果、ペネトレーションテスト | ドキュメント、図表、責任マトリクス、監査レポート |
-| **FSx S3 AP の制御** | IAM ポリシー、AP ポリシー、VPC エンドポイント、ファイルシステム ACL、SSE-FSX、Block Public Access | アーキテクチャ図、RACI マトリクス、監査ログサンプル、インシデント対応手順 |
+| **FSx for ONTAP S3 AP の制御** | IAM ポリシー、AP ポリシー、VPC エンドポイント、ファイルシステム ACL、SSE-FSX、Block Public Access | アーキテクチャ図、RACI マトリクス、監査ログサンプル、インシデント対応手順 |
 
 ### 安全性制御からの保証構築
 
@@ -351,14 +351,14 @@ Components:
 
 ## 生成 AI / RAG ガバナンス
 
-FSx S3 AP を生成 AI のデータソースとして使用する場合（例：Amazon Bedrock Knowledge Bases、Snowflake Cortex Search）、追加のガバナンス考慮事項が適用されます。
+FSx for ONTAP S3 AP を生成 AI のデータソースとして使用する場合（例：Amazon Bedrock Knowledge Bases、Snowflake Cortex Search）、追加のガバナンス考慮事項が適用されます。
 
 ### プラットフォーム別 RAG ガバナンス
 
 | プラットフォーム | RAG パス | データ移動 | ガバナンスモデル | 最適用途 |
 |----------|----------|---------|------------|----------|
-| **Amazon Bedrock KB** | FSx S3 AP → Bedrock KB → OpenSearch（embedding） | 顧客アカウント内に embedding 作成 | IAM + Bedrock ガードレール + 人間レビュー | AWS ネイティブ、権限認識型検索 |
-| **Snowflake Cortex Search** | FSx S3 AP → External Table → COPY INTO → Cortex Search Service | Snowflake ストレージにデータコピー | Snowflake RBAC + Tags + Row Access Policy | Snowflake ネイティブ、ガバナンス付き分析 + RAG |
+| **Amazon Bedrock KB** | FSx for ONTAP S3 AP → Bedrock KB → OpenSearch（embedding） | 顧客アカウント内に embedding 作成 | IAM + Bedrock ガードレール + 人間レビュー | AWS ネイティブ、権限認識型検索 |
+| **Snowflake Cortex Search** | FSx for ONTAP S3 AP → External Table → COPY INTO → Cortex Search Service | Snowflake ストレージにデータコピー | Snowflake RBAC + Tags + Row Access Policy | Snowflake ネイティブ、ガバナンス付き分析 + RAG |
 
 ### Snowflake ガバナンス（FSx for ONTAP データ上）
 
@@ -373,7 +373,7 @@ Snowflake は S3 Access Points 経由でアクセスする FSx for ONTAP デー�
 | **Data Sharing ガバナンス** | Row Access Policy 適用済み External Table の共有 | パートナー/サプライヤーへのガバナンス付き配布 |
 | **Cortex AI ガードレール** | Cross-Region Inference 制御、モデルアクセスポリシー | AI 処理境界の制御 |
 
-**Snowflake ガバナンスは FSx S3 AP 上の External Table に適用可能** — ガバナンス機能（Tags, Row Policy, Masking, Sharing, Access History）に COPY INTO は不要。Cortex AI 関数（COMPLETE, SUMMARIZE, EXTRACT_ANSWER）および Cortex Search も Managed Iceberg Table で直接動作し、内部テーブルへのデータ配置は不要（2026年5月確認）。Vision AI の TO_FILE のみ FSx S3 AP ステージでは COPY FILES ワークアラウンドが必要。
+**Snowflake ガバナンスは FSx for ONTAP S3 AP 上の External Table に適用可能** — ガバナンス機能（Tags, Row Policy, Masking, Sharing, Access History）に COPY INTO は不要。Cortex AI 関数（COMPLETE, SUMMARIZE, EXTRACT_ANSWER）および Cortex Search も Managed Iceberg Table で直接動作し、内部テーブルへのデータ配置は不要（2026年5月確認）。Vision AI の TO_FILE のみ FSx for ONTAP S3 AP ステージでは COPY FILES ワークアラウンドが必要。
 
 ### Snowflake 外部エンジンアクセスの監査（2026年5月確認）
 
@@ -442,13 +442,13 @@ Snowflake Horizon Catalog
 | データリネージ | ❌ 組み込みなし | ❌ 組み込みなし | ✅ 自動（UC リネージグラフ） |
 | セットアップ複雑度 | 中（LF admin + grants） | 低（Snowflake プラットフォーム組み込み） | 中（DataSync + UC セットアップ） |
 | カバーするエンジン | Athena, Redshift, EMR, Glue | Snowflake のみ | Databricks（Spark, SQL, ML） |
-| データ移動必要性 | なし（同一データ上のガバナンス） | ガバナンスにはなし; Cortex Search には COPY INTO | **あり — DataSync → S3 が必要**（UC は FSx S3 AP に直接アクセス不可） |
-| FSx S3 AP 直接アクセス | ✅ | ✅（`AWS_ACCESS_POINT_ARN` 使用） | ❌（UC テーブル作成ブロック; DataSync パスが必要） |
+| データ移動必要性 | なし（同一データ上のガバナンス） | ガバナンスにはなし; Cortex Search には COPY INTO | **あり — DataSync → S3 が必要**（UC は FSx for ONTAP S3 AP に直接アクセス不可） |
+| FSx for ONTAP S3 AP 直接アクセス | ✅ | ✅（`AWS_ACCESS_POINT_ARN` 使用） | ❌（UC テーブル作成ブロック; DataSync パスが必要） |
 | 外部エンジンでのガバナンス適用 | ✅（Athena, Redshift, EMR 全てガバナンス適用） | ✅ **Horizon Catalog が外部エンジンに Row Access Policy + Masking を強制**（2026年5月確認） | ❌ **UC Row Filters/Column Masks は外部エンジンで適用されない**（Athena/EMR が Iceberg REST Catalog 経由でアクセスすると UC ガバナンスをバイパス） |
 
 ### Databricks Unity Catalog ガバナンス（DataSync → S3 経由）
 
-Databricks Unity Catalog は **DataSync で S3 に同期した後**、FSx for ONTAP データに対してエンタープライズガバナンスを提供します。UC は FSx S3 AP に直接アクセスできません（セッションポリシー制限、2026年5月確認）が、DataSync → S3 → UC パスで全ガバナンス機能が利用可能です:
+Databricks Unity Catalog は **DataSync で S3 に同期した後**、FSx for ONTAP データに対してエンタープライズガバナンスを提供します。UC は FSx for ONTAP S3 AP に直接アクセスできません（セッションポリシー制限、2026年5月確認）が、DataSync → S3 → UC パスで全ガバナンス機能が利用可能です:
 
 | 機能 | 動作 | ガバナンス価値 |
 |------|------|-------------|
@@ -462,7 +462,7 @@ Databricks Unity Catalog は **DataSync で S3 に同期した後**、FSx for ON
 | **Mosaic AI ガバナンス** | Model Registry, Feature Store, AI ガードレール | ML モデルライフサイクルガバナンス |
 | **Lakehouse Monitoring** | データ品質メトリクス、ドリフト検出 | プロアクティブなデータ品質ガバナンス |
 
-**重要な制約**: 全ての Databricks UC ガバナンスはデータが S3 にある必要があります（FSx S3 AP 直接ではない）。推奨アーキテクチャ:
+**重要な制約**: 全ての Databricks UC ガバナンスはデータが S3 にある必要があります（FSx for ONTAP S3 AP 直接ではない）。推奨アーキテクチャ:
 
 ```
 FSx for ONTAP (Source of Truth)
@@ -499,7 +499,7 @@ UC 管理 Delta/Iceberg テーブル（S3 上）
 
 > **規制ワークロード向け**: UC ガバナンスが非 Databricks エンジンからのアクセス時にデータを自動的に保護すると想定しないこと。コンプライアンスが Athena や EMR クエリに行/カラムレベルのアクセス制御を要求する場合、UC とは独立して同じ基盤 S3 データに Lake Formation 権限を設定すること。
 
-> **トレードオフ**: Databricks は最も豊富なガバナンス機能セット（特に自動リネージと ML ガバナンス）を提供しますが、DataSync によるデータ重複が必要です。Snowflake と Lake Formation はコピーなしで FSx S3 AP データをガバナンスできます。リネージ/ML ガバナンスとゼロコピーアクセスのどちらが優先かで選択してください。
+> **トレードオフ**: Databricks は最も豊富なガバナンス機能セット（特に自動リネージと ML ガバナンス）を提供しますが、DataSync によるデータ重複が必要です。Snowflake と Lake Formation はコピーなしで FSx for ONTAP S3 AP データをガバナンスできます。リネージ/ML ガバナンスとゼロコピーアクセスのどちらが優先かで選択してください。
 
 > **規制ワークロード向け推奨**: 複数の AWS ネイティブエンジン（Athena + Redshift + EMR）にガバナンスを適用する場合は **Lake Formation** を使用。主要プラットフォームが Snowflake で、データ移動なしに AI + ガバナンス + データ共有を統合する場合は **Snowflake ガバナンス** を使用。自動リネージ、ML ガバナンス（Mosaic AI, Feature Store）、または Delta Sharing（オープンプロトコル）が必要な場合は **Databricks UC** を使用 — DataSync 同期レイテンシとストレージ重複をトレードオフとして受け入れる。3つすべてが同じ FSx for ONTAP ソースデータ上で共存可能です。
 
@@ -525,13 +525,13 @@ UC 管理 Delta/Iceberg テーブル（S3 上）
 │                                                              │
 │  ┌──────────────┐     ┌─────────────────┐                  │
 │  │ Source Docs   │     │ De-identification│                  │
-│  │ (FSx Volume)  │────▶│ Pipeline (Glue)  │                  │
+│  │ (FSx for ONTAP Volume)  │────▶│ Pipeline (Glue)  │                  │
 │  │ NFS/SMB write │     │ Remove PHI/PII   │                  │
 │  └──────────────┘     └────────┬────────┘                  │
 │                                │                             │
 │                       ┌────────▼────────┐                   │
 │                       │ Clean Documents  │                   │
-│                       │ (FSx Volume)     │                   │
+│                       │ (FSx for ONTAP Volume)     │                   │
 │                       └────────┬────────┘                   │
 │                                │                             │
 │                       ┌────────▼────────┐                   │
@@ -569,10 +569,10 @@ UC 管理 Delta/Iceberg テーブル（S3 上）
 
 | データタイプ | 保持期間 | ストレージ階層 | 削除方法 |
 |------------|---------|-------------|---------|
-| アクティブ分析データ | 無期限（使用中） | FSx SSD | 手動レビュー + 承認 |
-| 過去の分析データ | ビジネス要件に従う | FSx Capacity Pool（FabricPool） | 自動階層化、手動削除 |
+| アクティブ分析データ | 無期限（使用中） | FSx for ONTAP SSD | 手動レビュー + 承認 |
+| 過去の分析データ | ビジネス要件に従う | FSx for ONTAP Capacity Pool（FabricPool） | 自動階層化、手動削除 |
 | 監査ログ（CloudTrail） | 7 年（SOX）/ 6 年（HIPAA） | S3（CloudTrail 送信先） | S3 ライフサイクルポリシー |
-| ONTAP スナップショット | スナップショットポリシーに従う（例：日次 7、週次 4） | FSx SSD（copy-on-write） | ポリシーに従い自動 |
+| ONTAP スナップショット | スナップショットポリシーに従う（例：日次 7、週次 4） | FSx for ONTAP SSD（copy-on-write） | ポリシーに従い自動 |
 | RAG エンベディング | ソースドキュメントの保持期間と同じ | OpenSearch Serverless | ソース削除後に Knowledge Base を再同期 |
 | クエリ結果（Athena） | 90 日（デフォルト）またはポリシーに従う | S3（Athena 結果バケット） | S3 ライフサイクルポリシー |
 
@@ -694,7 +694,7 @@ Alert       Assessment policy/IAM    log analysis  restore     & improve
 | データ形式 | 識別可能（PHI） | 匿名化または非識別化 |
 | 同意 | 治療同意 | 研究同意またはウェイバー（IRB/倫理委員会） |
 | アクセス | 臨床スタッフ | 研究者、データサイエンティスト、AI システム |
-| 保存 | 臨床システム（EHR） | 研究データプラットフォーム（FSx + 分析） |
+| 保存 | 臨床システム（EHR） | 研究データプラットフォーム（FSx for ONTAP + 分析） |
 | ガバナンス | 臨床データガバナンス | 研究データガバナンス + 倫理 |
 
 ### 二次利用ガバナンスフレームワーク
@@ -710,7 +710,7 @@ Alert       Assessment policy/IAM    log analysis  restore     & improve
 | **出版レビュー** | データを使用する全出版物は再識別リスクのレビューが必要 |
 | **監査証跡** | 全研究データアクセスをログ。定期的なアクセスレビュー |
 
-### FSx S3 AP 向け匿名化パイプライン
+### FSx for ONTAP S3 AP 向け匿名化パイプライン
 
 ```
 Clinical Volume (PHI)          Research Volume (De-identified)
@@ -829,7 +829,7 @@ Clinical Volume (PHI)          Research Volume (De-identified)
 
 | リスク ID | 説明 | 影響度 (1-5) | 発生可能性 (1-5) | リスクスコア | 既存の制御 | 残留レベル | オーナー | 対処 | リスク受容権限 | レビュー頻度 |
 |----------|------|:---:|:---:|:---:|-----------|:---:|--------|------|------------|:---:|
-| R-001 | FSx S3 AP はアトミックリネームをサポートしない。Delta 書き込みが破損する可能性 | 5 | 1 | 5 | アンチパターンを文書化。読み取り専用 AP を強制 | Low | プラットフォームチーム | 回避（Delta 書き込みを使用しない） | CISO | 四半期 |
+| R-001 | FSx for ONTAP S3 AP はアトミックリネームをサポートしない。Delta 書き込みが破損する可能性 | 5 | 1 | 5 | アンチパターンを文書化。読み取り専用 AP を強制 | Low | プラットフォームチーム | 回避（Delta 書き込みを使用しない） | CISO | 四半期 |
 | R-002 | 数十 ms のレイテンシがリアルタイム分析 SLA を満たさない可能性 | 3 | 3 | 9 | 本番前にベンチマーク。SLA を文書化 | Medium | プラットフォームチーム | 緩和（より高いスループットをプロビジョニング） | ビジネスオーナー | 四半期 |
 | R-003 | AP ポリシー設定ミスが全アクセスをブロックする可能性 | 4 | 2 | 8 | IaC 管理ポリシー。SCP が変更を制限。ランブック | Low | セキュリティチーム | 緩和（SCP + IaC + ランブック） | CISO | 月次 |
 | R-004 | スナップショット復元が Glue Catalog の不整合を引き起こす可能性 | 3 | 2 | 6 | カタログ修復のランブック。Crawler 再実行 | Low | データプラットフォーム | 緩和（ランブック + 自動化） | プラットフォームリード | 四半期 |

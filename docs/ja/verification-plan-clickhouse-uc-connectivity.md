@@ -14,7 +14,7 @@
 
 | トラック | 目的 | 主な前提 |
 |---------|------|---------|
-| **Track A** | ClickHouse `DataLakeCatalog`（Beta）で UC テーブルを読めるか実機確認 | Databricks UC + 外部データアクセス有効化（CN-B3）、ClickHouse Cloud、検証用 UC テーブル |
+| **Track A** | ClickHouse `DataLakeCatalog`（Beta）で UC テーブルを読めるか実機確認 | Databricks UC + 外部データアクセス有効化、ClickHouse Cloud、検証用 UC テーブル |
 | **Track B** | Kafka→Databricks（NCC/SG/ポート）と ClickHouse→S3（VPC エンドポイント）の通信経路確認 | Databricks serverless、既存 MSK、VPC/SG/エンドポイント権限 |
 
 **環境メモ（grounding、2026-06-18 読み取り確認）**: 検証アカウントに **provisioned MSK クラスタが既存**（Track B の Kafka ソースは新規構築不要）、**S3 Gateway VPC エンドポイントが複数 VPC に既存**。具体的 ID は本書では placeholder 化。
@@ -31,7 +31,7 @@
 ### Phase A0: 前提・ゲート
 - **ゲート（未充足なら BLOCKED）**:
   - ClickHouse Cloud が `DataLakeCatalog`（`catalog_type='unity'`）の Beta をサポートするバージョン/リージョン
-  - Databricks メタストアで **外部データアクセス（external data access）有効化**（CN-B3）
+  - Databricks メタストアで **外部データアクセス（external data access）有効化**
   - 認証主体（サービスプリンシパル or PAT）と UC 権限（`SELECT` + 外部利用付与）
 - **エビデンス**: ゲート充足状況のチェックリスト
 

@@ -14,7 +14,7 @@
 
 | Track | Objective | Main prerequisites |
 |-------|-----------|--------------------|
-| **Track A** | Verify on real systems that ClickHouse `DataLakeCatalog` (Beta) can read UC tables | Databricks UC + external data access enabled (CN-B3), ClickHouse Cloud, a test UC table |
+| **Track A** | Verify on real systems that ClickHouse `DataLakeCatalog` (Beta) can read UC tables | Databricks UC + external data access enabled, ClickHouse Cloud, a test UC table |
 | **Track B** | Verify the Kafka→Databricks path (NCC/SG/ports) and ClickHouse→S3 path (VPC endpoint) | Databricks serverless, existing MSK, VPC/SG/endpoint permissions |
 
 **Environment note (grounding, read-only check on 2026-06-18)**: the verification account has an **existing provisioned MSK cluster** (no new Kafka source needed for Track B) and **S3 Gateway VPC endpoints across multiple VPCs**. Specific IDs are placeholdered here.
@@ -31,7 +31,7 @@
 ### Phase A0: Prerequisites / gate
 - **Gate (BLOCKED if unmet)**:
   - A ClickHouse Cloud version/region that supports `DataLakeCatalog` (`catalog_type='unity'`) Beta
-  - **External data access enabled** on the Databricks metastore (CN-B3)
+  - **External data access enabled** on the Databricks metastore
   - An auth principal (service principal or PAT) and UC privileges (`SELECT` + external-use grant)
 - **Evidence**: a gate-satisfaction checklist
 

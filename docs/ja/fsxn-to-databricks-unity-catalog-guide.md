@@ -140,7 +140,7 @@ FSx for ONTAP S3 AP に対する接続能力の差異:
 |------|-----------|-----------------|------|
 | External Table (S3 AP) | ✅ 動作 | ❌ ブロック | Snowflake は `AWS_ACCESS_POINT_ARN` で S3 AP を解決。UC はセッションポリシーが S3 AP 未対応 |
 | Directory Table / Volume | ✅ 動作 | ❌ ブロック | 同上（External Location 依存） |
-| Event-driven Snowpipe / Auto Loader | ⚠️ FPolicy 経由 | ❌ ブロック | S3 Event Notifications が FSx S3 AP で非対応。両者とも FPolicy 経由の代替が必要 |
+| Event-driven Snowpipe / Auto Loader | ⚠️ FPolicy 経由 | ❌ ブロック | S3 Event Notifications が FSx for ONTAP S3 AP で非対応。両者とも FPolicy 経由の代替が必要 |
 | Zero-copy 読み取り | ✅ | ❌ | UC は標準 S3 バケットのみ |
 | ガバナンス (Tags, Masking) | ✅ | ✅（S3 経由で取り込み後） | UC のガバナンスは S3 上テーブルに適用 |
 | AI/ML 機能 | Cortex AI（限定的） | Mosaic AI（フル） | ML トレーニング / Feature Store は Databricks が強い |
@@ -238,7 +238,7 @@ aws datasync update-task --task-arn <TASK> \
 
 > **IAM 最小権限** (IAM Security Architect findings): DataSync の実行 IAM Role は以下に制限してください:
 > - S3 宛先: `s3:PutObject`, `s3:DeleteObject`, `s3:GetBucketLocation` のみ（リソース ARN を特定バケット/プレフィックスに制約）
-> - FSx ソース: `fsx:DescribeFileSystems`, `datasync:*` の必要最小限
+> - FSx for ONTAP ソース: `fsx:DescribeFileSystems`, `datasync:*` の必要最小限
 > - `s3:*` や `fsx:*` のワイルドカード権限は使用禁止
 
 ```sql
@@ -479,8 +479,8 @@ SELECT * FROM uc_delta.catalog.schema.sensor_data LIMIT 10;
 | **Lakeflow Zerobus Ingest** | ⚠️ 間接的に利用可能 | Kafka 代替。ap-northeast-1 対応。ただし入力は Databricks 側 |
 | **Unity AI Gateway** | ❌ 関連なし | エージェント/モデルのガバナンス。ストレージ接続ではない |
 | **Agent Bricks** | ❌ 関連なし | エージェント実行基盤。ストレージ接続ではない |
-| **UC Foreign Iceberg GA** | ✅ **間接的に解決候補** | Glue Iceberg REST 経由で FSx 由来の Iceberg テーブルを UC に公開可能（検証中） |
-| **OpenSharing SecureConnect** | ⚠️ 間接的に利用可能 | UC テーブル化後の外部共有をセキュア化。受信者ごとの FW 変更不要（プロバイダー側 1 回設定のみ）。FSx データの S3 → UC → 外部組織共有パスのセキュリティを強化 |
+| **UC Foreign Iceberg GA** | ✅ **間接的に解決候補** | Glue Iceberg REST 経由で FSx for ONTAP 由来の Iceberg テーブルを UC に公開可能（検証中） |
+| **OpenSharing SecureConnect** | ⚠️ 間接的に利用可能 | UC テーブル化後の外部共有をセキュア化。受信者ごとの FW 変更不要（プロバイダー側 1 回設定のみ）。FSx for ONTAP データの S3 → UC → 外部組織共有パスのセキュリティを強化 |
 
 ---
 
@@ -813,11 +813,11 @@ FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路（
 
 | パス | ストレージコスト | コンピュートコスト | 運用負荷 |
 |------|----------------|------------------|---------|
-| DataSync → S3 → UC | FSx + S3（重複） | DataSync 転送料 + Databricks | 中（スケジュール管理） |
+| DataSync → S3 → UC | FSx for ONTAP + S3（重複） | DataSync 転送料 + Databricks | 中（スケジュール管理） |
 | Kafka → SS → UC | FSx（メタデータのみ Kafka） | MSK + Databricks Streaming | 高（パイプライン管理） |
-| Glue/EMR ETL | FSx + S3（重複） | Glue/EMR ジョブ実行料 | 中（ジョブスケジュール） |
-| Athena (UC 外) | FSx のみ | クエリスキャン量課金 | 低（サーバーレス） |
-| boto3 PoC | FSx のみ | Databricks クラスター | 低（ガバナンスなし）⚠️ データ流出リスク |
+| Glue/EMR ETL | FSx for ONTAP + S3（重複） | Glue/EMR ジョブ実行料 | 中（ジョブスケジュール） |
+| Athena (UC 外) | FSx for ONTAP のみ | クエリスキャン量課金 | 低（サーバーレス） |
+| boto3 PoC | FSx for ONTAP のみ | Databricks クラスター | 低（ガバナンスなし）⚠️ データ流出リスク |
 
 > **boto3 PoC セキュリティ警告** (Data Exfiltration Prevention Engineer findings): boto3 PoC パスは UC ガバナンスを完全にバイパスするため、ユーザーがデータをローカルにダウンロードし外部に持ち出す流出リスクがあります。使用する場合は:
 > - Databricks workspace の **egress 制御**（S3 bucket policy + VPC endpoint policy で宛先制限）
@@ -831,6 +831,7 @@ FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路（
 
 | ドキュメント | 内容 |
 |-------------|------|
+| [業界別ソリューションカタログ](./industry-solution-catalog.md) | **本ガイドとセット**。業界ごとのユースケース → 推奨パス → ガバナンスのマッピング |
 | [DataSync → S3 ガイド](./datasync-to-s3-guide.md) | DataSync の詳細手順とスケジュール設計 |
 | [Kafka-ClickHouse-UC 接続ガイド](./kafka-clickhouse-unity-catalog-connectivity.md) | ストリーミング + カタログ接続の技術詳細 |
 | [Databricks 統合 README](../../integrations/databricks/README.md) | S3 AP 検証結果、エラーエビデンス、推奨パターン |
@@ -855,12 +856,3 @@ FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路（
 | OpenSharing Volumes コネクタ | 🔲 設計段階 | Databricks 開発 + FSx for ONTAP 対応 |
 | Lakebase × FSx for ONTAP | ⚠️ Lakebase ap-northeast-1 非対応 | Databricks リージョン拡大 |
 
----
-
-## ペルソナレビューステータス
-
-- [x] Cloud Data Architect: パス網羅性確認
-- [x] Manufacturing Edge Data Architect: Kafka パスの適切性確認
-- [x] Databricks Governance Architect: UC 制約の正確性確認
-- [x] FSx for ONTAP Architect: ONTAP 機能の過大評価なし確認
-- [x] Confidentiality Reviewer: 機密情報なし確認

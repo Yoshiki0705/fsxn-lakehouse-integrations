@@ -24,7 +24,7 @@ AI/ML services and analytics platforms without data copying.
 │         │                                                                 │
 │         ▼                                                                 │
 │  ┌──────────────┐     ┌──────────────┐     ┌─────────────────────────┐  │
-│  │ FSx for      │     │ S3 Access    │     │ AI/ML Services           │  │
+│  │ FSx for ONTAP for      │     │ S3 Access    │     │ AI/ML Services           │  │
 │  │ ONTAP Volume │────▶│ Point        │────▶│                         │  │
 │  │              │     │              │     │ • SageMaker (training)   │  │
 │  │ /images/     │     │              │     │ • Bedrock (RAG)         │  │
@@ -154,7 +154,7 @@ Camera → NFS → FSx for ONTAP Volume → S3 AP → Rekognition Video (analysi
 
 ### Databricks + Unstructured Data
 
-> **Note**: Databricks UC cannot directly access FSx S3 AP for governed file operations. The recommended path is DataSync → S3 → UC External Volume. The examples below show capabilities available on synced data.
+> **Note**: Databricks UC cannot directly access FSx for ONTAP S3 AP for governed file operations. The recommended path is DataSync → S3 → UC External Volume. The examples below show capabilities available on synced data.
 
 ```python
 # Read image files via UC Volume (after DataSync → S3 → UC External Volume)
@@ -202,7 +202,7 @@ FROM read_files(
 - ✅ Automatic lineage tracking (file → table → model)
 
 **Constraints:**
-- Requires DataSync → S3 → UC External Volume (cannot access FSx S3 AP directly from UC)
+- Requires DataSync → S3 → UC External Volume (cannot access FSx for ONTAP S3 AP directly from UC)
 - Large files (>100MB) retrieved via Multipart Download
 - Image/video processing libraries available in Databricks ML Runtime
 - Sync latency: 5-10 minutes (DataSync schedule + Auto Loader detection)
@@ -244,7 +244,7 @@ SELECT SNOWFLAKE.CORTEX.COMPLETE('pixtral-large',
 **Capabilities (verified May 2026):**
 - ✅ Directory Table for file metadata management (path, size, date)
 - ✅ GET_PRESIGNED_URL / BUILD_SCOPED_FILE_URL for file access
-- ✅ PARSE_DOCUMENT (OCR) — extract text from images/PDFs directly on FSx S3 AP
+- ✅ PARSE_DOCUMENT (OCR) — extract text from images/PDFs directly on FSx for ONTAP S3 AP
 - ✅ Cortex AI text functions (SUMMARIZE, TRANSLATE, SENTIMENT) — work on External Table data
 - ✅ Vision AI (multimodal COMPLETE) — requires COPY FILES to internal stage
 - ✅ Cortex Search (RAG) — requires COPY INTO internal table (198ms query latency)

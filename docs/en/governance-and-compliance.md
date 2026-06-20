@@ -122,10 +122,10 @@ Amazon S3 enforces Block Public Access by default for all access points attached
 
 | Log Source | What is Captured | Retention | Use |
 |-----------|-----------------|-----------|-----|
-| **AWS CloudTrail** | FSx API calls (CreateAccessPoint, etc.), S3 data events (GetObject, PutObject via AP) | Configurable (recommend 1+ year for compliance) | Who accessed what, when, from where |
+| **AWS CloudTrail** | FSx for ONTAP API calls (CreateAccessPoint, etc.), S3 data events (GetObject, PutObject via AP) | Configurable (recommend 1+ year for compliance) | Who accessed what, when, from where |
 | **FSx for ONTAP audit logs** | NFS/SMB file access events (via ONTAP fpolicy/audit) | Configurable on ONTAP | Direct file system access not through S3 AP |
 | **Lakehouse audit logs** | Query history, table modifications (platform-specific) | Platform-dependent | Analytics activity tracking |
-| **VPC Flow Logs** | Network traffic to/from FSx ENIs | Configurable | Network-level access verification |
+| **VPC Flow Logs** | Network traffic to/from FSx for ONTAP ENIs | Configurable | Network-level access verification |
 | **S3 Access Point access logs** | S3 data events via CloudTrail | Same as CloudTrail | S3 API-level access audit |
 
 ### Enabling S3 Data Events for Access Points
@@ -148,7 +148,7 @@ To audit individual object-level operations (GetObject, PutObject) through acces
 
 | Layer | Mechanism | Key Management | Notes |
 |-------|-----------|---------------|-------|
-| **At rest** | SSE-FSX (automatic) | AWS KMS managed | All FSx file systems encrypted by default; transparent to applications |
+| **At rest** | SSE-FSX (automatic) | AWS KMS managed | All FSx for ONTAP file systems encrypted by default; transparent to applications |
 | **In transit (S3 API)** | TLS 1.2+ | AWS managed | HTTPS enforced for S3 API calls |
 | **In transit (NFS)** | Kerberos encryption (optional) | Customer managed | For NFS clients accessing same data |
 | **In transit (SMB)** | SMB encryption (optional) | Customer managed | For SMB clients accessing same data |
@@ -160,18 +160,18 @@ To audit individual object-level operations (GetObject, PutObject) through acces
 | Aspect | Guarantee |
 |--------|-----------|
 | Data at rest | Remains in the AWS Region where FSx for ONTAP is deployed |
-| S3 Access Point | Must be in same Region as FSx volume ([source](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-point-for-fsxn-restrictions-limitations-naming-rules.html)) |
+| S3 Access Point | Must be in same Region as FSx for ONTAP volume ([source](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-point-for-fsxn-restrictions-limitations-naming-rules.html)) |
 | DR replication | SnapMirror to specified DR Region (customer-controlled) |
 | Query results | Written to customer-specified S3 bucket (same or different Region) |
 | Backup storage | Same Region as file system, redundant across multiple AZs |
 
 ## Responsibility Matrix (RACI)
 
-| Responsibility | AWS | FSx Admin | Lakehouse Admin | Data Owner |
+| Responsibility | AWS | FSx for ONTAP Admin | Lakehouse Admin | Data Owner |
 |---------------|-----|-----------|-----------------|------------|
 | Physical infrastructure security | **R** | — | — | — |
-| FSx file system encryption at rest | **R** | — | — | — |
-| FSx file system provisioning | I | **R** | — | — |
+| FSx for ONTAP file system encryption at rest | **R** | — | — | — |
+| FSx for ONTAP file system provisioning | I | **R** | — | — |
 | S3 Access Point creation & policy | I | **R** | C | — |
 | IAM role/policy for analytics | I | C | **R** | — |
 | File system user permissions | I | **R** | C | A |
@@ -324,7 +324,7 @@ Technical safety and organizational assurance are distinct concerns. Regulated i
 | **What it answers** | "Is the system technically secure?" | "Can we explain WHY it is secure to stakeholders?" |
 | **Audience** | Security engineers, auditors | CxO, compliance officers, patients, regulators |
 | **Evidence** | Configuration, test results, penetration tests | Documentation, diagrams, responsibility matrices, audit reports |
-| **FSx S3 AP controls** | IAM policy, AP policy, VPC endpoint, file system ACL, SSE-FSX, Block Public Access | Architecture diagrams, RACI matrix, audit log samples, incident response procedures |
+| **FSx for ONTAP S3 AP controls** | IAM policy, AP policy, VPC endpoint, file system ACL, SSE-FSX, Block Public Access | Architecture diagrams, RACI matrix, audit log samples, incident response procedures |
 
 ### Building Assurance from Safety Controls
 
@@ -351,14 +351,14 @@ Technical safety and organizational assurance are distinct concerns. Regulated i
 
 ## Generative AI / RAG Governance
 
-When using FSx S3 AP as a data source for generative AI (e.g., Amazon Bedrock Knowledge Bases, Snowflake Cortex Search), additional governance considerations apply.
+When using FSx for ONTAP S3 AP as a data source for generative AI (e.g., Amazon Bedrock Knowledge Bases, Snowflake Cortex Search), additional governance considerations apply.
 
 ### Platform-Specific RAG Governance
 
 | Platform | RAG Path | Data Movement | Governance Model | Best For |
 |----------|----------|---------------|-----------------|----------|
-| **Amazon Bedrock KB** | FSx S3 AP → Bedrock KB → OpenSearch (embeddings) | Embeddings created in customer account | IAM + Bedrock guardrails + human review | AWS-native, permission-aware retrieval |
-| **Snowflake Cortex Search** | FSx S3 AP → External Table → COPY INTO → Cortex Search Service | Data copied to Snowflake storage | Snowflake RBAC + Tags + Row Access Policy | Snowflake-native, governed analytics + RAG |
+| **Amazon Bedrock KB** | FSx for ONTAP S3 AP → Bedrock KB → OpenSearch (embeddings) | Embeddings created in customer account | IAM + Bedrock guardrails + human review | AWS-native, permission-aware retrieval |
+| **Snowflake Cortex Search** | FSx for ONTAP S3 AP → External Table → COPY INTO → Cortex Search Service | Data copied to Snowflake storage | Snowflake RBAC + Tags + Row Access Policy | Snowflake-native, governed analytics + RAG |
 
 ### Snowflake Governance on FSx for ONTAP Data
 
@@ -373,7 +373,7 @@ Snowflake provides a complementary governance layer for FSx for ONTAP data acces
 | **Data Sharing Governance** | Share External Tables with Row Access Policy applied | Governed distribution to partners/suppliers |
 | **Cortex AI Guardrails** | Cross-Region Inference controls, model access policies | AI processing boundary control |
 
-**Snowflake governance applies to External Tables on FSx S3 AP** — no COPY INTO required for governance features (Tags, Row Policy, Masking, Sharing, Access History). Cortex AI functions (COMPLETE, SUMMARIZE, EXTRACT_ANSWER) and Cortex Search also work directly on Managed Iceberg Tables without requiring data in internal tables (confirmed May 2026). Only Vision AI with TO_FILE on FSx S3 AP stages requires the COPY FILES workaround.
+**Snowflake governance applies to External Tables on FSx for ONTAP S3 AP** — no COPY INTO required for governance features (Tags, Row Policy, Masking, Sharing, Access History). Cortex AI functions (COMPLETE, SUMMARIZE, EXTRACT_ANSWER) and Cortex Search also work directly on Managed Iceberg Tables without requiring data in internal tables (confirmed May 2026). Only Vision AI with TO_FILE on FSx for ONTAP S3 AP stages requires the COPY FILES workaround.
 
 ### Snowflake Audit for External Engine Access (Confirmed May 2026)
 
@@ -429,7 +429,7 @@ External Engine reads S3 data files directly
 
 **Reference**: [Snowflake Horizon Iceberg REST Catalog — External Engine Access](https://docs.snowflake.com/en/user-guide/tables-iceberg-access-using-external-query-engine-snowflake-horizon) (Step 5: Configure data protection policies)
 
-### Comparison: AWS-Native vs Snowflake vs Databricks Governance for FSx S3 AP Data
+### Comparison: AWS-Native vs Snowflake vs Databricks Governance for FSx for ONTAP S3 AP Data
 
 | Aspect | AWS-Native (Lake Formation) | Snowflake (External Table) | Databricks (Unity Catalog via DataSync → S3) |
 |--------|---|---|---|
@@ -442,13 +442,13 @@ External Engine reads S3 data files directly
 | Data lineage | ❌ Not built-in | ❌ Not built-in | ✅ Automatic (UC lineage graph) |
 | Setup complexity | Medium (LF admin + grants) | Low (built-in to Snowflake platform) | Medium (DataSync + UC setup) |
 | Engines covered | Athena, Redshift, EMR, Glue | Snowflake only | Databricks (Spark, SQL, ML) |
-| Data movement required | None (governance on same data) | None for governance; COPY INTO for Cortex Search | **Yes — DataSync → S3 required** (UC cannot access FSx S3 AP directly) |
-| FSx S3 AP direct access | ✅ | ✅ (with `AWS_ACCESS_POINT_ARN`) | ❌ (UC table creation blocked; DataSync path required) |
+| Data movement required | None (governance on same data) | None for governance; COPY INTO for Cortex Search | **Yes — DataSync → S3 required** (UC cannot access FSx for ONTAP S3 AP directly) |
+| FSx for ONTAP S3 AP direct access | ✅ | ✅ (with `AWS_ACCESS_POINT_ARN`) | ❌ (UC table creation blocked; DataSync path required) |
 | Governance enforced on external engines | ✅ (Athena, Redshift, EMR all governed) | ✅ **Horizon Catalog enforces Row Access Policies + Masking on external engines** (confirmed May 2026) | ❌ **UC Row Filters/Column Masks NOT enforced on external engines** (Athena/EMR via Iceberg REST Catalog bypass UC governance) |
 
 ### Databricks Unity Catalog Governance (via DataSync → S3)
 
-Databricks Unity Catalog provides enterprise governance for FSx for ONTAP data **after syncing to S3 via DataSync**. While UC cannot directly access FSx S3 AP (session policy limitation confirmed May 2026), the DataSync → S3 → UC path provides full governance capabilities:
+Databricks Unity Catalog provides enterprise governance for FSx for ONTAP data **after syncing to S3 via DataSync**. While UC cannot directly access FSx for ONTAP S3 AP (session policy limitation confirmed May 2026), the DataSync → S3 → UC path provides full governance capabilities:
 
 | Capability | How It Works | Governance Value |
 |---|---|---|
@@ -462,7 +462,7 @@ Databricks Unity Catalog provides enterprise governance for FSx for ONTAP data *
 | **Mosaic AI Governance** | Model Registry, Feature Store, AI guardrails | ML model lifecycle governance |
 | **Lakehouse Monitoring** | Data quality metrics, drift detection | Proactive data quality governance |
 
-**Key constraint**: All Databricks UC governance requires data to be in S3 (not FSx S3 AP directly). The recommended architecture:
+**Key constraint**: All Databricks UC governance requires data to be in S3 (not FSx for ONTAP S3 AP directly). The recommended architecture:
 
 ```
 FSx for ONTAP (source of truth)
@@ -499,7 +499,7 @@ UC-managed Delta/Iceberg table on S3
 
 > **For regulated workloads**: Do not assume that UC governance automatically protects data when accessed from non-Databricks engines. If compliance requires row/column-level access control on Athena or EMR queries, configure Lake Formation permissions on the same underlying S3 data independently of UC.
 
-> **Trade-off**: Databricks provides the richest governance feature set (especially automatic lineage and ML governance), but requires data duplication via DataSync. Snowflake and Lake Formation can govern FSx S3 AP data without copying. Choose based on whether lineage/ML governance or zero-copy access is the higher priority.
+> **Trade-off**: Databricks provides the richest governance feature set (especially automatic lineage and ML governance), but requires data duplication via DataSync. Snowflake and Lake Formation can govern FSx for ONTAP S3 AP data without copying. Choose based on whether lineage/ML governance or zero-copy access is the higher priority.
 
 > **Recommendation for regulated workloads**: Use **Lake Formation** when governance must apply across multiple AWS-native engines (Athena + Redshift + EMR). Use **Snowflake governance** when the primary platform is Snowflake and you need integrated AI + governance + data sharing without data movement. Use **Databricks UC** when automatic lineage, ML governance (Mosaic AI, Feature Store), or Delta Sharing (open protocol) are required — accepting the DataSync sync latency and storage duplication as trade-offs. All three can coexist on the same FSx for ONTAP source data.
 
@@ -525,13 +525,13 @@ UC-managed Delta/Iceberg table on S3
 │                                                              │
 │  ┌──────────────┐     ┌─────────────────┐                  │
 │  │ Source Docs   │     │ De-identification│                  │
-│  │ (FSx Volume)  │────▶│ Pipeline (Glue)  │                  │
+│  │ (FSx for ONTAP Volume)  │────▶│ Pipeline (Glue)  │                  │
 │  │ NFS/SMB write │     │ Remove PHI/PII   │                  │
 │  └──────────────┘     └────────┬────────┘                  │
 │                                │                             │
 │                       ┌────────▼────────┐                   │
 │                       │ Clean Documents  │                   │
-│                       │ (FSx Volume)     │                   │
+│                       │ (FSx for ONTAP Volume)     │                   │
 │                       └────────┬────────┘                   │
 │                                │                             │
 │                       ┌────────▼────────┐                   │
@@ -569,10 +569,10 @@ UC-managed Delta/Iceberg table on S3
 
 | Data Type | Retention Period | Storage Tier | Deletion Method |
 |-----------|----------------|-------------|-----------------|
-| Active analytics data | Indefinite (while in use) | FSx SSD | Manual review + approval |
-| Historical analytics data | Per business requirement | FSx Capacity Pool (FabricPool) | Automated tiering, manual deletion |
+| Active analytics data | Indefinite (while in use) | FSx for ONTAP SSD | Manual review + approval |
+| Historical analytics data | Per business requirement | FSx for ONTAP Capacity Pool (FabricPool) | Automated tiering, manual deletion |
 | Audit logs (CloudTrail) | 7 years (SOX) / 6 years (HIPAA) | S3 (CloudTrail destination) | S3 Lifecycle policy |
-| ONTAP Snapshots | Per snapshot policy (e.g., 7 daily, 4 weekly) | FSx SSD (copy-on-write) | Automatic per policy |
+| ONTAP Snapshots | Per snapshot policy (e.g., 7 daily, 4 weekly) | FSx for ONTAP SSD (copy-on-write) | Automatic per policy |
 | RAG embeddings | Same as source document retention | OpenSearch Serverless | Re-sync Knowledge Base after source deletion |
 | Query results (Athena) | 90 days (default) or per policy | S3 (Athena results bucket) | S3 Lifecycle policy |
 
@@ -694,7 +694,7 @@ When healthcare data is used beyond its primary clinical purpose (e.g., for rese
 | Data form | Identified (PHI) | De-identified or anonymized |
 | Consent | Treatment consent | Research consent or waiver (IRB/ethics board) |
 | Access | Clinical staff | Researchers, data scientists, AI systems |
-| Storage | Clinical systems (EHR) | Research data platform (FSx + analytics) |
+| Storage | Clinical systems (EHR) | Research data platform (FSx for ONTAP + analytics) |
 | Governance | Clinical data governance | Research data governance + ethics |
 
 ### Secondary Use Governance Framework
@@ -710,7 +710,7 @@ When healthcare data is used beyond its primary clinical purpose (e.g., for rese
 | **Publication review** | All publications using the data must be reviewed for re-identification risk |
 | **Audit trail** | All research data access logged; periodic access review |
 
-### De-identification Pipeline for FSx S3 AP
+### De-identification Pipeline for FSx for ONTAP S3 AP
 
 ```
 Clinical Volume (PHI)          Research Volume (De-identified)
@@ -829,7 +829,7 @@ All approval decisions must be documented and retained:
 
 | Risk ID | Description | Impact (1-5) | Likelihood (1-5) | Risk Score | Existing Controls | Residual Level | Owner | Treatment | Acceptance Authority | Review Frequency |
 |---------|-------------|:---:|:---:|:---:|-------------------|:---:|-------|-----------|---------------------|-----------------|
-| R-001 | FSx S3 AP does not support atomic rename; Delta write may corrupt | 5 | 1 | 5 | Anti-pattern documented; read-only AP enforced | Low | Platform team | Avoid (do not use Delta write) | CISO | Quarterly |
+| R-001 | FSx for ONTAP S3 AP does not support atomic rename; Delta write may corrupt | 5 | 1 | 5 | Anti-pattern documented; read-only AP enforced | Low | Platform team | Avoid (do not use Delta write) | CISO | Quarterly |
 | R-002 | Tens of ms latency may not meet real-time analytics SLA | 3 | 3 | 9 | Benchmark before production; document SLA | Medium | Platform team | Mitigate (provision higher throughput) | Business owner | Quarterly |
 | R-003 | AP policy misconfiguration could block all access | 4 | 2 | 8 | IaC-managed policy; SCP restricts changes; runbook | Low | Security team | Mitigate (SCP + IaC + runbook) | CISO | Monthly |
 | R-004 | Snapshot restore may cause Glue Catalog inconsistency | 3 | 2 | 6 | Runbook for catalog repair; crawler re-run | Low | Data platform | Mitigate (runbook + automation) | Platform lead | Quarterly |
