@@ -342,6 +342,24 @@ aws datasync describe-task-execution --task-execution-arn <EXECUTION_ARN>
 
 > **コスト最適化** (Cost Optimization Specialist lens): Phase 4 では S3 Intelligent-Tiering を検討してください。DataSync 同期先のデータは書き込み後にアクセス頻度が急速に低下する傾向があり、30 日未経過データを Standard、30 日超を IA に自動階層化することで月額 30-40% のストレージコスト削減が可能です。
 
+## 検証ステータスサマリ
+
+| 項目 | ステータス | 検証日 | エビデンス |
+|------|-----------|--------|-----------|
+| DataSync FSx for ONTAP NFS → S3 基本動作 | ✅ **検証済み** | 2026-05 | 本リポジトリ PoC 実行 |
+| 増分同期（`TransferMode: CHANGED`） | ✅ **検証済み** | 2026-05 | 変更ファイルのみ転送確認 |
+| Snapshot/FlexClone → DataSync | ✅ **設計検証済み** | 2026-05 | 本番影響ゼロ確認 |
+| EventBridge スケジュール自動実行 | ✅ **検証済み** | 2026-05 | `rate(5 minutes)` 安定稼働 |
+| DataSync → S3 → UC External Location | ✅ **検証済み** | 2026-05 | datasync-to-s3-guide + UC 接続ガイド |
+| DataSync → S3 → Auto Loader（通知モード） | ✅ **設計検証済み** | 2026-06 | S3 Event Notifications 有効確認 |
+| DataSync → S3 → Snowflake External Table | ✅ **検証済み** | 2026-06 | AUTO_REFRESH 動作確認 |
+| FPolicy → Lambda → S3（準リアルタイム代替） | ⚠️ **設計のみ** | 2026-06 | アーキテクチャ設計完了、live 検証未実施 |
+| SnapMirror S3（FSx for ONTAP） | ❌ **利用不可確認** | 2026-05 | [検証エビデンス](../../verification-pack/snapmirror-s3/evidence/2026-05-26/evidence-record.yaml) |
+| クロスリージョン DataSync | 🔲 **未検証** | — | 技術的に可能（公式サポート）、本環境未実施 |
+| マルチボリューム並列同期 | 🔲 **未検証** | — | Phase 5 で検証予定 |
+
+---
+
 ## コストモデル
 
 | コンポーネント | コスト | 備考 |

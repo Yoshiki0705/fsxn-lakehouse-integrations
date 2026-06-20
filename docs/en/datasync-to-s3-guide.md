@@ -339,6 +339,24 @@ aws datasync start-task-execution --task-arn <TASK_ARN>
 aws datasync describe-task-execution --task-execution-arn <EXECUTION_ARN>
 ```
 
+## Verification Status Summary
+
+| Item | Status | Verified | Evidence |
+|------|--------|----------|----------|
+| DataSync FSx for ONTAP NFS → S3 basic operation | ✅ **Verified** | 2026-05 | This repo PoC execution |
+| Incremental sync (`TransferMode: CHANGED`) | ✅ **Verified** | 2026-05 | Only changed files transferred confirmed |
+| Snapshot/FlexClone → DataSync | ✅ **Design verified** | 2026-05 | Zero production impact confirmed |
+| EventBridge scheduled execution | ✅ **Verified** | 2026-05 | `rate(5 minutes)` stable operation |
+| DataSync → S3 → UC External Location | ✅ **Verified** | 2026-05 | datasync-to-s3-guide + UC Connection Guide |
+| DataSync → S3 → Auto Loader (notification mode) | ✅ **Design verified** | 2026-06 | S3 Event Notifications enabled confirmed |
+| DataSync → S3 → Snowflake External Table | ✅ **Verified** | 2026-06 | AUTO_REFRESH operation confirmed |
+| FPolicy → Lambda → S3 (near-real-time alternative) | ⚠️ **Design only** | 2026-06 | Architecture design complete, live verification pending |
+| SnapMirror S3 (FSx for ONTAP) | ❌ **Confirmed unavailable** | 2026-05 | [Verification evidence](../../verification-pack/snapmirror-s3/evidence/2026-05-26/evidence-record.yaml) |
+| Cross-region DataSync | 🔲 **Not verified** | — | Technically possible (officially supported), not tested in this environment |
+| Multi-volume parallel sync | 🔲 **Not verified** | — | Scheduled for Phase 5 verification |
+
+---
+
 ## Cost Model
 
 | Component | Cost | Notes |
