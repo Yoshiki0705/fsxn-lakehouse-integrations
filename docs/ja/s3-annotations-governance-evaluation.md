@@ -159,6 +159,23 @@ annotation パイプラインは以下へのアクセスが必要:
 
 > **トレーサビリティ設計** (Manufacturing Traceability Specialist lens): 自動車製造のトレーサビリティ annotation では、IATF 16949 の要求に対応するため以下のフィールドを含めてください: `lot_id`、`serial_number`、`production_order`、`work_center`、`inspection_result`、`defect_category`（該当時）、`operator_shift`、`equipment_id`。これにより品質問題発生時の原因追跡（8D レポート作成）が迅速化されます。
 
+## 検証ステータスサマリ
+
+| 項目 | ステータス | 検証日 | エビデンス |
+|------|-----------|--------|-----------|
+| S3 Annotations 付与/往復（PutObjectAnnotation） | ✅ **Verified** | 2026-06-18 | §4 スクリプト実行、ap-northeast-1 |
+| S3 Annotations — ACL ヒント格納 | ✅ **Verified** | 2026-06-18 | §4 Case 2（owner/group/acl_hash 往復確認） |
+| FSx for ONTAP S3 AP への直接 annotation 適用 | ❌ **不可確認** | 2026-06-18 | §3 構造的制約（ONTAP S3 は S3 名前空間外） |
+| Annotation テーブル有効化 + Athena クエリ | ⚠️ **公式根拠で経路確定** | 2026-06 | AWS 公式ドキュメント確認。backfill 遅延のため live 未実施 |
+| AWS ネイティブエンジンからのクエリ（Athena/Trino/Spark） | ✅ **公式サポート確認** | 2026-06 | `s3tablescatalog` 経由（§6） |
+| Databricks UC からの annotation テーブル参照 | ❌ **ブロック中** | 2026-06 | `iceberg_rest` connection 未サポート |
+| AI 分類パイプライン（Bedrock → annotation 自動付与） | 🔲 **設計のみ** | — | Phase 3 で実装予定 |
+| ACL ヒント + permission-aware RAG 認可チェーン統合 | 🔲 **設計のみ** | — | Phase 4 で実装予定 |
+| Source 変更/削除時の annotation 再同期 | 🔲 **設計のみ** | — | FPolicy トリガ設計待ち |
+| Annotation schema バージョン管理 | 🔲 **設計のみ** | — | Phase 1 で `schema_version` フィールド含む |
+
+---
+
 ## 関連ドキュメント
 
 本評価は以下のドキュメントと連携しています:
