@@ -287,7 +287,7 @@ network:
   phase_b:
     onprem_cidr: "192.168.0.0/16"  # PLACEHOLDER — actual factory network
     connectivity_type: vpn  # vpn | direct-connect
-    vpn_gateway_ip: "<VPN_GATEWAY_IP>"  # PLACEHOLDER
+    vpn_gateway_ip: "<VPN_GATEWAY_IP>"  # PLACEHOLDER (gitleaks:allow — placeholder, no real IP)
     bandwidth_mbps: 100  # Minimum for FlexCache + Kafka replication
     # Intercluster network for FlexCache
     intercluster_cidr: "10.10.0.0/24"
