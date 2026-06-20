@@ -24,7 +24,7 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Points は構造化�
 │         │                                                                 │
 │         ▼                                                                 │
 │  ┌──────────────┐     ┌──────────────┐     ┌─────────────────────────┐  │
-│  │ FSx for      │     │ S3 Access    │     │ AI/ML サービス           │  │
+│  │ FSx for ONTAP for      │     │ S3 Access    │     │ AI/ML サービス           │  │
 │  │ ONTAP Volume │────▶│ Point        │────▶│                         │  │
 │  │              │     │              │     │ • SageMaker (学習)       │  │
 │  │ /images/     │     │              │     │ • Bedrock (RAG)         │  │
@@ -189,12 +189,12 @@ FROM read_files(
 - ✅ 自動リネージ追跡（ファイル → テーブル → モデル）
 
 **制約:**
-- DataSync → S3 → UC External Volume が必要（FSx S3 AP から UC に直接アクセス不可）
+- DataSync → S3 → UC External Volume が必要（FSx for ONTAP S3 AP から UC に直接アクセス不可）
 - 同期レイテンシ: 5-10分（DataSync スケジュール + Auto Loader 検出）
 
 ---
 
-> ⚠️ **以下は FSx S3 AP 直接アクセスの検証結果（参考）**: Unity Catalog の session policy が FSx for ONTAP S3 Access Point の
+> ⚠️ **以下は FSx for ONTAP S3 AP 直接アクセスの検証結果（参考）**: Unity Catalog の session policy が FSx for ONTAP S3 Access Point の
 > ARN 形式 (`arn:aws:s3:<region>:<account>:accesspoint/<name>`) を認識しないため、
 > S3 AP 経由の直接アクセスは現時点でブロックされています。以下に回避策を含む全アプローチを記載します。
 
@@ -342,7 +342,7 @@ SELECT SNOWFLAKE.CORTEX.COMPLETE('pixtral-large',
 **機能（2026年5月検証済み）:**
 - ✅ Directory Table でファイルメタデータ管理（パス、サイズ、日付）
 - ✅ GET_PRESIGNED_URL / BUILD_SCOPED_FILE_URL でファイルアクセス
-- ✅ PARSE_DOCUMENT (OCR) — FSx S3 AP 上の画像/PDF からテキスト直接抽出
+- ✅ PARSE_DOCUMENT (OCR) — FSx for ONTAP S3 AP 上の画像/PDF からテキスト直接抽出
 - ✅ Cortex AI テキスト関数（SUMMARIZE, TRANSLATE, SENTIMENT）— External Table データ上で動作
 - ✅ Vision AI（マルチモーダル COMPLETE）— 内部ステージへの COPY FILES が必要
 - ✅ Cortex Search (RAG) — COPY INTO 内部テーブルが必要（198ms クエリレイテンシ）

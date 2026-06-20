@@ -11,7 +11,7 @@ This document defines measurable success criteria for FSx for ONTAP Lakehouse in
 | Metric | Definition | Measurement Method | Target (Good Tier) | Target (Best Tier) |
 |--------|-----------|-------------------|-------------------|-------------------|
 | Cold query latency | Time from query submission to first result (no cache) | Athena/Databricks query execution time | < 30s for 1 GB scan | < 10s for 1 GB scan |
-| Warm query latency | Time with data in FSx NVMe/memory cache | Repeated query execution time | < 10s for 1 GB scan | < 5s for 1 GB scan |
+| Warm query latency | Time with data in FSx for ONTAP NVMe/memory cache | Repeated query execution time | < 10s for 1 GB scan | < 5s for 1 GB scan |
 | Metadata query latency | Time for schema/partition discovery | Glue Catalog API response time | < 5s | < 2s |
 
 **How to measure**:
@@ -29,18 +29,18 @@ ORDER BY submission_date_time DESC;
 
 | Metric | Definition | Measurement Method | Target |
 |--------|-----------|-------------------|--------|
-| Read throughput | MB/s sustained during table scan | CloudWatch `DataReadBytes` / query duration | ≥ 80% of FSx provisioned throughput |
-| Write throughput | MB/s during ETL write-back | CloudWatch `DataWriteBytes` / write duration | ≥ 50% of FSx provisioned throughput |
+| Read throughput | MB/s sustained during table scan | CloudWatch `DataReadBytes` / query duration | ≥ 80% of FSx for ONTAP provisioned throughput |
+| Write throughput | MB/s during ETL write-back | CloudWatch `DataWriteBytes` / write duration | ≥ 50% of FSx for ONTAP provisioned throughput |
 | Concurrent query throughput | Aggregate throughput under concurrent load | Multiple simultaneous queries | Linear scaling up to provisioned limit |
 
-**Note**: S3 API throughput via access points depends on FSx file system provisioned throughput capacity. This is NOT equivalent to native S3 throughput. ([source](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/performance.html))
+**Note**: S3 API throughput via access points depends on FSx for ONTAP file system provisioned throughput capacity. This is NOT equivalent to native S3 throughput. ([source](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/performance.html))
 
 ### 3. Cost per TB Scanned
 
 | Metric | Definition | Measurement Method | Target |
 |--------|-----------|-------------------|--------|
-| Athena cost/TB | Athena query cost per TB scanned | $5/TB (Athena pricing) + FSx throughput cost | < $10/TB total |
-| Storage cost/TB | Monthly storage cost per TB | FSx SSD + capacity pool pricing | Compare vs. S3 Standard + ETL pipeline cost |
+| Athena cost/TB | Athena query cost per TB scanned | $5/TB (Athena pricing) + FSx for ONTAP throughput cost | < $10/TB total |
+| Storage cost/TB | Monthly storage cost per TB | FSx for ONTAP SSD + capacity pool pricing | Compare vs. S3 Standard + ETL pipeline cost |
 | Total cost of ownership | Storage + compute + data transfer | Monthly bill analysis | < current NAS + S3 copy pipeline cost |
 
 **Cost comparison framework**:
@@ -52,14 +52,14 @@ Current state cost:
   + Data transfer: $W/month
   = Total: $(X+Y+Z+W)/month
 
-FSx S3 AP state cost:
-  FSx storage: $A/TB/month
+FSx for ONTAP S3 AP state cost:
+  FSx for ONTAP storage: $A/TB/month
   + Analytics compute: $B/month
   + No S3 copy: $0
   + No ETL pipeline: $0
   = Total: $(A+B)/month
 
-Savings = Current - FSx S3 AP
+Savings = Current - FSx for ONTAP S3 AP
 ```
 
 ### 4. Data Freshness
@@ -69,7 +69,7 @@ Savings = Current - FSx S3 AP
 | Write-to-query latency | Time from NFS/SMB write to S3 AP query visibility | Write file via NFS, immediately query via S3 AP | Near-zero (same volume, same data) |
 | Catalog refresh latency | Time from file creation to Glue Catalog awareness | Glue Crawler run time or event-driven update | < 5 minutes (crawler) or < 1 minute (event) |
 
-**Key advantage**: Since S3 Access Points read directly from the FSx volume, data written via NFS/SMB is immediately visible via S3 API. No sync delay.
+**Key advantage**: Since S3 Access Points read directly from the FSx for ONTAP volume, data written via NFS/SMB is immediately visible via S3 API. No sync delay.
 
 ### 5. Data Copies Avoided
 
@@ -132,7 +132,7 @@ Savings = Current - FSx S3 AP
 
 | Tool | What it Measures | Setup |
 |------|-----------------|-------|
-| CloudWatch (FSx metrics) | Throughput, IOPS, latency, storage utilization | Automatic with FSx |
+| CloudWatch (FSx for ONTAP metrics) | Throughput, IOPS, latency, storage utilization | Automatic with FSx for ONTAP |
 | CloudTrail | API calls, data access events | Enable S3 data events on AP |
 | Athena query history | Query latency, data scanned, cost | Built into Athena |
 | Databricks query profile | Query execution plan, duration | Built into Databricks |
@@ -222,7 +222,7 @@ For CxO reporting, distill to 4-5 headline metrics:
 | Output rows | ~15 (aggregated) |
 | Worker type | G.1X × 2 |
 
-### Upload Performance (local → FSx S3 AP via internet)
+### Upload Performance (local → FSx for ONTAP S3 AP via internet)
 
 | File Size | Duration | Throughput |
 |-----------|----------|-----------|
@@ -293,7 +293,7 @@ value_hypothesis:
 |------|----------|----------|--------|
 | 1 | Baseline KPI measurement (current search time, MTTR) | Week -2 to 0 | Baseline metrics |
 | 2 | Data readiness assessment | Week 1 | Readiness score |
-| 3 | FSx S3 AP + Athena/Bedrock deployment | Week 1-2 | Working environment |
+| 3 | FSx for ONTAP S3 AP + Athena/Bedrock deployment | Week 1-2 | Working environment |
 | 4 | Functional + Security + Benchmark tests | Week 2 | Evidence records |
 | 5 | User pilot (5-10 users) | Week 3-4 | Initial usage data |
 | 6 | 30-day review + draft Investment Case | Day 30 | Go/Adjust decision |
@@ -384,7 +384,7 @@ Define maximum acceptable PoC cost before starting:
 | Outcome | Action |
 |---------|--------|
 | All Phase 1-2 criteria pass | Proceed to Phase 3 (production readiness) |
-| Performance targets not met | Evaluate FSx throughput sizing; re-test with higher provisioning |
+| Performance targets not met | Evaluate FSx for ONTAP throughput sizing; re-test with higher provisioning |
 | Security verification fails | Investigate and remediate before proceeding |
 | Cost exceeds ceiling | Stop and reassess architecture |
 | Fundamental limitation discovered | Document and evaluate alternative approaches |
@@ -393,7 +393,7 @@ Define maximum acceptable PoC cost before starting:
 
 ## RAG Use Case Catalog
 
-FSx S3 AP + Amazon Bedrock Knowledge Bases enables RAG on existing enterprise file data without migration.
+FSx for ONTAP S3 AP + Amazon Bedrock Knowledge Bases enables RAG on existing enterprise file data without migration.
 
 | Industry | Use Case | Source Documents | Business Value |
 |----------|----------|-----------------|----------------|
@@ -428,11 +428,11 @@ Existing NFS/SMB workflow          Analytics / AI workflow
 
 ## Future: Agentic AI Integration
 
-As AI evolves from RAG to autonomous agents, FSx S3 AP positions enterprise file data as a governed data access layer for AI agents.
+As AI evolves from RAG to autonomous agents, FSx for ONTAP S3 AP positions enterprise file data as a governed data access layer for AI agents.
 
 ### Potential Integration Points
 
-| AI Capability | FSx S3 AP Role | Status |
+| AI Capability | FSx for ONTAP S3 AP Role | Status |
 |--------------|---------------|--------|
 | **Bedrock Knowledge Bases (RAG)** | Document data source for retrieval | ✅ Available ([tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)) |
 | **Bedrock Agents (tool use)** | Agent retrieves documents via S3 API tool | Architecturally feasible (agent → S3 GetObject → AP → FSx) |
@@ -448,7 +448,7 @@ When AI agents access enterprise data autonomously, governance becomes critical:
 - **Scoped IAM roles**: Per-agent IAM roles with minimum necessary permissions
 - **Audit trail**: All agent data access logged via CloudTrail S3 data events
 - **Human-in-the-loop**: Agent actions that affect business decisions require human approval
-- **Rate limiting**: Prevent runaway agents from overwhelming FSx throughput
+- **Rate limiting**: Prevent runaway agents from overwhelming FSx for ONTAP throughput
 - **Data classification awareness**: Agents must respect data classification boundaries
 
 ### Strategic Positioning
@@ -460,13 +460,13 @@ RAG on documents  →    Agents query structured  →  Autonomous agents
                        (Athena + Bedrock)           to enterprise files
 ```
 
-FSx S3 AP provides a **governed, auditable, read-only data access layer** that is well-suited for AI agent architectures where data security and auditability are non-negotiable.
+FSx for ONTAP S3 AP provides a **governed, auditable, read-only data access layer** that is well-suited for AI agent architectures where data security and auditability are non-negotiable.
 
 ### Agentic AI Roadmap (Phased)
 
 | Phase | Capability | Business Use Case | Guardrails | Human Approval | Exit Criteria |
 |-------|-----------|-------------------|-----------|----------------|---------------|
-| **1. Read-only RAG** | Bedrock Knowledge Base on FSx documents | Document search, Q&A on manuals/policies | Read-only AP, human review of answers | Required for all responses | Accuracy > 80%, user adoption > 50% |
+| **1. Read-only RAG** | Bedrock Knowledge Base on FSx for ONTAP documents | Document search, Q&A on manuals/policies | Read-only AP, human review of answers | Required for all responses | Accuracy > 80%, user adoption > 50% |
 | **2. RAG + Query Assistant** | RAG + Athena SQL generation | "Show me last month's production data" → SQL → results | Read-only AP + Athena, query cost limits | Required for data-modifying queries | Query accuracy > 90%, cost < budget |
 | **3. Agent-Assisted Analysis** | Multi-step: retrieve docs → query data → summarize | Automated report generation, trend analysis | Read-only AP, execution time limits, output review | Required before report distribution | Report quality validated by domain expert |
 | **4. Multi-Tool Governed Agent** | Agent uses multiple tools (S3, Athena, Bedrock, Lambda) | Complex research workflows, cross-source analysis | Per-tool IAM scoping, rate limiting, audit | Required for actions with business impact | Workflow completion rate > 95% |
@@ -575,7 +575,7 @@ Production deployment is not the end — it's the beginning of value creation.
 
 ## Data Readiness Assessment
 
-Before deploying FSx S3 AP for analytics or AI, assess whether the data is ready.
+Before deploying FSx for ONTAP S3 AP for analytics or AI, assess whether the data is ready.
 
 ### Assessment Dimensions
 
@@ -590,7 +590,7 @@ Before deploying FSx S3 AP for analytics or AI, assess whether the data is ready
 | **Sensitive data ratio** | What percentage contains PHI/PII/secrets? | | De-identification pipeline if > 0% for analytics |
 | **Searchability** | Can documents be meaningfully searched/chunked for RAG? | | Evaluate document structure; test chunking |
 | **Catalog readiness** | Can a Glue Crawler successfully catalog the data? | | Test crawler; fix format issues |
-| **Volume size** | Is the dataset size appropriate for FSx throughput provisioning? | | Size FSx throughput to dataset |
+| **Volume size** | Is the dataset size appropriate for FSx for ONTAP throughput provisioning? | | Size FSx for ONTAP throughput to dataset |
 
 ### Readiness Scoring
 
@@ -707,7 +707,7 @@ Successful deployment requires organizational alignment, not just technology.
 | **Executive Sponsor** | Budget approval, organizational priority, blocker removal | Monthly review |
 | **Business Owner** | Define use case, success criteria, user acceptance | Weekly check-in |
 | **Data Owner** | Approve data access, classification, retention | Per-project approval |
-| **Platform Team** | Deploy, operate, monitor FSx + S3 AP + analytics | Daily operations |
+| **Platform Team** | Deploy, operate, monitor FSx for ONTAP + S3 AP + analytics | Daily operations |
 | **Security / Governance** | Review policies, approve access, audit | Per-change review |
 | **AI Product Owner** | Define RAG use cases, evaluate accuracy, manage guardrails | Weekly iteration |
 | **User Champion** | Drive adoption within business unit, collect feedback | Continuous |

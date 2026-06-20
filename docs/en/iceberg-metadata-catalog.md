@@ -151,7 +151,7 @@ FSx for ONTAP ──S3 AP──→ Bedrock KB (RAG, Vision)
 ```
 
 **Key advantages**:
-- FSx S3 AP direct access from Athena and Bedrock (no S3 copy needed for reads)
+- FSx for ONTAP S3 AP direct access from Athena and Bedrock (no S3 copy needed for reads)
 - Lake Formation enforces governance across all AWS analytics engines
 - S3 Tables auto-compaction eliminates table maintenance
 - Bedrock Knowledge Base indexes metadata for natural language search
@@ -503,16 +503,16 @@ File → PII Detection (Comprehend / Bedrock)
 | Bedrock throttling | CloudWatch (Bedrock) | ThrottlingException > 0 | Adjust request rate, add backoff |
 | S3 AP AccessDenied | CloudTrail | > 10/10min | Review IAM/AP policy |
 
-### NetApp Console Integration
+### Storage-Layer Metrics Integration
 
-Monitor the following storage-layer metrics from [NetApp Console](https://console.netapp.com/) alongside metadata catalog health:
+Monitor the following storage-layer metrics from Amazon FSx for NetApp ONTAP CloudWatch metrics and the ONTAP REST API alongside metadata catalog health:
 
-| Metric | Check Point | Metadata Catalog Relevance |
-|--------|------------|---------------------------|
-| Volume utilization | Alert at >85% | New file additions stop → metadata sync also stops |
-| Deduplication ratio | Deviation from expected | Identify duplicate files → visualize in metadata |
-| FabricPool tiering ratio | Cold data percentage | Affects access latency for AI processing target files |
-| Snapshot usage | Unexpected growth | Forgotten AI batch processing Snapshots |
+| Metric | Source | Check Point | Metadata Catalog Relevance |
+|--------|--------|------------|---------------------------|
+| Volume utilization | CloudWatch (FSx) / ONTAP REST API | Alert at >85% | New file additions stop → metadata sync also stops |
+| Deduplication ratio | ONTAP REST API | Deviation from expected | Identify duplicate files → visualize in metadata |
+| FabricPool tiering ratio | ONTAP REST API | Cold data percentage | Affects access latency for AI processing target files |
+| Snapshot usage | CloudWatch (FSx) / ONTAP REST API | Unexpected growth | Forgotten AI batch processing Snapshots |
 
 For detailed observability pipelines, see [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations).
 
@@ -552,7 +552,7 @@ For detailed observability pipelines, see [fsxn-observability-integrations](http
 
 | Component | Location | Cross-region Transfer |
 |-----------|----------|---------------------|
-| Raw files (FSx for ONTAP) | Same region as FSx file system | None (S3 AP same-region only) |
+| Raw files (FSx for ONTAP) | Same region as FSx for ONTAP file system | None (S3 AP same-region only) |
 | Metadata table (S3 Tables) | Same region (configurable) | None (query results stay in region) |
 | AI processing (Bedrock/Lambda) | Same region | None (processing in-region) |
 | Governance (Lake Formation) | Same region | Cross-account possible (same region) |
@@ -645,7 +645,7 @@ FPolicy asynchronous mode may drop events under extreme load (>10,000 events/sec
 ```
 EventBridge Schedule (daily at 02:00 UTC)
   → Step Functions: FullScanReconciliation
-    → Lambda: ListObjectsV2 on FSx S3 AP (paginated)
+    → Lambda: ListObjectsV2 on FSx for ONTAP S3 AP (paginated)
     → Lambda: Compare with Metadata_Table (anti-join)
     → Lambda: Insert missing records (enrichment_status = "pending")
     → CloudWatch Metric: reconciliation_gap_count
@@ -768,20 +768,20 @@ AI-based PII detection is not 100% accurate. False negatives (missed PII) create
 
 | Anti-Pattern | Why It's Problematic | Correct Approach |
 |-------------|---------------------|-----------------|
-| Write Iceberg tables directly to FSx S3 AP | conditional writes not supported → commit failures | Metadata on S3 Tables, raw data on FSx (separate) |
+| Write Iceberg tables directly to FSx for ONTAP S3 AP | conditional writes not supported → commit failures | Metadata on S3 Tables, raw data on FSx for ONTAP (separate) |
 | Copy all files to S3 then use S3 Metadata | Negates the "eliminate S3 copy" core value | FPolicy pipeline for metadata-only sync |
 | Store embeddings in DynamoDB | Inefficient kNN search, disconnected from Iceberg ecosystem | S3 Tables BINARY column or OpenSearch Serverless |
 | Process all files with AI (no filter) | Cost explosion (100K files × $0.05 = $5,000/run) | Process only new/changed files, filter by file_type |
-| Store raw data (binary) in metadata table | Table size explosion, query performance degradation | Store file_path reference only, raw data stays on FSx |
+| Store raw data (binary) in metadata table | Table size explosion, query performance degradation | Store file_path reference only, raw data stays on FSx for ONTAP |
 | Single monolithic Lambda for all processing | Timeouts, debugging difficulty, coarse retry granularity | Step Functions with per-file-type Lambda functions |
 | Expose metadata without governance | File paths leak → unauthorized access to raw data | Always apply Lake Formation / Horizon column/row controls |
 
 | Constraint | Impact | Mitigation |
 |-----------|--------|-----------|
-| FSx S3 AP: No conditional writes | Cannot write Iceberg tables directly to FSx S3 AP | Metadata on S3 Tables (not on FSx); raw files on FSx |
-| FSx S3 AP: No S3 Event Notifications | Cannot use native S3 events for change detection | FPolicy provides equivalent real-time detection |
-| FSx S3 AP: ListObjectsV2 latency | Slow directory listing (30-80x vs native S3) | Metadata table eliminates need for LIST operations |
-| Databricks: Session policy blocks S3 AP | Cannot access FSx files directly from UC | Access metadata via Iceberg REST; files via Bedrock/Lambda |
+| FSx for ONTAP S3 AP: No conditional writes | Cannot write Iceberg tables directly to FSx for ONTAP S3 AP | Metadata on S3 Tables (not on FSx); raw files on FSx for ONTAP |
+| FSx for ONTAP S3 AP: No S3 Event Notifications | Cannot use native S3 events for change detection | FPolicy provides equivalent real-time detection |
+| FSx for ONTAP S3 AP: ListObjectsV2 latency | Slow directory listing (30-80x vs native S3) | Metadata table eliminates need for LIST operations |
+| Databricks: Session policy blocks S3 AP | Cannot access FSx for ONTAP files directly from UC | Access metadata via Iceberg REST; files via Bedrock/Lambda |
 | Databricks: SQL Warehouse doesn't support S3 Tables | `CREATE CONNECTION TYPE iceberg_rest` not supported (verified May 2026) | Use Spark cluster with Iceberg REST Catalog config, or query via Athena |
 | Snowflake: TO_FILE fails on S3 AP | Vision AI requires internal stage workaround | COPY FILES to internal stage; PARSE_DOCUMENT works directly |
 | Snowflake: Cannot directly read S3 Tables | `CATALOG = 'ICEBERG_REST'` not supported (verified May 2026) | COPY INTO → Managed Iceberg Table; External Volume creation succeeds |

@@ -37,7 +37,7 @@ Databricks **Structured Streaming / Lakeflow Declarative Pipelines** read Kafka 
   1. **Destination table**: the target Delta table is governed by UC (tags/permissions/lineage).
   2. **Connection auth**: **since DBR 16.1, MSK authentication can use UC service credentials** (recommended, especially on shared/serverless compute) ([Kafka authentication](https://docs.databricks.com/aws/en/connect/streaming/kafka/authentication)).
 
-> **Streaming semantics (CN-1)**: store the checkpoint (offset management) on durable storage (cloud storage / a UC volume). Default is **at-least-once**; absorb duplicates with **idempotent writes** on the destination (Delta MERGE / event-ID dedup). Ordering is guaranteed only **within a Kafka partition** (important for connected-vehicle telemetry).
+> **Streaming semantics**: store the checkpoint (offset management) on durable storage (cloud storage / a UC volume). Default is **at-least-once**; absorb duplicates with **idempotent writes** on the destination (Delta MERGE / event-ID dedup). Ordering is guaranteed only **within a Kafka partition** (important for connected-vehicle telemetry).
 
 ### Communication path (network)
 
@@ -76,9 +76,9 @@ On the UC side, open APIs + credential vending are provided for external engines
 - **Unity REST API** (Delta clients) ([Delta clients](https://docs.databricks.com/external-access/unity-rest.html))
 - **Credential vending**: issues temporary credentials that inherit UC privileges to external engines (used by Trino / DuckDB / StarRocks / Dremio / Spark, etc.) ([Secure External Access via Open APIs](https://www.databricks.com/blog/secure-external-access-unity-catalog-assets-open-apis))
 
-> **ClickHouse Cloud vs self-managed (CN-2)**: `DataLakeCatalog` is a ClickHouse Cloud-centric feature. ClickHouse Cloud → UC/S3 is SaaS egress (verify PrivateLink options). For self-managed (EC2/on-prem), design outbound 443 from your own VPC + S3 endpoints.
+> **ClickHouse Cloud vs self-managed**: `DataLakeCatalog` is a ClickHouse Cloud-centric feature. ClickHouse Cloud → UC/S3 is SaaS egress (verify PrivateLink options). For self-managed (EC2/on-prem), design outbound 443 from your own VPC + S3 endpoints.
 
-#### Access patterns by UC object type (CN-4, Public)
+#### Access patterns by UC object type (Public)
 
 | UC object | Format | External access |
 |---|---|---|
@@ -106,7 +106,7 @@ On the UC side, open APIs + credential vending are provided for external engines
 
 | Direction | Description | Status |
 |-----------|-------------|--------|
-| **UC = Iceberg REST server → ClickHouse/Trino/Spark read** | UC exposes the catalog and external engines consume it (credential vending) | ✅ **Supported** (consistent with [S3 Annotations doc EXT-1](./s3-annotations-governance-evaluation.md)) |
+| **UC = Iceberg REST server → ClickHouse/Trino/Spark read** | UC exposes the catalog and external engines consume it (credential vending) | ✅ **Supported** (consistent with [S3 Annotations doc](./s3-annotations-governance-evaluation.md)) |
 | **UC consumes AWS S3 Tables via an `iceberg_rest` connection** | UC ingests external Iceberg (reverse direction) | ❌ **Blocked** (this repo's iceberg-metadata-catalog Phase 4) |
 
 → "ClickHouse reads UC" is **supported**. "UC reads S3 Tables" is blocked, and **the two are opposite directions / different things**.
@@ -159,9 +159,9 @@ Kafka (shared bus)─┤
 - **Least privilege**: minimize UC table/catalog grants; scope credential-vending grants tightly.
 - **Auditing**: correlate Kafka ingest (UC lineage) with external-engine access (UC audit logs).
 - **Storage-layer compensating controls (the other perspective)**: ONTAP ACL/FPolicy remain effective at the file level (see [S3 Annotations doc §2](./s3-annotations-governance-evaluation.md)).
-- **Concrete network controls (CN-3)**: Databricks serverless fixes egress via **NCC (Network Connectivity Config)** (stable IPs / PrivateLink), allowed on the MSK broker security group. ClickHouse → S3 should use an **S3 gateway/interface VPC endpoint** where possible. SG direction: **the MSK broker SG allows inbound from Databricks (9094, etc.)**, **ClickHouse allows outbound 443 (Databricks workspace / S3)**.
-- **Credential-vending operations (CN-5)**: vended credentials are **TTL- and scope-bound** temporary credentials; external-engine reads are recorded in UC audit. **Distinguish the two UC mechanisms**: (a) **UC service credentials** = auth for Databricks itself connecting outward (e.g., Kafka); (b) **credential vending** = external engines (e.g., ClickHouse) inheriting UC privileges to read data.
-- **Prerequisite: enable external data access (CN-B3, Round 2)**: credential vending / external-engine UC access requires **enabling "external data access"** at the metastore/workspace level ([External data access for pipelines](https://docs.databricks.com/aws/en/external-access/external-for-pipelines)); otherwise connections from ClickHouse, etc., are rejected.
+- **Concrete network controls**: Databricks serverless fixes egress via **NCC (Network Connectivity Config)** (stable IPs / PrivateLink), allowed on the MSK broker security group. ClickHouse → S3 should use an **S3 gateway/interface VPC endpoint** where possible. SG direction: **the MSK broker SG allows inbound from Databricks (9094, etc.)**, **ClickHouse allows outbound 443 (Databricks workspace / S3)**.
+- **Credential-vending operations**: vended credentials are **TTL- and scope-bound** temporary credentials; external-engine reads are recorded in UC audit. **Distinguish the two UC mechanisms**: (a) **UC service credentials** = auth for Databricks itself connecting outward (e.g., Kafka); (b) **credential vending** = external engines (e.g., ClickHouse) inheriting UC privileges to read data.
+- **Prerequisite: enable external data access**: credential vending / external-engine UC access requires **enabling "external data access"** at the metastore/workspace level ([External data access for pipelines](https://docs.databricks.com/aws/en/external-access/external-for-pipelines)); otherwise connections from ClickHouse, etc., are rejected.
 
 ---
 
@@ -192,34 +192,3 @@ Kafka (shared bus)─┤
 
 > Source descriptions are paraphrased/summarized for licensing compliance.
 
----
-
-## Persona Review Summary (improvement loop Rounds 1–2)
-
-> Review by domain-expert role archetypes. **No individual or company names recorded** (provenance kept internally in `.private/`).
-
-### Round 1 findings and resolutions (CN-1–5)
-| ID | Archetype | Finding | Resolution |
-|----|-----------|---------|-----------|
-| CN-1 | Streaming SA | checkpoint/offset & delivery semantics missing | §1 semantics note (at-least-once + idempotent + intra-partition order) |
-| CN-2 | Real-time OLAP | Cloud vs self-managed path difference | §2 distinction note |
-| CN-3 | Networking/Security | NCC egress, S3 VPC endpoint, SG direction missing | §5 concrete network controls |
-| CN-4 | Open Table Format | per-UC-object access matrix + freshness | §2 access-pattern table + metadata-refresh note |
-| CN-5 | Governance | credential-vending TTL/scope/audit; two-mechanism distinction | §5 operations note |
-
-### Round 2 findings and resolutions
-| ID | Archetype | Finding | Resolution |
-|----|-----------|---------|-----------|
-| CN-B3 | Governance | external data access must be enabled | §5 prerequisite note |
-
-### Final sign-off
-- **Streaming SA**: APPROVE (delivery/order assumptions stated).
-- **Real-time OLAP**: APPROVE (Cloud/self path difference, Beta caveat).
-- **Networking/Security**: APPROVE WITH COMMENTS (private path, SG, endpoints stated; validate actual SG rules per environment).
-- **Open Table Format**: APPROVE (access-pattern table + foreign Preview/freshness stated).
-- **Governance**: APPROVE (two-mechanism distinction + external-access prerequisite + audit).
-
-### Final Recommendation
-- **APPROVE WITH COMMENTS (converged)** — path/ports/auth for Kafka→UC (ingest) and ClickHouse→UC (catalog integration) are clarified with Public sources. The key distinction is stated: **"ClickHouse reads UC" is supported**, while **only "UC consumes S3 Tables" is blocked** (the reverse direction).
-- Required Next Actions: phase the live network (NCC/SG/endpoints) and ClickHouse `DataLakeCatalog` (Beta) connection validation.
-- Public Repository Readiness: Ready (no individual/company names, role descriptions only).

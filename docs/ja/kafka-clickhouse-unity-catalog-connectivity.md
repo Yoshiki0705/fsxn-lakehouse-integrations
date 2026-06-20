@@ -37,7 +37,7 @@ Databricks の **Structured Streaming / Lakeflow Declarative Pipelines** が Kaf
   1. **宛先テーブル**: 書き込み先 Delta テーブルを UC がガバナンス（タグ/権限/リネージ）。
   2. **接続認証**: **DBR 16.1 以降、MSK 認証に UC service credentials を利用可能**（推奨。特に共有クラスタ/サーバーレス）（[Kafka authentication](https://docs.databricks.com/aws/en/connect/streaming/kafka/authentication)）。
 
-> **ストリーミング・セマンティクス（CN-1）**: チェックポイント（オフセット管理）は耐久ストレージ（クラウドストレージ / UC ボリューム）に保存する。デフォルトは **at-least-once**。重複は宛先側の**冪等書き込み**（Delta MERGE / イベント ID 重複排除）で吸収。順序保証は **Kafka パーティション内**に限る（コネクテッドカー telemetry 等で要注意）。
+> **ストリーミング・セマンティクス**: チェックポイント（オフセット管理）は耐久ストレージ（クラウドストレージ / UC ボリューム）に保存する。デフォルトは **at-least-once**。重複は宛先側の**冪等書き込み**（Delta MERGE / イベント ID 重複排除）で吸収。順序保証は **Kafka パーティション内**に限る（コネクテッドカー telemetry 等で要注意）。
 
 ### 通信経路（ネットワーク）
 
@@ -76,9 +76,9 @@ UC 側は外部エンジン向けに**オープン API + credential vending** �
 - **Unity REST API**（Delta clients）（[Delta clients](https://docs.databricks.com/external-access/unity-rest.html)）
 - **Credential vending**: UC 権限を継承した一時資格情報を外部エンジンに発行（Trino / DuckDB / StarRocks / Dremio / Spark 等が利用）（[Secure External Access via Open APIs](https://www.databricks.com/blog/secure-external-access-unity-catalog-assets-open-apis)）
 
-> **ClickHouse Cloud vs セルフマネージド（CN-2）**: `DataLakeCatalog` は ClickHouse Cloud 中心の機能。ClickHouse Cloud → UC/S3 は SaaS からの egress（PrivateLink オプションの可否を要確認）。セルフマネージド（EC2/オンプレ）の場合は自前 VPC からの outbound 443 + S3 エンドポイント設計が必要。
+> **ClickHouse Cloud vs セルフマネージド**: `DataLakeCatalog` は ClickHouse Cloud 中心の機能。ClickHouse Cloud → UC/S3 は SaaS からの egress（PrivateLink オプションの可否を要確認）。セルフマネージド（EC2/オンプレ）の場合は自前 VPC からの outbound 443 + S3 エンドポイント設計が必要。
 
-#### UC オブジェクト種別ごとのアクセスパターン（CN-4, Public）
+#### UC オブジェクト種別ごとのアクセスパターン（Public）
 
 | UC オブジェクト | フォーマット | 外部アクセス手段 |
 |---|---|---|
@@ -106,7 +106,7 @@ UC 側は外部エンジン向けに**オープン API + credential vending** �
 
 | 方向 | 説明 | 状態 |
 |------|------|------|
-| **UC = Iceberg REST サーバ → ClickHouse/Trino/Spark が読む** | UC がカタログを公開し外部エンジンが消費（credential vending） | ✅ **サポート済**（[S3 Annotations doc の EXT-1](./s3-annotations-governance-evaluation.md) と整合） |
+| **UC = Iceberg REST サーバ → ClickHouse/Trino/Spark が読む** | UC がカタログを公開し外部エンジンが消費（credential vending） | ✅ **サポート済**（[S3 Annotations doc](./s3-annotations-governance-evaluation.md) と整合） |
 | **UC が AWS S3 Tables を `iceberg_rest` connection で消費** | UC が外部 Iceberg を取り込む（逆方向） | ❌ **ブロック中**（本リポジトリ iceberg-metadata-catalog Phase 4） |
 
 → 「ClickHouse が UC を読む」のは**サポート済**。「UC が S3 Tables を読む」のがブロック中で、**両者は逆方向の別物**。
@@ -159,9 +159,9 @@ Kafka（共有バス）─┤
 - **最小権限**: UC 上のテーブル/カタログ権限を最小化。credential vending の付与範囲を限定。
 - **監査**: Kafka 取り込み（UC リネージ）+ 外部エンジンアクセス（UC 監査ログ）を突合。
 - **ストレージ層の補償コントロール**（別視点）: ONTAP ACL/FPolicy は引き続きファイルレベルで有効（[S3 Annotations doc §2](./s3-annotations-governance-evaluation.md) 参照）。
-- **ネットワーク制御の具体（CN-3）**: Databricks サーバーレスは **NCC（Network Connectivity Config）** で egress を固定（安定 IP / PrivateLink）し、MSK ブローカー側のセキュリティグループで許可する。ClickHouse → S3 は可能なら **S3 ゲートウェイ/インターフェース VPC エンドポイント**経由。SG の向き: **MSK ブローカー SG は Databricks からの inbound（9094 等）を許可**、**ClickHouse は outbound 443（Databricks workspace / S3）を許可**。
-- **credential vending の運用（CN-5）**: vended credentials は **TTL・スコープ付きの一時資格情報**であり、外部エンジンの読み取りは UC 監査に記録される。**2 つの UC 機構を区別**すること — (a) **UC service credentials** = Databricks 自身が外部へ接続する際の認証（例: Kafka）、(b) **credential vending** = 外部エンジン（ClickHouse 等）が UC 権限を継承してデータを読む仕組み。
-- **前提: 外部データアクセスの有効化（CN-B3, Round 2）**: credential vending / 外部エンジンの UC アクセスは、メタストア/ワークスペースで **「外部データアクセス（external data access）」を有効化**することが前提（[External data access for pipelines](https://docs.databricks.com/aws/en/external-access/external-for-pipelines)）。無効の場合、ClickHouse 等からの接続は拒否される。
+- **ネットワーク制御の具体**: Databricks サーバーレスは **NCC（Network Connectivity Config）** で egress を固定（安定 IP / PrivateLink）し、MSK ブローカー側のセキュリティグループで許可する。ClickHouse → S3 は可能なら **S3 ゲートウェイ/インターフェース VPC エンドポイント**経由。SG の向き: **MSK ブローカー SG は Databricks からの inbound（9094 等）を許可**、**ClickHouse は outbound 443（Databricks workspace / S3）を許可**。
+- **credential vending の運用**: vended credentials は **TTL・スコープ付きの一時資格情報**であり、外部エンジンの読み取りは UC 監査に記録される。**2 つの UC 機構を区別**すること — (a) **UC service credentials** = Databricks 自身が外部へ接続する際の認証（例: Kafka）、(b) **credential vending** = 外部エンジン（ClickHouse 等）が UC 権限を継承してデータを読む仕組み。
+- **前提: 外部データアクセスの有効化**: credential vending / 外部エンジンの UC アクセスは、メタストア/ワークスペースで **「外部データアクセス（external data access）」を有効化**することが前提（[External data access for pipelines](https://docs.databricks.com/aws/en/external-access/external-for-pipelines)）。無効の場合、ClickHouse 等からの接続は拒否される。
 
 ---
 
@@ -192,34 +192,3 @@ Kafka（共有バス）─┤
 
 > 出典の記述はライセンス遵守のため要約・言い換えしています。
 
----
-
-## Persona Review Summary（改善ループ Round 1–2）
-
-> ドメイン専門家のロールアーキタイプによるレビュー。**個人名・社名は非記載**（provenance は `.private/` に内部記録）。
-
-### Round 1 所見と対応（CN-1〜5）
-| ID | archetype | 所見 | 対応 |
-|----|-----------|------|------|
-| CN-1 | ストリーミング SA | checkpoint/offset・配信保証が未記載 | §1 にセマンティクス注記（at-least-once + 冪等 + パーティション内順序） |
-| CN-2 | リアルタイム OLAP | Cloud vs セルフマネージドの経路差 | §2 に区別注記 |
-| CN-3 | ネットワーク/セキュリティ | NCC egress 固定・S3 VPC エンドポイント・SG の向きが未記載 | §5 に具体的ネットワーク制御 |
-| CN-4 | Open Table Format | UC オブジェクト種別ごとのアクセス可否 + 鮮度 | §2 にアクセスパターン表 + メタデータ更新注記 |
-| CN-5 | ガバナンス | credential vending の TTL/スコープ/監査・2機構の区別 | §5 に運用注記 |
-
-### Round 2 所見と対応
-| ID | archetype | 所見 | 対応 |
-|----|-----------|------|------|
-| CN-B3 | ガバナンス | 外部データアクセスの有効化が前提 | §5 に前提注記 |
-
-### 最終サインオフ
-- **ストリーミング SA**: APPROVE（配信保証・順序の前提を明記）。
-- **リアルタイム OLAP**: APPROVE（Cloud/セルフの経路差、Beta 注記）。
-- **ネットワーク/セキュリティ**: APPROVE WITH COMMENTS（プライベート経路・SG・エンドポイントを明記。実機 SG ルールは環境ごとに検証）。
-- **Open Table Format**: APPROVE（アクセスパターン表 + foreign の Preview/鮮度を明記）。
-- **ガバナンス**: APPROVE（2 機構の区別 + 外部アクセス有効化前提 + 監査）。
-
-### Final Recommendation
-- **APPROVE WITH COMMENTS（収束）** — Kafka→UC（取り込み）と ClickHouse→UC（カタログ連携）の経路・ポート・認証を Public 根拠で明確化。**「ClickHouse が UC を読む」はサポート済**、**「UC が S3 Tables を消費」のみブロック**（逆方向）という重要な区別を明記。
-- Required Next Actions: 実機ネットワーク（NCC/SG/エンドポイント）と ClickHouse `DataLakeCatalog`（Beta）の接続検証を Phase 化。
-- Public Repository Readiness: Ready（個人名・社名なし、ロール記述のみ）。

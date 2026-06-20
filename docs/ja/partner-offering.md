@@ -25,7 +25,7 @@ Amazon FSx for ONTAP S3 Access Points により、FSx for ONTAP ボリューム�
 - サポートされる S3 操作: GetObject, PutObject, DeleteObject, ListObjectsV2, HeadObject, Multipart Upload, CopyObject（同一アクセスポイント内のみ）
 - 二層認可: IAM ポリシー評価 + ファイルシステムユーザー権限（UNIX または Windows）
 - レイテンシ: 数十ミリ秒（S3 バケットアクセスと同等）
-- スループット: FSx ファイルシステムのプロビジョンドスループット容量に依存
+- スループット: FSx for ONTAP ファイルシステムのプロビジョンドスループット容量に依存
 - Block Public Access がデフォルトで強制（無効化不可）
 - ONTAP バージョン 9.17.1 以降が必要
 
@@ -237,16 +237,16 @@ Discovery → Assessment → PoC → Production → Managed Operations
 
 | アンチパターン | 失敗する理由 | 代わりに提案すべきもの |
 |-------------|------------|-------------------|
-| FSx S3 AP 上での Delta Lake write / MERGE / compaction | Delta コミットプロトコルは atomic rename を必要とするが、FSx S3 AP ではサポートされていない（[API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)） | Delta テーブルの読み取り専用分析、または Delta 書き込みパスにはネイティブ S3 を使用 |
+| FSx for ONTAP S3 AP 上での Delta Lake write / MERGE / compaction | Delta コミットプロトコルは atomic rename を必要とするが、FSx for ONTAP S3 AP ではサポートされていない（[API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)） | Delta テーブルの読み取り専用分析、または Delta 書き込みパスにはネイティブ S3 を使用 |
 | 規制業界でのデフォルトとしての Internet-origin AP | 規制データにはネットワークレベルの分離が必要。VPC-origin は非 VPC トラフィックに対する明示的 Deny を組み込み提供 | 機密/規制データには VPC-origin AP（注: Athena は internet-origin が必要） |
-| 「S3 完全互換」と主張すること | FSx S3 AP は S3 操作のサブセットをサポート。Object Versioning なし、条件付き書き込みなし、署名付き URL なし、5GB アップロード制限 | 正確な表現を使用: 「サポートされる操作での S3 API アクセス」+ 互換性マトリクスへのリンク |
+| 「S3 完全互換」と主張すること | FSx for ONTAP S3 AP は S3 操作のサブセットをサポート。Object Versioning なし、条件付き書き込みなし、署名付き URL なし、5GB アップロード制限 | 正確な表現を使用: 「サポートされる操作での S3 API アクセス」+ 互換性マトリクスへのリンク |
 | 未検証の Iceberg 書き込みパスを本番対応として販売 | 外部カタログでの Iceberg 書き込みは Experimental であり、Verified ではない | 「読み取り専用は検証済み、書き込みパスは検証中」と位置付け |
-| FSx スループットプロビジョニングの無視 | 顧客は S3 のような無制限スループットを期待するが、FSx S3 AP スループットはプロビジョンド容量に制限される | FSx スループットをワークロード要件に合わせてサイジング。PoC 検証に含める |
-| 高並行性・小ファイルワークロードへの FSx S3 AP 提案 | 数十ミリ秒のレイテンシ + プロビジョンドスループット制限により、ネイティブ S3 と比較して最適ではない | 大規模シーケンシャルスキャン、バッチ分析、ドキュメント検索に使用。高頻度 API コールには不向き |
+| FSx for ONTAP スループットプロビジョニングの無視 | 顧客は S3 のような無制限スループットを期待するが、FSx for ONTAP S3 AP スループットはプロビジョンド容量に制限される | FSx for ONTAP スループットをワークロード要件に合わせてサイジング。PoC 検証に含める |
+| 高並行性・小ファイルワークロードへの FSx for ONTAP S3 AP 提案 | 数十ミリ秒のレイテンシ + プロビジョンドスループット制限により、ネイティブ S3 と比較して最適ではない | 大規模シーケンシャルスキャン、バッチ分析、ドキュメント検索に使用。高頻度 API コールには不向き |
 
 ### パートナー提案のレッドライン
 
-1. **絶対に** FSx S3 AP が S3 バケットのドロップイン代替であると主張しないこと
+1. **絶対に** FSx for ONTAP S3 AP が S3 バケットのドロップイン代替であると主張しないこと
 2. **絶対に** 制限事項の明示的な顧客承認なしに Delta/Hudi 書き込み操作を提案しないこと
 3. **絶対に** PoC 環境で実際の PHI/PII を使用しないこと
 4. **絶対に** セキュリティトレードオフを文書化せずに医療/金融向けに internet-origin AP を提案しないこと
@@ -260,35 +260,35 @@ Discovery → Assessment → PoC → Production → Managed Operations
 
 | アプローチ | データコピー? | NAS への影響 | 分析までの時間 | ガバナンス | AI/RAG | 最適な用途 |
 |----------|-----------|-----------|-------------|-----------|--------|----------|
-| **FSx S3 AP（本ソリューション）** | なし | なし | 数時間 | 統一（二層） | あり（Bedrock） | 既存 NAS データ、読み取り中心の分析、ドキュメント AI |
+| **FSx for ONTAP S3 AP（本ソリューション）** | なし | なし | 数時間 | 統一（二層） | あり（Bedrock） | 既存 NAS データ、読み取り中心の分析、ドキュメント AI |
 | **Native S3 + DataSync** | あり（フルコピー） | なし | 数日（初期同期） | 分離（S3 vs NAS） | あり | 書き込み中心の Lakehouse、Delta/Iceberg マネージドテーブル |
 | **Native S3 + ETL パイプライン** | あり（変換済み） | なし | 数日〜数週間 | 分離 | あり | 複雑な変換、S3 上のメダリオンアーキテクチャ |
-| **Snowflake External Stage on FSx S3 AP** | なし（ゼロコピー読み取り） | なし | 数時間 | Snowflake 管理（Tags, Row Policy, Masking） | あり（Cortex AI, Cortex Search） | NAS データ上のガバナンス付き AI が必要な Snowflake 顧客。COPY INTO → Managed Iceberg でオープン形式共有。 |
+| **Snowflake External Stage on FSx for ONTAP S3 AP** | なし（ゼロコピー読み取り） | なし | 数時間 | Snowflake 管理（Tags, Row Policy, Masking） | あり（Cortex AI, Cortex Search） | NAS データ上のガバナンス付き AI が必要な Snowflake 顧客。COPY INTO → Managed Iceberg でオープン形式共有。 |
 | **Databricks on native S3** | あり（先に S3 へ） | なし | 数日 | Unity Catalog on S3 | あり | Databricks 中心、Delta 書き込み中心 |
-| **NetApp Console tiering** | 部分的（コールドティア） | 最小限 | N/A（分析用途ではない） | ONTAP 管理 | なし | コスト最適化、分析用途ではない |
+| **FabricPool tiering** | 部分的（コールドティア） | 最小限 | N/A（分析用途ではない） | ONTAP 管理 | なし | コスト最適化、分析用途ではない |
 | **オンプレミス分析** | なし | なし | 数週間（セットアップ） | オンプレミスツール | 限定的 | エアギャップ環境 |
 
 ### 判断フレームワーク
 
 ```
 Q1: Does the customer need to WRITE Lakehouse tables (Delta/Iceberg)?
-  → Yes: Use native S3 for write path; FSx S3 AP for read-only source data
-  → No: FSx S3 AP is ideal
+  → Yes: Use native S3 for write path; FSx for ONTAP S3 AP for read-only source data
+  → No: FSx for ONTAP S3 AP is ideal
 
 Q2: Does the customer need sub-millisecond latency or unlimited concurrency?
   → Yes: Use native S3
-  → No: FSx S3 AP (tens of ms latency, provisioned throughput)
+  → No: FSx for ONTAP S3 AP (tens of ms latency, provisioned throughput)
 
 Q3: Does the customer have existing NAS/ONTAP data they want to analyze?
-  → Yes: FSx S3 AP eliminates the copy
+  → Yes: FSx for ONTAP S3 AP eliminates the copy
   → No: Native S3 is simpler
 
 Q4: Does the customer need NFS/SMB access alongside S3 analytics?
-  → Yes: FSx S3 AP (multi-protocol on same data)
+  → Yes: FSx for ONTAP S3 AP (multi-protocol on same data)
   → No: Native S3 may be sufficient
 
 Q5: Does the customer need AI/RAG on existing documents?
-  → Yes: FSx S3 AP + Bedrock Knowledge Bases
+  → Yes: FSx for ONTAP S3 AP + Bedrock Knowledge Bases
   → No: Evaluate based on Q1-Q4
 ```
 
@@ -332,23 +332,23 @@ AWS + パートナー共同販売のための資料とプロセス。
 
 | オブジェクション | 回答 |
 |---------------|------|
-| 「既に S3 にコピーしていて問題ない」 | 「そのパイプラインの月額コストはいくらですか？障害時はどうなりますか？FSx S3 AP ならそれを完全に排除できます。」 |
+| 「既に S3 にコピーしていて問題ない」 | 「そのパイプラインの月額コストはいくらですか？障害時はどうなりますか？FSx for ONTAP S3 AP ならそれを完全に排除できます。」 |
 | 「本当に S3 互換ですか？」 | 「分析に必要なコア S3 操作（Get、Put、List、Delete）をサポートしています。正確な互換性マトリクスはこちらです。読み取り専用分析は完全に検証済みです。」 |
-| 「パフォーマンスはどうですか？」 | 「レイテンシは数十ミリ秒で S3 と同等です。スループットは FSx のプロビジョニングに依存します。PoC でワークロードに合わせてサイジングします。」 |
-| 「Delta Lake の書き込みが必要です」 | 「Delta 書き込みには atomic rename が必要ですが、これはサポートされていません。ソースデータの読み取りには FSx S3 AP を、Delta 書き込みターゲットにはネイティブ S3 を推奨します。」 |
+| 「パフォーマンスはどうですか？」 | 「レイテンシは数十ミリ秒で S3 と同等です。スループットは FSx for ONTAP のプロビジョニングに依存します。PoC でワークロードに合わせてサイジングします。」 |
+| 「Delta Lake の書き込みが必要です」 | 「Delta 書き込みには atomic rename が必要ですが、これはサポートされていません。ソースデータの読み取りには FSx for ONTAP S3 AP を、Delta 書き込みターゲットにはネイティブ S3 を推奨します。」 |
 | 「セキュリティチームがブロックするでしょう」 | 「Block Public Access がデフォルトで強制されます。二層認証（IAM + ファイルシステム）。ネットワーク分離には VPC-origin オプション。ガバナンスドキュメントはこちらです。」 |
 
 ### PoC SOW テンプレート概要
 
 ```
-1. Objective: Validate FSx S3 AP for [use case]
+1. Objective: Validate FSx for ONTAP S3 AP for [use case]
 2. Scope: [Good/Better/Best tier]
 3. Duration: 2 weeks
 4. Deliverables:
-   - Working query on FSx data via [Athena/Glue/Bedrock]
+   - Working query on FSx for ONTAP data via [Athena/Glue/Bedrock]
    - Performance benchmark results
    - Security validation report
-   - Cost comparison (current vs FSx S3 AP)
+   - Cost comparison (current vs FSx for ONTAP S3 AP)
 5. Success criteria: [from kpi-and-validation.md]
 6. Resources: Partner SA (X days), Customer admin (Y hours)
 7. AWS charges estimate: < $1,000
@@ -365,7 +365,7 @@ AWS + パートナー共同販売のための資料とプロセス。
 |---------|-------------|------|--------|
 | 1. アセスメント | NAS データの棚卸し、分析候補の特定 | 1 週間 | アセスメントレポート |
 | 2. 設計 | Good/Better ティアのアーキテクチャ | 1 週間 | アーキテクチャドキュメント |
-| 3. PoC | FSx + S3 AP + Athena/Glue のデプロイ | 2 週間 | 動作デモ + ベンチマーク |
+| 3. PoC | FSx for ONTAP + S3 AP + Athena/Glue のデプロイ | 2 週間 | 動作デモ + ベンチマーク |
 | 4. 提案 | 本番デプロイメント提案 | 1 週間 | SOW + コスト見積もり |
 | **初回案件規模** | アセスメント + PoC: $15K-30K | | |
 
@@ -373,7 +373,7 @@ AWS + パートナー共同販売のための資料とプロセス。
 
 | フェーズ | アクティビティ | 期間 | 成果物 |
 |---------|-------------|------|--------|
-| 1. オンボード | FSx + S3 AP + モニタリングのデプロイ | 2 週間 | 本番環境 |
+| 1. オンボード | FSx for ONTAP + S3 AP + モニタリングのデプロイ | 2 週間 | 本番環境 |
 | 2. 運用 | 月次モニタリング、パッチ適用、最適化 | 継続 | 月次レポート |
 | 3. 拡張 | Glue ETL、Bedrock RAG の追加 | 要望に応じて | 更新アーキテクチャ |
 | **収益モデル** | セットアップ費用 + 月額マネージド費用 | | |
@@ -395,7 +395,7 @@ AWS + パートナー共同販売のための資料とプロセス。
 |---------|-------------|------|--------|
 | 1. 特定 | 分析ニーズのある既存 ONTAP 顧客 | 継続 | ターゲットリスト |
 | 2. ワークショップ | 共同ワークショップ: ONTAP + AWS 分析 | 1 日 | 顧客の関心 |
-| 3. PoC | FSx 移行 + S3 AP + 分析 | 3 週間 | 動作するソリューション |
+| 3. PoC | FSx for ONTAP 移行 + S3 AP + 分析 | 3 週間 | 動作するソリューション |
 | **初回案件規模** | ワークショップ + PoC: $10K-20K | | |
 
 ### ISV: ガバナンス付きファイルアクセス統合
@@ -480,7 +480,7 @@ Phase 4: Scale (Month 6-12)
 
 | 基準 | ウェイト | 説明 |
 |------|---------|------|
-| 既存 FSx / NetApp プラクティス | 5 | 既に ONTAP ソリューションを提供 |
+| 既存 FSx for ONTAP / NetApp プラクティス | 5 | 既に ONTAP ソリューションを提供 |
 | データ & 分析能力 | 4 | Databricks/Snowflake/Athena の専門知識あり |
 | 業界フットプリント（医療/金融/製造） | 4 | 規制業界でアクティブ |
 | マネージドサービス能力 | 3 | 継続的な環境運用が可能 |
@@ -543,7 +543,7 @@ Phase 4: Scale (Month 6-12)
 |----------|------|--------|------|
 | 1. 概要 & ポジショニング | 1 時間 | 全員 | ビジネス価値、アーキテクチャ選定ガイド、アンチパターン |
 | 2. 技術ディープダイブ | 2 時間 | SA / デリバリー | アーキテクチャ、互換性マトリクス、セキュリティモデル |
-| 3. ハンズオンラボ | 4 時間 | SA / デリバリー | FSx + S3 AP + Athena/Glue のエンドツーエンドデプロイ |
+| 3. ハンズオンラボ | 4 時間 | SA / デリバリー | FSx for ONTAP + S3 AP + Athena/Glue のエンドツーエンドデプロイ |
 | 4. セールスプレイワークショップ | 1 時間 | セールス | ディスカバリー質問、オブジェクション対応、価格設定 |
 | 5. 初回案件プランニング | 1 時間 | セールス + SA | ターゲットアカウント、パイプラインスプリントキックオフ |
 
@@ -571,7 +571,7 @@ Phase 4: Scale (Month 6-12)
 
 パートナーは共同ディスカバリーワークショップの資格を得るために、以下の**すべて**を満たす必要があります：
 
-- [ ] 既存の FSx / NetApp / NAS 顧客基盤を保有
+- [ ] 既存の FSx for ONTAP / NetApp / NAS 顧客基盤を保有
 - [ ] Data/AI またはマネージドサービス能力を保有（少なくとも 1 つ）
 - [ ] ビジネスまたは技術リーダーがワークショップに参加可能
 - [ ] 30 日以内に少なくとも 1 件の顧客候補を特定可能
@@ -685,7 +685,7 @@ R = Responsible、A = Accountable、C = Consulted、I = Informed
 
 ---
 
-## 初回オファー: FSx S3 AP アナリティクス準備アセスメント
+## 初回オファー: FSx for ONTAP S3 AP アナリティクス準備アセスメント
 
 **期間**: 2〜3 週間  
 **対象**: 既存の NAS/ONTAP データを持ち、データ移行なしでアナリティクスや AI を検討したい顧客

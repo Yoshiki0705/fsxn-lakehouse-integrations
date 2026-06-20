@@ -1,0 +1,131 @@
+name: Agent Output Audit
+
+# Portable guardrail that enforces the user-level Kiro steering rules (naming, vendor
+# neutrality, public-output safety, JA/EN parity) regardless of which agent/IDE/human
+# produced the change. Drop this file into any repo's .github/workflows/.
+#
+# Design: a "ratchet". Style/leak checks run only on files CHANGED in the push/PR, so
+# new work must comply while pre-existing debt does not block the build. Secret and
+# AWS-account-ID scanning is handled separately by gitleaks.
+
+on:
+  push:
+    branches: [main]
+    paths: ['**/*.md', '**/*.yaml', '**/*.yml', '**/*.py', '**/*.sql', '**/*.json', '**/*.sh']
+  pull_request:
+    branches: [main]
+    paths: ['**/*.md', '**/*.yaml', '**/*.yml', '**/*.py', '**/*.sql', '**/*.json', '**/*.sh']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# IMPORTANT: project-context persona names are NOT stored in this file — putting them here
+# would itself leak them in a public repo (the exact thing this workflow prevents). Provide
+# them via a repository/org SECRET named PROJECT_CONTEXT_NAMES (pipe-separated regex, e.g.
+# "Name1|Name2"). The secret is referenced only in the leak step below. If unset, the leak
+# check still scans generic vendor-internal IDs (DB-I-####). Note: on public repos, secrets
+# are not exposed to workflows from fork PRs, so name-matching is skipped for fork PRs
+# (maintainer review + gitleaks remain the backstop).
+
+jobs:
+  agent-output-audit:
+    name: Agent Output Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Determine changed files
+        id: changed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          BASE=""
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE="$PR_BASE_SHA"
+          elif [[ "$EVENT_NAME" == "push" && "$PUSH_BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            BASE="$PUSH_BEFORE_SHA"
+          fi
+          if [[ -n "$BASE" ]] && git cat-file -e "$BASE" 2>/dev/null; then
+            git diff --name-only --diff-filter=ACMR "$BASE" HEAD > changed_all.txt || true
+          else
+            # No usable base (manual dispatch, new branch): scan all tracked files.
+            git ls-files > changed_all.txt
+          fi
+          # Exclude policy/config files that legitimately contain the forbidden example strings.
+          grep -vE '^(\.github/|AGENTS\.md|CONTRIBUTING|\.kiro/)' changed_all.txt > changed.txt || true
+          grep -E '\.md$' changed.txt > changed_md.txt || true
+          grep -E '\.(md|ya?ml|py|sql|json|sh)$' changed.txt > changed_text.txt || true
+          echo "Changed md files:"; cat changed_md.txt || true
+          echo "md_count=$(wc -l < changed_md.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: NetApp / AWS naming standardization
+        run: |
+          [[ -s changed_md.txt ]] || { echo "✓ no changed .md"; exit 0; }
+          HITS=$(xargs grep -nE '\bFSxN\b|FSx ONTAP|FSx S3 AP' < changed_md.txt 2>/dev/null | grep -vE 'http|allow:naming' || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::Non-standard naming. Use 'Amazon FSx for NetApp ONTAP' / 'FSx for ONTAP' / 'FSx for ONTAP S3 AP'. (Whitelist a verbatim external citation with an inline 'allow:naming' comment.)"
+            echo "$HITS"; exit 1
+          fi
+          echo "✓ Naming standardized (changed files)"
+
+      - name: Forbidden NetApp tooling
+        run: |
+          [[ -s changed_md.txt ]] || { echo "✓ no changed .md"; exit 0; }
+          HITS=$(xargs grep -niE 'Workload Factory|NetApp Console|BlueXP' < changed_md.txt 2>/dev/null || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::Do not propose NetApp Workload Factory / NetApp Console / BlueXP. Reframe to native equivalents (CloudWatch, ONTAP REST API, FabricPool, AWS DataSync, Snapshot/FlexClone/SnapMirror)."
+            echo "$HITS"; exit 1
+          fi
+          echo "✓ No forbidden tooling (changed files)"
+
+      - name: Vendor neutrality (no superiority / vendor-versus framing)
+        run: |
+          [[ -s changed_md.txt ]] || { echo "✓ no changed .md"; exit 0; }
+          HITS=$(xargs grep -nE '最強|game-changer|ゲームチェンジャー|競合ツール|優位性|より優れ|is better than|is superior to' < changed_md.txt 2>/dev/null || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::Vendor-versus / superiority framing. Use right-tool-for-the-job phrasing and state trade-offs symmetrically."
+            echo "$HITS"; exit 1
+          fi
+          echo "✓ Neutral framing (changed files)"
+
+      - name: Persona names & vendor-internal IDs
+        env:
+          PROJECT_CONTEXT_NAMES: ${{ secrets.PROJECT_CONTEXT_NAMES }}
+        run: |
+          [[ -s changed_text.txt ]] || { echo "✓ no changed text files"; exit 0; }
+          PATTERN='DB-I-[0-9]+'
+          [[ -n "${PROJECT_CONTEXT_NAMES:-}" ]] && PATTERN="${PROJECT_CONTEXT_NAMES}|${PATTERN}"
+          # Report file:line only (never echo matched content) so names/IDs are not
+          # re-exposed in public CI logs.
+          HITS=$(xargs grep -nE "$PATTERN" < changed_text.txt 2>/dev/null | cut -d: -f1,2 || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::Persona name or vendor-internal ticket ID found at the locations below. Inspect locally and replace with role-based references / 'an internal product request (tracked)'."
+            echo "$HITS"; exit 1
+          fi
+          echo "✓ No persona-name / internal-ID leaks (changed files)"
+
+      - name: JA/EN section-count parity (warning)
+        run: |
+          [[ -s changed_md.txt ]] || { echo "✓ no changed .md"; exit 0; }
+          MISMATCH=0
+          while IFS= read -r ja; do
+            case "$ja" in */ja/*) ;; *) continue ;; esac
+            en="${ja/\/ja\//\/en\/}"
+            [[ -f "$en" ]] || continue
+            jc=$(grep -cE '^## ' "$ja" || true)
+            ec=$(grep -cE '^## ' "$en" || true)
+            if [[ "$jc" != "$ec" ]]; then
+              echo "::warning file=$ja::JA/EN section-count mismatch: JA=$jc EN=$ec"
+              MISMATCH=$((MISMATCH+1))
+            fi
+          done < changed_md.txt
+          echo "✓ Parity check complete ($MISMATCH mismatch(es); warnings only)"

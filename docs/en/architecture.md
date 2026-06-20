@@ -192,7 +192,7 @@ Each platform accesses FSx for ONTAP via S3 API.
 
 > **Important**: The table below shows S3 API-level format support. For FSx for ONTAP S3 Access Points, write operations for transactional formats (Delta Lake, Apache Hudi) are **Not Supported** due to the lack of atomic rename and conditional writes. See [Compatibility Matrix](compatibility-matrix.md) for verified platform × format × mode combinations.
 
-| Format | Read | Write | Primary Use | FSx S3 AP Write |
+| Format | Read | Write | Primary Use | FSx for ONTAP S3 AP Write |
 |--------|------|-------|-------------|:---------------:|
 | Parquet | ✅ | ✅ | Analytics queries (columnar) | ✅ Append |
 | Apache Iceberg | ✅ | ⚠️ | ACID tables (vendor-neutral) | Experimental (external catalog) |

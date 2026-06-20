@@ -49,9 +49,9 @@ This document clarifies the relationship between ONTAP Snapshot (storage-level p
 | Regulated environments | Snapshot for disaster recovery SLA + time travel for audit trail |
 | Multi-table pipeline failure | Snapshot to restore volume to consistent state, then time travel to verify individual table states |
 
-## Important Caveats for FSx S3 Access Point Context
+## Important Caveats for FSx for ONTAP S3 Access Point Context
 
-1. **Lakehouse time travel requires write access**: Delta Lake and Iceberg time travel depend on transaction logs/metadata being written alongside data. Since FSx S3 AP has limitations on atomic rename (required by Delta) and conditional writes, **time travel is only available for tables whose transaction logs are managed externally** (e.g., Iceberg with Glue Catalog as metadata store) or for read-only access to pre-existing versioned tables.
+1. **Lakehouse time travel requires write access**: Delta Lake and Iceberg time travel depend on transaction logs/metadata being written alongside data. Since FSx for ONTAP S3 AP has limitations on atomic rename (required by Delta) and conditional writes, **time travel is only available for tables whose transaction logs are managed externally** (e.g., Iceberg with Glue Catalog as metadata store) or for read-only access to pre-existing versioned tables.
 
 2. **ONTAP Snapshot works regardless of access method**: Snapshots capture the volume state at the block level, independent of whether data was written via NFS, SMB, or S3 API. This makes Snapshot the **primary recovery mechanism** for data accessed through S3 Access Points.
 
@@ -80,7 +80,7 @@ This document clarifies the relationship between ONTAP Snapshot (storage-level p
 | SnapMirror (sync) | Zero | Minutes | Synchronous replication |
 | Delta time travel | Per-commit (every write) | Seconds | Query-level, no restore needed |
 | Iceberg time travel | Per-commit (every write) | Seconds | Query-level, no restore needed |
-| FSx Backup | Daily (automatic) | Hours | Full volume restore from backup |
+| FSx for ONTAP Backup | Daily (automatic) | Hours | Full volume restore from backup |
 
 ## References
 
