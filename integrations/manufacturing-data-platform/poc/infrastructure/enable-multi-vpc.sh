@@ -7,7 +7,7 @@ set -euo pipefail
 # Prerequisites:
 #   - MSK cluster State = ACTIVE
 #   - Broker type = kafka.m5.large (or larger)
-#   - Cluster policy already set (allows ClickHouse account 072088201116)
+#   - Cluster policy already set (allows ClickHouse's published ClickPipes AWS account; see ClickHouse ClickPipes docs for the current account ID)
 
 REGION="ap-northeast-1"
 CLUSTER_ARN="arn:aws:kafka:ap-northeast-1:<ACCOUNT_ID>:cluster/manufacturing-poc-msk-prov/f3a0fc3c-e4df-4a62-86ea-c8478657d898-3"
