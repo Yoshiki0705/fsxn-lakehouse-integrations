@@ -49,9 +49,9 @@
 | 規制環境 | 災害復旧 SLA に Snapshot + 監査証跡に Time Travel |
 | マルチテーブルパイプライン障害 | 一貫した状態にボリュームを復元する Snapshot、その後個別テーブル状態を確認する Time Travel |
 
-## FSx S3 Access Point コンテキストでの重要な注意事項
+## FSx for ONTAP S3 Access Point コンテキストでの重要な注意事項
 
-1. **Lakehouse Time Travel には書き込みアクセスが必要**: Delta Lake と Iceberg の Time Travel はデータと並行してトランザクションログ/メタデータが書き込まれることに依存します。FSx S3 AP にはアトミック rename（Delta が必要）と条件付き書き込みの制限があるため、**Time Travel はトランザクションログが外部で管理されるテーブル**（例: Glue Catalog をメタデータストアとする Iceberg）または既存のバージョン管理済みテーブルへの読み取り専用アクセスでのみ利用可能です。
+1. **Lakehouse Time Travel には書き込みアクセスが必要**: Delta Lake と Iceberg の Time Travel はデータと並行してトランザクションログ/メタデータが書き込まれることに依存します。FSx for ONTAP S3 AP にはアトミック rename（Delta が必要）と条件付き書き込みの制限があるため、**Time Travel はトランザクションログが外部で管理されるテーブル**（例: Glue Catalog をメタデータストアとする Iceberg）または既存のバージョン管理済みテーブルへの読み取り専用アクセスでのみ利用可能です。
 
 2. **ONTAP Snapshot はアクセス方法に関係なく動作**: Snapshot はブロックレベルでボリューム状態をキャプチャし、データが NFS、SMB、S3 API のいずれで書き込まれたかに依存しません。これにより、S3 Access Points 経由でアクセスされるデータの**主要なリカバリメカニズム**は Snapshot になります。
 
@@ -80,7 +80,7 @@
 | SnapMirror（同期） | ゼロ | 分 | 同期レプリケーション |
 | Delta Time Travel | コミット単位（書き込みごと） | 秒 | クエリレベル、復元不要 |
 | Iceberg Time Travel | コミット単位（書き込みごと） | 秒 | クエリレベル、復元不要 |
-| FSx バックアップ | 日次（自動） | 時間 | バックアップからの完全ボリューム復元 |
+| FSx for ONTAP バックアップ | 日次（自動） | 時間 | バックアップからの完全ボリューム復元 |
 
 ## 参考資料
 

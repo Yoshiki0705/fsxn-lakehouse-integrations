@@ -25,7 +25,7 @@ Amazon FSx for ONTAP S3 Access Points enable S3 API access to file data stored o
 - Supported S3 operations: GetObject, PutObject, DeleteObject, ListObjectsV2, HeadObject, Multipart Upload, CopyObject (same access point only)
 - Dual-layer authorization: IAM policy evaluation + file system user permissions (UNIX or Windows)
 - Latency: Tens of milliseconds range, consistent with S3 bucket access
-- Throughput: Depends on FSx file system provisioned throughput capacity
+- Throughput: Depends on FSx for ONTAP file system provisioned throughput capacity
 - Block Public Access enforced by default (cannot be disabled)
 - Requires ONTAP version 9.17.1 or later
 
@@ -237,18 +237,18 @@ Discovery → Assessment → PoC → Production → Managed Operations
 
 | Anti-Pattern | Why It Fails | What to Propose Instead |
 |-------------|-------------|------------------------|
-| Delta Lake write / MERGE / compaction on FSx S3 AP | Delta commit protocol requires atomic rename, which is not supported by FSx S3 AP ([API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)) | Read-only analytics on Delta tables, or use native S3 for Delta write path |
-| Iceberg write (CREATE TABLE / INSERT) on FSx S3 AP | Iceberg S3FileIO cannot handle S3 AP alias for metadata write/verify. NullPointerException during commit (verified 2026-05-24). | Read-only analytics on pre-existing Iceberg tables, or use native S3 for Iceberg warehouse |
-| **Any transactional table format write on FSx S3 AP** | **All Lakehouse formats (Delta, Iceberg, Hudi) require metadata operations that fail on S3 AP** — atomic rename (Delta/Hudi) or metadata file write/verify (Iceberg). | **Use FSx S3 AP for read-only analytics and flat file writes (Parquet append). Use native S3 for transactional table writes.** |
+| Delta Lake write / MERGE / compaction on FSx for ONTAP S3 AP | Delta commit protocol requires atomic rename, which is not supported by FSx for ONTAP S3 AP ([API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)) | Read-only analytics on Delta tables, or use native S3 for Delta write path |
+| Iceberg write (CREATE TABLE / INSERT) on FSx for ONTAP S3 AP | Iceberg S3FileIO cannot handle S3 AP alias for metadata write/verify. NullPointerException during commit (verified 2026-05-24). | Read-only analytics on pre-existing Iceberg tables, or use native S3 for Iceberg warehouse |
+| **Any transactional table format write on FSx for ONTAP S3 AP** | **All Lakehouse formats (Delta, Iceberg, Hudi) require metadata operations that fail on S3 AP** — atomic rename (Delta/Hudi) or metadata file write/verify (Iceberg). | **Use FSx for ONTAP S3 AP for read-only analytics and flat file writes (Parquet append). Use native S3 for transactional table writes.** |
 | Internet-origin AP as default for regulated industries | Regulated data requires network-level isolation; VPC-origin provides built-in explicit Deny for non-VPC traffic | VPC-origin AP for Confidential/Regulated data (note: Athena requires internet-origin) |
-| Claiming "S3 fully compatible" | FSx S3 AP supports a subset of S3 operations. No Object Versioning, no conditional writes, no presigned URLs, 5GB upload limit | Use precise language: "S3 API access for supported operations" with link to compatibility matrix |
+| Claiming "S3 fully compatible" | FSx for ONTAP S3 AP supports a subset of S3 operations. No Object Versioning, no conditional writes, no presigned URLs, 5GB upload limit | Use precise language: "S3 API access for supported operations" with link to compatibility matrix |
 | Selling unverified Iceberg write path as production-ready | Iceberg write with external catalog is Experimental, not Verified | Position as "read-only verified, write path under validation" |
-| Ignoring FSx throughput provisioning | Customers expect S3-like unlimited throughput; FSx S3 AP throughput is bounded by provisioned capacity | Size FSx throughput to workload requirements; include in PoC validation |
-| Proposing FSx S3 AP for high-concurrency, small-file workloads | Tens of milliseconds latency + provisioned throughput limits make this suboptimal vs native S3 | Use for large sequential scans, batch analytics, document retrieval; not for high-frequency API calls |
+| Ignoring FSx for ONTAP throughput provisioning | Customers expect S3-like unlimited throughput; FSx for ONTAP S3 AP throughput is bounded by provisioned capacity | Size FSx for ONTAP throughput to workload requirements; include in PoC validation |
+| Proposing FSx for ONTAP S3 AP for high-concurrency, small-file workloads | Tens of milliseconds latency + provisioned throughput limits make this suboptimal vs native S3 | Use for large sequential scans, batch analytics, document retrieval; not for high-frequency API calls |
 
 ### Red Lines for Partner Proposals
 
-1. **Never** claim FSx S3 AP is a drop-in replacement for S3 buckets
+1. **Never** claim FSx for ONTAP S3 AP is a drop-in replacement for S3 buckets
 2. **Never** propose Delta/Hudi write operations without explicit customer acknowledgment of limitations
 3. **Never** use real PHI/PII in PoC environments
 4. **Never** propose internet-origin AP for healthcare/financial without documenting the security trade-off
@@ -262,35 +262,35 @@ Discovery → Assessment → PoC → Production → Managed Operations
 
 | Approach | Data Copy? | NAS Impact | Time to Analytics | Governance | AI/RAG | Best For |
 |----------|-----------|-----------|-------------------|-----------|--------|----------|
-| **FSx S3 AP (this solution)** | No | None | Hours | Unified (dual-layer) | Yes (Bedrock) | Existing NAS data, read-heavy analytics, AI on documents |
+| **FSx for ONTAP S3 AP (this solution)** | No | None | Hours | Unified (dual-layer) | Yes (Bedrock) | Existing NAS data, read-heavy analytics, AI on documents |
 | **Native S3 + DataSync** | Yes (full copy) | None | Days (initial sync) | Separate (S3 vs NAS) | Yes | Write-heavy Lakehouse, Delta/Iceberg managed tables |
 | **Native S3 + ETL pipeline** | Yes (transformed) | None | Days-weeks | Separate | Yes | Complex transformations, medallion architecture on S3 |
-| **Snowflake External Stage on FSx S3 AP** | No (zero-copy read) | None | Hours | Snowflake-managed (Tags, Row Policy, Masking) | Yes (Cortex AI, Cortex Search) | Snowflake customers needing governed AI on NAS data. COPY INTO → Managed Iceberg for open format sharing. |
+| **Snowflake External Stage on FSx for ONTAP S3 AP** | No (zero-copy read) | None | Hours | Snowflake-managed (Tags, Row Policy, Masking) | Yes (Cortex AI, Cortex Search) | Snowflake customers needing governed AI on NAS data. COPY INTO → Managed Iceberg for open format sharing. |
 | **Databricks on native S3** | Yes (to S3 first) | None | Days | Unity Catalog on S3 | Yes | Databricks-centric, Delta write-heavy |
-| **NetApp Console tiering** | Partial (cold tier) | Minimal | N/A (not analytics) | ONTAP-managed | No | Cost optimization, not analytics |
+| **FabricPool tiering** | Partial (cold tier) | Minimal | N/A (not analytics) | ONTAP-managed | No | Cost optimization, not analytics |
 | **On-premises analytics** | No | None | Weeks (setup) | On-prem tools | Limited | Air-gapped environments |
 
 ### Decision Framework
 
 ```
 Q1: Does the customer need to WRITE Lakehouse tables (Delta/Iceberg)?
-  → Yes: Use native S3 for write path; FSx S3 AP for read-only source data
-  → No: FSx S3 AP is ideal
+  → Yes: Use native S3 for write path; FSx for ONTAP S3 AP for read-only source data
+  → No: FSx for ONTAP S3 AP is ideal
 
 Q2: Does the customer need sub-millisecond latency or unlimited concurrency?
   → Yes: Use native S3
-  → No: FSx S3 AP (tens of ms latency, provisioned throughput)
+  → No: FSx for ONTAP S3 AP (tens of ms latency, provisioned throughput)
 
 Q3: Does the customer have existing NAS/ONTAP data they want to analyze?
-  → Yes: FSx S3 AP eliminates the copy
+  → Yes: FSx for ONTAP S3 AP eliminates the copy
   → No: Native S3 is simpler
 
 Q4: Does the customer need NFS/SMB access alongside S3 analytics?
-  → Yes: FSx S3 AP (multi-protocol on same data)
+  → Yes: FSx for ONTAP S3 AP (multi-protocol on same data)
   → No: Native S3 may be sufficient
 
 Q5: Does the customer need AI/RAG on existing documents?
-  → Yes: FSx S3 AP + Bedrock Knowledge Bases
+  → Yes: FSx for ONTAP S3 AP + Bedrock Knowledge Bases
   → No: Evaluate based on Q1-Q4
 ```
 
@@ -334,23 +334,23 @@ Materials and processes for AWS + Partner joint selling.
 
 | Objection | Response |
 |-----------|----------|
-| "We already copy to S3, it works fine" | "What's the monthly cost of that pipeline? What happens when it fails? FSx S3 AP eliminates that entirely." |
+| "We already copy to S3, it works fine" | "What's the monthly cost of that pipeline? What happens when it fails? FSx for ONTAP S3 AP eliminates that entirely." |
 | "Is it really S3 compatible?" | "It supports the core S3 operations for analytics (Get, Put, List, Delete). Here's the exact compatibility matrix. Read-only analytics is fully verified." |
-| "What about performance?" | "Latency is tens of milliseconds — same as S3. Throughput depends on your FSx provisioning. We size it to your workload in the PoC." |
-| "We need Delta Lake write" | "Delta write requires atomic rename which isn't supported. We recommend FSx S3 AP for source data reads, native S3 for Delta write targets." |
+| "What about performance?" | "Latency is tens of milliseconds — same as S3. Throughput depends on your FSx for ONTAP provisioning. We size it to your workload in the PoC." |
+| "We need Delta Lake write" | "Delta write requires atomic rename which isn't supported. We recommend FSx for ONTAP S3 AP for source data reads, native S3 for Delta write targets." |
 | "Our security team will block this" | "Block Public Access is enforced by default. Dual-layer auth (IAM + file system). VPC-origin option for network isolation. Here's the governance doc." |
 
 ### PoC SOW Template Outline
 
 ```
-1. Objective: Validate FSx S3 AP for [use case]
+1. Objective: Validate FSx for ONTAP S3 AP for [use case]
 2. Scope: [Good/Better/Best tier]
 3. Duration: 2 weeks
 4. Deliverables:
-   - Working query on FSx data via [Athena/Glue/Bedrock]
+   - Working query on FSx for ONTAP data via [Athena/Glue/Bedrock]
    - Performance benchmark results
    - Security validation report
-   - Cost comparison (current vs FSx S3 AP)
+   - Cost comparison (current vs FSx for ONTAP S3 AP)
 5. Success criteria: [from kpi-and-validation.md]
 6. Resources: Partner SA (X days), Customer admin (Y hours)
 7. AWS charges estimate: < $1,000
@@ -367,7 +367,7 @@ Materials and processes for AWS + Partner joint selling.
 |-------|----------|----------|-------------|
 | 1. Assessment | Inventory NAS data, identify analytics candidates | 1 week | Assessment report |
 | 2. Design | Architecture for Good/Better tier | 1 week | Architecture document |
-| 3. PoC | Deploy FSx + S3 AP + Athena/Glue | 2 weeks | Working demo + benchmark |
+| 3. PoC | Deploy FSx for ONTAP + S3 AP + Athena/Glue | 2 weeks | Working demo + benchmark |
 | 4. Proposal | Production deployment proposal | 1 week | SOW + cost estimate |
 | **First deal size** | Assessment + PoC: $15K-30K | | |
 
@@ -375,7 +375,7 @@ Materials and processes for AWS + Partner joint selling.
 
 | Phase | Activity | Duration | Deliverable |
 |-------|----------|----------|-------------|
-| 1. Onboard | Deploy FSx + S3 AP + monitoring | 2 weeks | Production environment |
+| 1. Onboard | Deploy FSx for ONTAP + S3 AP + monitoring | 2 weeks | Production environment |
 | 2. Operate | Monthly monitoring, patching, optimization | Ongoing | Monthly report |
 | 3. Expand | Add Glue ETL, Bedrock RAG | Per request | Updated architecture |
 | **Revenue model** | Setup fee + monthly managed fee | | |
@@ -397,7 +397,7 @@ Materials and processes for AWS + Partner joint selling.
 |-------|----------|----------|-------------|
 | 1. Identify | Existing ONTAP customers with analytics needs | Ongoing | Target list |
 | 2. Workshop | Joint workshop: ONTAP + AWS analytics | 1 day | Customer interest |
-| 3. PoC | FSx migration + S3 AP + analytics | 3 weeks | Working solution |
+| 3. PoC | FSx for ONTAP migration + S3 AP + analytics | 3 weeks | Working solution |
 | **First deal size** | Workshop + PoC: $10K-20K | | |
 
 ### ISV: Governed File Access Integration
@@ -482,7 +482,7 @@ Score each candidate partner (1-5 per criterion) to determine engagement priorit
 
 | Criterion | Weight | Description |
 |-----------|--------|-------------|
-| Existing FSx / NetApp practice | 5 | Already delivers ONTAP solutions |
+| Existing FSx for ONTAP / NetApp practice | 5 | Already delivers ONTAP solutions |
 | Data & analytics capability | 4 | Has Databricks/Snowflake/Athena expertise |
 | Industry footprint (healthcare/finance/manufacturing) | 4 | Active in regulated industries |
 | Managed service capability | 3 | Can operate ongoing environments |
@@ -545,7 +545,7 @@ Score each candidate partner (1-5 per criterion) to determine engagement priorit
 |---------|----------|----------|---------|
 | 1. Overview & positioning | 1 hour | All | Business value, architecture selection guidance, anti-patterns |
 | 2. Technical deep dive | 2 hours | SA / delivery | Architecture, compatibility matrix, security model |
-| 3. Hands-on lab | 4 hours | SA / delivery | Deploy FSx + S3 AP + Athena/Glue end-to-end |
+| 3. Hands-on lab | 4 hours | SA / delivery | Deploy FSx for ONTAP + S3 AP + Athena/Glue end-to-end |
 | 4. Sales play workshop | 1 hour | Sales | Discovery questions, objection handling, pricing |
 | 5. First deal planning | 1 hour | Sales + SA | Target accounts, pipeline sprint kickoff |
 
@@ -573,7 +573,7 @@ Validate partner fit, identify target accounts, and define the first joint offer
 
 A partner must meet ALL of the following to qualify for a Joint Discovery Workshop:
 
-- [ ] Has existing FSx / NetApp / NAS customer base
+- [ ] Has existing FSx for ONTAP / NetApp / NAS customer base
 - [ ] Has Data/AI or managed service capability (at least one)
 - [ ] Business or technical leader can attend the workshop
 - [ ] Can identify at least 1 customer candidate within 30 days
@@ -687,7 +687,7 @@ For each active deal, assign explicit owners:
 
 ---
 
-## First Offer: FSx S3 AP Analytics Readiness Assessment
+## First Offer: FSx for ONTAP S3 AP Analytics Readiness Assessment
 
 **Duration**: 2–3 weeks  
 **Target**: Customers with existing NAS/ONTAP data who want to explore analytics or AI without data migration

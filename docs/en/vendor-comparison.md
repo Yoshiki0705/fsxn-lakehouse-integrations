@@ -1,6 +1,8 @@
-# Vendor Comparison Matrix
+# Platform Integration Reference
 
 🌐 [日本語](../ja/vendor-comparison.md)
+
+> **Framing**: This document is a neutral reference summarizing each platform's integration approach, support status, and trade-offs. It is not a ranking of superiority — the goal is to support right-tool-for-the-job selection based on use case.
 
 ## Project Concept
 
@@ -18,7 +20,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ---
 
-## Tier 1: Primary Candidates
+## Managed Lakehouse Platforms
 
 | Vendor | Integration Method | Use Case | Status |
 |--------|-------------------|----------|--------|
@@ -35,8 +37,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Governance**: Unity Catalog — Table/Column Grants, Row Filters, Column Masks, UC Tags, Automatic Lineage (column-level), Audit Logs (system tables), Lakehouse Monitoring (data quality + drift)
 - **Data Sharing**: Delta Sharing — open protocol, readable by Snowflake, Pandas, Spark, Power BI without Databricks account
 - **ONTAP Value**: FlexClone (dev/test), Snapshot (complements Delta Time Travel), FabricPool (cold data tiering)
-- **Unique strengths**: Automatic data lineage (column-level), ML model governance (MLflow + Model Registry), Lakehouse Monitoring, Iceberg REST Catalog (external engine access to UC tables)
-- **Limitation**: UC session policy blocks table creation and subdirectory listing on FSx S3 AP directly. **Recommended path: DataSync → S3 → UC** (full governance, full AI, full lineage)
+- **Characteristics**: Automatic data lineage (column-level), ML model governance (MLflow + Model Registry), Lakehouse Monitoring, Iceberg REST Catalog (external engine access to UC tables)
+- **Limitation**: UC session policy blocks table creation and subdirectory listing on FSx for ONTAP S3 AP directly. **Recommended path: DataSync → S3 → UC** (full governance, full AI, full lineage)
 
 ### Snowflake
 
@@ -44,18 +46,18 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Network**: Internet network origin (PrivateLink optional)
 - **Formats**: Parquet, CSV, JSON, Avro, ORC, Iceberg
 - **Unstructured**: Directory Table + Pre-signed URLs + Cortex AI (PARSE_DOCUMENT for OCR, multimodal vision via staging)
-- **AI Capabilities**: 8/10 Cortex AI functions verified on FSx data (SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE, EXTRACT_ANSWER, PARSE_DOCUMENT, Cortex Search 198ms, Vision AI via staging)
+- **AI Capabilities**: 8/10 Cortex AI functions verified on FSx for ONTAP data (SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE, EXTRACT_ANSWER, PARSE_DOCUMENT, Cortex Search 198ms, Vision AI via staging)
 - **Governance**: Object Tags, Row Access Policy, Column Masking, Data Sharing — all verified on External Table
-- **Advanced Patterns**: Dynamic Table (confirmed, FULL refresh, min 60s TARGET_LAG), Managed Iceberg Table (confirmed, open format on customer S3)
+- **Advanced Patterns**: Dynamic Table (confirmed, FULL refresh, min 60s TARGET_LAG), Managed Iceberg Table (confirmed, open format on user-owned S3)
 - **ONTAP Value**: Snapshot (beyond Time Travel retention), FlexClone (test env), multi-protocol (NFS/SMB/S3 on same data)
 - **Data Sharing**: Governed distribution to partners/suppliers via Snowflake Data Sharing (External Table shareable)
 - **Known Limitation**: AUTO_REFRESH not available (no S3 Event Notifications); use Task + ALTER EXTERNAL TABLE REFRESH
 
 ---
 
-## Tier 2: Open Table Formats & Distributed SQL
+## Open Table Formats & Distributed SQL
 
-| Format/Engine | Read from FSx S3 AP | Write to FSx S3 AP | Write to S3 (via sync) | Status |
+| Format/Engine | Read from FSx for ONTAP S3 AP | Write to FSx for ONTAP S3 AP | Write to S3 (via sync) | Status |
 |--------------|:---:|:---:|:---:|--------|
 | **Apache Iceberg** | ⚠️ Experimental (pre-existing tables) | ❌ Not Supported (NullPointerException) | ✅ EMR Spark → S3 | Part 7 verified |
 | **Delta Lake (OSS)** | ✅ Read Verified (delta-rs) | ❌ Not Supported (501 Not Implemented) | ✅ DataSync → S3 → UC | Part 7 verified |
@@ -63,28 +65,28 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 | **Trino / Starburst** | ✅ Read Verified (5M rows, 1.5s) | ❌ (same limitations) | N/A | Part 0 verified |
 | **Dremio** | 🔲 Planned | 🔲 Planned | N/A | 📋 NetApp/Dremio joint solution (not independently validated) |
 
-> **Key finding (Part 7)**: All three transactional table formats (Delta, Iceberg, Hudi) fail to WRITE on FSx S3 AP due to fundamental S3 API limitations — no conditional writes (`If-None-Match` → 501), no atomic rename. READ of pre-existing tables is theoretically possible but only Delta read has been verified.
+> **Key finding (Part 7)**: All three transactional table formats (Delta, Iceberg, Hudi) fail to WRITE on FSx for ONTAP S3 AP due to fundamental S3 API limitations — no conditional writes (`If-None-Match` → 501), no atomic rename. READ of pre-existing tables is theoretically possible but only Delta read has been verified.
 
 ### Apache Iceberg
 
-- **Read**: Pre-existing Iceberg tables (metadata in Glue Catalog, data files on FSx S3 AP) are theoretically readable via GetObject. Not fully validated.
+- **Read**: Pre-existing Iceberg tables (metadata in Glue Catalog, data files on FSx for ONTAP S3 AP) are theoretically readable via GetObject. Not fully validated.
 - **Write**: ❌ S3FileIO cannot handle AP alias for metadata write/verify (NullPointerException during commit). Conditional writes not supported.
-- **Working alternative**: EMR Spark writes Iceberg to standard S3 → register in Glue Catalog → query from Athena/Redshift/Snowflake/Databricks. FSx S3 AP serves as read-only source data.
-- **Snowflake path**: FSx S3 AP → External Stage → COPY INTO → Snowflake Managed Iceberg Table (open format on customer S3, confirmed May 2026)
+- **Working alternative**: EMR Spark writes Iceberg to standard S3 → register in Glue Catalog → query from Athena/Redshift/Snowflake/Databricks. FSx for ONTAP S3 AP serves as read-only source data.
+- **Snowflake path**: FSx for ONTAP S3 AP → External Stage → COPY INTO → Snowflake Managed Iceberg Table (open format on user-owned S3, confirmed May 2026)
 - **Catalog options**: Glue Catalog (AWS-native), Snowflake Managed Iceberg (Snowflake-native), Databricks UC Iceberg REST Catalog (Databricks-native)
 
 ### Delta Lake (OSS)
 
 - **Read**: ✅ Verified with delta-rs (Rust). Spark Delta reader also works for pre-existing tables.
-- **Write**: ❌ Delta commit protocol requires `If-None-Match` conditional write for `_delta_log/` — FSx S3 AP returns 501 Not Implemented.
-- **Working alternative**: DataSync → S3 → Delta Table (Databricks UC or OSS Spark). FSx S3 AP as read-only source.
+- **Write**: ❌ Delta commit protocol requires `If-None-Match` conditional write for `_delta_log/` — FSx for ONTAP S3 AP returns 501 Not Implemented.
+- **Working alternative**: DataSync → S3 → Delta Table (Databricks UC or OSS Spark). FSx for ONTAP S3 AP as read-only source.
 - **Databricks path**: DataSync → S3 → UC Managed Delta Table (full governance, lineage, Time Travel)
 
 ### Apache Hudi
 
 - **Read**: Not tested (theoretically possible for pre-existing tables via GetObject).
 - **Write**: ❌ Hudi timeline commit requires atomic rename (`.inflight` → `.commit`). S3 has no rename operation.
-- **Working alternative**: Standard S3 bucket for Hudi write path. FSx S3 AP as read-only source.
+- **Working alternative**: Standard S3 bucket for Hudi write path. FSx for ONTAP S3 AP as read-only source.
 
 ### Trino / Starburst
 
@@ -107,7 +109,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ---
 
-## Tier 3: Cloud-Native Analytics (AWS)
+## Cloud-Native Analytics (AWS)
 
 | Service | Integration Method | Use Case | Status |
 |---------|-------------------|----------|--------|
@@ -124,10 +126,10 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Auth**: IAM Role (service role)
 - **Network**: Internet network origin **required**
 - **Features**: Serverless, pay-per-query ($5/TB scanned), Glue Catalog integration
-- **AI Integration**: Athena + Bedrock KB (RAG on same FSx data), Athena + SageMaker (ML inference UDF)
+- **AI Integration**: Athena + Bedrock KB (RAG on same FSx for ONTAP data), Athena + SageMaker (ML inference UDF)
 - **Governance**: Lake Formation (table/column/row/tag) — same permissions apply to Athena and Redshift Spectrum
-- **Write-back**: ✅ CTAS writes Parquet back to FSx S3 AP (verified, 3.7s)
-- **Unique strengths**: Zero infrastructure, shared Glue Catalog with all AWS engines, Lake Formation governance automatic
+- **Write-back**: ✅ CTAS writes Parquet back to FSx for ONTAP S3 AP (verified, 3.7s)
+- **Characteristics**: Zero infrastructure, shared Glue Catalog with all AWS engines, Lake Formation governance automatic
 - **Benchmark**: 54.8 MB/s peak (5M rows in 2.2s)
 - **Reference**: [AWS Tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-query-data-with-athena.html)
 
@@ -138,8 +140,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Features**: Crawler (schema discovery), ETL Job (PySpark/Python Shell/Ray), Data Quality
 - **AI Integration**: Glue + Bedrock (AI-powered transforms), Glue Data Quality (automated validation)
 - **Governance**: Glue Data Catalog is the foundation for Lake Formation — all permissions defined here
-- **Write-back**: ✅ ETL write-back to FSx S3 AP (verified, 64s for 10K row medallion pipeline)
-- **Unique strengths**: Schema discovery (Crawler), visual ETL (Studio), serverless Spark, Data Quality rules
+- **Write-back**: ✅ ETL write-back to FSx for ONTAP S3 AP (verified, 64s for 10K row medallion pipeline)
+- **Characteristics**: Schema discovery (Crawler), visual ETL (Studio), serverless Spark, Data Quality rules
 - **Reference**: [AWS Tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html)
 
 ### AWS Lake Formation
@@ -148,8 +150,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Network**: N/A (governance layer, not a query engine)
 - **Features**: Table/column-level grants, Row Filters (Data Cells Filter), LF-Tags (tag-based access control), cross-account sharing
 - **AI Integration**: Governs data accessed by Bedrock KB, SageMaker, EMR ML workloads
-- **Governance**: ✅ **The strongest AWS-native governance** — fine-grained (column/row/tag), multi-engine (Athena + Redshift + EMR + Glue all share same permissions), zero data movement
-- **Unique strengths**: Single governance definition applies to ALL AWS analytics engines simultaneously. No per-engine configuration needed. Cross-account table sharing without data copy.
+- **Governance**: ✅ fine-grained AWS-native governance — fine-grained (column/row/tag), multi-engine (Athena + Redshift + EMR + Glue all share same permissions), zero data movement
+- **Characteristics**: Single governance definition applies to ALL AWS analytics engines simultaneously. No per-engine configuration needed. Cross-account table sharing without data copy.
 - **Verified capabilities (May 2026)**: Column-level permission (deny specific columns), Row Filter (Data Cells Filter with expression), LF-Tag (sensitivity classification + tag-based grants)
 
 ### Amazon Redshift Spectrum
@@ -160,7 +162,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **AI Integration**: Redshift ML (CREATE MODEL), federated query to SageMaker endpoints
 - **Governance**: Lake Formation (same permissions as Athena — configure once, apply everywhere)
 - **Write-back**: ❌ (query results stay in Redshift; use EMR for write-back)
-- **Unique strengths**: JOIN NAS data with local DWH tables, materialized views on external data, same Glue Catalog as Athena
+- **Characteristics**: JOIN NAS data with local DWH tables, materialized views on external data, same Glue Catalog as Athena
 - **Benchmark**: 5M rows in 4.3s (Serverless 8 RPU)
 - **Reference**: [AWS re:Post](https://repost.aws/articles/AR7E4oxFvtR5GgajAQT7X1xQ)
 
@@ -171,8 +173,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Features**: Full Spark SQL, UDFs, window functions, MLlib, distributed processing
 - **AI Integration**: Spark MLlib, SageMaker Spark connector, Iceberg table creation on S3
 - **Governance**: IAM-based (pair with Lake Formation for governed reads on output)
-- **Write-back**: ✅ **Best write-back path** — flat Parquet to FSx S3 AP (verified, 16s total ETL)
-- **Unique strengths**: No session policy issues (direct IAM), full Spark power, write-back to FSx, Iceberg table creation on S3
+- **Write-back**: ✅ verified write-back path — flat Parquet to FSx for ONTAP S3 AP (verified, 16s total ETL)
+- **Characteristics**: No session policy issues (direct IAM), full Spark power, write-back to FSx, Iceberg table creation on S3
 - **Benchmark**: 10K rows read+transform+write in 16s, $0.05/job
 - **Critical note**: Use `s3://` (EMRFS), NOT `s3a://` (S3A cannot parse AP alias)
 
@@ -181,9 +183,9 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Auth**: Bedrock service role with S3 AP permissions
 - **Network**: Internet network origin
 - **Features**: RAG document ingestion, vector embeddings, permission-aware retrieval
-- **AI Integration**: ✅ **Native RAG path** — ingest documents from FSx S3 AP, create embeddings, semantic search with guardrails
+- **AI Integration**: ✅ **Native RAG path** — ingest documents from FSx for ONTAP S3 AP, create embeddings, semantic search with guardrails
 - **Governance**: Bedrock guardrails (topic filtering, PII detection, hallucination reduction), IAM model access policies
-- **Unique strengths**: Zero-copy RAG (reads directly from FSx S3 AP without COPY INTO), permission-aware retrieval, Bedrock agents for multi-step reasoning
+- **Characteristics**: Zero-copy RAG (reads directly from FSx for ONTAP S3 AP without COPY INTO), permission-aware retrieval, Bedrock agents for multi-step reasoning
 - **Reference**: [AWS Tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)
 
 ### DuckDB Lambda
@@ -194,19 +196,19 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **AI Integration**: Minimal (SQL-only; pair with Bedrock for AI)
 - **Governance**: IAM + S3 AP policy only (no table-level governance)
 - **Write-back**: ✅ COPY TO Parquet (verified, 304ms)
-- **Unique strengths**: Cheapest path ($0.00001/query), zero idle cost, sub-second warm latency (452ms)
+- **Characteristics**: Low-cost path ($0.00001/query), zero idle cost, sub-second warm latency (452ms)
 - **Benchmark**: 10K rows in 452ms (warm), 5M rows in 779ms
 
 ### AWS-Native Unique Value Proposition
 
-| Advantage | Detail |
+| Characteristic | Detail |
 |-----------|--------|
 | **No session policy issues** | All AWS services use direct IAM — no intermediary session policies that block S3 AP ARN format |
 | **Shared Glue Catalog** | Athena, Redshift Spectrum, EMR, Glue all share the same catalog. Register once, query from any engine. |
 | **Lake Formation multi-engine** | One governance definition applies to ALL engines simultaneously. No per-platform configuration. |
-| **Zero-copy RAG** | Bedrock KB reads directly from FSx S3 AP — no COPY INTO, no staging, no data movement for RAG |
+| **Zero-copy RAG** | Bedrock KB reads directly from FSx for ONTAP S3 AP — no COPY INTO, no staging, no data movement for RAG |
 | **Serverless-first** | Athena, Glue, EMR Serverless, Lambda — zero idle cost across the entire stack |
-| **Write-back verified** | EMR, Athena CTAS, DuckDB all write flat Parquet back to FSx S3 AP (Snowflake/Databricks cannot) |
+| **Write-back verified** | EMR, Athena CTAS, DuckDB all write flat Parquet back to FSx for ONTAP S3 AP (Snowflake/Databricks cannot) |
 | **Iceberg on S3** | EMR Spark creates Iceberg tables on standard S3 → registered in Glue Catalog → queryable by Athena/Redshift/Snowflake/Databricks |
 
 ### Google BigQuery Omni
@@ -225,7 +227,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ---
 
-## Tier 4: Emerging & Specialized
+## Emerging & Specialized Platforms
 
 | Vendor | Integration Method | Use Case | Status |
 |--------|-------------------|----------|--------|

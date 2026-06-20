@@ -1,5 +1,210 @@
 # Compatibility Matrix
 
+> 🌐 **English** | [日本語](../ja/compatibility-matrix.md)
+
+## Executive Summary
+
+- **Purpose**: Defines verified compatibility between FSx for ONTAP S3 Access Points and Lakehouse platforms/formats, clarifying support status from read-only analytics to write paths
+- **Key findings**: Read-only analytics (Athena/Glue/EMR/Snowflake/Bedrock) are verified and production-ready. Write paths (Delta Lake/Iceberg) are limited due to lack of conditional writes support
+- **Critical constraints**: Conditional writes (`If-None-Match`) not supported, S3 Event Notifications not supported, ListObjectsV2 high latency (30-80x), SnapMirror S3 not available
+- **Recommended approach**: Implement read-only use cases via FSx for ONTAP S3 AP direct path. Use DataSync → standard S3 path when writes are required
+- **Verification levels**: 4-stage progression: API verified → Functionally verified → Security verified → Production verified. Most platforms currently at functional verification
+
+## FAQ / Common Misconceptions
+
+### Q1: Why doesn't Delta Lake write work?
+
+**A**: Delta Lake's commit protocol requires atomic rename within the `_delta_log/` directory, but the S3 API has no native rename operation. The CopyObject + DeleteObject workaround is possible, but conditional writes (`If-None-Match`) are also unsupported, meaning **transaction integrity cannot be guaranteed for concurrent writers**. Do not use for production writes.
+
+> **Common S3-compatible storage challenge** (S3 Compatibility / Storage Specialist lens): This constraint is not unique to FSx for ONTAP S3 AP — it exists across S3-compatible storage. Standard S3 resolved this with conditional writes (available since Aug 2024), but FSx for ONTAP S3 AP has not yet received this capability.
+
+> **UniForm read path** (Iceberg / Open Table Specialist lens): Delta Lake UniForm (`delta.universalFormat`) generates metadata for both Delta and Iceberg. Because the Iceberg metadata path manages pointers via an external catalog (Glue), the Iceberg read path may function even on FSx for ONTAP S3 AP. However, the UniForm write commit itself depends on the Delta protocol, so direct writes to FSx for ONTAP S3 AP remain unsupported.
+
+### Q2: Can I use presigned URLs?
+
+**A**: They technically work (client-side signature calculation; server processes as a standard request). However, AWS officially lists this as "Not supported" and does not guarantee stability. **Do not rely on for production.**
+
+### Q3: What about SnapMirror S3?
+
+**A**: SnapMirror S3 (ONTAP S3 bucket → AWS S3 replication) is **intentionally disabled** on FSx for ONTAP (confirmed by AWS Support, May 2026). Use AWS DataSync for FSx for ONTAP → standard S3 sync. Details: [DataSync Guide](./datasync-to-s3-guide.md)
+
+### Q4: Why is ListObjectsV2 slow on large datasets?
+
+**A**: FSx for ONTAP S3 AP's ListObjectsV2 exhibits 30-80x higher latency than standard S3. AWS Support confirmed this as a **product-level performance characteristic** (not an environmental issue). For workloads requiring extensive file listing, consolidate files to ≥ 128 MB and organize with partition structures.
+
+> **Small-file consolidation** (Data Lake Optimization lens): Manufacturing data tends to generate massive numbers of small files (sensor logs, etc.). Pre-processing with Glue ETL or EMR to consolidate into Parquet ≥ 128 MB before analytics via FSx for ONTAP S3 AP is recommended.
+
+### Q5: Do I need Multi-AZ for production?
+
+**A**: **Multi-AZ is strongly recommended for production**. Multi-AZ provides synchronous replication to a secondary file server with automatic failover during AZ failures. Note that write bandwidth consumption doubles (Multi-AZ replication).
+
+### Q6: What's the difference between API/Functional/Security/Production verification levels?
+
+**A**:
+- **API verified**: S3 API operations succeed (minimum viability check)
+- **Functionally verified**: End-to-end workflow succeeds (data upload → catalog registration → query → correct results)
+- **Security verified**: IAM + AP policy + filesystem permissions + CloudTrail all confirmed
+- **Production verified**: Concurrent queries, disaster recovery, cost validation, SLA compliance confirmed
+
+> **Pre-production security verification** (Security Verification lens): Many PoCs stop at API/functional verification, but security verification (including negative tests) must be completed before production deployment. Cross-account access denial and VPC-origin AP isolation confirmation are mandatory.
+
+### Q7: Can I mix formats (Parquet/Delta/Iceberg/Hudi) in one bucket?
+
+**A**: Format mixing within the same volume/prefix is technically possible but increases management complexity. Recommended approach is to separate formats by prefix or volume and catalog appropriately in Glue Catalog.
+
+## Selection Guide (Platform/Format Decision Flowchart)
+
+```mermaid
+graph TD
+    A[Lakehouse analytics<br/>via FSx for ONTAP S3 AP] --> B{Use case?}
+    
+    B --> C[Read-only SQL analytics]
+    B --> D[ETL / batch transformation]
+    B --> E[Table format writes<br/>Delta/Iceberg]
+    B --> F[AI/ML / RAG]
+    
+    C --> G{Platform selection}
+    G --> G1[Athena — serverless, most verified]
+    G --> G2[Snowflake — External Stage, Cortex AI]
+    G --> G3[Databricks — External Location, UC governance]
+    
+    D --> H{Write destination?}
+    H --> H1[Write back to FSx for ONTAP S3 AP<br/>Glue/EMR Parquet Append ✅]
+    H --> H2[Write to standard S3<br/>DataSync → S3 → any format]
+    
+    E --> I[Direct write to FSx for ONTAP S3 AP ❌<br/>conditional writes not supported]
+    I --> I1[DataSync → standard S3 → Delta/Iceberg ✅]
+    
+    F --> J[Bedrock Knowledge Base ✅<br/>Document read via S3 AP]
+    
+    style G1 fill:#ccffcc
+    style H1 fill:#ccffcc
+    style I fill:#ffcccc
+    style I1 fill:#ccffcc
+    style J fill:#ccffcc
+```
+
+> **UC governance path** (Databricks Governance Architect lens): When selecting Databricks, UC External Location does not directly support S3 AP (session policy constraint). Reading via Instance Profile is possible but bypasses UC governance. For UC-governed analytics, use the DataSync → standard S3 → UC External Location path.
+
+## OT/IT Security Considerations
+
+### Dual-Layer Authorization Model
+
+FSx for ONTAP S3 AP implements **dual-layer authorization**:
+
+| Layer | Control | Applied When |
+|-------|---------|-------------|
+| **Layer 1: IAM + AP Policy** | S3 API-level access control | On S3 request receipt |
+| **Layer 2: Filesystem Permissions** | ONTAP UNIX/NTFS ACL | On filesystem access |
+
+**Both checks must pass for access to be granted.** This is a stronger authorization model than native S3.
+
+### VPC-Origin vs Internet-Origin AP Security
+
+| Attribute | VPC-Origin | Internet-Origin |
+|-----------|-----------|----------------|
+| Network isolation | Accessible only from specified VPC | Accessible from any network (controlled by IAM auth) |
+| Recommended for | Production, sensitive data | Development, Athena/Glue (managed services outside VPC) |
+| Athena compatibility | ❌ Athena connects from outside VPC | ✅ Athena requires Internet-Origin only |
+
+> **VPC-Origin AP isolation** (OT Network Security Specialist lens): For sensitive data like manufacturing data, use VPC-Origin AP and allow access only from VPC-internal services (EMR/Lambda). When Athena access is needed, use Internet-Origin AP + IAM + AP policy triple control as an alternative.
+
+### Manufacturing Environment Security Design
+
+```
+OT Network (Factory)
+  └── Edge Gateway → NFS/SMB → FSx for ONTAP (in IT VPC)
+
+IT VPC:
+  ├── FSx for ONTAP (Multi-AZ)
+  │     ├── VPC-Origin S3 AP → EMR/Lambda (sensitive data)
+  │     └── Internet-Origin S3 AP → Athena/Glue (aggregated data)
+  ├── VPC Endpoint (S3 Gateway)
+  └── CloudTrail + VPC Flow Logs
+```
+
+### CloudTrail Audit Patterns
+
+| Event | Audit Target | Detection Purpose |
+|-------|-------------|-----------------|
+| `GetObject` via AP | Who read which file | Unauthorized access detection |
+| `PutObject` via AP | Who wrote | Data tampering detection |
+| `PutAccessPointPolicy` | AP policy changes | Privilege escalation detection |
+| `DeleteObject` via AP | Who deleted | Data loss tracking |
+
+> **Audit-log identifiability** (Audit / Observability lens): S3 data event CloudTrail logs are recorded based on AP ARN. When operating multiple APs, include purpose in AP names (`analytics-readonly`, `etl-readwrite`) to facilitate log analysis identification.
+
+### Credential Rotation
+
+| Component | Auth Method | Rotation Policy |
+|-----------|------------|----------------|
+| Athena → AP | IAM Role (service-linked) | Automatic (STS temporary credentials) |
+| Glue → AP | IAM Role | Automatic |
+| Databricks → AP | Instance Profile / Storage Credential | Key rotation within 90 days recommended |
+| Snowflake → AP | Storage Integration IAM Role | Automatic (STS) |
+
+## Phased Implementation Steps
+
+| Phase | Goal | Key Actions | Completion Criteria | Duration |
+|-------|------|-------------|--------------------|---------| 
+| **Phase 1**: PoC read-only | Validate basic operation with single platform | Athena + Parquet query via S3 AP success | End-to-end read query succeeds | 1-2 days |
+| **Phase 2**: Multi-platform read | Validate multiple platform compatibility | Read verification with Glue/EMR/Snowflake/Bedrock | All platforms API/functionally verified | 3-5 days |
+| **Phase 3**: Write pattern validation | Validate DataSync integration | DataSync → S3 → Delta/Iceberg write test | Write path works, incremental sync confirmed | 1 week |
+| **Phase 4**: Security hardening | Least privilege / negative testing | IAM policy minimization, all negative tests pass, CloudTrail enabled | Security verification level achieved | 1-2 weeks |
+| **Phase 5**: Production validation | Performance/DR/cost confirmation | Concurrent query benchmarks, DR failover test, monthly cost validation | Production verification level achieved, SLA compliance confirmed | 2-4 weeks |
+
+> **Production-deployment gate** (Reliability / QA lens): Before transitioning from Phase 4 to Phase 5, ensure all items in the negative test matrix (NEG-001 through NEG-010) pass. Block production deployment if any Critical-level item fails.
+
+> **Throughput optimization** (Performance / Throughput Architect lens): In Phase 5, verify the gap between FSx for ONTAP provisioned throughput and actual workload measurements. For over-provisioning (utilization < 30%), consider throughput reduction; for under-provisioning (sustained utilization > 80%), consider increase. Use CloudWatch `ThroughputUtilization` metric for decision-making.
+
+## Related Documents
+
+- [FSx for ONTAP → Databricks UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) — UC integration overview
+- [DataSync: FSx for ONTAP → S3 Sync Guide](./datasync-to-s3-guide.md) — DataSync setup required for write paths
+- [S3 Annotations Governance Evaluation](./s3-annotations-governance-evaluation.md) — Metadata enhancement evaluation
+- [Kafka-ClickHouse-Unity Catalog Connectivity Guide](./kafka-clickhouse-unity-catalog-connectivity.md) — Streaming integration
+- [Recovery Semantics](./recovery-semantics.md) — Snapshot vs Lakehouse Time Travel comparison
+
+## Quick Start (3 Steps to Start Analytics)
+
+The most verified, lowest-risk path: **Athena + Parquet read**
+
+```bash
+# Step 1: Create FSx for ONTAP S3 Access Point (skip if existing)
+aws fsx create-and-attach-s3-access-point \
+  --name analytics-reader \
+  --type ONTAP \
+  --ontap-configuration '{
+    "VolumeId": "<VOL_ID>",
+    "FileSystemIdentity": {"Type": "UNIX", "UnixUser": {"Name": "analytics_reader"}}
+  }'
+
+# Step 2: Register with Glue Crawler
+aws glue create-crawler --name fsxn-parquet-crawler \
+  --role GlueCrawlerRole \
+  --database-name fsxn_analytics \
+  --targets '{"S3Targets": [{"Path": "s3://<AP-ALIAS>/data/"}]}'
+aws glue start-crawler --name fsxn-parquet-crawler
+
+# Step 3: Query with Athena
+aws athena start-query-execution \
+  --query-string "SELECT * FROM fsxn_analytics.data LIMIT 10" \
+  --work-group primary
+```
+
+> **Phased approach** (Solution Architect lens): 80% of users start with "is read-only analytics sufficient, or do I need writes?" If unsure, try the Quick Start above with FSx for ONTAP S3 AP + Athena, and add the DataSync path when writes are needed. No need to build a complex architecture from the start.
+
+## Cross-Path Cost Comparison
+
+| Path | Estimated Monthly Cost (1TB data) | Additional Components | Use Case |
+|------|----------------------------------|----------------------|----------|
+| FSx for ONTAP S3 AP direct (read-only) | $0 (no additional) | None (existing FSx for ONTAP only) | Athena/Glue/Snowflake read analytics |
+| DataSync → S3 → analytics | ~$27/month (transfer+S3 storage) | DataSync task + S3 bucket | UC Managed Tables / Delta / Iceberg writes |
+| DataSync → S3 → Iceberg Lakehouse | ~$50-80/month (transfer+S3+compute) | DataSync + S3 + EMR/Glue transformation | Full-governance Lakehouse |
+| FPolicy → Lambda → S3 (near-real-time) | ~$15-40/month (Lambda+S3) | Lambda + EventBridge + S3 | Near-real-time change detection needed |
+
+> **Long-term retention tiering** (Manufacturing Compliance Specialist lens): In automotive manufacturing environments, quality inspection data requires minimum 15-year retention per regulatory requirements (IATF 16949). Combining S3 Lifecycle + Glacier Deep Archive reduces long-term retention cost to ~$1/TB/month. Typical tiering: Standard/IA for short-term analytics (last 90 days), Glacier for long-term retention.
+
 ## Overview
 
 This document defines the verified compatibility between FSx for ONTAP S3 Access Points and Lakehouse platforms/formats. The matrix is based on the S3 API operations supported by FSx for ONTAP access points as documented in [Access point compatibility](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html).
@@ -29,7 +234,7 @@ Before reviewing the compatibility matrix, understand these fundamental constrai
 
 Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specific S3 behaviors for transactional guarantees:
 
-| Requirement | Delta Lake | Apache Iceberg | Apache Hudi | FSx S3 AP Support |
+| Requirement | Delta Lake | Apache Iceberg | Apache Hudi | FSx for ONTAP S3 AP Support |
 |-------------|-----------|----------------|-------------|-------------------|
 | Atomic rename for commit | Required (\_delta\_log/) | Not required (uses metadata pointers) | Required (timeline) | **Not available** — CopyObject + DeleteObject as workaround within same AP |
 | Consistent list-after-write | Required | Required | Required | Supported (ONTAP provides consistency) |
@@ -63,7 +268,11 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **AWS Glue ETL** | Parquet | Write (Append) | ✅ Verified | Read-write file system user on AP | 5 GB max per file upload |
 | **AWS Glue ETL** | Parquet | Overwrite | ⚠️ Experimental | Read-write file system user | DeleteObject + PutObject pattern; no atomic overwrite guarantee |
 | **AWS Glue ETL** | Delta Lake | Read | ⚠️ Experimental | Glue 4.0+ with Delta Lake library | Delta log reading works; commit protocol untested for writes |
+| **AWS Glue ETL** | Iceberg | Read | ⚠️ Experimental | Glue 4.0+ native Iceberg support, Glue Catalog as Iceberg catalog | Glue 4.0 provides native Iceberg integration. Iceberg metadata reading on FSx for ONTAP S3 AP via external catalog (Glue) expected to work. Write commits limited by lack of conditional writes |
 | **AWS Glue ETL** | Delta Lake | Write | ❌ Not Supported | — | Delta commit protocol requires atomic rename of _delta_log JSON files; not natively supported |
+| **AWS Glue ETL** | Iceberg | Write | ⚠️ Experimental | Glue 4.0+ Iceberg native + Glue Catalog | Iceberg uses external catalog for pointer management (no rename needed). However, some implementations use conditional writes for concurrent writer conflict resolution, which may fail on FSx for ONTAP S3 AP. Single-writer configuration expected to work |
+
+> **Single-writer configuration** (Data Engineering SA lens): Glue 4.0's native Iceberg support uses Glue Catalog as the Iceberg catalog to manage metadata pointer updates. This means reads of data files on FSx for ONTAP S3 AP work without issues, and **single-writer configuration** writes are theoretically possible. However, if multiple Glue jobs write to the same table, conflicts may occur — standard S3 writes are recommended for multi-writer scenarios.
 | **Amazon EMR Serverless** | Parquet | Read | ✅ Verified | Spark with S3A connector, AP alias | — |
 | **Amazon EMR Serverless** | Parquet | Write (Append) | ✅ Verified | Read-write file system user | 5 GB max per file |
 | **Amazon EMR Serverless** | Iceberg | Read | ⚠️ Experimental | Iceberg Spark runtime, Glue Catalog | Metadata reading works; write commit untested |
@@ -71,18 +280,23 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **Amazon EMR Serverless** | Delta Lake | Read | ⚠️ Experimental | Delta Lake Spark library | Log reading works |
 | **Amazon EMR Serverless** | Delta Lake | Write/MERGE | ❌ Not Supported | — | Atomic rename required for commit protocol |
 | **Databricks** | Parquet/CSV | Read (External Location) | ✅ Verified | Unity Catalog External Location, instance profile/storage credential with AP permissions | — |
-| **Databricks** | Delta Lake | Read (External Table) | ⚠️ Experimental | Unity Catalog, Delta log on FSx volume | Read works if Delta log is pre-existing |
+| **Databricks** | Delta Lake | Read (External Table) | ⚠️ Experimental | Unity Catalog, Delta log on FSx for ONTAP volume | Read works if Delta log is pre-existing |
 | **Databricks** | Delta Lake | Write/MERGE/Compaction | ❌ Not Supported | — | Delta commit protocol requires rename; S3A rename emulation (copy+delete) may fail without conditional writes |
 | **Snowflake** | Parquet/CSV | Read (External Stage) | ✅ Verified | External Stage with AP alias, storage integration IAM role | — |
 | **Snowflake** | Iceberg | Read (External Catalog) | ⚠️ Experimental | Snowflake Iceberg Tables with external catalog | Metadata pointer reading works. Write not applicable (Snowflake External Stage is read-only). |
-| **Snowflake** | Iceberg | Write (Managed Iceberg Table) | ✅ Confirmed (May 2026) | COPY INTO from FSx S3 AP External Stage → Managed Iceberg Table on customer S3 | Data written in open Iceberg format. Readable by Databricks/Athena/EMR via Horizon Iceberg REST Catalog. Dynamic Table source also confirmed (FULL refresh, min 60s TARGET_LAG). **COPY INTO 64-day deduplication confirmed** — same behavior as standard tables. Task + COPY INTO pattern is production-ready. Horizon Catalog enforces governance (Row Access Policies, Masking) on external engine access. |
-| **Snowflake** | Any | Write (to FSx S3 AP) | ❌ Not Supported | — | Snowflake External Stages are read-only by design. Write path is COPY INTO → Snowflake-managed storage (internal table or Managed Iceberg on S3). |
+| **Snowflake** | Iceberg | Write (Managed Iceberg Table) | ✅ Confirmed (May 2026) | COPY INTO from FSx for ONTAP S3 AP External Stage → Managed Iceberg Table on customer S3 | Data written in open Iceberg format. Readable by Databricks/Athena/EMR via Horizon Iceberg REST Catalog. Dynamic Table source also confirmed (FULL refresh, min 60s TARGET_LAG). **COPY INTO 64-day deduplication confirmed** — same behavior as standard tables. Task + COPY INTO pattern is production-ready. Horizon Catalog enforces governance (Row Access Policies, Masking) on external engine access. |
+| **Snowflake** | Any | Write (to FSx for ONTAP S3 AP) | ❌ Not Supported | — | Snowflake External Stages are read-only by design. Write path is COPY INTO → Snowflake-managed storage (internal table or Managed Iceberg on S3). |
 | **Redshift Spectrum** | Parquet/CSV | Read-only | ✅ Verified | External schema via Glue Catalog, IAM role with AP permissions | Same pattern as Athena. Query results stay in Redshift. |
 | **Amazon Bedrock** | Documents (PDF, TXT, etc.) | Read (Knowledge Base) | ✅ Verified | Bedrock Knowledge Base with S3 data source pointing to AP | For RAG applications; documents indexed for retrieval |
+| **ClickHouse** | Parquet | Read (s3() table function) | 🔲 Planned | `s3('https://<AP-ALIAS>.s3.<REGION>.amazonaws.com/path/*.parquet')` + IAM auth | s3() table function against FSx for ONTAP S3 AP unverified. ListObjectsV2 latency impact needs assessment. Note: ClickHouse Cloud vs self-managed have different S3 credential mechanisms |
+| **ClickHouse** | Iceberg | Read (iceberg() table function) | 🔲 Planned | ClickHouse 23.8+ `iceberg()` table function. Glue Catalog integration needs verification | Annotation table (Iceberg on S3 Tables) reading mentioned in [S3 Annotations Evaluation](./s3-annotations-governance-evaluation.md). Version/config dependent |
+| **ClickHouse** | Parquet/CSV | Read (S3Queue engine) | ⚠️ Design phase | DataSync → S3 → ClickHouse S3Queue engine for automated ingestion | Standard S3 bucket path expected to work. FSx for ONTAP S3 AP direct S3Queue not possible (no Event Notifications) |
+
+> **ClickHouse hot/cold role** (ClickHouse Specialist lens): ClickHouse's primary role in manufacturing use cases is real-time quality analytics via Kafka/streaming (hot path). Reading from FSx for ONTAP S3 AP should be positioned as cold path (historical analysis, batch enrichment). For real-time quality alerts, use ClickHouse Materialized Views consuming directly from Kafka, and limit S3 AP batch reads to post-hoc analysis.
 
 ## Parquet Timestamp Compatibility
 
-> **Yakio-san review note**: This is a sizing/implementation reference, not a service limit. The constraint originates from Apache Spark's Parquet reader, not from FSx S3 AP.
+> **Positioning note** (Data Format Specialist lens): This is a sizing/implementation reference, not a service limit. The constraint originates from Apache Spark's Parquet reader, not from FSx for ONTAP S3 AP.
 
 When generating Parquet files for use with Spark-based engines (Glue ETL, EMR, Databricks), timestamp resolution matters:
 
@@ -109,26 +323,26 @@ ts_array = pa.array(df['timestamp'].values.astype('datetime64[us]'), type=pa.tim
 
 ## Performance Characteristics
 
-**Important**: S3 API access via FSx for ONTAP S3 Access Points is **NOT equivalent to native S3 performance**. Performance depends on the FSx file system's provisioned throughput capacity.
+**Important**: S3 API access via FSx for ONTAP S3 Access Points is **NOT equivalent to native S3 performance**. Performance depends on the FSx for ONTAP file system's provisioned throughput capacity.
 
-| Characteristic | FSx S3 Access Point | Native S3 |
+| Characteristic | FSx for ONTAP S3 Access Point | Native S3 |
 |---------------|--------------------:|----------:|
 | Latency | Tens of milliseconds | Single-digit milliseconds |
-| Throughput | Limited by FSx provisioned throughput | Virtually unlimited (scales with prefixes) |
-| Requests/sec | Limited by FSx provisioned throughput | 5,500 GET/s per prefix, 3,500 PUT/s per prefix |
+| Throughput | Limited by FSx for ONTAP provisioned throughput | Virtually unlimited (scales with prefixes) |
+| Requests/sec | Limited by FSx for ONTAP provisioned throughput | 5,500 GET/s per prefix, 3,500 PUT/s per prefix |
 | Max object size (upload) | 5 GB | 5 TB |
-| Concurrent readers | Limited by FSx throughput capacity | Highly parallel |
+| Concurrent readers | Limited by FSx for ONTAP throughput capacity | Highly parallel |
 
 Source: [Amazon FSx for NetApp ONTAP performance](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/performance.html), [Accessing your data via Amazon S3 access points](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)
 
 ### Throughput Planning
 
-When planning analytics workloads on FSx S3 Access Points:
+When planning analytics workloads on FSx for ONTAP S3 Access Points:
 
 1. **Identify peak scan volume**: e.g., 100 GB table scan
 2. **Determine acceptable query time**: e.g., < 60 seconds
 3. **Calculate required throughput**: 100 GB / 60s ≈ 1.7 GB/s read throughput
-4. **Provision accordingly**: Select FSx throughput capacity that meets or exceeds requirement
+4. **Provision accordingly**: Select FSx for ONTAP throughput capacity that meets or exceeds requirement
 
 Note: Write operations consume 2x network bandwidth (replicated to secondary file server in Multi-AZ).
 
@@ -193,7 +407,7 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 
 | Level | Definition | What Was Tested | Confidence for Production |
 |-------|-----------|-----------------|--------------------------|
-| **API Verified** | Basic S3 API operations succeed against FSx S3 AP | GetObject/PutObject/ListObjectsV2 return expected results | Low — only confirms API compatibility |
+| **API Verified** | Basic S3 API operations succeed against FSx for ONTAP S3 AP | GetObject/PutObject/ListObjectsV2 return expected results | Low — only confirms API compatibility |
 | **Functional Verified** | Representative end-to-end use case succeeds | Full workflow: data upload → catalog registration → query → correct results | Medium — confirms the pattern works |
 | **Security Verified** | IAM, AP policy, VPC endpoint, file system permissions, CloudTrail all confirmed | Unauthorized access denied at both layers; audit events logged | High — confirms security posture |
 | **Production Validated** | Customer PoC or production-equivalent load tested | Concurrent queries, failure recovery, cost validation, SLA compliance | Highest — ready for production proposal |
@@ -204,7 +418,7 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 |----------------|-------------------|-------|
 | Athena + Parquet Read | **Security Verified** | Full workflow + 9/9 negative tests PASS + CloudTrail confirmed. Benchmark: 54.8 MB/s peak (128 MB/s provisioned). |
 | Glue ETL + Parquet Read/Write | **Functional Verified** | Read 10K rows → Transform → Write-back in 64s. Verified 2026-05-23. |
-| Glue Crawler | **Functional Verified** | Auto-schema detection on FSx S3 AP data. Verified 2026-05-23. |
+| Glue Crawler | **Functional Verified** | Auto-schema detection on FSx for ONTAP S3 AP data. Verified 2026-05-23. |
 | Delta Lake OSS (delta-rs) Read | **Functional Verified** | DeltaTable.open + to_pyarrow_table + metadata/history. Verified 2026-05-23. |
 | Delta Lake OSS Write | **Not Supported** | Returns 501 Not Implemented (conditional writes required by delta-rs commit protocol). |
 | EMR Serverless + Parquet Read/Write | Functional Verified | Per AWS official tutorial. |
@@ -212,9 +426,9 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | Snowflake + External Stage (LIST) | **API Verified** | LIST @stage succeeds (files visible). |
 | Snowflake + External Stage (GetObject) | **Verified** | Resolved (2026-06-02). Session policy issue was due to syntax error. GetObject works correctly with S3 AP External Stage. |
 | Snowflake + TO_FILE on S3 AP Stage | **Verified** | Resolved (2026-06-02). `TO_FILE` works with string literal syntax and correct file path. Original failures were (a) identifier syntax, (b) non-existent file path. Cortex COMPLETE multimodal can read files from FSx for ONTAP via S3 AP. |
-| Snowflake + BUILD_SCOPED_FILE_URL on S3 AP Stage | **Functional Verified** | Works correctly on FSx S3 AP external stage. |
-| Snowflake + PARSE_DOCUMENT on S3 AP Stage | **Functional Verified** | Works correctly on FSx S3 AP external stage. |
-| Snowflake + Managed Iceberg Table (COPY INTO from S3 AP Stage) | **Functional Verified** | COPY INTO from FSx S3 AP External Stage → Managed Iceberg Table confirmed. 64-day deduplication works. Horizon REST Catalog exposes to external engines with governance enforcement. |
+| Snowflake + BUILD_SCOPED_FILE_URL on S3 AP Stage | **Functional Verified** | Works correctly on FSx for ONTAP S3 AP external stage. |
+| Snowflake + PARSE_DOCUMENT on S3 AP Stage | **Functional Verified** | Works correctly on FSx for ONTAP S3 AP external stage. |
+| Snowflake + Managed Iceberg Table (COPY INTO from S3 AP Stage) | **Functional Verified** | COPY INTO from FSx for ONTAP S3 AP External Stage → Managed Iceberg Table confirmed. 64-day deduplication works. Horizon REST Catalog exposes to external engines with governance enforcement. |
 | Databricks + Unity Catalog | **Blocked** | Session policy blocks all S3 AP operations. Support case filed with Databricks. |
 | Snowflake + Parquet Read | API Verified | External Stage creation and query confirmed |
 | Delta Lake Write (any platform) | Not Supported | Fundamental constraint (no atomic rename) |
@@ -225,12 +439,12 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 
 ### Why This Matters
 
-Lakehouse table formats require specific S3 behaviors for transactional guarantees. Understanding the commit protocol explains why some operations work and others do not on FSx S3 AP.
+Lakehouse table formats require specific S3 behaviors for transactional guarantees. Understanding the commit protocol explains why some operations work and others do not on FSx for ONTAP S3 AP.
 
-### Delta Lake Write Path (NOT SUPPORTED on FSx S3 AP)
+### Delta Lake Write Path (NOT SUPPORTED on FSx for ONTAP S3 AP)
 
 ```
-Writer                          S3 (or FSx S3 AP)
+Writer                          S3 (or FSx for ONTAP S3 AP)
   │                                    │
   │  1. Write data files               │
   │  ──── PutObject(part-00000.parquet)──▶│  ✅ Supported
@@ -255,10 +469,10 @@ guarantee exactly-once commit semantics. Concurrent writers may corrupt
 the transaction log. DO NOT USE for production writes.
 ```
 
-### Apache Iceberg with External Catalog (EXPERIMENTAL Read on FSx S3 AP)
+### Apache Iceberg with External Catalog (EXPERIMENTAL Read on FSx for ONTAP S3 AP)
 
 ```
-Writer                    Glue Catalog           FSx S3 AP
+Writer                    Glue Catalog           FSx for ONTAP S3 AP
   │                           │                      │
   │  1. Write data files      │                      │
   │  ──── PutObject(data/...) ──────────────────────▶│  ✅ Supported
@@ -282,13 +496,13 @@ Writer                    Glue Catalog           FSx S3 AP
 RESULT: Iceberg with external catalog (Glue) does NOT require rename
 for commit. The catalog atomically updates the metadata pointer.
 READ PATH works. WRITE PATH is theoretically possible but untested
-for concurrent writers and compaction on FSx S3 AP.
+for concurrent writers and compaction on FSx for ONTAP S3 AP.
 ```
 
-### Read-Only Analytics Path (VERIFIED on FSx S3 AP)
+### Read-Only Analytics Path (VERIFIED on FSx for ONTAP S3 AP)
 
 ```
-Athena/Glue/EMR           Glue Catalog           FSx S3 AP
+Athena/Glue/EMR           Glue Catalog           FSx for ONTAP S3 AP
   │                           │                      │
   │  1. Get table metadata    │                      │
   │  ──── GetTable() ────────▶│                      │
@@ -314,19 +528,19 @@ No rename, no conditional writes, no concurrent writer conflicts.
 
 ## Workload-Specific Performance Characteristics
 
-| Workload | Typical Pattern | Bottleneck | Recommended FSx Config | File Size Guidance | Concurrency | Verification Status |
+| Workload | Typical Pattern | Bottleneck | Recommended FSx for ONTAP Config | File Size Guidance | Concurrency | Verification Status |
 |----------|----------------|-----------|----------------------|-------------------|-------------|-------------------|
-| **Large sequential scan** (Athena full-table) | Few large reads, high throughput | FSx network throughput | ≥ 1 GB/s provisioned throughput | ≥ 128 MB per file (Parquet/ORC) | Low-medium (1-10 queries) | Functional Verified |
+| **Large sequential scan** (Athena full-table) | Few large reads, high throughput | FSx for ONTAP network throughput | ≥ 1 GB/s provisioned throughput | ≥ 128 MB per file (Parquet/ORC) | Low-medium (1-10 queries) | Functional Verified |
 | **Small file / metadata-heavy** (many small CSVs) | Many ListObjectsV2 + small GetObject | Request rate, latency | Higher throughput for IOPS headroom | Consolidate to ≥ 32 MB files | Low | API Verified |
-| **High-concurrency Athena** (many analysts) | Parallel scans on same data | FSx aggregate throughput | Scale throughput to concurrent load | Partition data for scan reduction | High (10-50 queries) | Not yet validated |
-| **Glue ETL read-heavy** (batch transform) | Sequential large reads + write-back | FSx read throughput | ≥ 512 MB/s provisioned | ≥ 128 MB per file | Low (1-5 jobs) | Functional Verified |
-| **Spark write-heavy** (ETL output) | Many PutObject calls | FSx write throughput (2x bandwidth) | ≥ 1 GB/s for write-heavy | Target 128-256 MB output files | Low | Functional Verified |
+| **High-concurrency Athena** (many analysts) | Parallel scans on same data | FSx for ONTAP aggregate throughput | Scale throughput to concurrent load | Partition data for scan reduction | High (10-50 queries) | Not yet validated |
+| **Glue ETL read-heavy** (batch transform) | Sequential large reads + write-back | FSx for ONTAP read throughput | ≥ 512 MB/s provisioned | ≥ 128 MB per file | Low (1-5 jobs) | Functional Verified |
+| **Spark write-heavy** (ETL output) | Many PutObject calls | FSx for ONTAP write throughput (2x bandwidth) | ≥ 1 GB/s for write-heavy | Target 128-256 MB output files | Low | Functional Verified |
 | **RAG document ingestion** (Bedrock) | Many small-medium GetObject | Latency per document | Standard throughput sufficient | N/A (document size varies) | Low (batch ingestion) | Functional Verified |
 
 ### Performance Planning Formula
 
 ```
-Required FSx Throughput = max(
+Required FSx for ONTAP Throughput = max(
   Read workload:  (Total scan size / Acceptable query time),
   Write workload: (Total write size / Acceptable job time) × 2,  # 2x for Multi-AZ replication
   Concurrent load: Sum of all concurrent workload throughput needs
@@ -340,7 +554,7 @@ Required FSx Throughput = max(
 ### Q: What happens after an ONTAP Snapshot restore?
 
 **A**: Snapshot restore reverts all files on the volume to the snapshot point-in-time. Effects:
-- **Glue Catalog**: Catalog metadata is NOT on the FSx volume — it remains unchanged. This creates a mismatch: catalog may reference files that no longer exist (if added after snapshot), or miss files that were restored.
+- **Glue Catalog**: Catalog metadata is NOT on the FSx for ONTAP volume — it remains unchanged. This creates a mismatch: catalog may reference files that no longer exist (if added after snapshot), or miss files that were restored.
 - **Action required**: Re-run Glue Crawler after snapshot restore to reconcile catalog with actual file state.
 - **Athena queries**: May fail with "file not found" until catalog is refreshed.
 
@@ -354,11 +568,11 @@ Required FSx Throughput = max(
 
 ### Q: What happens if a Spark/Glue job fails mid-write?
 
-**A**: Partial files may remain on the FSx volume.
+**A**: Partial files may remain on the FSx for ONTAP volume.
 - **Parquet append**: Orphaned partial files exist but are not referenced by catalog. Safe to clean up manually.
 - **Delta write (if attempted)**: Transaction log may be in inconsistent state. This is why Delta write is Not Supported.
 - **Recovery**: Delete orphaned files via S3 API (DeleteObject) or NFS/SMB. Re-run the job.
-- **Note**: FSx S3 AP does not support Object Lifecycle rules for automatic cleanup.
+- **Note**: FSx for ONTAP S3 AP does not support Object Lifecycle rules for automatic cleanup.
 
 ### Q: What happens if a file is updated via NFS while Bedrock is ingesting it?
 
@@ -369,7 +583,7 @@ Required FSx Throughput = max(
 
 ### Q: What happens after SnapMirror failover to DR region?
 
-**A**: The S3 Access Point is bound to the original FSx file system in the source region.
+**A**: The S3 Access Point is bound to the original FSx for ONTAP file system in the source region.
 - **AP ARN**: Remains in source region. Does NOT automatically transfer to DR.
 - **Action required**: Create a new S3 Access Point on the DR volume in the DR region. Update all references (Glue Catalog location, IAM policies, application configs) to point to the new AP.
 - **Automation**: Include AP recreation in DR runbook. Use CloudFormation/Terraform for repeatable setup.
@@ -380,7 +594,7 @@ Required FSx Throughput = max(
 **A**: The access point transitions to `MISCONFIGURED` state.
 - **Effect**: All S3 requests through the AP fail.
 - **Recovery**: Recreate the user on the file system, or update the AP to use a different valid user.
-- **FSx behavior**: FSx periodically checks and automatically returns the AP to `AVAILABLE` when the user identity is resolvable again. ([source](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html))
+- **FSx for ONTAP behavior**: FSx for ONTAP periodically checks and automatically returns the AP to `AVAILABLE` when the user identity is resolvable again. ([source](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html))
 
 ---
 
@@ -392,7 +606,7 @@ Both Databricks and Snowflake apply **session policies** during `AssumeRole` tha
 
 ### Root Cause
 
-| Component | Standard S3 ARN | FSx S3 AP ARN |
+| Component | Standard S3 ARN | FSx for ONTAP S3 AP ARN |
 |-----------|----------------|---------------|
 | Bucket-level | `arn:aws:s3:::bucket-name` | `arn:aws:s3:region:account:accesspoint/name` |
 | Object-level | `arn:aws:s3:::bucket-name/key` | `arn:aws:s3:region:account:accesspoint/name/object/key` |
@@ -436,7 +650,7 @@ This explains the observed behavior where LIST operations succeed but GetObject/
 
 ### Resolution Path
 
-1. **Databricks**: UC does not support S3 Tables. Internal product request DB-I-15824 tracking. Use Instance Profile + boto3 for PoC/demo (not production).
+1. **Databricks**: UC does not support S3 Tables. Tracked via an internal product request with Databricks. Use Instance Profile + boto3 for PoC/demo (not production).
 2. **Snowflake**: ✅ Fully resolved. External Stage (GetObject, TO_FILE, PARSE_DOCUMENT, BUILD_SCOPED_FILE_URL) and Iceberg via Glue REST + VENDED_CREDENTIALS both working.
 3. **Interim recommendation**: For Databricks, use DataSync → S3 → UC External Table pattern. For Snowflake, use Glue REST + VENDED_CREDENTIALS for Iceberg metadata and External Stage for file access.
 
@@ -665,7 +879,7 @@ benchmark_id: "BENCH-001"
 date: "YYYY-MM-DD"
 region: "<REGION>"
 
-# FSx Configuration
+# FSx for ONTAP Configuration
 fsxn_throughput_mbps: 512
 fsxn_deployment_type: "MULTI_AZ_2"
 fsxn_storage_gb: 1024
@@ -693,7 +907,7 @@ cost_usd: 0.05
 
 # Analysis
 throughput_vs_provisioned_pct: 94  # 480/512 = 94%
-bottleneck: "FSx network throughput (near max)"
+bottleneck: "FSx for ONTAP network throughput (near max)"
 recommendation: "Sufficient for this workload"
 ```
 
@@ -786,12 +1000,12 @@ When benchmark results deviate from expectations, use this guide to diagnose.
 
 | Symptom | Likely Cause | Investigation | Resolution |
 |---------|-------------|---------------|-----------|
-| Large scan slower than expected | FSx throughput saturated | Check CloudWatch `ThroughputUtilization` metric | Increase FSx provisioned throughput |
+| Large scan slower than expected | FSx for ONTAP throughput saturated | Check CloudWatch `ThroughputUtilization` metric | Increase FSx for ONTAP provisioned throughput |
 | Large scan slower than expected | Small files (< 32 MB) | Check average file size | Consolidate files to ≥ 128 MB |
 | Small file listing very slow | High file count per prefix | Count objects in prefix | Restructure with partitioning / fewer files per prefix |
 | Athena latency high (> 30s for 1 GB) | Unpartitioned data | Check table partitioning | Add partition columns; use Parquet/ORC |
 | Athena latency high | CSV/JSON format | Check file format | Convert to Parquet (columnar, compressed) |
-| Concurrent queries degrade | Aggregate throughput exceeds provisioned | Check concurrent throughput sum | Increase FSx throughput or reduce concurrency |
+| Concurrent queries degrade | Aggregate throughput exceeds provisioned | Check concurrent throughput sum | Increase FSx for ONTAP throughput or reduce concurrency |
 | Glue ETL write slow | Write amplification (2x for Multi-AZ) | Check write throughput vs provisioned | Account for 2x write bandwidth; increase throughput |
 | Bedrock KB ingestion slow | Large documents or complex chunking | Check document sizes and chunking config | Optimize chunk size; pre-process large documents |
 | Intermittent errors | AP in MISCONFIGURED state | Check AP status via `describe-s3-access-points` | Resolve file system user identity issue |
@@ -802,12 +1016,48 @@ When benchmark results deviate from expectations, use this guide to diagnose.
 - [ ] File format: Parquet or ORC (not CSV/JSON for large scans)
 - [ ] File size: ≥ 128 MB per file for sequential scans
 - [ ] Partitioning: Date/category partitions to reduce scan scope
-- [ ] FSx throughput: Provisioned to match peak workload
+- [ ] FSx for ONTAP throughput: Provisioned to match peak workload
 - [ ] Compression: Snappy (fast) or ZSTD (smaller) for Parquet
 - [ ] Concurrency: Total concurrent throughput within provisioned limit
 - [ ] Write budget: Account for 2x bandwidth on Multi-AZ writes
 
 ---
+
+## ClickHouse × FSx for ONTAP S3 AP Test Plan
+
+> Status: 🔲 Planned. Verify whether ClickHouse's `s3()` table function can read directly from FSx for ONTAP S3 AP.
+
+### Test Targets
+
+| Test ID | Test Description | Expected Result | Priority |
+|---------|-----------------|----------------|----------|
+| CH-001 | `s3()` table function Parquet read | SELECT succeeds, data returned | High |
+| CH-002 | `s3()` wildcard pattern read | Multi-file combined read succeeds | High |
+| CH-003 | ListObjectsV2 latency impact measurement | Query time compared to native S3 | Medium |
+| CH-004 | `s3Cluster()` distributed read | Access successful from all cluster nodes | Medium |
+| CH-005 | IAM Role authentication (ClickHouse Cloud) | Access via IRSA / Instance Profile | High |
+| CH-006 | S3Queue engine (DataSync → S3 → ClickHouse) | Automated ingestion from standard S3 bucket | High |
+| CH-007 | `iceberg()` table function S3 Tables read | Annotation table query succeeds | Medium |
+
+### Test Environment Requirements
+
+```bash
+# ClickHouse version requirements
+# - s3() table function: all versions
+# - iceberg() table function: 23.8+
+# - S3Queue engine: 23.4+
+
+# Example test command
+clickhouse-client --query "
+  SELECT count(), avg(sensor_value)
+  FROM s3(
+    'https://<AP-ALIAS>.s3.ap-northeast-1.amazonaws.com/sensor-data/*.parquet',
+    'Parquet'
+  )
+"
+```
+
+> **ListObjectsV2 latency mitigation** (Query Performance Engineer lens): Even if CH-001/CH-002 succeed, the high ListObjectsV2 latency (30-80x) may make wildcard scans over many files impractical. When reading FSx for ONTAP S3 AP from ClickHouse, either pre-fetch the file path list and pass individual paths to `s3()`, or use the indirect path DataSync → standard S3 → S3Queue. In ClickHouse Cloud environments, the IAM auth mechanism differs from self-managed (SharedRole-based), so test CH-005 in both environments.
 
 ## References
 

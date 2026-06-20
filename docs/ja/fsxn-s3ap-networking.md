@@ -1,4 +1,4 @@
-# FSx S3 AP ネットワーキング考慮事項
+# FSx for ONTAP S3 AP ネットワーキング考慮事項
 
 ## 概要
 
@@ -6,13 +6,13 @@ FSx for ONTAP S3 Access Points には、通常の S3 バケットアクセスと
 
 ## 主な発見
 
-### 1. S3 Gateway エンドポイントと FSx S3 AP
+### 1. S3 Gateway エンドポイントと FSx for ONTAP S3 AP
 
 **既知の問題**（[FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns) で文書化済み）:
 
 > VPC 内 Lambda からタイムアウト | Internet Origin AP に S3 Gateway EP 経由でアクセス | Lambda を VPC 外に配置、または NAT Gateway 経由に変更
 
-**説明**: VPC アタッチされた Lambda または EC2 インスタンスが internet-origin FSx S3 AP にアクセスする際、S3 Gateway VPC エンドポイントがトラフィックをインターセプトするが、FSx S3 AP バックエンドに正しくルーティングできない場合があります。FSx S3 AP alias は `s3-r-w.<region>.amazonaws.com` に解決され、Gateway エンドポイントが通常の S3 バケットトラフィックと同じ方法で処理できない可能性があるためです。
+**説明**: VPC アタッチされた Lambda または EC2 インスタンスが internet-origin FSx for ONTAP S3 AP にアクセスする際、S3 Gateway VPC エンドポイントがトラフィックをインターセプトするが、FSx for ONTAP S3 AP バックエンドに正しくルーティングできない場合があります。FSx for ONTAP S3 AP alias は `s3-r-w.<region>.amazonaws.com` に解決され、Gateway エンドポイントが通常の S3 バケットトラフィックと同じ方法で処理できない可能性があるためです。
 
 **回避策**:
 1. Lambda を VPC 外に配置（VPC アタッチメントなし）— internet-origin AP に最もシンプル
@@ -28,7 +28,7 @@ FSx for ONTAP S3 Access Points には、通常の S3 バケットアクセスと
 
 ### 3. AWS サービスアクセスパターン
 
-| サービス | ネットワークパス | FSx S3 AP 互換性 |
+| サービス | ネットワークパス | FSx for ONTAP S3 AP 互換性 |
 |---------|-------------|------------------------|
 | Athena | AWS マネージド（顧客 VPC なし） | ✅ Internet-origin 必須 |
 | Glue ETL | AWS マネージドまたは VPC アタッチ | ✅ Internet-origin（非 VPC）または NAT Gateway（VPC） |
@@ -40,21 +40,21 @@ FSx for ONTAP S3 Access Points には、通常の S3 バケットアクセスと
 
 ### 4. DNS 解決
 
-FSx S3 AP alias は通常の S3 バケットとは異なる解決をします:
+FSx for ONTAP S3 AP alias は通常の S3 バケットとは異なる解決をします:
 
 ```
 通常の S3 バケット:
   my-bucket.s3.ap-northeast-1.amazonaws.com → S3 サービス IP（プレフィックスリスト内）
 
-FSx S3 AP alias:
+FSx for ONTAP S3 AP alias:
   my-ap-alias-ext-s3alias.s3.ap-northeast-1.amazonaws.com → s3-r-w.ap-northeast-1.amazonaws.com
 ```
 
-`s3-r-w` ホスト名は FSx S3 AP バックエンドです。その IP アドレスは、S3 Gateway エンドポイントが使用する S3 プレフィックスリスト（ap-northeast-1 では `pl-61a54008`）に含まれている場合と含まれていない場合があります。
+`s3-r-w` ホスト名は FSx for ONTAP S3 AP バックエンドです。その IP アドレスは、S3 Gateway エンドポイントが使用する S3 プレフィックスリスト（ap-northeast-1 では `pl-61a54008`）に含まれている場合と含まれていない場合があります。
 
 ### 5. トラブルシューティングチェックリスト
 
-FSx S3 AP アクセスがタイムアウトする場合:
+FSx for ONTAP S3 AP アクセスがタイムアウトする場合:
 
 1. **DNS 解決を確認**: `nslookup <alias>.s3.<region>.amazonaws.com`
 2. **TCP 接続性を確認**: `curl -s -o /dev/null -w '%{http_code}' --max-time 5 https://<alias>.s3.<region>.amazonaws.com/`
@@ -71,7 +71,7 @@ FSx S3 AP アクセスがタイムアウトする場合:
 │  VPC                                                             │
 │                                                                  │
 │  ┌──────────────────┐     ┌──────────────────┐                  │
-│  │ プライベートサブネット │────▶│ NAT Gateway       │────▶ IGW ──▶ FSx S3 AP
+│  │ プライベートサブネット │────▶│ NAT Gateway       │────▶ IGW ──▶ FSx for ONTAP S3 AP
 │  │ (Lambda/EC2)      │     │                   │                  │
 │  └──────────────────┘     └──────────────────┘                  │
 │         │                                                        │
@@ -81,9 +81,9 @@ FSx S3 AP アクセスがタイムアウトする場合:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-通常の S3 と FSx S3 AP の両方が必要な VPC 内ワークロード向け:
+通常の S3 と FSx for ONTAP S3 AP の両方が必要な VPC 内ワークロード向け:
 - 通常の S3 バケットアクセスには S3 Gateway エンドポイントを維持（無料、低レイテンシ）
-- FSx S3 AP トラフィックは NAT Gateway 経由でルーティング（またはコンピュートを VPC 外に配置）
+- FSx for ONTAP S3 AP トラフィックは NAT Gateway 経由でルーティング（またはコンピュートを VPC 外に配置）
 
 ---
 
@@ -103,7 +103,7 @@ SVM に DNS サーバーが設定されており（Active Directory ドメイン
 
 ```
 S3 API リクエスト
-  → FSx S3 AP バックエンド
+  → FSx for ONTAP S3 AP バックエンド
     → SVM ファイルシステムアクセス
       → ONTAP ネームサービススタック (ns-switch: files, dns)
         → CIFS サーバーが存在 → ユーザーマッピングに DC 参照が必要

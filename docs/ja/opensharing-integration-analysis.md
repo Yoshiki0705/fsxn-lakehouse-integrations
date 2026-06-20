@@ -103,9 +103,9 @@ OpenSharing プロトコルの `dir` access mode（サーバーが presigned URL
 
 | 制限 | 状態 | 理由 |
 |------|------|------|
-| **FSx S3 AP への Delta/Iceberg トランザクショナル write** | ❌ 依然ブロック | Conditional writes（`If-None-Match`）が 501 を返す。atomic rename 非対応。FSx S3 AP の製品レベル制限であり、OpenSharing とは無関係 |
+| **FSx for ONTAP S3 AP への Delta/Iceberg トランザクショナル write** | ❌ 依然ブロック | Conditional writes（`If-None-Match`）が 501 を返す。atomic rename 非対応。FSx for ONTAP S3 AP の製品レベル制限であり、OpenSharing とは無関係 |
 | **Databricks から S3 Tables の Foreign Iceberg 読み取り** | ❌ 依然ブロック | External Location 検証が S3 Tables 内部バケットを拒否（HeadBucket 失敗）。本 credential vending テストとは無関係 |
-| **Databricks UC による FSx S3 AP の read** | ✅ 解決済み（2026-05） | UC External Location の `access_point` field で動作。本日の STS テストは *OpenSharing recipient* パスの検証であり、これと補完関係 |
+| **Databricks UC による FSx for ONTAP S3 AP の read** | ✅ 解決済み（2026-05） | UC External Location の `access_point` field で動作。本日の STS テストは *OpenSharing recipient* パスの検証であり、これと補完関係 |
 
 ### アーキテクチャの明確化
 
@@ -117,12 +117,12 @@ FSx for ONTAP（raw data の source of truth: 画像、CSV、センサーログ�
     │   • OpenSharing STS credential vending（任意 recipient、2026-06）← NEW
     │   • Direct IAM（Athena, Glue, EMR — 既存）
     │
-    │ WRITE パス（FSx S3 AP 上ではない）:
+    │ WRITE パス（FSx for ONTAP S3 AP 上ではない）:
     │   • Delta/Iceberg managed tables は標準 S3 または S3 Tables に配置
-    │   • FSx S3 AP はトランザクショナルなテーブルメタデータをホストできない
+    │   • FSx for ONTAP S3 AP はトランザクショナルなテーブルメタデータをホストできない
     │
     ▼
-分析エンジンが FSx から raw data を read し、governed tables は別ストレージに write
+分析エンジンが FSx for ONTAP から raw data を read し、governed tables は別ストレージに write
 ```
 
 **FSx for ONTAP はデータソース。テーブルフォーマット管理は別ストレージで行う。** OpenSharing はそのソースデータのガバナンス付き zero-copy read 配信を任意の recipient に対して実現する。
@@ -247,41 +247,3 @@ FSx for ONTAP → OpenSharing Server（共有 + アクセス制御）
 
 段階的な検証アクティビティを定義済み（read → Iceberg IRC → ガバナンス travel → write-back → 非構造化設計 → 公開）。ステータスはリポジトリの Supported Integrations テーブルおよび今後のブログシリーズで更新する。
 
----
-
-## Persona Review Summary（ペルソナレビューサマリー）
-
-### レビューメタデータ
-- レビュー日: 2026-06-16
-- 対象ドキュメント: `opensharing-integration-analysis.md`（en/ja）、`omnigent-multi-agent-evaluation.md`（en/ja）
-- 範囲: 公開 OpenSharing 仕様からのプロトコル仕様面の追加、Omnigent Phase 0 評価
-- ラウンド数: 2（ラウンド間で指摘を反映）
-
-### Principal Cloud Data Architect
-- 強み: プロトコル上の事実と FSx for ONTAP 検証ステータスを明確に分離。access mode（`url`/`dir`）と credential vending を公開仕様に基づき記述。
-- ラウンド1指摘（反映済み）: Omnigent ドキュメントが「Databricks AI チームと Neon」によるリリースと記載 → 検証不能。Databricks（Matei Zaharia 発表）に修正（エビデンス規律）。
-- 未解決: write-back 未検証、共有サーバーの Tier-1 SPOF をリスクとして明記。
-
-### Manufacturing Edge Data Architect
-- 強み: Volume asset（STS のみ）が非構造化ペイロード共有に整合。メタデータ↔ペイロードリンクは自前責務として維持。
-- 懸念: 新規なし。エッジの順序/重複排除は共有プロトコル範囲外（既記載）。
-
-### Databricks Governance Architect
-- 強み: 標準 Iceberg REST Catalog 実装を正確に特定。credential vending（prefix 単位）と scan planning（行/列）の区別を維持。
-- 検証済み: Agent Bricks Supervisor Agent GA の参照は実在する引用可能なソース。
-
-### NetApp FSx for ONTAP Architect
-- 強み: NetApp を OpenSharing ストレージパートナーの "coming soon"（「年末までに」と公式確認、[OpenSharing blog](https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era)）と正確に記述（提供中と過大表現していない）。Snapshot/FlexClone 価値を要検証として提示。
-- 未解決: native 実装が ONTAP S3 / S3 AP / 独立パスのどれに乗るか。
-
-### Public Repository Confidentiality Reviewer
-- ステータス: Pass
-- 検出された機微情報: 公開ドキュメントには無し（サポートケース番号・アカウント ID は gitignore 対象の `.kiro/` ノートのみ）。例示 CIDR（10.0.0.0/16）は RFC1918 のドキュメント例。`Yoshiki0705` は公開リポジトリのオーナーハンドル。
-- 必要な編集: なし。
-
-### 最終推奨
-- APPROVE WITH COMMENTS: 公開リポジトリに適合。将来予測の主張は evidence tier で分類し、FSx for ONTAP 検証（保留中）と区別済み。
-
----
-
-*本ドキュメントは GA 時期の予測を避け、検証済み結果と将来分析を区別する。「レンズ」に帰属する記述は役割ベースのレビュー視点であり、特定個人・特定企業の発言ではない。*

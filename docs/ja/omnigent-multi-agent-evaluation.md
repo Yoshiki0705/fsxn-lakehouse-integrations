@@ -420,7 +420,7 @@ Kiro と Omnigent は重複しません。Kiro は**何を構築するか**（sp
 | セキュリティ（secrets, Actions） | ✅ pre-commit + CI | — |
 | LLM コスト制御 | — | ✅ cost_budget policy |
 | ファイルアクセス制限 | — | ✅ Omnibox sandbox |
-| データアクセス（FSx ACL） | Steering（原則） | Custom policy（強制） |
+| データアクセス（FSx for ONTAP ACL） | Steering（原則） | Custom policy（強制） |
 | マルチエージェントレビュー | — | ✅ Polly cross-review |
 
 ### Bedrock 連携パス
@@ -508,7 +508,7 @@ Supervisor Agent (Claude Sonnet)
 ### セキュリティ設計
 
 - **Deny-by-default**: 明示的に許可されない限りエージェントはファイルにアクセス不可
-- **Omnibox sandbox**: `read_paths` を指定 FSx ボリュームに制限
+- **Omnibox sandbox**: `read_paths` を指定 FSx for ONTAP ボリュームに制限
 - **クレデンシャル非公開**: API キーは Omnigent 経由でブローカリング、エージェントからは不可視
 - **監査証跡**: エージェントツール呼び出しログ + ONTAP fpolicy イベントで突合
 - **プロンプトインジェクション防御**: 取得ファイル内容はデータとして扱い、指示としては扱わない

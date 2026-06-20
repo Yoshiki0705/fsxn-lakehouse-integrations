@@ -103,9 +103,9 @@ The OpenSharing protocol's `dir` access mode (where the server vends temporary A
 
 | Limitation | Remains | Why |
 |-----------|---------|-----|
-| **Delta/Iceberg transactional writes to FSx S3 AP** | ❌ Still blocked | Conditional writes (`If-None-Match`) return 501; atomic rename not supported. This is a product-level FSx S3 AP limitation, unrelated to OpenSharing. |
+| **Delta/Iceberg transactional writes to FSx for ONTAP S3 AP** | ❌ Still blocked | Conditional writes (`If-None-Match`) return 501; atomic rename not supported. This is a product-level FSx for ONTAP S3 AP limitation, unrelated to OpenSharing. |
 | **Foreign Iceberg reading S3 Tables from Databricks** | ❌ Still blocked | External Location validation rejects S3 Tables internal buckets (HeadBucket fails). Unrelated to this credential vending test. |
-| **Databricks UC read from FSx S3 AP** | ✅ Already solved (May 2026) | UC External Location with `access_point` field works. Today's STS test validates the *OpenSharing recipient* path, which is complementary. |
+| **Databricks UC read from FSx for ONTAP S3 AP** | ✅ Already solved (May 2026) | UC External Location with `access_point` field works. Today's STS test validates the *OpenSharing recipient* path, which is complementary. |
 
 ### Architectural clarity
 
@@ -117,9 +117,9 @@ FSx for ONTAP (source of truth for raw data: images, CSV, sensor logs, documents
     │   • OpenSharing STS credential vending (any recipient, June 2026) ← NEW
     │   • Direct IAM (Athena, Glue, EMR — existing)
     │
-    │ WRITE path (NOT on FSx S3 AP):
+    │ WRITE path (NOT on FSx for ONTAP S3 AP):
     │   • Delta/Iceberg managed tables live on standard S3 or S3 Tables
-    │   • FSx S3 AP cannot host transactional table metadata
+    │   • FSx for ONTAP S3 AP cannot host transactional table metadata
     │
     ▼
 Analytics engines read raw data from FSx, write governed tables elsewhere
@@ -247,41 +247,3 @@ Still open:
 
 A phased validation activity has been defined (read → Iceberg IRC → governance travel → write-back → unstructured design → publication). See the repository's Supported Integrations table and the upcoming blog series for status updates.
 
----
-
-## Persona Review Summary
-
-### Review Metadata
-- Review Date: 2026-06-16
-- Reviewed Documents: `opensharing-integration-analysis.md` (en/ja), `omnigent-multi-agent-evaluation.md` (en/ja)
-- Review Scope: Protocol-surface additions from public OpenSharing spec; Omnigent Phase 0 evaluation
-- Rounds: 2 (findings applied between rounds)
-
-### Principal Cloud Data Architect
-- Strengths: Protocol facts clearly separated from FSx-for-ONTAP validation status; access modes (`url`/`dir`) and credential vending grounded in the published spec.
-- Round 1 finding (applied): Omnigent doc attributed the release to "the Databricks AI team and Neon" — unverifiable. Corrected to Databricks (announced by Matei Zaharia), per evidence discipline.
-- Open: write-back remains untested; Tier-1 SPOF of a sharing server stated as a risk.
-
-### Manufacturing Edge Data Architect
-- Strengths: Volume asset (STS-only) maps cleanly to unstructured payload sharing; metadata↔payload linkage retained as a custom responsibility.
-- Concerns: none new; edge ordering/dedup remain out of the sharing protocol's scope (already noted).
-
-### Databricks Governance Architect
-- Strengths: Standard Iceberg REST Catalog implementation correctly identified; credential vending (prefix-level) vs scan planning (row/column) distinction preserved.
-- Verified: Agent Bricks Supervisor Agent GA reference is a real, citable source.
-
-### NetApp FSx for ONTAP Architect
-- Strengths: NetApp correctly described as a "coming soon" OpenSharing storage partner (confirmed "by end of year" per [OpenSharing blog](https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era)) — not overstated as available. Snapshot/FlexClone value framed as to-validate.
-- Open: whether a native implementation sits on ONTAP S3, S3 AP, or an independent path.
-
-### Public Repository Confidentiality Reviewer
-- Status: Pass
-- Sensitive Terms Found: none in public docs (support case numbers and account IDs remain only in gitignored `.kiro/` notes). Example CIDRs (10.0.0.0/16) are RFC1918 documentation examples. `Yoshiki0705` is the public repository owner handle.
-- Required Redactions: none.
-
-### Final Recommendation
-- APPROVE WITH COMMENTS: Safe for public repository. Forward-looking claims are tagged by evidence tier and distinguished from FSx-for-ONTAP validation, which remains pending.
-
----
-
-*This document avoids predicting general-availability dates and distinguishes validated results from forward-looking analysis. Statements attributed to "lenses" are review perspectives by role, not statements by named individuals or companies.*

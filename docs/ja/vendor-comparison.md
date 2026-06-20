@@ -1,6 +1,8 @@
-# ベンダー比較マトリクス
+# プラットフォーム統合リファレンス
 
 🌐 [English](../en/vendor-comparison.md)
+
+> **フレーミング**: 本ドキュメントは各プラットフォームの統合方式・対応状況・トレードオフを中立的に整理したリファレンスです。優劣の順位付けではなく、用途に応じた選択（right-tool-for-the-job）を支援することを目的とします。
 
 ## プロジェクトコンセプト
 
@@ -17,7 +19,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ---
 
-## Tier 1: 最有力候補
+## マネージド Lakehouse プラットフォーム
 
 | ベンダー | 統合方式 | ユースケース | ステータス |
 |---------|---------|-------------|----------|
@@ -34,8 +36,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **ガバナンス**: Unity Catalog — テーブル/カラム Grants、Row Filters、Column Masks、UC Tags、自動リネージ（カラムレベル）、監査ログ（システムテーブル）、Lakehouse Monitoring（データ品質 + ドリフト）
 - **Data Sharing**: Delta Sharing — オープンプロトコル、Snowflake/Pandas/Spark/Power BI から Databricks アカウントなしで読み取り可能
 - **ONTAP 活用**: FlexClone（dev/test）、Snapshot（Delta Time Travel 補完）、FabricPool（コールドデータ階層化）
-- **独自の強み**: 自動データリネージ（カラムレベル）、ML モデルガバナンス（MLflow + Model Registry）、Lakehouse Monitoring、Iceberg REST Catalog（外部エンジンから UC テーブルへのアクセス）
-- **制限**: UC セッションポリシーが FSx S3 AP 上のテーブル作成とサブディレクトリ一覧を直接ブロック。**推奨パス: DataSync → S3 → UC**（フルガバナンス、フル AI、フルリネージ）
+- **特徴**: 自動データリネージ（カラムレベル）、ML モデルガバナンス（MLflow + Model Registry）、Lakehouse Monitoring、Iceberg REST Catalog（外部エンジンから UC テーブルへのアクセス）
+- **制限**: UC セッションポリシーが FSx for ONTAP S3 AP 上のテーブル作成とサブディレクトリ一覧を直接ブロック。**推奨パス: DataSync → S3 → UC**（フルガバナンス、フル AI、フルリネージ）
 
 ### Snowflake
 
@@ -43,18 +45,18 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **ネットワーク**: Internet network origin（PrivateLink オプション）
 - **データ形式**: Parquet, CSV, JSON, Avro, ORC, Iceberg
 - **非構造化データ**: Directory Table + Pre-signed URL + Cortex AI（PARSE_DOCUMENT で OCR、ステージング経由でマルチモーダル Vision）
-- **AI 機能**: FSx データ上で 8/10 Cortex AI 関数検証済み（SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE, EXTRACT_ANSWER, PARSE_DOCUMENT, Cortex Search 198ms, Vision AI ステージング経由）
+- **AI 機能**: FSx for ONTAP データ上で 8/10 Cortex AI 関数検証済み（SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE, EXTRACT_ANSWER, PARSE_DOCUMENT, Cortex Search 198ms, Vision AI ステージング経由）
 - **ガバナンス**: Object Tags, Row Access Policy, Column Masking, Data Sharing — External Table 上で全て検証済み
-- **高度なパターン**: Dynamic Table（確認済み、FULL refresh、最小 60秒 TARGET_LAG）、Managed Iceberg Table（確認済み、顧客 S3 上のオープン形式）
+- **高度なパターン**: Dynamic Table（確認済み、FULL refresh、最小 60秒 TARGET_LAG）、Managed Iceberg Table（確認済み、ユーザー所有の S3 上のオープン形式）
 - **ONTAP 活用**: Snapshot（Time Travel 超過分）、FlexClone（テスト環境）、マルチプロトコル（NFS/SMB/S3 同一データ）
 - **Data Sharing**: Snowflake Data Sharing 経由でパートナー/サプライヤーへのガバナンス付き配布（External Table 共有可能）
 - **既知の制限**: AUTO_REFRESH 利用不可（S3 Event Notifications なし）; Task + ALTER EXTERNAL TABLE REFRESH を使用
 
 ---
 
-## Tier 2: オープンテーブルフォーマット & 分散 SQL
+## オープンテーブルフォーマット & 分散 SQL
 
-| フォーマット/エンジン | FSx S3 AP からの読み取り | FSx S3 AP への書き込み | S3 への書き込み（同期経由） | ステータス |
+| フォーマット/エンジン | FSx for ONTAP S3 AP からの読み取り | FSx for ONTAP S3 AP への書き込み | S3 への書き込み（同期経由） | ステータス |
 |-------------------|:---:|:---:|:---:|--------|
 | **Apache Iceberg** | ⚠️ 実験的（既存テーブル） | ❌ 非サポート（NullPointerException） | ✅ EMR Spark → S3 | Part 7 検証済み |
 | **Delta Lake (OSS)** | ✅ 読み取り検証済み（delta-rs） | ❌ 非サポート（501 Not Implemented） | ✅ DataSync → S3 → UC | Part 7 検証済み |
@@ -62,28 +64,28 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 | **Trino / Starburst** | ✅ 読み取り検証済み（5M 行、1.5秒） | ❌（同じ制限） | N/A | Part 0 検証済み |
 | **Dremio** | 🔲 計画中 | 🔲 計画中 | N/A | 📋 NetApp/Dremio ジョイントソリューション（独自検証未実施） |
 
-> **主要な発見（Part 7）**: 3つのトランザクショナルテーブルフォーマット（Delta, Iceberg, Hudi）は全て FSx S3 AP への書き込みに失敗。根本原因は S3 API の基本的な制限 — conditional writes なし（`If-None-Match` → 501）、atomic rename なし。既存テーブルの読み取りは理論的に可能だが、Delta read のみ検証済み。
+> **主要な発見（Part 7）**: 3つのトランザクショナルテーブルフォーマット（Delta, Iceberg, Hudi）は全て FSx for ONTAP S3 AP への書き込みに失敗。根本原因は S3 API の基本的な制限 — conditional writes なし（`If-None-Match` → 501）、atomic rename なし。既存テーブルの読み取りは理論的に可能だが、Delta read のみ検証済み。
 
 ### Apache Iceberg
 
-- **読み取り**: 既存 Iceberg テーブル（Glue Catalog にメタデータ、FSx S3 AP にデータファイル）は GetObject 経由で理論的に読み取り可能。完全な検証は未実施。
+- **読み取り**: 既存 Iceberg テーブル（Glue Catalog にメタデータ、FSx for ONTAP S3 AP にデータファイル）は GetObject 経由で理論的に読み取り可能。完全な検証は未実施。
 - **書き込み**: ❌ S3FileIO が AP エイリアスでのメタデータ書き込み/検証を処理できない（コミット時に NullPointerException）。Conditional writes 非サポート。
-- **動作する代替パス**: EMR Spark が標準 S3 に Iceberg を書き込み → Glue Catalog に登録 → Athena/Redshift/Snowflake/Databricks からクエリ。FSx S3 AP は読み取り専用ソースデータとして機能。
-- **Snowflake パス**: FSx S3 AP → External Stage → COPY INTO → Snowflake Managed Iceberg Table（顧客 S3 上のオープン形式、2026年5月確認済み）
+- **動作する代替パス**: EMR Spark が標準 S3 に Iceberg を書き込み → Glue Catalog に登録 → Athena/Redshift/Snowflake/Databricks からクエリ。FSx for ONTAP S3 AP は読み取り専用ソースデータとして機能。
+- **Snowflake パス**: FSx for ONTAP S3 AP → External Stage → COPY INTO → Snowflake Managed Iceberg Table（ユーザー所有の S3 上のオープン形式、2026年5月確認済み）
 - **カタログオプション**: Glue Catalog（AWS ネイティブ）、Snowflake Managed Iceberg（Snowflake ネイティブ）、Databricks UC Iceberg REST Catalog（Databricks ネイティブ）
 
 ### Delta Lake (OSS)
 
 - **読み取り**: ✅ delta-rs（Rust）で検証済み。Spark Delta reader も既存テーブルで動作。
-- **書き込み**: ❌ Delta コミットプロトコルが `_delta_log/` に `If-None-Match` conditional write を要求 — FSx S3 AP は 501 Not Implemented を返す。
-- **動作する代替パス**: DataSync → S3 → Delta Table（Databricks UC または OSS Spark）。FSx S3 AP は読み取り専用ソース。
+- **書き込み**: ❌ Delta コミットプロトコルが `_delta_log/` に `If-None-Match` conditional write を要求 — FSx for ONTAP S3 AP は 501 Not Implemented を返す。
+- **動作する代替パス**: DataSync → S3 → Delta Table（Databricks UC または OSS Spark）。FSx for ONTAP S3 AP は読み取り専用ソース。
 - **Databricks パス**: DataSync → S3 → UC Managed Delta Table（フルガバナンス、リネージ、Time Travel）
 
 ### Apache Hudi
 
 - **読み取り**: 未テスト（既存テーブルの GetObject 経由読み取りは理論的に可能）。
 - **書き込み**: ❌ Hudi タイムラインコミットが atomic rename（`.inflight` → `.commit`）を要求。S3 に rename 操作なし。
-- **動作する代替パス**: 標準 S3 バケットで Hudi 書き込みパス。FSx S3 AP は読み取り専用ソース。
+- **動作する代替パス**: 標準 S3 バケットで Hudi 書き込みパス。FSx for ONTAP S3 AP は読み取り専用ソース。
 
 ### Trino / Starburst
 
@@ -106,7 +108,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ---
 
-## Tier 3: クラウドネイティブ分析 (AWS)
+## クラウドネイティブ分析（AWS）
 
 | サービス | 統合方式 | ユースケース | ステータス |
 |---------|---------|-------------|----------|
@@ -123,10 +125,10 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **認証**: IAM Role（サービスロール）
 - **ネットワーク**: Internet network origin **必須**
 - **特徴**: サーバーレス、従量課金（$5/TB スキャン）、Glue Catalog 統合
-- **AI 統合**: Athena + Bedrock KB（同じ FSx データで RAG）、Athena + SageMaker（ML 推論 UDF）
+- **AI 統合**: Athena + Bedrock KB（同じ FSx for ONTAP データで RAG）、Athena + SageMaker（ML 推論 UDF）
 - **ガバナンス**: Lake Formation（テーブル/カラム/行/タグ）— Athena と Redshift Spectrum に同じ権限が自動適用
-- **書き戻し**: ✅ CTAS で FSx S3 AP に Parquet 書き戻し（検証済み、3.7秒）
-- **独自の強み**: ゼロインフラ、全 AWS エンジンと Glue Catalog 共有、Lake Formation ガバナンス自動適用
+- **書き戻し**: ✅ CTAS で FSx for ONTAP S3 AP に Parquet 書き戻し（検証済み、3.7秒）
+- **特徴**: ゼロインフラ、全 AWS エンジンと Glue Catalog 共有、Lake Formation ガバナンス自動適用
 - **ベンチマーク**: 54.8 MB/s ピーク（5M 行を 2.2秒）
 - **参考**: [AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-query-data-with-athena.html)
 
@@ -138,7 +140,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **AI 統合**: Glue + Bedrock（AI 駆動変換）、Glue Data Quality（自動バリデーション）
 - **ガバナンス**: Glue Data Catalog が Lake Formation の基盤 — 全権限はここで定義
 - **書き戻し**: ✅ ETL 書き戻し（検証済み、10K 行メダリオンパイプライン 64秒）
-- **独自の強み**: スキーマ発見（Crawler）、ビジュアル ETL（Studio）、サーバーレス Spark、Data Quality ルール
+- **特徴**: スキーマ発見（Crawler）、ビジュアル ETL（Studio）、サーバーレス Spark、Data Quality ルール
 - **参考**: [AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html)
 
 ### AWS Lake Formation
@@ -147,8 +149,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **ネットワーク**: N/A（ガバナンスレイヤー、クエリエンジンではない）
 - **特徴**: テーブル/カラムレベル grants、Row Filters（Data Cells Filter）、LF-Tags（タグベースアクセス制御）、クロスアカウント共有
 - **AI 統合**: Bedrock KB、SageMaker、EMR ML ワークロードがアクセスするデータをガバナンス
-- **ガバナンス**: ✅ **最強の AWS ネイティブガバナンス** — 細粒度（カラム/行/タグ）、マルチエンジン（Athena + Redshift + EMR + Glue が同じ権限を共有）、データ移動なし
-- **独自の強み**: 単一のガバナンス定義が全 AWS 分析エンジンに同時適用。エンジンごとの設定不要。データコピーなしのクロスアカウントテーブル共有。
+- **ガバナンス**: ✅ 細粒度な AWS ネイティブガバナンス — 細粒度（カラム/行/タグ）、マルチエンジン（Athena + Redshift + EMR + Glue が同じ権限を共有）、データ移動なし
+- **特徴**: 単一のガバナンス定義が全 AWS 分析エンジンに同時適用。エンジンごとの設定不要。データコピーなしのクロスアカウントテーブル共有。
 - **検証済み機能（2026年5月）**: カラムレベル権限（特定カラム拒否）、Row Filter（式によるフィルタ）、LF-Tag（sensitivity 分類 + タグベース grants）
 
 ### Amazon Redshift Spectrum
@@ -159,7 +161,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **AI 統合**: Redshift ML（CREATE MODEL）、SageMaker エンドポイントへのフェデレーテッドクエリ
 - **ガバナンス**: Lake Formation（Athena と同じ権限 — 一度設定すれば全エンジンに適用）
 - **書き戻し**: ❌（クエリ結果は Redshift に残る; 書き戻しには EMR を使用）
-- **独自の強み**: NAS データとローカル DWH テーブルの JOIN、外部データ上のマテリアライズドビュー、Athena と同じ Glue Catalog
+- **特徴**: NAS データとローカル DWH テーブルの JOIN、外部データ上のマテリアライズドビュー、Athena と同じ Glue Catalog
 - **ベンチマーク**: 5M 行を 4.3秒（Serverless 8 RPU）
 
 ### Amazon EMR Serverless (Spark)
@@ -169,8 +171,8 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **特徴**: フル Spark SQL、UDF、ウィンドウ関数、MLlib、分散処理
 - **AI 統合**: Spark MLlib、SageMaker Spark コネクタ、S3 上の Iceberg テーブル作成
 - **ガバナンス**: IAM ベース（出力のガバナンス読み取りには Lake Formation と組み合わせ）
-- **書き戻し**: ✅ **最強の書き戻しパス** — FSx S3 AP にフラット Parquet（検証済み、16秒 ETL 合計）
-- **独自の強み**: セッションポリシー問題なし（直接 IAM）、フル Spark パワー、FSx への書き戻し、S3 上の Iceberg テーブル作成
+- **書き戻し**: ✅ 検証済みの書き戻しパス — FSx for ONTAP S3 AP にフラット Parquet（検証済み、16秒 ETL 合計）
+- **特徴**: セッションポリシー問題なし（直接 IAM）、フル Spark パワー、FSx for ONTAP への書き戻し、S3 上の Iceberg テーブル作成
 - **ベンチマーク**: 10K 行 読み取り+変換+書き込み 16秒、$0.05/ジョブ
 - **重要**: `s3://`（EMRFS）を使用。`s3a://` は AP エイリアスをパースできない
 
@@ -179,9 +181,9 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **認証**: Bedrock サービスロール（S3 AP 権限付き）
 - **ネットワーク**: Internet network origin
 - **特徴**: RAG ドキュメント取り込み、ベクトル embedding、権限認識型検索
-- **AI 統合**: ✅ **ネイティブ RAG パス** — FSx S3 AP からドキュメント取り込み、embedding 作成、ガードレール付きセマンティック検索
+- **AI 統合**: ✅ **ネイティブ RAG パス** — FSx for ONTAP S3 AP からドキュメント取り込み、embedding 作成、ガードレール付きセマンティック検索
 - **ガバナンス**: Bedrock ガードレール（トピックフィルタリング、PII 検出、ハルシネーション低減）、IAM モデルアクセスポリシー
-- **独自の強み**: ゼロコピー RAG（COPY INTO なしで FSx S3 AP から直接読み取り）、権限認識型検索、マルチステップ推論の Bedrock エージェント
+- **特徴**: ゼロコピー RAG（COPY INTO なしで FSx for ONTAP S3 AP から直接読み取り）、権限認識型検索、マルチステップ推論の Bedrock エージェント
 - **参考**: [AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)
 
 ### DuckDB Lambda
@@ -192,19 +194,19 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **AI 統合**: 最小限（SQL のみ; AI には Bedrock と組み合わせ）
 - **ガバナンス**: IAM + S3 AP ポリシーのみ（テーブルレベルガバナンスなし）
 - **書き戻し**: ✅ COPY TO Parquet（検証済み、304ms）
-- **独自の強み**: 最安パス（$0.00001/クエリ）、ゼロアイドルコスト、サブ秒ウォームレイテンシ（452ms）
+- **特徴**: 低コストなパス（$0.00001/クエリ）、ゼロアイドルコスト、サブ秒ウォームレイテンシ（452ms）
 - **ベンチマーク**: 10K 行 452ms（ウォーム）、5M 行 779ms
 
-### AWS ネイティブ固有の価値提案
+### AWS ネイティブ構成の特徴
 
-| 優位性 | 詳細 |
+| 特徴 | 詳細 |
 |--------|------|
 | **セッションポリシー問題なし** | 全 AWS サービスが直接 IAM を使用 — S3 AP ARN 形式をブロックする中間セッションポリシーなし |
 | **Glue Catalog 共有** | Athena、Redshift Spectrum、EMR、Glue が同じカタログを共有。一度登録すれば全エンジンからクエリ可能 |
 | **Lake Formation マルチエンジン** | 単一のガバナンス定義が全エンジンに同時適用。プラットフォームごとの設定不要 |
-| **ゼロコピー RAG** | Bedrock KB が FSx S3 AP から直接読み取り — COPY INTO なし、ステージングなし、RAG のためのデータ移動なし |
+| **ゼロコピー RAG** | Bedrock KB が FSx for ONTAP S3 AP から直接読み取り — COPY INTO なし、ステージングなし、RAG のためのデータ移動なし |
 | **サーバーレスファースト** | Athena、Glue、EMR Serverless、Lambda — スタック全体でゼロアイドルコスト |
-| **書き戻し検証済み** | EMR、Athena CTAS、DuckDB が FSx S3 AP にフラット Parquet を書き戻し可能（Snowflake/Databricks は不可） |
+| **書き戻し検証済み** | EMR、Athena CTAS、DuckDB が FSx for ONTAP S3 AP にフラット Parquet を書き戻し可能（Snowflake/Databricks は不可） |
 | **S3 上の Iceberg** | EMR Spark が標準 S3 に Iceberg テーブル作成 → Glue Catalog に登録 → Athena/Redshift/Snowflake/Databricks からクエリ可能 |
 - **ネットワーク**: Internet network origin
 - **特徴**: OneLake 統合、Power BI 連携
@@ -212,7 +214,7 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ---
 
-## Tier 4: 新興・特化型
+## 新興・特化型プラットフォーム
 
 | ベンダー | 統合方式 | ユースケース | ステータス |
 |---------|---------|-------------|----------|

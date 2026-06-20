@@ -86,7 +86,7 @@ s3.region=ap-northeast-1
 | 7 | メタデータテーブルアクセス | アクセス可能 |
 | 8 | Lake Formation 権限適用 | 未認可クエリがブロック |
 
-## Databricks/Snowflake に対する期待される優位性
+## Trino による Iceberg REST アクセスの特徴（他エンジンとの比較）
 
 | 観点 | Trino | Databricks | Snowflake |
 |---|---|---|---|

@@ -1,4 +1,4 @@
-# FSx S3 AP Networking Considerations
+# FSx for ONTAP S3 AP Networking Considerations
 
 ## Overview
 
@@ -6,13 +6,13 @@ FSx for ONTAP S3 Access Points have specific networking requirements that differ
 
 ## Key Findings
 
-### 1. S3 Gateway Endpoint and FSx S3 AP
+### 1. S3 Gateway Endpoint and FSx for ONTAP S3 AP
 
 **Known issue** (documented in [FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns)):
 
 > VPC 内 Lambda からタイムアウト | Internet Origin AP に S3 Gateway EP 経由でアクセス | Lambda を VPC 外に配置、または NAT Gateway 経由に変更
 
-**Explanation**: When a VPC-attached Lambda or EC2 instance accesses an internet-origin FSx S3 AP, the S3 Gateway VPC Endpoint may intercept the traffic but fail to route it correctly to the FSx S3 AP backend. This is because FSx S3 AP aliases resolve to `s3-r-w.<region>.amazonaws.com` which may not be handled the same way as standard S3 bucket traffic by the Gateway endpoint.
+**Explanation**: When a VPC-attached Lambda or EC2 instance accesses an internet-origin FSx for ONTAP S3 AP, the S3 Gateway VPC Endpoint may intercept the traffic but fail to route it correctly to the FSx for ONTAP S3 AP backend. This is because FSx for ONTAP S3 AP aliases resolve to `s3-r-w.<region>.amazonaws.com` which may not be handled the same way as standard S3 bucket traffic by the Gateway endpoint.
 
 **Workarounds**:
 1. Place Lambda outside VPC (no VPC attachment) — simplest for internet-origin APs
@@ -28,7 +28,7 @@ FSx for ONTAP S3 Access Points have specific networking requirements that differ
 
 ### 3. AWS Service Access Patterns
 
-| Service | Network Path | FSx S3 AP Compatibility |
+| Service | Network Path | FSx for ONTAP S3 AP Compatibility |
 |---------|-------------|------------------------|
 | Athena | AWS-managed (no customer VPC) | ✅ Internet-origin required |
 | Glue ETL | AWS-managed or VPC-attached | ✅ Internet-origin (non-VPC) or NAT Gateway (VPC) |
@@ -40,21 +40,21 @@ FSx for ONTAP S3 Access Points have specific networking requirements that differ
 
 ### 4. DNS Resolution
 
-FSx S3 AP aliases resolve differently from regular S3 buckets:
+FSx for ONTAP S3 AP aliases resolve differently from regular S3 buckets:
 
 ```
 Regular S3 bucket:
   my-bucket.s3.ap-northeast-1.amazonaws.com → S3 service IPs (in prefix list)
 
-FSx S3 AP alias:
+FSx for ONTAP S3 AP alias:
   my-ap-alias-ext-s3alias.s3.ap-northeast-1.amazonaws.com → s3-r-w.ap-northeast-1.amazonaws.com
 ```
 
-The `s3-r-w` hostname is the FSx S3 AP backend. Its IP addresses may or may not be included in the S3 prefix list (`pl-61a54008` for ap-northeast-1) used by S3 Gateway endpoints.
+The `s3-r-w` hostname is the FSx for ONTAP S3 AP backend. Its IP addresses may or may not be included in the S3 prefix list (`pl-61a54008` for ap-northeast-1) used by S3 Gateway endpoints.
 
 ### 5. Troubleshooting Checklist
 
-When FSx S3 AP access times out:
+When FSx for ONTAP S3 AP access times out:
 
 1. **Verify DNS resolution**: `nslookup <alias>.s3.<region>.amazonaws.com`
 2. **Verify TCP connectivity**: `curl -s -o /dev/null -w '%{http_code}' --max-time 5 https://<alias>.s3.<region>.amazonaws.com/`
@@ -72,7 +72,7 @@ When FSx S3 AP access times out:
 │                                                                  │
 │  ┌──────────────────┐     ┌──────────────────┐                  │
 │  │ Private Subnet    │     │ Public Subnet     │                  │
-│  │ (Lambda/EC2)      │────▶│ NAT Gateway       │────▶ IGW ──▶ FSx S3 AP
+│  │ (Lambda/EC2)      │────▶│ NAT Gateway       │────▶ IGW ──▶ FSx for ONTAP S3 AP
 │  │                   │     │                   │                  │
 │  └──────────────────┘     └──────────────────┘                  │
 │         │                                                        │
@@ -82,9 +82,9 @@ When FSx S3 AP access times out:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-For VPC-internal workloads that need both regular S3 and FSx S3 AP:
+For VPC-internal workloads that need both regular S3 and FSx for ONTAP S3 AP:
 - Keep S3 Gateway endpoint for regular S3 bucket access (free, low latency)
-- Route FSx S3 AP traffic through NAT Gateway (or place compute outside VPC)
+- Route FSx for ONTAP S3 AP traffic through NAT Gateway (or place compute outside VPC)
 
 ---
 
@@ -104,7 +104,7 @@ This is because the S3 AP request processing path traverses the SVM's name-servi
 
 ```
 S3 API Request
-  → FSx S3 AP Backend
+  → FSx for ONTAP S3 AP Backend
     → SVM file system access
       → ONTAP name-service stack (ns-switch: files, dns)
         → CIFS server present → user-mapping requires DC lookup

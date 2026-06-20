@@ -19,7 +19,7 @@ This document compares architectural approaches for connecting unstructured file
 | DataSync + S3 | Full copy | Scheduled | Source NAS → S3 | Small file sets, simple one-way sync |
 | Databricks Unity Catalog | S3 copy required | — | S3/ADLS | Structured/semi-structured lakehouse |
 
-*Zero-copy storage: S3 Access Point reads files in-place from FSx volumes. Processing requires ephemeral file content access in Lambda memory. File bytes are not persisted outside the source FSx volume.
+*Zero-copy storage: S3 Access Point reads files in-place from FSx for ONTAP volumes. Processing requires ephemeral file content access in Lambda memory. File bytes are not persisted outside the source FSx for ONTAP volume.
 
 ---
 
@@ -41,7 +41,7 @@ This document compares architectural approaches for connecting unstructured file
 - ONTAP features (SnapMirror, FlexClone, storage efficiency) remain available
 
 **Limitations & Considerations:**
-- S3 AP is used read-only in this pipeline (**writes are supported**) — no write-back from analytics tools to FSx volumes
+- S3 AP is used read-only in this pipeline (**writes are supported**) — no write-back from analytics tools to FSx for ONTAP volumes
 - S3 Access Point does **not support S3 Event Notifications** (cannot auto-trigger Snowpipe, EventBridge rules, etc.)
 - FPolicy adds latency overhead (~1–5ms per file operation) to NAS clients
 - Lambda processing: file content passes through Lambda memory (ephemeral, not persisted, but not "zero data movement" at the processing layer)
@@ -131,9 +131,9 @@ This solution is **not the best fit** when:
 | Data is born in S3 (no NAS origin) | S3-native + Glue | No benefit from zero-copy storage if data is already in S3 |
 | Object-native workloads (large media, append-only logs) | S3 + S3 Events | S3 Event Notifications enable Snowpipe/EventBridge triggers |
 | Small file counts (<5,000 files, infrequent changes) | DataSync + S3 | DataSync is simpler to operate; event-driven detection is unnecessary |
-| Need write-back from analytics to storage | S3 Standard | S3 AP is used read-only in this pipeline (writes supported); cannot write results back to FSx |
+| Need write-back from analytics to storage | S3 Standard | S3 AP is used read-only in this pipeline (writes supported); cannot write results back to FSx for ONTAP |
 | Structured/tabular data only | Databricks / Glue | Unity Catalog or Glue Data Catalog handles tabular data without AI classification |
-| No existing FSx for ONTAP deployment | Evaluate cost of FSx adoption first | Solution assumes FSx for ONTAP is already in place or planned |
+| No existing FSx for ONTAP deployment | Evaluate cost of FSx for ONTAP adoption first | Solution assumes FSx for ONTAP is already in place or planned |
 
 ---
 
@@ -180,7 +180,7 @@ Do analytics tools need to write results back to storage?
 
 | Item | Detail |
 |------|--------|
-| S3 AP read-only | Analytics services cannot write back to FSx volumes via S3 AP |
+| S3 AP read-only | Analytics services cannot write back to FSx for ONTAP volumes via S3 AP |
 | No S3 Event Notifications | Cannot trigger Snowpipe, EventBridge rules, or S3 bucket notifications via S3 AP |
 | FPolicy latency | ~1–5ms added per file operation on NAS clients |
 | Lambda ephemeral access | File content passes through Lambda memory during processing; not persisted but not "zero data movement" |

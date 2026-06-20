@@ -115,7 +115,7 @@ iceberg.rest-catalog.warehouse=arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:buck
 - **Snapshot freshness**: Trino should always see the latest committed snapshot (no refresh needed, unlike Databricks Foreign Iceberg).
 - **Write capability**: Verify whether Trino can append to the Iceberg table via Glue REST (if write access is needed for backfill).
 
-## Expected Advantages over Databricks/Snowflake
+## Trino's Iceberg REST Access Characteristics (Comparison with Other Engines)
 
 | Aspect | Trino | Databricks | Snowflake |
 |---|---|---|---|

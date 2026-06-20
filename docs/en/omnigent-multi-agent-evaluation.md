@@ -420,7 +420,7 @@ Kiro and Omnigent do not overlap. Kiro manages **what to build** (spec-driven). 
 | Security (secrets, Actions) | ✅ pre-commit + CI | — |
 | LLM cost control | — | ✅ cost_budget policy |
 | File access restriction | — | ✅ Omnibox sandbox |
-| Data access (FSx ACL) | Steering (principles) | Custom policy (enforcement) |
+| Data access (FSx for ONTAP ACL) | Steering (principles) | Custom policy (enforcement) |
 | Multi-agent review | — | ✅ Polly cross-review |
 
 ### Bedrock Integration Path
@@ -508,7 +508,7 @@ Classifier Orchestrator
 ### Security Design
 
 - **Deny-by-default**: Agents cannot access files unless explicitly allowed
-- **Omnibox sandbox**: `read_paths` restricted to designated FSx volumes
+- **Omnibox sandbox**: `read_paths` restricted to designated FSx for ONTAP volumes
 - **No credential exposure**: API keys brokered through Omnigent, never visible to agent
 - **Audit trail**: Agent tool calls logged + ONTAP fpolicy events for correlation
 - **Prompt injection defense**: Retrieved file content treated as data, not instructions

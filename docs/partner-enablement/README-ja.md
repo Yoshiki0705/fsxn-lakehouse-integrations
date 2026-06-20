@@ -95,7 +95,7 @@
 ### Phase 1: デプロイ（Day 1–2）
 
 - [ ] CloudFormation スタックのデプロイ成功
-- [ ] S3 Access Point の検証（FSx からファイル読み取り可能）
+- [ ] S3 Access Point の検証（FSx for ONTAP からファイル読み取り可能）
 - [ ] Lambda 関数をサンプルファイルでテスト
 - [ ] S3 Tables ネームスペースを作成し Athena からアクセス確認
 
