@@ -128,8 +128,9 @@
 
 **回避策**:
 1. **Databricks Spark クラスターで手動カタログ設定** — クラスタースコープで `spark.sql.catalog.s3tables` を設定（UC ガバナンス外）
-2. **Athena / EMR 経由でクエリ** — AWS ネイティブエンジンは `s3tablescatalog` 経由で正常動作
-3. **データコピー** — S3 Tables から通常の S3 バケットにエクスポート → UC External Location
+2. **Glue HMS Federation（推奨）** — `CREATE CONNECTION TYPE glue` で Glue Federated Catalog 経由で S3 Tables Iceberg テーブルを Foreign Catalog として参照。UC ガバナンス適用可能。[検証ガイド](../../integrations/iceberg-metadata-catalog/databricks/foreign-iceberg-execution-guide.md)
+3. **Athena / EMR 経由でクエリ** — AWS ネイティブエンジンは `s3tablescatalog` 経由で正常動作
+4. **通常 S3 上の Iceberg テーブル** — S3 Tables を使わず通常 S3 バケットに Iceberg テーブルを作成し、Glue Catalog 経由で UC に公開（最も確実）
 
 **エビデンス**: [互換性マトリクス](./compatibility-matrix.md)（S3 Tables Iceberg REST Endpoint セクション）
 
