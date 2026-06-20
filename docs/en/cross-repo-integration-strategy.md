@@ -166,7 +166,7 @@ The `ontap-edge-to-cloud-ai` repository provides patterns for aggregating edge d
 | C | ONTAP S3 → External Location → Unity Catalog | — | Designed |
 | **D** | **Kafka → Lakebase (LTAP)** | **Milliseconds–seconds (estimated)** | **🆕 Under design review (added 2026-06-18)** |
 
-> **Path A improvement (added 2026-06-18)**: Lakeflow Real-Time Mode (Spark Declarative Pipelines, Public Preview, DBR 18.1.3) may reduce Path A's Structured Streaming latency (seconds–minutes) to ~5ms. This is an improvement to the existing Path A via a trigger-mode change, not a new path. Production adoption decision after GA. See [Lakeflow Evaluation](#lakeflow-evaluation-zerobus-ingest--real-time-mode-dais-2026--synced-2026-06-18) below.
+> **Path A improvement (added 2026-06-18, updated 2026-06-20)**: Lakeflow Real-Time Mode (Spark Declarative Pipelines) is **GA (2025-12)**. Can reduce Path A's Structured Streaming latency (seconds–minutes) to ~5ms. This is an improvement to the existing Path A via a trigger-mode change, not a new path. Immediately applicable. See [Lakeflow Evaluation](#lakeflow-evaluation-zerobus-ingest--real-time-mode-dais-2026--synced-2026-06-18) below.
 
 ### Path D: Kafka → Lakebase (LTAP) — Details
 
@@ -215,14 +215,14 @@ The Lakeflow-related features announced at DAIS 2026 were evaluated in the conte
 | Feature | Status | Position in this ecosystem |
 |---------|--------|----------------------------|
 | Zerobus Ingest | GA | **Additional option** for Databricks-only ingestion. Writes directly to Delta bypassing Kafka, but is not a Kafka replacement (see "Key Design Decisions" below) |
-| Real-Time Mode (Spark Declarative Pipelines) | Public Preview (DBR 18.1.3) | **Path A latency improvement path**. May reduce Structured Streaming's seconds–minutes to ~5ms |
+| Real-Time Mode (Spark Declarative Pipelines) | ✅ GA (2025-12) | **Path A latency improvement path**. May reduce Structured Streaming's seconds–minutes to ~5ms |
 | Lakeflow Connect (100+ connectors) | GA (connector-dependent) | Managed connector suite. ONTAP/NFS direct connector availability to be confirmed |
 | Agentic Data Engineering | Preview | Touchpoint of data quality × agents. Awaiting API availability |
 
 #### Key Design Decisions
 
 - **Kafka continues as a general-purpose event bus**: This ecosystem's Kafka fans out to multiple consumers (ClickHouse, Lambda, Databricks). Zerobus Ingest is an ingestion interface to a single Databricks sink and is not a replacement for the Kafka fan-out role. Zerobus is treated as "an additional route when a Databricks-only ingestion need materializes."
-- **Real-Time Mode is a Path A improvement**: Real-Time Mode is not a new path but a latency improvement to the existing Path A (Kafka → Structured Streaming → Delta) via a trigger-mode change. Evaluate after GA, if a Path A latency requirement materializes. It may cover some Path D (Lakebase/LTAP) use cases (millisecond latency).
+- **Real-Time Mode is a Path A improvement**: Real-Time Mode is not a new path but a latency improvement to the existing Path A (Kafka → Structured Streaming → Delta) via a trigger-mode change. **GA reached (2025-12)**. Immediately applicable when a Path A latency requirement materializes. It may cover some Path D (Lakebase/LTAP) use cases (millisecond latency).
 - **No edge-side changes**: The Kafka Producer design (v3 event schema, topic design) is unchanged. The impact is limited to cloud-side reception/ingestion.
 - **No on-premises support**: Lakeflow is a Databricks-managed feature with no on-premises/edge deployment option. Edge-layer real-time analytics (ClickHouse, etc.) remains necessary.
 
@@ -231,7 +231,7 @@ The Lakeflow-related features announced at DAIS 2026 were evaluated in the conte
 ```
 Kafka (general event bus, multiple consumers)
  ├── Path A current (Structured Streaming, sec–min) ✅ Validated
- │     └── Path A improved (Real-Time Mode, ~5ms) 🆕 Under evaluation (Public Preview)
+ │     └── Path A improved (Real-Time Mode, ~5ms) ✅ GA (immediately applicable)
  ├── Path D future (Lakebase/LTAP, ms–sec) 🔄 Under design review
  └── (other consumers: ClickHouse, Lambda)
 
@@ -243,7 +243,7 @@ Zerobus Ingest → Delta direct (Kafka bypass, Databricks-only) 🆕 Under evalu
 | Feature | Gate condition |
 |---------|----------------|
 | Zerobus Ingest | A Databricks-only ingestion need materializes and a use case without Kafka fan-out is identified |
-| Real-Time Mode | Reaches GA + a latency requirement materializes that existing Path A cannot satisfy (production decision after GA) |
+| Real-Time Mode | ~~Reaches GA~~ ✅ GA (2025-12). Immediately applicable when latency requirement materializes |
 | Lakeflow Connect | ONTAP/NFS direct connector published |
 | Agentic Data Engineering | API published + a data quality workflow use case identified |
 
@@ -264,7 +264,7 @@ Zerobus Ingest → Delta direct (Kafka bypass, Databricks-only) 🆕 Under evalu
 | Lakebase ap-northeast-1 availability | Confirm Lakebase GA is not region-limited; verify availability in ap-northeast-1 | this repo | ⚠️ **Not available confirmed** (2026-06-18) |
 | Lakebase Private Link connectivity | Whether Private Link (port 5432) is available for Lakebase access from VPC (announced GA at DAIS 2026). Note: moot in ap-northeast-1 until Lakebase itself is available | this repo | ⚠️ Blocked by Lakebase region constraint |
 | Zerobus Ingest alternative path | Whether Zerobus Ingest (Private Link supported) can write directly to Lakebase as Kafka alternative. Prerequisite: confirm whether external sources (MSK/Kafka Producer) can push to Zerobus Ingest endpoint | edge repo | 🔲 Spec confirmation pending |
-| Real-Time Mode GA evaluation | After Real-Time Mode (Spark Declarative Pipelines, DBR 18.1.3) reaches GA, evaluate Path A latency improvement (sec–min → ~5ms). Verify whether it applies to existing Path A via trigger-mode change alone, and whether it can cover some Path D (Lakebase/LTAP) use cases | edge repo + this repo | 🔲 Public Preview (evaluate after GA) |
+| Real-Time Mode GA evaluation | Real-Time Mode (Spark Declarative Pipelines) **GA reached (2025-12)**. Path A latency improvement (sec–min → ~5ms) now evaluatable. Verify whether it applies to existing Path A via trigger-mode change alone, and whether it can cover some Path D (Lakebase/LTAP) use cases | edge repo + this repo | 🔄 GA confirmed, production validation pending |
 | Zerobus Ingest SDK validation (gRPC/Python) | Validate Zerobus Ingest SDK (gRPC / Python) direct Delta writes. Confirm push method from external sources, throughput, Private Link route, and schema definition method | edge repo | 🔲 Awaiting SDK validation |
 
 > ⚠️ **Validation Required**: The Kafka → Lakebase direct write path has no published connector specification. Do not make PoC adoption decisions until all validation items above are confirmed.
@@ -302,7 +302,7 @@ Zerobus Ingest → Delta direct (Kafka bypass, Databricks-only) 🆕 Under evalu
 | **P2** | Managed KB × Omnigent integration design | This repository | ✅ Design complete | Added as Section 4 in `omnigent-multi-agent-evaluation.md` |
 | **P2** | Official RAG tutorial links | Agentic-RAG repo + this repo | ✅ Both repos done | Agentic-RAG repo README "AWS Official Resources" section added |
 | **P2** | LTAP integration design with ontap-edge-to-cloud-ai | This repo + edge repo | 🔄 Under design review | edge repo Path D added (2026-06-18). Awaiting Lakebase GA / connector spec |
-| **P2** | Lakeflow Real-Time Mode / Zerobus Ingest evaluation | This repo + edge repo | 🔄 Evaluation recorded, validation pending | Findings recorded in this doc's [Lakeflow Evaluation](#lakeflow-evaluation-zerobus-ingest--real-time-mode-dais-2026--synced-2026-06-18) (2026-06-18). Next gates: Real-Time Mode GA evaluation / Zerobus Ingest SDK validation (gRPC/Python) |
+| **P2** | Lakeflow Real-Time Mode / Zerobus Ingest evaluation | This repo + edge repo | 🔄 Real-Time Mode GA confirmed, validation pending | Real-Time Mode GA (2025-12). edge repo updated. Next gates: production latency validation / Zerobus Ingest SDK validation (gRPC/Python) |
 | **P3** | AWS Context GA validation for FSx for ONTAP auto-catalog | This repository | 🔲 | Waiting for AWS Context GA |
 | **P3** | Audit log integrated query patterns | observability repo | ✅ Design complete (PR #22) | Implementation after agent infrastructure build |
 
