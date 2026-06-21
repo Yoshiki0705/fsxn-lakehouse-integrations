@@ -425,7 +425,7 @@ S3 Tables / Glue Catalog (Iceberg メタデータ)
 UC Foreign Catalog (読み取り専用)
 ```
 
-**ステータス**: 検証計画策定済み、実行待ち。([検証計画](../../integrations/iceberg-metadata-catalog/databricks/uc-foreign-iceberg-validation.md))
+**ステータス**: ❌ **ブロック確認済み（2026-06-21）**。`iceberg_rest` connection type が ap-northeast-1 ワークスペースで非対応。S3 Tables マネージドバケットの UC External Location 登録も不可。([検証結果](../../integrations/iceberg-metadata-catalog/databricks/uc-foreign-iceberg-validation.md#validation-execution-results-2026-06-21))
 
 > **運用注記** (Iceberg Specialist findings): `REFRESH FOREIGN TABLE` は自動実行されません（Databricks は外部 Iceberg のメタデータ更新を自動検知しない）。定期的なリフレッシュが必要な場合は **Databricks Workflow** でスケジュールジョブを設定してください。
 
@@ -460,7 +460,7 @@ SELECT * FROM uc_delta.catalog.schema.sensor_data LIMIT 10;
 | DataSync → S3 → UC | ✅ **検証済み** | 2026-05 | datasync-to-s3-guide.md |
 | Kafka → Structured Streaming → UC | ✅ **設計検証済み** | 2026-06 | kafka-clickhouse-uc-connectivity.md |
 | Glue/EMR → S3 → UC | ✅ **公式チュートリアル** | — | AWS 公式ドキュメント |
-| Foreign Iceberg (Glue REST) | 🔲 **検証計画のみ** | — | uc-foreign-iceberg-validation.md |
+| Foreign Iceberg (Glue REST) | ❌ **ブロック確認** | 2026-06-21 | `iceberg_rest` type 非対応 + S3 Tables バケット EL 登録不可 |
 | boto3 PoC (ガバナンスなし) | ✅ **動作確認** | 2026-05 | ai-demo-guide.md |
 | S3 AP → Athena (UC 外) | ✅ **動作確認** | 2026-04 | S3 AP Serverless Patterns repo |
 | S3 AP → Bedrock KB (UC 外) | ✅ **公式チュートリアル** | — | AWS 公式ドキュメント |
@@ -479,7 +479,7 @@ SELECT * FROM uc_delta.catalog.schema.sensor_data LIMIT 10;
 | **Lakeflow Zerobus Ingest** | ⚠️ 間接的に利用可能 | Kafka 代替。ap-northeast-1 対応。ただし入力は Databricks 側 |
 | **Unity AI Gateway** | ❌ 関連なし | エージェント/モデルのガバナンス。ストレージ接続ではない |
 | **Agent Bricks** | ❌ 関連なし | エージェント実行基盤。ストレージ接続ではない |
-| **UC Foreign Iceberg GA** | ✅ **間接的に解決候補** | Glue Iceberg REST 経由で FSx for ONTAP 由来の Iceberg テーブルを UC に公開可能（検証中） |
+| **UC Foreign Iceberg GA** | ❌ **ブロック確認（2026-06-21）** | `iceberg_rest` type が ap-northeast-1 で非対応。S3 Tables マネージドバケットの UC External Location 登録も不可。Databricks Support への確認が必要 |
 | **OpenSharing SecureConnect** | ⚠️ 間接的に利用可能 | UC テーブル化後の外部共有をセキュア化。受信者ごとの FW 変更不要（プロバイダー側 1 回設定のみ）。FSx for ONTAP データの S3 → UC → 外部組織共有パスのセキュリティを強化 |
 
 ---
@@ -852,7 +852,7 @@ FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路（
 | 項目 | ステータス | 解除条件 |
 |------|-----------|---------|
 | UC External Location S3 AP 対応 | ❌ 非対応（feature request 提出済み） | Databricks のプラットフォーム開発 |
-| UC Foreign Iceberg × S3 Tables | 🔲 検証中 | Glue Iceberg REST endpoint の検証完了 |
+| UC Foreign Iceberg × S3 Tables | ❌ ブロック確認（2026-06-21） | `iceberg_rest` type 非対応 + S3 Tables EL 登録不可。Databricks Support 確認待ち |
 | OpenSharing Volumes コネクタ | 🔲 設計段階 | Databricks 開発 + FSx for ONTAP 対応 |
 | Lakebase × FSx for ONTAP | ⚠️ Lakebase ap-northeast-1 非対応 | Databricks リージョン拡大 |
 
