@@ -425,7 +425,7 @@ S3 Tables / Glue Catalog (Iceberg metadata)
 UC Foreign Catalog (read-only)
 ```
 
-**Status**: Validation plan complete, execution pending. ([Validation plan](../../integrations/iceberg-metadata-catalog/databricks/uc-foreign-iceberg-validation.md))
+**Status**: ❌ **Blocked confirmed (2026-06-21)**. `iceberg_rest` connection type not available in ap-northeast-1 workspace. S3 Tables managed bucket UC External Location registration also fails. ([Validation results](../../integrations/iceberg-metadata-catalog/databricks/uc-foreign-iceberg-validation.md#validation-execution-results-2026-06-21))
 
 > **Operational note** (Iceberg Specialist findings): `REFRESH FOREIGN TABLE` does not execute automatically (Databricks does not auto-detect external Iceberg metadata updates). If periodic refresh is needed, configure a **Databricks Workflow** scheduled job.
 
@@ -460,7 +460,7 @@ SELECT * FROM uc_delta.catalog.schema.sensor_data LIMIT 10;
 | DataSync → S3 → UC | ✅ **Verified** | 2026-05 | datasync-to-s3-guide.md |
 | Kafka → Structured Streaming → UC | ✅ **Design verified** | 2026-06 | kafka-clickhouse-uc-connectivity.md |
 | Glue/EMR → S3 → UC | ✅ **Official tutorial** | — | AWS official documentation |
-| Foreign Iceberg (Glue REST) | 🔲 **Plan only** | — | uc-foreign-iceberg-validation.md |
+| Foreign Iceberg (Glue REST) | ❌ **Blocked confirmed** | 2026-06-21 | `iceberg_rest` type not supported + S3 Tables bucket EL creation fails |
 | boto3 PoC (no governance) | ✅ **Working confirmed** | 2026-05 | ai-demo-guide.md |
 | S3 AP → Athena (outside UC) | ✅ **Working confirmed** | 2026-04 | S3 AP Serverless Patterns repo |
 | S3 AP → Bedrock KB (outside UC) | ✅ **Official tutorial** | — | AWS official documentation |
@@ -479,7 +479,7 @@ SELECT * FROM uc_delta.catalog.schema.sensor_data LIMIT 10;
 | **Lakeflow Zerobus Ingest** | ⚠️ Indirectly usable | Kafka alternative. ap-northeast-1 available. Input is Databricks-side |
 | **Unity AI Gateway** | ❌ Not related | Agent/model governance. Not a storage connector |
 | **Agent Bricks** | ❌ Not related | Agent execution platform. Not a storage connector |
-| **UC Foreign Iceberg GA** | ✅ **Indirect resolution candidate** | Can expose FSx-derived Iceberg tables to UC via Glue REST (validating) |
+| **UC Foreign Iceberg GA** | ❌ **Blocked confirmed (2026-06-21)** | `iceberg_rest` type not available in ap-northeast-1. S3 Tables managed bucket cannot be registered as UC External Location. Databricks Support confirmation needed |
 | **OpenSharing SecureConnect** | ⚠️ Indirectly usable | Secures external sharing of UC tables. No per-recipient FW changes needed (one-time provider setup). Strengthens security for FSx for ONTAP data → S3 → UC → external organization sharing path |
 
 ---
@@ -852,7 +852,7 @@ Paths for using FSx for ONTAP data with Databricks AI/ML features (AI/GenAI Spec
 | Item | Status | Unblocking Condition |
 |------|--------|---------------------|
 | UC External Location S3 AP support | ❌ Not supported (feature request filed) | Databricks platform development |
-| UC Foreign Iceberg × S3 Tables | 🔲 Validating | Glue Iceberg REST endpoint verification complete |
+| UC Foreign Iceberg × S3 Tables | ❌ Blocked confirmed (2026-06-21) | `iceberg_rest` type not supported + S3 Tables EL registration fails. Awaiting Databricks Support |
 | OpenSharing Volumes connector | 🔲 Design phase | Databricks development + FSx for ONTAP support |
 | Lakebase × FSx for ONTAP | ⚠️ Lakebase not in ap-northeast-1 | Databricks region expansion |
 
