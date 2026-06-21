@@ -157,3 +157,123 @@ SELECT snapshot_id FROM glue_metadata.metadata.unstructured_files.history LIMIT 
 - [AWS Glue Iceberg REST → Databricks blog](https://aws.amazon.com/blogs/big-data/access-amazon-s3-iceberg-tables-from-databricks-using-aws-glue-iceberg-rest-catalog-in-amazon-sagemaker-lakehouse)
 - [Databricks Catalog Federation](https://docs.databricks.com/aws/en/query-federation/catalog-federation)
 - [AWS Glue → UC federation](https://docs.aws.amazon.com/lake-formation/latest/dg/catalog-federation-databricks.html)
+
+
+---
+
+## Validation Execution Results (2026-06-21)
+
+### Environment
+
+| Item | Value |
+|------|-------|
+| Workspace | `fsxn-lakehouse-verification` (ap-northeast-1) |
+| Workspace URL | `https://<WORKSPACE_ID>.cloud.databricks.com` |
+| Account ID | `<DATABRICKS_ACCOUNT_ID>` |
+| SQL Warehouse | Serverless Starter Warehouse (Small) |
+| S3 Tables bucket | `fsxn-metadata-catalog` (arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog) |
+| S3 Tables table | `metadata.unstructured_files` |
+| S3 Tables data bucket | `s3://<TABLE_BUCKET_ID>--table-s3` |
+| IAM Role | `fsxn-databricks-executor-validation-role` (Glue + S3 Tables + S3 permissions) |
+
+### Pre-existing Resources
+
+| Resource | Type | Status |
+|----------|------|--------|
+| `glue_s3tables_conn` | CONNECTION (GLUE) | ✅ Exists |
+| `s3tables_storage_credential` | STORAGE CREDENTIAL | ✅ Exists |
+| `fsxn_s3ap_credential` | STORAGE CREDENTIAL | ✅ Exists |
+
+### Test Results
+
+#### Test 1: `CREATE CONNECTION TYPE iceberg_rest`
+
+```sql
+CREATE CONNECTION IF NOT EXISTS glue_iceberg_rest
+TYPE iceberg_rest
+OPTIONS (
+  uri = 'https://glue.ap-northeast-1.amazonaws.com/iceberg',
+  warehouse = '178625946981:s3tablescatalog/fsxn-metadata-catalog',
+  credential_name = 'glue_s3tables_conn'
+);
+```
+
+**Result**: ❌ FAILED
+
+**Error**: `[CONNECTION_TYPE_NOT_SUPPORTED] Cannot create connection of type 'iceberg_rest'. Supported connection types: 1PASSWORD_EVENT_LOGS, SALESFORCE, AKAMAI_WAF_LOGS, EPIC_CLARITY, GLUE, X_ADS, MARKETO, APPLE_SEARCH_ADS, FRONT, AZURE_MONITOR_LOGS, META_MARKETING, GA4_RAW_DATA, WORKDAY_ACTIVITY_LOGGING, ONELAKE, AKAMAI, GOOGLE_WORKSPACE, PROOFPOINT_SIEM, WORKDAY_HCM, BIGQUERY, VEEVA, HTTP, QUICKBOOKS, ZOHO_BOOKS, SQUARE, OUTLOOK, PENDO, ZOOM_LOGS, CERIDIAN_DAYFORCE, COMMUNITY, GURU, APPLE_APP_STORE, AMPLITUDE, JIRA, GENESYS, GOOGLE_ADS, SALESFORCE_DATA_CLOUD_FILE_SHARING, POSTGRESQL, DYNAMICS365, ADOBE_CAMPAIGNS, SALESFORCE_MARKETING_CLOUD, ZENDESK_SUPPORT, ADP_WORKFORCE...`
+
+**Root Cause**: `iceberg_rest` connection type is not available in this workspace (ap-northeast-1). This appears to be a regional feature availability limitation or a preview feature not yet enabled.
+
+---
+
+#### Test 2: `CREATE EXTERNAL LOCATION` for S3 Tables data bucket
+
+```sql
+CREATE EXTERNAL LOCATION IF NOT EXISTS s3tables_data_location
+URL 's3://<TABLE_BUCKET_ID>--table-s3'
+WITH (STORAGE CREDENTIAL s3tables_storage_credential);
+```
+
+**Result**: ❌ FAILED
+
+**Error**: `[INVALID_STATE.UC_CLOUD_STORAGE_ACCESS_FAILURE] Failed to access cloud storage: [AWSBadRequestException] () exceptionTraceId=0ff546b2-e705-425b-8588-196f3edab325`
+
+**Root Cause**: S3 Tables managed data buckets (`xxxx--table-s3` format) are AWS-internal buckets that cannot be accessed via standard S3 API operations (`s3:ListBucket`, `s3:GetObject`). They are only accessible via the S3 Tables API (`s3tables:GetTableData`). Unity Catalog performs S3 API validation during External Location creation, which fails against S3 Tables managed buckets.
+
+---
+
+#### Test 3: `CREATE FOREIGN CATALOG` via Glue HMS connection
+
+```sql
+CREATE FOREIGN CATALOG IF NOT EXISTS glue_s3tables_catalog
+USING CONNECTION glue_s3tables_conn
+OPTIONS (
+  authorized_paths = 's3://<TABLE_BUCKET_ID>--table-s3'
+);
+```
+
+**Result**: ❌ FAILED
+
+**Error**: `[EXTERNAL_LOCATION_DOES_NOT_EXIST] parent external location for path 's3://<TABLE_BUCKET_ID>--table-s3/' does not exist.`
+
+**Root Cause**: Foreign Catalog creation requires a parent External Location to exist for the `authorized_paths`. Since Test 2 failed (External Location cannot be created for S3 Tables managed buckets), this test also fails.
+
+---
+
+### Summary of Findings
+
+| Path | Result | Blocker |
+|------|--------|---------|
+| B-4: `iceberg_rest` → Foreign Catalog | ❌ Blocked | `iceberg_rest` connection type not available in ap-northeast-1 workspace |
+| B-5: Glue Iceberg REST → Foreign Catalog | ❌ Blocked | Same as B-4 (requires `iceberg_rest` type) |
+| Alternative: Glue HMS → Foreign Catalog | ❌ Blocked | S3 Tables managed bucket cannot be registered as UC External Location |
+
+### Platform Constraints Identified
+
+1. **`iceberg_rest` connection type**: Not available in this workspace. The supported connection types list does NOT include `iceberg_rest`. This may be:
+   - A regional limitation (ap-northeast-1 not yet supported)
+   - A preview feature requiring explicit opt-in
+   - A workspace configuration requirement
+
+2. **S3 Tables managed buckets vs UC External Location**: UC External Location validates bucket access via standard S3 API during creation. S3 Tables managed buckets (format: `xxxx--table-s3`) are AWS-internal and do not respond to standard S3 API calls. This creates an incompatibility between UC External Location and S3 Tables data storage.
+
+3. **Circular dependency**: Foreign Catalog (Glue HMS type) requires `authorized_paths` → which requires External Location → which requires S3 API-accessible bucket → S3 Tables managed buckets are not S3 API-accessible.
+
+### Required Actions (Databricks Support)
+
+1. Confirm when `iceberg_rest` connection type will be available for ap-northeast-1 workspaces
+2. Confirm whether UC External Location will support S3 Tables managed buckets (via S3 Tables API instead of standard S3 API)
+3. Clarify the recommended path for accessing S3 Tables data from Databricks Unity Catalog
+
+### Workaround (if needed before platform support)
+
+If UC Foreign Iceberg remains blocked, the validated alternative is:
+- **Athena** can query S3 Tables directly (via Glue catalog integration) — confirmed working
+- **DataSync → S3 → UC Delta** remains the only validated Databricks path
+- **PyIceberg on Databricks compute** (driver-only, no UC governance) could read S3 Tables via the Glue Iceberg REST endpoint directly — not validated yet
+
+### Evidence Files
+
+- Screenshots: `tmp/.playwright-mcp/page-2026-06-21T01-27-35-446Z.png` (iceberg_rest error), `tmp/.playwright-mcp/page-2026-06-21T01-36-39-118Z.png` (External Location error)
+- Workspace: `https://<WORKSPACE_ID>.cloud.databricks.com`
+- Query: `New Query 2026-06-21 10:14:58` (saved in workspace)
