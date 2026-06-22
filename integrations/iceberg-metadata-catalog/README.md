@@ -160,7 +160,7 @@ Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platfor
 | Production Maturity Model | [EN](genai/production-maturity-model.md) | [JA](genai/production-maturity-model-ja.md) |
 | Regulated Workload Readiness | [EN](governance/regulated-workload-readiness.md) | [JA](governance/regulated-workload-readiness-ja.md) |
 | FSx S3 AP Production Checklist | [EN](storage/fsx-s3ap-production-checklist.md) | [JA](storage/fsx-s3ap-production-checklist-ja.md) |
-| Partner Solution Packaging | [EN](../../docs/partner-enablement/solution-packaging.md) | [JA](../../docs/partner-enablement/solution-packaging-ja.md) |
+| PoC Execution Guide | [EN](../../docs/implementation-guide/poc-execution-guide.md) | [JA](../../docs/implementation-guide/poc-execution-guide-ja.md) |
 | Snowflake Troubleshooting | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
 | Snowflake VENDED_CREDENTIALS | [EN](snowflake/glue-rest-vended-credentials-validation.md) | [JA](snowflake/glue-rest-vended-credentials-validation-ja.md) |
 | S3 Annotations Governance Eval (Databricks UC × FSx S3 AP) | [EN](../../docs/en/s3-annotations-governance-evaluation.md) | [JA](../../docs/ja/s3-annotations-governance-evaluation.md) |

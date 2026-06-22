@@ -151,7 +151,7 @@ integrations/iceberg-metadata-catalog/
 | 本番化成熟度モデル | [EN](genai/production-maturity-model.md) | [JA](genai/production-maturity-model-ja.md) |
 | 規制ワークロード対応 | [EN](governance/regulated-workload-readiness.md) | [JA](governance/regulated-workload-readiness-ja.md) |
 | FSx S3 AP 本番チェックリスト | [EN](storage/fsx-s3ap-production-checklist.md) | [JA](storage/fsx-s3ap-production-checklist-ja.md) |
-| パートナーソリューションパッケージング | [EN](../../docs/partner-enablement/solution-packaging.md) | [JA](../../docs/partner-enablement/solution-packaging-ja.md) |
+| PoC 実行ガイド | [EN](../../docs/implementation-guide/poc-execution-guide.md) | [JA](../../docs/implementation-guide/poc-execution-guide-ja.md) |
 | Snowflake トラブルシューティング | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
 | Snowflake VENDED_CREDENTIALS 検証 | [EN](snowflake/glue-rest-vended-credentials-validation.md) | [JA](snowflake/glue-rest-vended-credentials-validation-ja.md) |
 | S3 Annotations ガバナンス評価 (Databricks UC × FSx S3 AP) | [EN](../../docs/en/s3-annotations-governance-evaluation.md) | [JA](../../docs/ja/s3-annotations-governance-evaluation.md) |
