@@ -32,8 +32,8 @@
 | **影響サービス** | Databricks Unity Catalog |
 | **影響機能** | External Location / External Table / External Volume / UC ガバナンス全般 |
 | **根本原因** | Databricks の AssumeRole 時にセッションポリシーが S3 AP ARN を正しく解釈しない |
-| **確認日** | 2026-05-26（Databricks Support 確認） |
-| **ステータス** | ❌ 未解決 — Feature Request 提出済み |
+| **確認日** | 2026-05-26（Databricks Support 確認; ケースクローズ — サポートティア不足により資格なし） |
+| **ステータス** | ❌ 未解決 — サポートケースクローズ（資格なし）; プラットフォームレベルでの解決待ち |
 | **解除条件** | Databricks プラットフォームが S3 AP を UC External Location として GA サポート |
 | **影響度** | **Critical** — UC ガバナンス（lineage, tags, masks, row filters）を FSx for ONTAP データに直接適用できない |
 
@@ -121,8 +121,8 @@
 | **影響サービス** | Databricks Unity Catalog |
 | **影響機能** | UC Foreign Catalog × S3 Tables Iceberg REST endpoint |
 | **根本原因** | Databricks SQL Warehouse が `iceberg_rest` を Connection Type として認識しない |
-| **確認日** | 2026-05-31（`CONNECTION_TYPE_NOT_SUPPORTED` エラー確認） |
-| **ステータス** | ❌ 未解決 — Feature Request 提出済み |
+| **確認日** | 2026-05-31（`CONNECTION_TYPE_NOT_SUPPORTED` エラー確認; ケースクローズ — サポートティア不足により資格なし） |
+| **ステータス** | ❌ 未解決 — サポートケースクローズ（資格なし）; プラットフォームレベルでの解決待ち |
 | **解除条件** | Databricks が `iceberg_rest` を UC Connection Type として GA サポート |
 | **影響度** | **Medium** — S3 Tables / S3 Metadata の Iceberg テーブルを UC から直接参照できない |
 
@@ -223,8 +223,8 @@ graph TD
 
 | ベンダー | 要望内容 | 提出日 | ステータス |
 |---------|---------|--------|-----------|
-| Databricks | UC External Location の S3 AP サポート | 2026-05 | 提出済み・未回答 |
-| Databricks | `iceberg_rest` Connection Type サポート | 2026-05 | 提出済み・未回答 |
+| Databricks | UC External Location の S3 AP サポート | 2026-05 | クローズ（サポートティア不足により資格なし） |
+| Databricks | `iceberg_rest` Connection Type サポート | 2026-05 | クローズ（サポートティア不足により資格なし） |
 | AWS | FSx for ONTAP S3 AP に conditional writes 追加 | 2026-05 | 提出済み・未回答 |
 | AWS | FSx for ONTAP S3 AP に Event Notifications 追加 | 2026-05 | 提出済み・未回答 |
 | AWS | FSx for ONTAP に SnapMirror S3 有効化 | 2026-05 | 提出済み・未回答 |

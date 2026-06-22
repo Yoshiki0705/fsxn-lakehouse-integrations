@@ -32,8 +32,8 @@
 | **Affected service** | Databricks Unity Catalog |
 | **Affected features** | External Location / External Table / External Volume / all UC governance |
 | **Root cause** | Databricks session policy generated during AssumeRole does not correctly interpret S3 AP ARNs |
-| **Confirmed** | 2026-05-26 (Databricks Support) |
-| **Status** | ❌ Unresolved — Feature Request filed |
+| **Confirmed** | 2026-05-26 (Databricks Support; case closed — not entitled due to support tier) |
+| **Status** | ❌ Unresolved — support case closed (not entitled); awaiting platform-level resolution |
 | **Resolution criteria** | Databricks platform GA-supports S3 AP as UC External Location |
 | **Severity** | **Critical** — Cannot apply UC governance (lineage, tags, masks, row filters) directly to FSx for ONTAP data |
 
@@ -121,8 +121,8 @@
 | **Affected service** | Databricks Unity Catalog |
 | **Affected features** | UC Foreign Catalog × S3 Tables Iceberg REST endpoint |
 | **Root cause** | Databricks SQL Warehouse does not recognize `iceberg_rest` as a Connection Type |
-| **Confirmed** | 2026-05-31 (`CONNECTION_TYPE_NOT_SUPPORTED` error) |
-| **Status** | ❌ Unresolved — Feature Request filed |
+| **Confirmed** | 2026-05-31 (`CONNECTION_TYPE_NOT_SUPPORTED` error; case closed — not entitled due to support tier) |
+| **Status** | ❌ Unresolved — support case closed (not entitled); awaiting platform-level resolution |
 | **Resolution criteria** | Databricks GA-supports `iceberg_rest` as UC Connection Type |
 | **Severity** | **Medium** — Cannot reference S3 Tables / S3 Metadata Iceberg tables from UC directly |
 
@@ -223,8 +223,8 @@ graph TD
 
 | Vendor | Request | Filed | Status |
 |--------|---------|-------|--------|
-| Databricks | UC External Location S3 AP support | 2026-05 | Filed, no response |
-| Databricks | `iceberg_rest` Connection Type support | 2026-05 | Filed, no response |
+| Databricks | UC External Location S3 AP support | 2026-05 | Closed (not entitled — support tier limitation) |
+| Databricks | `iceberg_rest` Connection Type support | 2026-05 | Closed (not entitled — support tier limitation) |
 | AWS | FSx for ONTAP S3 AP conditional writes | 2026-05 | Filed, no response |
 | AWS | FSx for ONTAP S3 AP Event Notifications | 2026-05 | Filed, no response |
 | AWS | Enable SnapMirror S3 on FSx for ONTAP | 2026-05 | Filed, no response |
