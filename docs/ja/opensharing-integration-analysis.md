@@ -181,11 +181,11 @@ STS モード（primary）に加え、presigned URL も実証的に動作する:
 
 ### Enterprise Storage Data Services Architect lens（Archetype）
 - **戦略的枠組み**: OpenSharing エンドポイントは NFS/SMB/iSCSI/S3 に続くデータ公開面となり、エンタープライズファイルストレージをサイロからガバナンド・ノードへ転換。
-- **検証すべき差別化**: テーブルのタイムトラベルを補完する point-in-time recovery（Snapshot）/ 共有 sandbox 向けの即時論理コピー（FlexClone）/ DR 対応共有エンドポイント向けクロスリージョンレプリケーション（SnapMirror）/ 同一データがファイルワークロードと AI を同時に支えるマルチプロトコル。
+- **検証すべき技術特性**: テーブルのタイムトラベルを補完する point-in-time recovery（Snapshot）/ 共有 sandbox 向けの即時論理コピー（FlexClone）/ DR 対応共有エンドポイント向けクロスリージョンレプリケーション（SnapMirror）/ 同一データがファイルワークロードと AI を同時に支えるマルチプロトコル。
 - **オープンクエスチョン**: native 実装が ONTAP S3 上か S3 Access Points 上か独立データパス上か / AWS マネージドとオンプレの提供タイミング。
 
 ### Open Catalog Strategist lens（Public）
-- 2026 年半ば時点で、オープンテーブルフォーマットの議論は概ね Apache Iceberg に収束し、差別化は**カタログレイヤー**に移行。カタログが AI control plane 化しつつある。([ソース](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))
+- 2026 年半ば時点で、オープンテーブルフォーマットの議論は概ね Apache Iceberg に収束し、技術的焦点は**カタログレイヤー**に移行。カタログが AI control plane 化しつつある。([ソース](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))
 - **重要な区別**: OpenSharing は*共有*プロトコル、Iceberg REST は*カタログ*プロトコル。両者はレイヤーが異なり、競合ではなく補完。
 - **業界の未解決問題**: ガバナンスポリシーはカタログ間でポータブルでない。現実解は**単一カタログを governance boundary** に定め、全エンジンをそこ経由にすること。
 

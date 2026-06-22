@@ -215,7 +215,7 @@ OpenSearch Dashboards:
 
 ## Iceberg Time Travel: Historical Comparison
 
-One unique advantage of the Iceberg table format is time travel — querying metadata as it existed at any past point in time.
+A notable capability of the Iceberg table format is time travel — querying metadata as it existed at any past point in time.
 
 ```sql
 -- View snapshot history

@@ -185,7 +185,7 @@ In addition to the STS mode (primary), presigned URLs also work empirically:
 - **Open question**: whether a native implementation sits on top of ONTAP S3, S3 Access Points, or an independent data path; and the relative timing of AWS-managed vs on-premises availability.
 
 ### Open Catalog Strategist lens (Public)
-- As of mid-2026, the open table format question is largely settled in favor of Apache Iceberg; the differentiation has moved to the **catalog layer**, which is becoming the AI control plane. ([Source](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))
+- As of mid-2026, the open table format question is largely settled in favor of Apache Iceberg; the technical focus has moved to the **catalog layer**, which is becoming the AI control plane. ([Source](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))
 - **Key distinction**: OpenSharing is a *sharing* protocol; Iceberg REST is a *catalog* protocol. They operate at different layers and are complementary, not mutually exclusive.
 - **Unresolved industry problem**: governance policy is not portable across catalogs. The pragmatic answer is to designate a **single catalog as the governance boundary** and route engines through it, rather than running multiple catalogs with inconsistent rules.
 
