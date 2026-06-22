@@ -1,6 +1,6 @@
 🌐 **English** | [日本語](../ja/quickstart-business-guide.md)
 
-# How to Use Your NAS Files in Databricks — A Plain-Language Guide
+# How to Use Your File Server Data for Analytics and AI
 
 > For account managers, sales, business leaders, and anyone who needs the "what" and "why" without the implementation details.
 
@@ -8,7 +8,7 @@
 
 ## The One-Sentence Answer
 
-**Yes, you can analyze your NAS files in Databricks Unity Catalog — but the system creates a small "card catalog" of your files rather than moving the files themselves.**
+**Yes, you can analyze your file server data (shared drives) using analytics platforms like Databricks, Athena, or Snowflake — and the system creates a small "card catalog" of your files rather than moving the files themselves.**
 
 ---
 
@@ -19,7 +19,7 @@ Think of it this way:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│   Your file server (FSx for ONTAP)     =  The library shelves  │
+│   Your file server (shared drives)     =  The library shelves  │
 │   Files (PDFs, images, CSVs, etc.)     =  The actual books     │
 │   The analytics extract                =  The card catalog     │
 │   Databricks Unity Catalog             =  The search system    │
@@ -72,7 +72,7 @@ The "adapter" in this case is a small pipeline that:
 │     ▼     ▼                      ▼                                  │
 │  ┌──────┐ ┌────────────┐ ┌────────────────┐                        │
 │  │Tables│ │Search Index│ │Databricks Table│                         │
-│  │(AWS) │ │(for AI/RAG)│ │(for analytics) │                        │
+│  │(AWS) │ │(for AI-powered search)│ │(for analytics) │                        │
 │  └──────┘ └────────────┘ └────────────────┘                        │
 │                                                                     │
 │  ② Only the "card catalog" is stored here — NOT your files.        │
