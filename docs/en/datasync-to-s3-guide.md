@@ -1,6 +1,6 @@
 🌐 **English** | [日本語](../ja/datasync-to-s3-guide.md)
 
-> 📖 **Comprehensive guide**: For a full overview of all FSx for ONTAP → Databricks UC connection paths, see the [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md). This document focuses on the DataSync path detailed procedures.
+> 📖 **Comprehensive guide**: For a full overview of all FSx for ONTAP → Databricks UC connection paths, see the [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md). This document focuses on the DataSync path detailed procedures.
 
 # AWS DataSync: FSx for ONTAP → S3 Sync Guide
 
@@ -507,7 +507,7 @@ See: [SnapMirror S3 verification evidence](../../verification-pack/snapmirror-s3
 
 This guide is connected to the following documents:
 
-- [FSx for ONTAP → Databricks UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) — Overview of all connection paths (DataSync is one path)
+- [FSx for ONTAP → Databricks UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) — Overview of all connection paths (DataSync is one path)
 - [Kafka-ClickHouse-Unity Catalog Connectivity Guide](./kafka-clickhouse-unity-catalog-connectivity.md) — Integration patterns with streaming data
 - [S3 Annotations Governance Evaluation](./s3-annotations-governance-evaluation.md) — Metadata governance enhancement after S3 sync
 - [Compatibility Matrix](./compatibility-matrix.md) — Platform-specific API support status and DataSync necessity determination

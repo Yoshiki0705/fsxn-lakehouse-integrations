@@ -295,7 +295,7 @@ Check these sources during quarterly reviews:
 
 ## Related Documents
 
-- [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) — Path design affected by blockers
+- [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) — Path design affected by blockers
 - [Compatibility Matrix](./compatibility-matrix.md) — Technical constraint details
 - [DataSync → S3 Guide](./datasync-to-s3-guide.md) — Primary workaround for BLK-001/002/003
 - [S3 Annotations Evaluation](./s3-annotations-governance-evaluation.md) — Case 3 affected by BLK-005

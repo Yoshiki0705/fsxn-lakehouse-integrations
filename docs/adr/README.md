@@ -25,5 +25,5 @@
 ## 関連ドキュメント
 
 - [ブロッカー追跡ダッシュボード](../ja/blocker-tracker.md)
-- [UC 接続総合ガイド](../ja/fsxn-to-databricks-unity-catalog-guide.md)
+- [UC 接続総合ガイド](../ja/fsx-ontap-to-databricks-unity-catalog-guide.md)
 - [読み順ガイド](../ja/reading-path-guide.md)

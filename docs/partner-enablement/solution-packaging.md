@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](./solution-packaging-ja.md)
+
 # Partner Solution Packaging
 
 ## Offer Summary

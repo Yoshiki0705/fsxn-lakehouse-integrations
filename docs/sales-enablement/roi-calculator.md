@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](./roi-calculator-ja.md)
+
 # ROI Calculator: FSx for ONTAP AI Metadata Catalog
 
 > Use this calculator to build customer-specific cost justification with conservative, moderate, and optimistic scenarios.

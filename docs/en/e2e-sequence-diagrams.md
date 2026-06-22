@@ -177,7 +177,7 @@ sequenceDiagram
 
 - [DataSync → S3 Guide](./datasync-to-s3-guide.md) — DataSync path implementation details
 - [Kafka-ClickHouse-UC Connectivity](./kafka-clickhouse-unity-catalog-connectivity.md) — FPolicy/Kafka path implementation
-- [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) — Path selection logic
+- [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) — Path selection logic
 - [Runbook #01](../../runbooks/01-datasync-failure-triage.md) — DataSync failure response
 - [Runbook #02](../../runbooks/02-fpolicy-lambda-failure.md) — FPolicy/Lambda failure response
-- [FSx for ONTAP Feature Map](./fsxn-feature-utilization-map.md) — ONTAP features used at each step
+- [FSx for ONTAP Feature Map](./fsx-ontap-feature-utilization-map.md) — ONTAP features used at each step

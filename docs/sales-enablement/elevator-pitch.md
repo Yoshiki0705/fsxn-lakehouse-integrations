@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](./elevator-pitch-ja.md)
+
 # 3-Minute Elevator Pitch: FSx for ONTAP AI Metadata Catalog
 
 > Scenario-based scripts (3 minutes each)

@@ -1,6 +1,6 @@
 🌐 [English](../en/industry-solution-catalog.md) | **日本語**
 
-> 📖 **技術ガイドとセット**: 本カタログは [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md)（接続パスの技術詳細）と対になる**業界別ソリューションカタログ**です。技術ガイドが「どう繋ぐか（How）」を扱うのに対し、本カタログは「どの業界で、何のために、どのパスを使うか（Who / Why / Which）」を扱います。
+> 📖 **技術ガイドとセット**: 本カタログは [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md)（接続パスの技術詳細）と対になる**業界別ソリューションカタログ**です。技術ガイドが「どう繋ぐか（How）」を扱うのに対し、本カタログは「どの業界で、何のために、どのパスを使うか（Who / Why / Which）」を扱います。
 
 # FSx for ONTAP × Databricks Unity Catalog 業界別ソリューションカタログ
 
@@ -468,7 +468,7 @@
 
 **ガバナンス/規制**: 弁護士・依頼者間秘匿特権、文書保持義務、GDPR の削除権。
 
-**注意点**: 秘匿特権文書は UC のアクセス制御を厳格に。permission-aware RAG では NTFS ACL を尊重したフィルタリングが必須（[技術ガイドのパーミッション考慮 RAG](./fsxn-to-databricks-unity-catalog-guide.md) 参照）。
+**注意点**: 秘匿特権文書は UC のアクセス制御を厳格に。permission-aware RAG では NTFS ACL を尊重したフィルタリングが必須（[技術ガイドのパーミッション考慮 RAG](./fsx-ontap-to-databricks-unity-catalog-guide.md) 参照）。
 
 > 訴訟が予見される場合の**リティゲーションホールド（証拠保全）**では、データを改ざん不可能な状態で保全する必要があります。SnapLock Compliance モード（管理者でも保持期間内は削除不可）が直接適用できます。e-Discovery では証拠の**チェーンオブカストディ**（誰がいつアクセス・処理したか）を UC audit log で証明可能にしてください。
 
@@ -772,7 +772,7 @@
 
 **推奨接続パス**:
 - 連携ファイル/バッチ出力 → **パス 1（DataSync → S3 → UC）**
-- 基幹 DB → UC Lakehouse Federation（PostgreSQL/Oracle/SQL Server、[技術ガイド](./fsxn-to-databricks-unity-catalog-guide.md) 参照）または CDC（Debezium → Kafka → UC）
+- 基幹 DB → UC Lakehouse Federation（PostgreSQL/Oracle/SQL Server、[技術ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) 参照）または CDC（Debezium → Kafka → UC）
 
 **ガバナンス/規制**: 基幹データの整合性、財務データ監査（SOX 等）、マスタデータガバナンス。
 
@@ -851,7 +851,7 @@ Q: あなたの業界のデータ鮮度要件は？
 
 ## 段階的導入の業界別考慮
 
-技術ガイドの [段階的導入推奨ステップ](./fsxn-to-databricks-unity-catalog-guide.md#段階的導入推奨ステップ) を業界特性で調整:
+技術ガイドの [段階的導入推奨ステップ](./fsx-ontap-to-databricks-unity-catalog-guide.md#段階的導入推奨ステップ) を業界特性で調整:
 
 | 業界 | Phase 1 重点 | 規制ゲート | 特記事項 |
 |------|------------|-----------|---------|
@@ -868,7 +868,7 @@ Q: あなたの業界のデータ鮮度要件は？
 
 | ドキュメント | 内容 |
 |-------------|------|
-| [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) | 接続パスの技術詳細（本カタログの技術的根拠） |
+| [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) | 接続パスの技術詳細（本カタログの技術的根拠） |
 | [DataSync → S3 同期ガイド](./datasync-to-s3-guide.md) | パス 1 の詳細手順 |
 | [Kafka-ClickHouse-UC 接続ガイド](./kafka-clickhouse-unity-catalog-connectivity.md) | パス 2 の技術詳細 |
 | [S3 Annotations ガバナンス評価](./s3-annotations-governance-evaluation.md) | メタデータガバナンス（トレーサビリティ等） |
@@ -883,4 +883,4 @@ Q: あなたの業界のデータ鮮度要件は？
 - 本カタログのユースケースは公開リファレンスアーキテクチャ（Databricks/AWS/NetApp 公式）と業界標準ロールの一般的知見に基づきます。
 - 特定顧客の事例・社名・機密情報は含みません。引用は公開情報（**Public**）に限定し、リンクで出典を明示しています。
 - 規制要件（HIPAA、BCBS 239、IATF 16949 等）の記載は技術設計上の考慮点であり、**法的・コンプライアンス判断ではありません**。各組織の法務・コンプライアンス部門の確認が必要です。
-- 接続パスの検証ステータスは技術ガイドの [検証ステータスサマリ](./fsxn-to-databricks-unity-catalog-guide.md#検証ステータスサマリ) を参照してください。
+- 接続パスの検証ステータスは技術ガイドの [検証ステータスサマリ](./fsx-ontap-to-databricks-unity-catalog-guide.md#検証ステータスサマリ) を参照してください。

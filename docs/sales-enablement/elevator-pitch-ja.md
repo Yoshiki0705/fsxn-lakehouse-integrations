@@ -1,3 +1,5 @@
+🌐 [English](./elevator-pitch.md) | **日本語**
+
 # 3 分エレベーターピッチ: FSx for ONTAP AI メタデータカタログ
 
 > 想定シーン別スクリプト（各 3 分）

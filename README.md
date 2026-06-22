@@ -289,7 +289,7 @@ fsxn-lakehouse-integrations/
 | OpenSharing Integration Analysis | [OpenSharing 統合分析](docs/ja/opensharing-integration-analysis.md) | [OpenSharing Integration Analysis](docs/en/opensharing-integration-analysis.md) |
 | Omnigent Multi-Agent Evaluation | [Omnigent マルチエージェント評価](docs/ja/omnigent-multi-agent-evaluation.md) | [Omnigent Multi-Agent Evaluation](docs/en/omnigent-multi-agent-evaluation.md) |
 | KPI & Validation | [KPI と PoC 検証](docs/ja/kpi-and-validation.md) | [KPI & Validation](docs/en/kpi-and-validation.md) |
-| **FSx for ONTAP → Databricks UC Guide** | [**UC 接続総合ガイド**](docs/ja/fsxn-to-databricks-unity-catalog-guide.md) | [**UC Connection Guide**](docs/en/fsxn-to-databricks-unity-catalog-guide.md) |
+| **FSx for ONTAP → Databricks UC Guide** | [**UC 接続総合ガイド**](docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) | [**UC Connection Guide**](docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) |
 | DataSync → S3 Guide | [DataSync ガイド](docs/ja/datasync-to-s3-guide.md) | [DataSync Guide](docs/en/datasync-to-s3-guide.md) |
 | Kafka-ClickHouse-UC Connectivity | [Kafka-CH-UC 接続](docs/ja/kafka-clickhouse-unity-catalog-connectivity.md) | [Kafka-CH-UC Connectivity](docs/en/kafka-clickhouse-unity-catalog-connectivity.md) |
 | S3 Annotations Governance | [S3 Annotations 評価](docs/ja/s3-annotations-governance-evaluation.md) | [S3 Annotations Evaluation](docs/en/s3-annotations-governance-evaluation.md) |

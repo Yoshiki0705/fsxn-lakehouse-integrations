@@ -1,6 +1,6 @@
 🌐 **English** | [日本語](../ja/industry-solution-catalog.md)
 
-> 📖 **Paired with the technical guide**: This catalog is the **industry solution catalog** that pairs with the [FSx for ONTAP → Databricks UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) (technical detail of connection paths). While the technical guide covers "How to connect," this catalog covers "Who / Why / Which path" per industry.
+> 📖 **Paired with the technical guide**: This catalog is the **industry solution catalog** that pairs with the [FSx for ONTAP → Databricks UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) (technical detail of connection paths). While the technical guide covers "How to connect," this catalog covers "Who / Why / Which path" per industry.
 
 # FSx for ONTAP × Databricks Unity Catalog Industry Solution Catalog
 
@@ -468,7 +468,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 
 **Governance/regulation**: Attorney-client privilege, document retention obligations, GDPR right to deletion.
 
-**Caveats**: Apply strict UC access control to privileged documents. Permission-aware RAG requires NTFS ACL-respecting filtering (see [permission-aware RAG in the technical guide](./fsxn-to-databricks-unity-catalog-guide.md)).
+**Caveats**: Apply strict UC access control to privileged documents. Permission-aware RAG requires NTFS ACL-respecting filtering (see [permission-aware RAG in the technical guide](./fsx-ontap-to-databricks-unity-catalog-guide.md)).
 
 > For **litigation hold (evidence preservation)** when litigation is anticipated, data must be preserved immutably. SnapLock Compliance mode (cannot be deleted within retention even by admin) applies directly. For e-Discovery, make the **chain of custody** (who accessed/processed what and when) provable via UC audit logs.
 
@@ -772,7 +772,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 
 **Recommended path**:
 - Integration files/batch output → **Path 1 (DataSync → S3 → UC)**
-- Core DB → UC Lakehouse Federation (PostgreSQL/Oracle/SQL Server, see [technical guide](./fsxn-to-databricks-unity-catalog-guide.md)) or CDC (Debezium → Kafka → UC)
+- Core DB → UC Lakehouse Federation (PostgreSQL/Oracle/SQL Server, see [technical guide](./fsx-ontap-to-databricks-unity-catalog-guide.md)) or CDC (Debezium → Kafka → UC)
 
 **Governance/regulation**: Core data integrity, financial data audit (SOX, etc.), master data governance.
 
@@ -851,7 +851,7 @@ For industries requiring multi-party data utilization (multi-party collaboration
 
 ## Industry-Specific Phased Adoption Considerations
 
-Adjust the technical guide's [Phased Adoption Steps](./fsxn-to-databricks-unity-catalog-guide.md#phased-adoption-recommended-steps) per industry characteristics:
+Adjust the technical guide's [Phased Adoption Steps](./fsx-ontap-to-databricks-unity-catalog-guide.md#phased-adoption-recommended-steps) per industry characteristics:
 
 | Industry | Phase 1 Focus | Regulatory Gate | Notes |
 |----------|--------------|----------------|-------|
@@ -868,7 +868,7 @@ Adjust the technical guide's [Phased Adoption Steps](./fsxn-to-databricks-unity-
 
 | Document | Content |
 |----------|---------|
-| [FSx for ONTAP → Databricks UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) | Technical detail of connection paths (technical basis for this catalog) |
+| [FSx for ONTAP → Databricks UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | Technical detail of connection paths (technical basis for this catalog) |
 | [DataSync → S3 Sync Guide](./datasync-to-s3-guide.md) | Path 1 detailed procedures |
 | [Kafka-ClickHouse-UC Connectivity Guide](./kafka-clickhouse-unity-catalog-connectivity.md) | Path 2 technical detail |
 | [S3 Annotations Governance Evaluation](./s3-annotations-governance-evaluation.md) | Metadata governance (traceability, etc.) |
@@ -883,4 +883,4 @@ Adjust the technical guide's [Phased Adoption Steps](./fsxn-to-databricks-unity-
 - The use cases in this catalog are based on public reference architectures (Databricks/AWS/NetApp official) and general knowledge of industry-standard roles.
 - No specific customer cases, company names, or confidential information are included. Citations are limited to public information (**Public**), with sources explicitly linked.
 - Statements on regulatory requirements (HIPAA, BCBS 239, IATF 16949, etc.) are technical design considerations, **not legal/compliance judgments**. Confirmation by each organization's legal/compliance department is required.
-- For connection path verification status, see the technical guide's [Verification Status Summary](./fsxn-to-databricks-unity-catalog-guide.md#verification-status-summary).
+- For connection path verification status, see the technical guide's [Verification Status Summary](./fsx-ontap-to-databricks-unity-catalog-guide.md#verification-status-summary).

@@ -31,7 +31,7 @@
 | DataSync ガイド | [docs/ja/datasync-to-s3-guide.md](../docs/ja/datasync-to-s3-guide.md) | モジュール 04 (Databricks) 同期メカニズム |
 | 非構造化データ | [docs/ja/unstructured-data-access.md](../docs/ja/unstructured-data-access.md) | 画像/PDF/動画アクセスパターン |
 | リージョン設計 | [docs/ja/region-design-guide.md](../docs/ja/region-design-guide.md) | 同一リージョン要件 |
-| ネットワーキング | [docs/en/fsxn-s3ap-networking.md](../docs/en/fsxn-s3ap-networking.md) | VPC/Internet origin、DNS/AD 問題 |
+| ネットワーキング | [docs/en/fsx-ontap-s3ap-networking.md](../docs/en/fsx-ontap-s3ap-networking.md) | VPC/Internet origin、DNS/AD 問題 |
 | リカバリセマンティクス | [docs/ja/recovery-semantics.md](../docs/ja/recovery-semantics.md) | Snapshot + テーブルフォーマットリカバリ |
 | ゼロコピー非構造化データガバナンス | [docs/ja/zero-copy-media-governance.md](../docs/ja/zero-copy-media-governance.md) | S3 重複排除 + マルチプラットフォーム活用 + FlexCache S3 AP ロードマップ |
 | Iceberg メタデータカタログ | [docs/ja/iceberg-metadata-catalog.md](../docs/ja/iceberg-metadata-catalog.md) | S3 Tables + FSx for ONTAP による非構造化データメタデータ管理 |

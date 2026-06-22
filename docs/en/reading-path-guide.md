@@ -21,7 +21,7 @@ graph TD
     
     DE --> GS[getting-started]
     DE --> CM[compatibility-matrix]
-    DE --> UC[fsxn-to-databricks-unity-catalog-guide]
+    DE --> UC[fsx-ontap-to-databricks-unity-catalog-guide]
     DE --> DS[datasync-to-s3-guide]
     DE --> KF[kafka-clickhouse-unity-catalog-connectivity]
     
@@ -33,7 +33,7 @@ graph TD
     
     SEC --> GOV
     SEC --> CM
-    SEC --> NET[fsxn-s3ap-networking]
+    SEC --> NET[fsx-ontap-s3ap-networking]
     SEC --> ANN[s3-annotations-governance-evaluation]
     
     EXEC --> IND
@@ -108,7 +108,7 @@ graph TD
 |:---:|---|:---:|---|:---:|
 | 1 | [Getting Started](./getting-started.md) | ● | None | 10 min |
 | 2 | [Compatibility Matrix](./compatibility-matrix.md) | ◎ | None (focus on matrix + quick start) | 15 min |
-| 3 | [Networking](./fsxn-s3ap-networking.md) | ◎ | #2 constraint understanding | 10 min |
+| 3 | [Networking](./fsx-ontap-s3ap-networking.md) | ◎ | #2 constraint understanding | 10 min |
 | 4 | [Event-driven Architecture](./event-driven-architecture.md) | ○ | None (only if needed) | 5 min |
 
 > Athena / Glue / EMR can access FSx for ONTAP S3 AP directly (no DataSync needed). You do NOT need the UC Connection Guide.
@@ -119,7 +119,7 @@ graph TD
 |:---:|---|:---:|---|:---:|
 | 1 | [Getting Started](./getting-started.md) | ● | None | 10 min |
 | 2 | [Compatibility Matrix](./compatibility-matrix.md) | ◎ | None | 15 min |
-| 3 | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) | ● | #2 constraint understanding required | 30 min |
+| 3 | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | ● | #2 constraint understanding required | 30 min |
 | 4 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | ● | After path selection in #3 | 20 min |
 | 5 | [Kafka-ClickHouse-UC Connectivity](./kafka-clickhouse-unity-catalog-connectivity.md) | ◎ | Only if real-time requirements exist | 25 min |
 | 6 | [Event-driven Architecture](./event-driven-architecture.md) | ◎ | If FPolicy details needed from #5 | 15 min |
@@ -133,9 +133,9 @@ graph TD
 |:---:|---|:---:|---|:---:|
 | 1 | [Getting Started](./getting-started.md) | ● | None | 10 min |
 | 2 | [Compatibility Matrix](./compatibility-matrix.md) | ◎ | None (focus on Snowflake rows) | 15 min |
-| 3 | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) | ◎ | Snowflake section only | 10 min |
+| 3 | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | ◎ | Snowflake section only | 10 min |
 | 4 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | ◎ | Focus on Snowflake integration section | 10 min |
-| 5 | [Networking](./fsxn-s3ap-networking.md) | ◎ | Storage Integration design | 10 min |
+| 5 | [Networking](./fsx-ontap-s3ap-networking.md) | ◎ | Storage Integration design | 10 min |
 
 > Snowflake can access FSx for ONTAP S3 AP directly (External Stage). DataSync is only needed for AUTO_REFRESH / Cortex Search.
 
@@ -150,7 +150,7 @@ graph TD
 | Order | Document | Why to read | Time |
 |:---:|---|---|:---:|
 | 1 | [Architecture](./architecture.md) | Overall design philosophy | 15 min |
-| 2 | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) | Complete path selection logic and constraints | 30 min |
+| 2 | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | Complete path selection logic and constraints | 30 min |
 | 3 | [Compatibility Matrix](./compatibility-matrix.md) | Platform/format support details | 20 min |
 | 4 | [Industry Solution Catalog](./industry-solution-catalog.md) | Industry-specific application patterns | 20 min |
 | 5 | [Governance and Compliance](./governance-and-compliance.md) | Enterprise requirements coverage | 15 min |
@@ -171,7 +171,7 @@ graph TD
 |:---:|---|---|:---:|
 | 1 | [Governance and Compliance](./governance-and-compliance.md) | Overall security design | 20 min |
 | 2 | [Compatibility Matrix](./compatibility-matrix.md) | Dual-layer authorization model and VPC design | 15 min |
-| 3 | [Networking](./fsxn-s3ap-networking.md) | VPC/AP/endpoint design | 15 min |
+| 3 | [Networking](./fsx-ontap-s3ap-networking.md) | VPC/AP/endpoint design | 15 min |
 | 4 | [S3 Annotations Governance Evaluation](./s3-annotations-governance-evaluation.md) | Metadata governance capabilities and constraints | 20 min |
 | 5 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | Focus on OT/IT security section | 10 min |
 | 6 | [Zero-copy Media Governance](./zero-copy-media-governance.md) | Media file access control | 15 min |
@@ -189,7 +189,7 @@ graph TD
 |:---:|---|---|:---:|
 | 1 | [Industry Solution Catalog](./industry-solution-catalog.md) | Business value and target industries | 15 min |
 | 2 | [Architecture](./architecture.md) | Executive summary only | 5 min |
-| 3 | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) | Executive summary + phased adoption steps | 10 min |
+| 3 | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | Executive summary + phased adoption steps | 10 min |
 | 4 | [Partner Offering](./partner-offering.md) | Market positioning | 10 min |
 | 5 | [KPI and Validation](./kpi-and-validation.md) | Success metrics and progress | 10 min |
 
@@ -205,7 +205,7 @@ graph TD
 |:---:|---|---|:---:|
 | 1 | [Partner Offering](./partner-offering.md) | Partner package overview | 10 min |
 | 2 | [Industry Solution Catalog](./industry-solution-catalog.md) | Industry patterns for proposals | 20 min |
-| 3 | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) | Technical understanding of all paths | 30 min |
+| 3 | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | Technical understanding of all paths | 30 min |
 | 4 | [Compatibility Matrix](./compatibility-matrix.md) | Constraint awareness for proposals | 15 min |
 | 5 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | Implementation procedure understanding | 20 min |
 | 6 | [Region Design Guide](./region-design-guide.md) | Global deployment design | 10 min |
@@ -238,12 +238,12 @@ graph TD
 |---------|----------|---------|
 | **Getting Started** | [Getting Started](./getting-started.md) | Setup and prerequisites |
 | **Design** | [Architecture](./architecture.md) | Overall architecture |
-| | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) | All Databricks UC paths (hub document) |
+| | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | All Databricks UC paths (hub document) |
 | | [Event-driven Architecture](./event-driven-architecture.md) | FPolicy / event-driven patterns |
 | | [Region Design Guide](./region-design-guide.md) | Multi-region design |
 | **Implementation** | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | DataSync path details |
 | | [Kafka-ClickHouse-UC](./kafka-clickhouse-unity-catalog-connectivity.md) | Streaming + OLAP path |
-| | [Networking](./fsxn-s3ap-networking.md) | VPC / AP / endpoints |
+| | [Networking](./fsx-ontap-s3ap-networking.md) | VPC / AP / endpoints |
 | | [Supported Regions](./supported-regions.md) | Region availability |
 | **Verification** | [Compatibility Matrix](./compatibility-matrix.md) | Platform/format compatibility |
 | | [KPI and Validation](./kpi-and-validation.md) | Validation KPIs and progress |
@@ -283,7 +283,7 @@ graph LR
     style CM fill:#ccffcc,stroke:#009900,stroke-width:2px
 ```
 
-> **If unsure where to start**: Begin with the [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md). It's the hub that connects all detailed documents.
+> **If unsure where to start**: Begin with the [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md). It's the hub that connects all detailed documents.
 
 ---
 
@@ -291,14 +291,14 @@ graph LR
 
 | I want to... | Read first | Read next |
 |---|---|---|
-| Analyze FSx for ONTAP data in Databricks | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) | [DataSync Guide](./datasync-to-s3-guide.md) |
-| Analyze FSx for ONTAP data in Athena | [Compatibility Matrix](./compatibility-matrix.md) | [Networking](./fsxn-s3ap-networking.md) |
-| Analyze FSx for ONTAP data in Snowflake | [Compatibility Matrix](./compatibility-matrix.md) | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) (Snowflake section) |
+| Analyze FSx for ONTAP data in Databricks | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | [DataSync Guide](./datasync-to-s3-guide.md) |
+| Analyze FSx for ONTAP data in Athena | [Compatibility Matrix](./compatibility-matrix.md) | [Networking](./fsx-ontap-s3ap-networking.md) |
+| Analyze FSx for ONTAP data in Snowflake | [Compatibility Matrix](./compatibility-matrix.md) | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) (Snowflake section) |
 | Ingest data in real-time | [Kafka-ClickHouse-UC](./kafka-clickhouse-unity-catalog-connectivity.md) | [Event-driven Architecture](./event-driven-architecture.md) |
 | Use unstructured data (images/PDFs) with AI | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | [Unstructured Data Access](./unstructured-data-access.md) |
 | Verify security/compliance | [Governance and Compliance](./governance-and-compliance.md) | [Compatibility Matrix](./compatibility-matrix.md) (OT/IT security) |
 | Create customer proposal materials | [Industry Solution Catalog](./industry-solution-catalog.md) | [Partner Offering](./partner-offering.md) |
-| Check blocked features | [Compatibility Matrix](./compatibility-matrix.md) (constraints table) | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) (future outlook) |
+| Check blocked features | [Compatibility Matrix](./compatibility-matrix.md) (constraints table) | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) (future outlook) |
 | Understand Snapshot / DR / recovery | [Recovery Semantics](./recovery-semantics.md) | [DataSync Guide](./datasync-to-s3-guide.md) (Phase 5) |
 
 ---
@@ -306,5 +306,5 @@ graph LR
 ## Related Documents
 
 - [Getting Started](./getting-started.md) — How to start using this repository
-- [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) — Hub document
+- [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) — Hub document
 - [Compatibility Matrix](./compatibility-matrix.md) — Technical constraints detail

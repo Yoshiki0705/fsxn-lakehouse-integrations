@@ -321,7 +321,7 @@ LIMIT 100;
 ## 関連ドキュメント
 
 - [DataSync → S3 ガイド](../../docs/ja/datasync-to-s3-guide.md) — 前提手順（Phase 1-3）
-- [UC 接続総合ガイド](../../docs/ja/fsxn-to-databricks-unity-catalog-guide.md) — 全接続パスの俯瞰
+- [UC 接続総合ガイド](../../docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) — 全接続パスの俯瞰
 - [ブロッカー追跡](../../docs/ja/blocker-tracker.md) — BLK-001/003 の回避として本 Cookbook を使用
 - [S3 Annotations 評価](../../docs/ja/s3-annotations-governance-evaluation.md) — annotation → UC Tag マッピング
 - [サンプルデータ](../../samples/manufacturing/) — 本 Cookbook の入力データ
@@ -562,7 +562,7 @@ ORDER BY event_time DESC;
 ## Related Documents
 
 - [DataSync → S3 Guide](../../docs/en/datasync-to-s3-guide.md) — Prerequisite steps (Phase 1-3)
-- [UC Connection Guide](../../docs/en/fsxn-to-databricks-unity-catalog-guide.md) — All connection paths overview
+- [UC Connection Guide](../../docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) — All connection paths overview
 - [Blocker Tracker](../../docs/en/blocker-tracker.md) — Using this Cookbook as BLK-001/003 workaround
 - [S3 Annotations Evaluation](../../docs/en/s3-annotations-governance-evaluation.md) — annotation → UC Tag mapping
 - [Sample Data](../../samples/manufacturing/) — Input data for this Cookbook

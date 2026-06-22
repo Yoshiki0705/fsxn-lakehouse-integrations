@@ -1,3 +1,5 @@
+🌐 [English](./customer-faq.md) | **日本語**
+
 # カスタマー FAQ: FSx for ONTAP AI メタデータカタログ
 
 > 制限事項と制約を含む正直な回答集

@@ -104,7 +104,7 @@ UC ガバナンス (lineage, tags, masks, row filters)
 
 ## References
 
-- [UC 接続総合ガイド](../ja/fsxn-to-databricks-unity-catalog-guide.md) — 全パスの俯瞰
+- [UC 接続総合ガイド](../ja/fsx-ontap-to-databricks-unity-catalog-guide.md) — 全パスの俯瞰
 - [DataSync → S3 ガイド](../ja/datasync-to-s3-guide.md) — 実装詳細
 - [ブロッカー追跡: BLK-001](../ja/blocker-tracker.md) — UC × S3 AP
 - [ブロッカー追跡: BLK-002](../ja/blocker-tracker.md) — Conditional writes

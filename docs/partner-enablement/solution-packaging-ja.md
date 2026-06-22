@@ -1,3 +1,5 @@
+🌐 [English](./solution-packaging.md) | **日本語**
+
 # パートナーソリューションパッケージング
 
 ## オファー概要

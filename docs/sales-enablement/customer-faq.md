@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](./customer-faq-ja.md)
+
 # Customer FAQ: FSx for ONTAP AI Metadata Catalog
 
 > Honest answers including limitations and constraints.
