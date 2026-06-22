@@ -3,7 +3,7 @@
 # FSx for ONTAP → Databricks Unity Catalog: Comprehensive Connection Guide
 
 > **Status**: Initial version (2026-06-18). Consolidates verification results from this repository.
-> **Audience**: AWS SAs, partner SIs/ISVs, customer data engineers. Post-DAIS 2026 FAQ reference.
+> **Audience**: AWS SAs, partner SIs/ISVs, data engineers. Post-DAIS 2026 FAQ reference.
 > **Evidence tier**: Verification results are **Project-context** (reproducible within this repo). Official information is **Public**.
 
 ---
@@ -240,7 +240,7 @@ Before diving into examples, clarify the distinct S3-related services:
 | Databricks UC (full governance needed) | **Standard S3 bucket** (Delta, UC Managed Table) | UC requires standard S3 for External Location / Managed Table |
 | Semantic search / RAG / similarity queries | **S3 Vectors** | Purpose-built for vector embeddings, integrates with Bedrock |
 | Both Databricks UC AND AWS native engines | **S3 Tables** + UC Foreign Iceberg | Write to S3 Tables (Iceberg); Databricks reads via Foreign Iceberg (Glue HMS Federation) |
-| Snowflake | **Standard S3 bucket** or **S3 Tables** | Snowflake reads via External Stage (standard S3) or Managed Iceberg (customer S3) |
+| Snowflake | **Standard S3 bucket** or **S3 Tables** | Snowflake reads via External Stage (standard S3) or Managed Iceberg (user-managed S3) |
 
 ### Three Ingestion Strategies (Revised)
 
@@ -680,7 +680,7 @@ For large manufacturing environments, implement paths incrementally rather than 
 | **4. AI/ML** | UC Volume + Feature Store + AI Search + Bedrock KB | 4-12 weeks | ML pipeline operational |
 | **5. Multi-system** | Lakehouse Federation (EC2 DB) + ClickHouse integration | 4-8 weeks | Unified analytics view |
 
-> **Note**: Phases 1-2 apply to nearly all customers. Phases 3+ are use-case-driven and selectively implemented.
+> **Note**: Phases 1-2 apply to nearly all environments. Phases 3+ are use-case-driven and selectively implemented.
 
 ---
 

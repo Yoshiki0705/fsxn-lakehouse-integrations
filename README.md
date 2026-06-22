@@ -194,12 +194,26 @@ No vendor lock-in. Data ownership retained. Each platform applies its own govern
 
 ## Use Cases
 
-| Industry | Use Case | Key Pattern | Deployment Considerations |
-|----------|----------|-------------|--------------------------|
-| [Financial Services](use-cases/financial-data-mesh/) | Data Mesh | Pattern D (Data Sharing) | Segregation of duties, per-domain access points, audit retention (7+ years), DR/BCP |
-| [Manufacturing](use-cases/manufacturing-iot-lake/) | IoT Data Lake | Pattern C (ETL Pipeline) | OT/IT boundary separation, edge ingestion via NFS, long-term retention (FabricPool) |
-| [Healthcare](use-cases/healthcare-research/) | Research Data | Pattern B (Managed Tables) | De-identification pipeline, VPC-origin AP, read-only access, synthetic test data only, BAA |
-| [Media](use-cases/media-asset-analytics/) | Asset Analytics | Pattern A (Read-Only) | Large file handling (5 GB upload limit), CloudFront integration for streaming |
+> 26 industries covered in the [Industry Solution Catalog](docs/en/industry-solution-catalog.md). Representative examples below.
+
+| Industry | Use Case | Key Pattern |
+|----------|----------|-------------|
+| Manufacturing | Quality analytics, predictive maintenance, traceability | DataSync / Kafka (FPolicy) |
+| Automotive | ADAS/AD data, connected vehicle, part genealogy | DataSync / Kafka |
+| Financial Services | Risk analytics, fraud detection, regulatory reporting | DataSync / Glue ETL |
+| Healthcare / Life Sciences | EHR analytics, genomics, medical imaging | DataSync / Glue ETL |
+| Semiconductor / EDA | Chip design verification, tape-out analysis | Glue/EMR / DataSync |
+| Media / Entertainment | Video metadata, content classification, DAM | Pattern A (Read-Only) |
+| Retail / E-commerce | POS analysis, demand forecasting, customer 360 | DataSync / Kafka |
+| Energy / Utilities | Grid monitoring, asset management, compliance | DataSync / Kafka |
+| Telecommunications | CDR analysis, network quality, IoT gateway | Kafka → Structured Streaming |
+| Public Sector | Document archive search, FOIA, data sovereignty | DataSync (SnapLock) |
+| Agriculture | Precision farming, weather data, yield prediction | DataSync / S3 Tables |
+| Logistics / Supply Chain | Tracking, route optimization, warehouse analytics | Kafka → UC Delta |
+| Construction / BIM | 3D model metadata, safety inspection, progress | DataSync / Glue ETL |
+| Education / Research | Research data catalog, e-learning analytics | DataSync / S3 Tables |
+
+For all 26 industries with governance considerations, caveats, and recommended paths, see the full [Industry Solution Catalog](docs/en/industry-solution-catalog.md).
 
 ---
 
