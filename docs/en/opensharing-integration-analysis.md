@@ -23,6 +23,8 @@ On 2026-06-10, Databricks announced **OpenSharing** — the evolution of the Del
 | **DAIS 2026 keynote (2026-06-16)**: SecureConnect enables secure cross-cloud connectivity with zero-copy data sharing; Global Distribution adds automated replication across clouds and regions | [What's new with Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026) |
 | **DAIS 2026 keynote (2026-06-16)**: Iceberg v3 GA, Managed Iceberg GA, Foreign Iceberg GA, new federation connectors, and cross-engine ABAC are now available | Same |
 | **DAIS 2026 keynote (2026-06-16)**: Storage Ecosystem partner status clarified — MinIO (GA), Everpure (Private Preview), Qumulo and VAST Data (Private Preview Soon); **NetApp, Cohesity, Commvault, and Nutanix confirmed coming by end of year**. SecureConnect is a Databricks-managed proxy (one-time config, no per-recipient firewall changes) — now in **Public Preview** with optional **NCC Private Link** connectivity between the proxy and provider storage, mutual TLS, and cross-region/cross-cloud support; serverless recipients require zero configuration ([SecureConnect blog](https://www.databricks.com/blog/introducing-opensharing-secureconnect)). Providers can also share from external catalogs (AWS Glue, Hive Metastore, Snowflake Horizon) without replication. | [OpenSharing blog](https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era) |
+| **DAIS 2026 (2026-06-16)**: **Share to any Iceberg client — GA**. Databricks users can share data to any external Iceberg-compatible client (Snowflake, Trino, Spark, Flink) with full transactional consistency. OIDC now supported for sharing to Iceberg clients | [OpenSharing and Marketplace blog](https://www.databricks.com/blog/announcing-new-opensharing-and-marketplace-capabilities-ai-era) |
+| **DAIS 2026 (2026-06-16)**: **LTAP (Lake Transactional/Analytical Processing)** announced — architecture unifying OLTP and OLAP on a single lakehouse storage layer. Lakebase serves as the transactional engine; operational data is immediately queryable in the lake without pipelines | [LTAP press release](https://www.databricks.com/company/newsroom/press-releases/databricks-launches-ltap-first-lake-transactionalanalytical) |
 
 > FSx for ONTAP is an AWS-managed enterprise storage service with multiprotocol access (NFS/SMB/iSCSI/S3) and data protection features (Snapshot, FlexClone, SnapMirror, FabricPool). The analysis below evaluates how the OpenSharing pattern could complement the existing S3 Access Point integration patterns in this repository.
 
@@ -163,35 +165,19 @@ In addition to the STS mode (primary), presigned URLs also work empirically:
 - **Single governance boundary**: Designate one catalog as the governance boundary; avoid distributing policy across multiple catalogs.
 - **Interim until native**: Independent validation in this repository uses the open-source Delta Sharing reference implementation (same protocol lineage) ahead of any native vendor implementation.
 
-## Multi-Lens Review
+## Design Considerations
 
-### Principal Cloud Data Architect lens (Archetype)
-- **Opportunity**: A presigned-URL sharing model can decouple the consuming platform from storage-specific ARN formats, preserving the zero-copy principle.
-- **Concern**: An OpenSharing server becomes a Tier-1 dependency with the same blast radius as a catalog (if it is down, dependent reads stop). Availability, scaling, and P99 latency must be designed.
-- **Must validate**: read-only vs read-write; whether Delta or Iceberg is served; whether catalog governance applies to shared tables.
+**Architecture**: The presigned-URL sharing model decouples the consuming platform from storage-specific ARN formats, preserving the zero-copy principle. However, an OpenSharing server becomes a Tier-1 dependency with catalog-equivalent blast radius — availability, scaling, and P99 latency design are required.
 
-### Manufacturing Edge Data Architect lens (Archetype)
-- **Opportunity**: Sensor data, quality-inspection images, and engineering documents on enterprise storage could become directly consumable by ML/AI workloads. The previewed Volumes APIs would extend this to unstructured payloads.
-- **Concern**: Edge concerns (time sync, event ordering, deduplication) remain out of scope of the sharing protocol; metadata-to-payload linkage stays a custom design responsibility.
+**Manufacturing / edge data**: Sensor data, quality-inspection images, and engineering documents on enterprise storage become directly consumable by ML/AI workloads. The previewed Volumes APIs extend this to unstructured payloads. Edge-specific concerns (time sync, event ordering, deduplication) remain outside the sharing protocol; metadata-to-payload linkage stays a custom design responsibility.
 
-### Lakehouse Governance Architect lens (Archetype)
-- **Core change**: Shared data could become subject to centralized governance (lineage, access control, audit) without copying.
-- **Trend (Public)**: The Iceberg REST **scan planning** capability (Iceberg 1.11) lets a catalog apply row filters and column masks at plan time, enabling cross-engine attribute-based access control. OpenSharing's Iceberg IRC support may benefit from this. ([Catalog landscape analysis](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))
-- **Must validate**: write-back support; whether column-level security / row filters / tags travel to shared tables.
+**Governance**: Shared data can become subject to centralized governance (lineage, access control, audit) without copying. The Iceberg REST **scan planning** capability (Iceberg 1.11) lets a catalog apply row filters and column masks at plan time, enabling cross-engine attribute-based access control. OpenSharing's Iceberg IRC support benefits from this. ([Catalog landscape analysis](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs)). Must validate: write-back support, column-level security / row filter / tag travel to shared tables.
 
-### Enterprise Storage Data Services Architect lens (Archetype)
-- **Strategic framing**: An OpenSharing endpoint would be a new data-exposure surface alongside NFS/SMB/iSCSI/S3, turning enterprise file storage from a silo into a governed, interoperable node.
-- **Differentiators to validate**: point-in-time recovery (Snapshot) as a complement to table time travel; instant logical copies (FlexClone) for shared sandboxes; cross-region replication (SnapMirror) for DR-capable share endpoints; multiprotocol so the same data serves file workloads and AI simultaneously.
-- **Open question**: whether a native implementation sits on top of ONTAP S3, S3 Access Points, or an independent data path; and the relative timing of AWS-managed vs on-premises availability.
+**Enterprise storage integration**: An OpenSharing endpoint would be a new data-exposure surface alongside NFS/SMB/iSCSI/S3, turning enterprise file storage from a silo into a governed, interoperable node. Technical characteristics to validate with FSx for ONTAP: point-in-time recovery (Snapshot) complementing table time travel, instant logical copies (FlexClone) for shared sandboxes, cross-region replication (SnapMirror) for DR-capable endpoints, and multiprotocol so the same data serves file workloads and AI simultaneously. Open question: whether a native implementation sits on ONTAP S3, S3 Access Points, or an independent data path.
 
-### Open Catalog Strategist lens (Public)
-- As of mid-2026, the open table format question is largely settled in favor of Apache Iceberg; the technical focus has moved to the **catalog layer**, which is becoming the AI control plane. ([Source](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))
-- **Key distinction**: OpenSharing is a *sharing* protocol; Iceberg REST is a *catalog* protocol. They operate at different layers and are complementary, not mutually exclusive.
-- **Unresolved industry problem**: governance policy is not portable across catalogs. The pragmatic answer is to designate a **single catalog as the governance boundary** and route engines through it, rather than running multiple catalogs with inconsistent rules.
+**Catalog landscape**: As of mid-2026, the open table format question is largely settled in favor of Apache Iceberg; the technical focus has moved to the **catalog layer**, which is becoming the AI control plane. ([Source](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs)). Key distinction: OpenSharing is a *sharing* protocol; Iceberg REST is a *catalog* protocol — they operate at different layers and are complementary, not mutually exclusive. Governance policy is not portable across catalogs today; the pragmatic answer is a **single catalog as governance boundary**.
 
-### SDS Launch Partner SA lens (Public)
-- Public statements from launch-partner storage vendors share a common theme: connect data that **cannot move** (sovereignty, gravity, cost) to cloud AI without migration.
-- Implementation pattern: the storage partner stands up an OpenSharing endpoint, connects it to the catalog, and serverless compute queries in place.
+**Storage ecosystem pattern**: Launch-partner storage vendors share a common theme — connect data that cannot move (sovereignty, gravity, cost) to cloud AI without migration. Implementation: the storage partner stands up an OpenSharing endpoint, connects it to the catalog, and serverless compute queries in place.
 
 ## Consensus
 

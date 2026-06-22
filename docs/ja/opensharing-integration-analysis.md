@@ -23,6 +23,8 @@
 | **DAIS 2026 キーノート（2026-06-16）**: SecureConnect がクラウド間のセキュア接続 + zero-copy 共有を実現。Global Distribution がクラウド・リージョン間の自動レプリケーションを追加 | [What's new with Unity Catalog](https://www.databricks.com/blog/whats-new-unity-catalog-data-ai-summit-2026) |
 | **DAIS 2026 キーノート（2026-06-16）**: Iceberg v3 GA / Managed Iceberg GA / Foreign Iceberg GA / 新フェデレーションコネクタ / cross-engine ABAC が利用可能に | 同上 |
 | **DAIS 2026 キーノート（2026-06-16）**: Storage Ecosystem パートナーステータスが精緻化 — MinIO（GA）、Everpure（Private Preview）、Qumulo / VAST Data（Private Preview Soon）。**NetApp、Cohesity、Commvault、Nutanix は年末までに提供確認**。SecureConnect は Databricks マネージドプロキシ（一度設定すれば recipient 追加ごとのファイアウォール変更不要）— **Public Preview** で利用可能、オプションで **NCC Private Link**（プロキシ↔provider ストレージ間の PrivateLink 接続）、mutual TLS、クロスリージョン/クロスクラウド対応。Serverless recipient は設定不要（[SecureConnect blog](https://www.databricks.com/blog/introducing-opensharing-secureconnect)）。外部カタログ（AWS Glue / Hive Metastore / Snowflake Horizon）からのテーブル共有もレプリケーションなしで可能 | [OpenSharing blog](https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era) |
+| **DAIS 2026（2026-06-16）**: **Share to any Iceberg client — GA**。Databricks ユーザーが任意の外部 Iceberg 互換クライアント（Snowflake、Trino、Spark、Flink）にフルトランザクション整合性でデータ共有可能。Iceberg クライアントへの共有で OIDC もサポート | [OpenSharing and Marketplace blog](https://www.databricks.com/blog/announcing-new-opensharing-and-marketplace-capabilities-ai-era) |
+| **DAIS 2026（2026-06-16）**: **LTAP（Lake Transactional/Analytical Processing）** 発表 — OLTP と OLAP を単一 Lakehouse ストレージレイヤー上で統合するアーキテクチャ。Lakebase がトランザクションエンジンとして機能し、運用データがパイプラインなしで即座にレイク上でクエリ可能 | [LTAP プレスリリース](https://www.databricks.com/company/newsroom/press-releases/databricks-launches-ltap-first-lake-transactionalanalytical) |
 
 > FSx for ONTAP は、マルチプロトコルアクセス（NFS/SMB/iSCSI/S3）とデータ保護機能（Snapshot、FlexClone、SnapMirror、FabricPool）を持つ AWS マネージドのエンタープライズストレージサービスである。以下では、OpenSharing パターンが本リポジトリの既存 S3 Access Point 統合パターンをどう補完しうるかを評価する。
 
@@ -163,35 +165,19 @@ STS モード（primary）に加え、presigned URL も実証的に動作する:
 - **単一 governance boundary**: 1つのカタログを governance boundary とし、複数カタログへの policy 分散を避ける。
 - **native までの interim**: 本リポジトリの独立検証は、native ベンダー実装に先んじて OSS Delta Sharing 参照実装（同系譜プロトコル）で行う。
 
-## 複数レンズレビュー
+## 設計上の考慮事項
 
-### Principal Cloud Data Architect lens（Archetype）
-- **機会**: presigned URL 共有モデルが消費側プラットフォームをストレージ固有 ARN 形式から切り離し、zero-copy 原則を維持。
-- **懸念**: OpenSharing server はカタログと同等の blast radius を持つ Tier-1 依存になる（停止時は依存する read が停止）。可用性・スケール・P99 レイテンシ設計が必要。
-- **要検証**: read-only か read-write か / Delta か Iceberg か / カタログガバナンスが共有テーブルに適用されるか。
+**アーキテクチャ**: presigned URL 共有モデルは、消費側プラットフォームをストレージ固有の ARN 形式から切り離し、ゼロコピー原則を維持する。ただし OpenSharing サーバーはカタログと同等の blast radius を持つ Tier-1 依存になる — 可用性、スケーリング、P99 レイテンシの設計が必要。
 
-### Manufacturing Edge Data Architect lens（Archetype）
-- **機会**: エンタープライズストレージ上のセンサーデータ・品質検査画像・設計ドキュメントが ML/AI ワークロードから直接利用可能に。予告された Volumes APIs で非構造化ペイロードにも拡張。
-- **懸念**: エッジ固有の論点（時刻同期、イベント順序、重複排除）は共有プロトコルの範囲外。メタデータ↔ペイロードのリンクは自前設計の責務として残る。
+**製造 / エッジデータ**: エンタープライズストレージ上のセンサーデータ・品質検査画像・設計ドキュメントが ML/AI ワークロードから直接利用可能に。予告された Volumes APIs で非構造化ペイロードにも拡張。エッジ固有の論点（時刻同期、イベント順序、重複排除）は共有プロトコルの範囲外。メタデータ↔ペイロードのリンクは自前設計の責務として残る。
 
-### Lakehouse Governance Architect lens（Archetype）
-- **核心的変化**: 共有データがコピーなしで一元ガバナンス（リネージ、アクセス制御、監査）の対象になりうる。
-- **トレンド（Public）**: Iceberg REST **scan planning**（Iceberg 1.11）により、カタログがプラン時に行フィルタ・列マスクを適用し cross-engine ABAC が可能。OpenSharing の Iceberg IRC 対応がこの恩恵を受ける可能性。([カタログ動向分析](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))
-- **要検証**: write-back 対応 / column-level security・row filter・tag が共有テーブルに travel するか。
+**ガバナンス**: 共有データがコピーなしで一元ガバナンス（リネージ、アクセス制御、監査）の対象になりうる。Iceberg REST **scan planning**（Iceberg 1.11）により、カタログがプラン時に行フィルタ・列マスクを適用し cross-engine ABAC が可能。OpenSharing の Iceberg IRC 対応がこの恩恵を受ける。([カタログ動向分析](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))。要検証: write-back 対応 / column-level security・row filter・tag が共有テーブルに travel するか。
 
-### Enterprise Storage Data Services Architect lens（Archetype）
-- **戦略的枠組み**: OpenSharing エンドポイントは NFS/SMB/iSCSI/S3 に続くデータ公開面となり、エンタープライズファイルストレージをサイロからガバナンド・ノードへ転換。
-- **検証すべき技術特性**: テーブルのタイムトラベルを補完する point-in-time recovery（Snapshot）/ 共有 sandbox 向けの即時論理コピー（FlexClone）/ DR 対応共有エンドポイント向けクロスリージョンレプリケーション（SnapMirror）/ 同一データがファイルワークロードと AI を同時に支えるマルチプロトコル。
-- **オープンクエスチョン**: native 実装が ONTAP S3 上か S3 Access Points 上か独立データパス上か / AWS マネージドとオンプレの提供タイミング。
+**エンタープライズストレージ統合**: OpenSharing エンドポイントは NFS/SMB/iSCSI/S3 に続くデータ公開面となり、エンタープライズファイルストレージをサイロからガバナンド・ノードへ転換。FSx for ONTAP で検証すべき技術特性: テーブルのタイムトラベルを補完する point-in-time recovery（Snapshot）、共有 sandbox 向けの即時論理コピー（FlexClone）、DR 対応共有エンドポイント向けクロスリージョンレプリケーション（SnapMirror）、同一データがファイルワークロードと AI を同時に支えるマルチプロトコル。オープンクエスチョン: native 実装が ONTAP S3 上か S3 Access Points 上か独立データパス上か。
 
-### Open Catalog Strategist lens（Public）
-- 2026 年半ば時点で、オープンテーブルフォーマットの議論は概ね Apache Iceberg に収束し、技術的焦点は**カタログレイヤー**に移行。カタログが AI control plane 化しつつある。([ソース](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))
-- **重要な区別**: OpenSharing は*共有*プロトコル、Iceberg REST は*カタログ*プロトコル。両者はレイヤーが異なり、競合ではなく補完。
-- **業界の未解決問題**: ガバナンスポリシーはカタログ間でポータブルでない。現実解は**単一カタログを governance boundary** に定め、全エンジンをそこ経由にすること。
+**カタログの動向**: 2026 年半ば時点で、オープンテーブルフォーマットの議論は概ね Apache Iceberg に収束し、技術的焦点は**カタログレイヤー**に移行。カタログが AI control plane 化しつつある。([ソース](https://amdatalakehouse.substack.com/p/the-state-of-apache-iceberg-catalogs))。重要な区別: OpenSharing は*共有*プロトコル、Iceberg REST は*カタログ*プロトコル。両者はレイヤーが異なり、競合ではなく補完。ガバナンスポリシーはカタログ間でポータブルでないのが現状であり、現実解は**単一カタログを governance boundary** に定めること。
 
-### SDS Launch Partner SA lens（Public）
-- launch partner ストレージベンダーの公開発言には共通テーマがある: **動かせない**データ（sovereignty、gravity、コスト）を移行せずクラウド AI に接続する。
-- 実装パターン: ストレージパートナーが OpenSharing エンドポイントを立て、カタログに接続、サーバーレスコンピュートがその場でクエリ。
+**ストレージエコシステムパターン**: launch partner ストレージベンダーに共通するテーマは、**動かせない**データ（sovereignty、gravity、コスト）を移行せずクラウド AI に接続すること。実装パターン: ストレージパートナーが OpenSharing エンドポイントを立て、カタログに接続、サーバーレスコンピュートがその場でクエリ。
 
 ## 合意点
 
