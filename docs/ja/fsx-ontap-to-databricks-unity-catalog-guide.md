@@ -3,7 +3,7 @@
 # FSx for ONTAP → Databricks Unity Catalog 接続総合ガイド
 
 > **ステータス**: 初版（2026-06-18）。本リポジトリの検証結果を統合。
-> **対象読者**: AWS SA、パートナー SI/ISV、顧客データエンジニア。DAIS 2026 後の FAQ 対応。
+> **対象読者**: AWS SA、パートナー SI/ISV、データエンジニア。DAIS 2026 後の FAQ 対応。
 > **Evidence tier**: 検証結果は **Project-context**（本リポジトリ内で再現可能）。公式情報は **Public**。
 
 ---
@@ -238,7 +238,7 @@ FSx for ONTAP
 | Databricks UC（フルガバナンス必要） | **標準 S3 バケット**（Delta、UC Managed Table） | UC は External Location / Managed Table に標準 S3 を要求 |
 | セマンティック検索 / RAG / 類似度クエリ | **S3 Vectors** | ベクトル埋め込み専用、Bedrock と統合 |
 | Databricks UC AND AWS ネイティブ両方 | **S3 Tables** + UC Foreign Iceberg | S3 Tables（Iceberg）に書き込み; Databricks は Foreign Iceberg（Glue HMS Federation）で読み取り |
-| Snowflake | **標準 S3 バケット** or **S3 Tables** | Snowflake は External Stage（標準 S3）or Managed Iceberg（顧客 S3）で読み取り |
+| Snowflake | **標準 S3 バケット** or **S3 Tables** | Snowflake は External Stage（標準 S3）or Managed Iceberg（利用者管理の S3）で読み取り |
 
 ### 3 つのインジェスト戦略（改訂版）
 
@@ -678,7 +678,7 @@ Q: データコピーを許容するか？
 | **4. AI/ML 統合** | UC Volume + Feature Store + AI Search + Bedrock KB | 4-12 週 | ML パイプライン稼働 |
 | **5. マルチシステム拡張** | Lakehouse Federation (EC2 DB) + ClickHouse 連携 | 4-8 週 | 統合分析ビュー |
 
-> **注意**: Phase 1-2 はほぼすべての顧客に適用。Phase 3 以降はユースケース駆動で選択的に実装。
+> **注意**: Phase 1-2 はほぼすべての環境に適用。Phase 3 以降はユースケース駆動で選択的に実装。
 
 ---
 

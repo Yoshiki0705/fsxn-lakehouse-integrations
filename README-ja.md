@@ -190,12 +190,26 @@ FSx for ONTAP (ソース) → S3 AP / DataSync → S3 → Snowflake Managed Iceb
 
 ## ユースケース
 
-| 業界 | ユースケース | 主要パターン | デプロイ時の考慮事項 |
-|------|------------|-------------|-------------------|
-| [金融サービス](use-cases/financial-data-mesh/) | データメッシュ | パターン D (データ共有) | 職務分離、ドメイン別アクセスポイント、監査保持 (7年+)、DR/BCP |
-| [製造](use-cases/manufacturing-iot-lake/) | IoT データレイク | パターン C (ETL パイプライン) | OT/IT 境界分離、NFS 経由のエッジ取り込み、長期保持 (FabricPool) |
-| [ヘルスケア](use-cases/healthcare-research/) | 研究データ | パターン B (マネージドテーブル) | 匿名化パイプライン、VPC-origin AP、読み取り専用、合成テストデータのみ、BAA |
-| [メディア](use-cases/media-asset-analytics/) | アセット分析 | パターン A (読み取り専用) | 大ファイル対応 (5 GB アップロード制限)、CloudFront 連携 |
+> [業界別ソリューションカタログ](docs/ja/industry-solution-catalog.md) で 26 業界をカバー。代表例を以下に掲載。
+
+| 業界 | ユースケース | 主要パターン |
+|------|------------|-------------|
+| 製造 / 産業 | 品質分析、予知保全、トレーサビリティ | DataSync / Kafka (FPolicy) |
+| 自動車 | ADAS/AD データ、コネクテッドカー、部品系譜 | DataSync / Kafka |
+| 金融 / 保険 | リスク分析、不正検知、規制報告 | DataSync / Glue ETL |
+| 医療 / ライフサイエンス | EHR 分析、ゲノミクス、医療画像 | DataSync / Glue ETL |
+| 半導体 / EDA | チップ設計検証、テープアウト分析 | Glue/EMR / DataSync |
+| メディア / エンターテインメント | 映像メタデータ、コンテンツ分類、DAM | パターン A（読み取り専用） |
+| 小売 / EC | POS 分析、需要予測、顧客 360 | DataSync / Kafka |
+| エネルギー / ユーティリティ | グリッド監視、アセット管理、コンプライアンス | DataSync / Kafka |
+| 通信 | CDR 分析、ネットワーク品質、IoT ゲートウェイ | Kafka → Structured Streaming |
+| 公共セクター | 文書アーカイブ検索、情報公開、データ主権 | DataSync (SnapLock) |
+| 農業 | 精密農業、気象データ、収量予測 | DataSync / S3 Tables |
+| 物流 / サプライチェーン | 追跡、ルート最適化、倉庫分析 | Kafka → UC Delta |
+| 建設 / BIM | 3D モデルメタデータ、安全検査、進捗 | DataSync / Glue ETL |
+| 教育 / 研究 | 研究データカタログ、e ラーニング分析 | DataSync / S3 Tables |
+
+全 26 業界のガバナンス考慮事項、注意点、推奨パスは [業界別ソリューションカタログ](docs/ja/industry-solution-catalog.md) を参照。
 
 </details>
 
