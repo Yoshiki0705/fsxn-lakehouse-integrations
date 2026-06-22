@@ -19,13 +19,13 @@ Think of it this way:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│   Your file server (shared drives)     =  The library shelves  │
-│   Files (PDFs, images, CSVs, etc.)     =  The actual books     │
-│   The analytics extract                =  The card catalog     │
-│   Databricks Unity Catalog             =  The search system    │
+│   Your file server (shared drives)     =  The library shelves   │
+│   Files (PDFs, images, CSVs, etc.)     =  The actual books      │
+│   The analytics extract                =  The card catalog      │
+│   Databricks Unity Catalog             =  The search system     │
 │                                                                 │
-│   You DON'T move the books.                                    │
-│   You CREATE a card catalog that tells you what's on each      │
+│   You DON'T move the books.                                     │
+│   You CREATE a card catalog that tells you what's on each       │
 │   shelf, and the search system lets anyone find what they need. │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -60,7 +60,7 @@ The "adapter" in this case is a small pipeline that:
 │  (thousands of files,                                               │
 │   images, PDFs, CSVs)                                               │
 │         │                                                           │
-│         │ ① Read relevant files                                     │
+│         │ ① Read relevant files                                    │
 │         ▼                                                           │
 │  ┌─────────────────┐                                                │
 │  │  Processing     │  An automated pipeline picks out the           │
@@ -70,10 +70,12 @@ The "adapter" in this case is a small pipeline that:
 │     ┌─────┼──────────────────────┐                                  │
 │     │     │                      │                                  │
 │     ▼     ▼                      ▼                                  │
-│  ┌──────┐ ┌────────────┐ ┌────────────────┐                        │
-│  │Tables│ │Search Index│ │Databricks Table│                         │
-│  │(AWS) │ │(for AI-powered search)│ │(for analytics) │                        │
-│  └──────┘ └────────────┘ └────────────────┘                        │
+│  ┌──────┐ ┌────────────────┐ ┌────────────────┐                     │
+│  │Tables│ │Search Index    │ │Databricks Table│                     │
+│  │(AWS) │ │(for AI-powered │ │(for analytics) │                     │
+│  │      │ │ search)        │ │                │                     │
+│  └──────┘ └────────────────┘ └────────────────┘                     │
+│                                                                     │
 │                                                                     │
 │  ② Only the "card catalog" is stored here — NOT your files.        │
 │     Typically less than 1% of the original file volume.             │
