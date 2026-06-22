@@ -121,6 +121,7 @@ FSx for ONTAP → OpenSharing Server (sharing + access control)
 
 <details>
 <summary>Platform verification status (click to expand)</summary>
+
 | Platform | Verification Status | Pattern | Notes |
 |----------|:---:|---------|-------|
 | [AWS Athena](integrations/athena/) | ✅ Security Verified | Glue Data Catalog + Serverless | Read-only. [Benchmark: 54.8 MB/s peak, 5M rows in 2s](verification-pack/athena-parquet-read/) |
@@ -252,6 +253,7 @@ python shared/scripts/validate-access.py \
 
 <details>
 <summary>Directory layout (click to expand)</summary>
+
 ```
 fsxn-lakehouse-integrations/
 ├── README.md                    # This file (English)
@@ -286,6 +288,7 @@ fsxn-lakehouse-integrations/
 
 <details>
 <summary>Languages, frameworks, and tested versions (click to expand)</summary>
+
 - **Infrastructure**: CloudFormation (YAML) + Terraform (Databricks/Snowflake)
 - **Scripts**: Python 3.12, Bash
 - **Notebooks**: Jupyter / Databricks Notebooks
@@ -313,6 +316,7 @@ fsxn-lakehouse-integrations/
 
 <details>
 <summary>Full document index (click to expand)</summary>
+
 | Document | Link |
 |----------|------|
 | **Start Here (Non-Technical)** | [**Plain-Language Business Guide**](docs/en/quickstart-business-guide.md) |
@@ -349,6 +353,7 @@ fsxn-lakehouse-integrations/
 
 <details>
 <summary>Published and in-progress blog series (click to expand)</summary>
+
 ### Series 1: "FSx for ONTAP S3 Access Points × Lakehouse Deep Dive" (Published)
 
 A 7-part validation series on dev.to:
