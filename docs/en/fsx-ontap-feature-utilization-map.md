@@ -2,14 +2,14 @@
 
 # FSx for ONTAP Feature Utilization Map
 
-> **Purpose**: Visualizes which FSx for ONTAP features are used in each connection path/document in this repository, making "what makes FSx for ONTAP unique" immediately apparent.
+> **Purpose**: Maps which FSx for ONTAP features are utilized by each connection path and document in this repository.
 > **Last updated**: 2026-06-20
 
 ---
 
 ## Executive Summary
 
-The core differentiation of FSx for ONTAP is providing **enterprise data protection + multiprotocol access + Lakehouse integration** on a single platform. Standard S3 + EBS cannot deliver the following combination:
+FSx for ONTAP provides **enterprise data protection + multiprotocol access + Lakehouse integration** on a single platform. Standard S3 + EBS cannot deliver the following combination:
 
 - Simultaneous NFS / SMB / S3 API access to the same data
 - Storage-efficient zero-cost FlexClone (instant test/dev environment creation)
@@ -44,7 +44,7 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 | Attribute | Value |
 |-----------|-------|
 | **Used in** | Athena / Glue / EMR / Snowflake / Bedrock KB data access |
-| **Differentiation** | Data written via NFS/SMB is readable via S3 API (no conversion/copy needed) |
+| **Characteristic** | Data written via NFS/SMB is readable via S3 API (no conversion/copy needed) |
 | **Constraints** | Conditional writes not supported, Event Notifications not supported ([BLK-002](./blocker-tracker.md), [BLK-003](./blocker-tracker.md)) |
 | **Related docs** | [Compatibility Matrix](./compatibility-matrix.md), [Networking](./fsx-ontap-s3ap-networking.md) |
 
@@ -55,7 +55,7 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 | Attribute | Value |
 |-----------|-------|
 | **Used in** | DataSync source consistency, AI catalog consistency, DR |
-| **Differentiation** | Zero-cost (no capacity consumed until writes occur), instant creation, no application downtime |
+| **Characteristic** | Zero-cost (no capacity consumed until writes occur), instant creation, no application downtime |
 | **Constraints** | Snapshot alone cannot replicate to other regions (combine with SnapMirror) |
 | **Related docs** | [DataSync Guide](./datasync-to-s3-guide.md) (Phase 2), [Recovery Semantics](./recovery-semantics.md) |
 
@@ -66,7 +66,7 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 | Attribute | Value |
 |-----------|-------|
 | **Used in** | DataSync production isolation, instant dev/test environment creation |
-| **Differentiation** | **Zero additional storage** (no capacity consumed until writes occur), instant creation (seconds even for TB-scale) |
+| **Characteristic** | **Zero additional storage** (no capacity consumed until writes occur), instant creation (seconds even for TB-scale) |
 | **Constraints** | Storage consumption begins when writes to the clone increase |
 | **Related docs** | [DataSync Guide](./datasync-to-s3-guide.md) (Phase 2), [ADR-001](../adr/ADR-001-datasync-as-primary-sync.md) |
 
@@ -77,7 +77,7 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 | Attribute | Value |
 |-----------|-------|
 | **Used in** | Event source for Kafka → Structured Streaming path, near-real-time S3 sync |
-| **Differentiation** | Real-time notification of file operations (create/modify/delete/rename) to external systems. Alternative to S3 Event Notifications |
+| **Characteristic** | Real-time notification of file operations (create/modify/delete/rename) to external systems. Alternative to S3 Event Notifications |
 | **Constraints** | Metadata events only (file content not transferred), operational complexity via Lambda |
 | **Related docs** | [Kafka-ClickHouse-UC Connectivity](./kafka-clickhouse-unity-catalog-connectivity.md), [DataSync Guide](./datasync-to-s3-guide.md) (FPolicy alternative pattern) |
 
@@ -88,7 +88,7 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 | Attribute | Value |
 |-----------|-------|
 | **Used in** | Cross-region DR, data mobility |
-| **Differentiation** | Block-level efficient replication (RPO in minutes). Syncs entire volumes to another region |
+| **Characteristic** | Block-level efficient replication (RPO in minutes). Syncs entire volumes to another region |
 | **Constraints** | SnapMirror **S3** (ONTAP S3 → AWS S3) is unavailable on FSx for ONTAP ([BLK-004](./blocker-tracker.md)). Volume-level SnapMirror IS available |
 | **Related docs** | [ADR-002](../adr/ADR-002-snapmirror-s3-unavailability.md), [Blocker Tracker](./blocker-tracker.md) |
 
@@ -99,7 +99,7 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 | Attribute | Value |
 |-----------|-------|
 | **Used in** | Cost optimization (automatic cold data tiering to S3) |
-| **Differentiation** | Automatically moves data from SSD → S3 based on access frequency. Transparent to applications (no path changes) |
+| **Characteristic** | Automatically moves data from SSD → S3 based on access frequency. Transparent to applications (no path changes) |
 | **Constraints** | Additional latency on first read of tiered data. Consider impact for analytics workloads |
 | **Related docs** | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) (Future Outlook section) |
 
@@ -108,13 +108,13 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 | Attribute | Value |
 |-----------|-------|
 | **Used in** | Tenant/workload isolation (production vs dev, factory A vs factory B) |
-| **Differentiation** | Complete logical separation of network/authentication/storage on a single file system |
+| **Characteristic** | Complete logical separation of network/authentication/storage on a single file system |
 | **Constraints** | SVM count limits (FSx for ONTAP quota dependent) |
 | **Related docs** | [Compatibility Matrix](./compatibility-matrix.md) (OT/IT Security) |
 
 ---
 
-## Differentiation Summary: FSx for ONTAP vs Alternative Storage
+## Technical Comparison: FSx for ONTAP vs Alternative Storage
 
 > **Note**: This is a comparison of technical characteristics, not a claim of superiority. The appropriate choice differs by use case.
 
