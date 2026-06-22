@@ -15,14 +15,14 @@
 
 - **目的**: FSx for ONTAP に蓄積されたエンタープライズファイルデータ（NFS/SMB/S3/iSCSI）を、業界ごとのユースケースに応じて Databricks Unity Catalog ガバナンス下の分析・AI 基盤に接続する際の、業界別の推奨パターンを提供
 - **共通原則**: UC への直接ゼロコピー接続は非対応（技術ガイド参照）。本番パスは「DataSync → S3 → UC」「Kafka → Structured Streaming → UC」「Glue/EMR ETL → UC」の間接パス
-- **FSx for ONTAP の業界共通価値**: マルチプロトコル（同一データへ NFS/SMB/S3 同時アクセス）、Snapshot/FlexClone（一貫性のある時点コピー・瞬時クローン）、SnapMirror（DR）、SnapLock（WORM コンプライアンス）、ストレージ効率（重複排除/圧縮）
+- **FSx for ONTAP の業界共通機能**: マルチプロトコル（同一データへ NFS/SMB/S3 同時アクセス）、Snapshot/FlexClone（一貫性のある時点コピー・瞬時クローン）、SnapMirror（DR）、SnapLock（WORM コンプライアンス）、ストレージ効率（重複排除/圧縮）
 - **規制業界の注意点**: 金融（BCBS 239 等）、医療（HIPAA/GxP）、公共（データ主権）では、データ分類・監査ログ・暗号化チェーン・データ越境制約を設計の前提に含める
 - **本カタログの使い方**: 自業界のセクションで「ユースケース → 推奨パス → ガバナンス → 注意点」を確認し、技術ガイドの該当パス詳細にリンクで遷移
 - **カバレッジ**: 26 業界を収録（製造・自動車・金融・医療・半導体・メディア・小売・エネルギー・通信・公共に加え、農業・物流・観光・法務・建設・教育・防衛・スマートシティ・広告・運輸・ESG・不動産・HR・化学・ゲーミング・SAP/ERP）。サーバーレス自動化パターンの実装例は [FSx for ONTAP S3 Access Points Serverless Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns)（同一著者）の業界別ユースケース（UC1-UC30）を参照
 
 ## 業界横断クイックリファレンス
 
-| 業界 | 代表ユースケース | 主要 FSx for ONTAP 価値 | 推奨接続パス | 主要規制/制約 |
+| 業界 | 代表ユースケース | 活用する FSx for ONTAP 機能 | 推奨接続パス | 主要規制/制約 |
 |------|----------------|-------------------|------------|-------------|
 | 製造 / 産業 | 品質分析、予知保全、トレーサビリティ | マルチプロトコル、Snapshot、FabricPool | DataSync / Kafka(FPolicy) | IATF 16949、OT/IT 分離 |
 | 自動車 | ADAS/AD データ、コネクテッドカー、部品系譜 | スケールアウト性能、SnapMirror、SnapLock | DataSync / Kafka | データ主権、ISO 26262、保持義務 |
@@ -75,7 +75,7 @@
 
 ## 業界別ソリューション
 
-各業界セクションは共通テンプレートで構成: **データ特性 → 主要ユースケース → FSx for ONTAP の価値 → 推奨接続パス → ガバナンス/規制 → 注意点**。
+各業界セクションは共通テンプレートで構成: **データ特性 → 主要ユースケース → 活用する FSx for ONTAP 機能 → 推奨接続パス → ガバナンス/規制 → 注意点**。
 
 ---
 
@@ -91,7 +91,7 @@
 - 製造トレーサビリティ: ロット/シリアル単位の製造系譜追跡（8D レポート、リコール対応）
 - デジタルサプライチェーン: 在庫・需給の可視化（Databricks 公式: [Digital Supply Chain Reference Architecture](https://www.databricks.com/resources/architectures/manufacturing-digital-supply-chain-reference-architecture)、**Public**）
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: PLC/SCADA が NFS/SMB で書き込んだデータを、変換なしで S3 AP 経由分析
 - Snapshot: 検査時点の一貫したデータセットを DataSync の同期元に使用（本番 I/O 影響回避）
 - FabricPool: コールドな履歴検査データを S3 に自動階層化
@@ -116,7 +116,7 @@
 - 品質トレーサビリティ: VIN/ロット単位の系譜追跡、リコール範囲特定
 - サプライチェーン可視化: ティア 1/2 サプライヤーとのデータ連携
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - スケールアウト性能（最大 36 GB/s、1.2M IOPS、[**Public**](https://aws.amazon.com/about-aws/whats-new/2023/11/amazon-fsx-netapp-ontap-scale-out-file-systems/)）: ADAS の大容量センサーデータの取り込み
 - SnapMirror: リージョン間データレプリケーション（データ主権を考慮した設計）
 - SnapLock: 品質記録の WORM 保持（規制対応）
@@ -144,7 +144,7 @@
 - 規制報告: BCBS 239（リスクデータ集計）、規制当局への報告データ生成
 - 保険: 保険金請求分析、アクチュアリーモデル、不正請求検知
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - SnapLock（WORM）: 規制報告データ・取引記録の改ざん防止保持
 - Snapshot: 監査時点の一貫したデータセット保全
 - 暗号化: 保存時（volume encryption）+ 転送時（NFS krb5p / TLS）の暗号化チェーン
@@ -177,7 +177,7 @@
 - 医療画像 AI: 画像診断支援モデルの学習（DICOM → UC Volume）
 - 創薬: 化合物スクリーニング、臨床試験データ管理（GxP）
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: 医療システムが SMB で書き込んだ画像/記録を分析基盤へ（[**Public**: 医療システムは患者記録を SMB ボリュームに保存](https://www.netapp.com/blog/ai-insights-ontap-s3-access-points-dremio/)）
 - FlexClone: 本番ゲノミクスデータの瞬時クローンで研究環境を分離（本番影響なし）
 - SnapLock: 臨床試験データの WORM 保持（GxP の電子記録要件）
@@ -205,7 +205,7 @@
 - リグレッション分析: 大量シミュレーションジョブ結果の傾向分析
 - ハイブリッドバースト: オンプレ EDA ワークロードのクラウドバースト（[**Public**](https://aws.amazon.com/blogs/industries/accelerating-eda-with-the-agility-of-aws-and-netapp-data-services/)）
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - FlexCache: オンプレのツール/ライブラリをクラウドにキャッシュ（クラウドワークロードからローカルに見える、[**Public**](https://aws.amazon.com/blogs/industries/accelerating-eda-with-the-agility-of-aws-and-netapp-data-services/)）
 - スケールアウト性能（36 GB/s、1.2M IOPS）: EDA の高 IOPS ワークロード
 - Snapshot: 設計バージョンの時点管理
@@ -232,7 +232,7 @@
 - 配信分析: 視聴ログ・エンゲージメント分析、レコメンデーション
 - コンテンツ AI: 自動タグ付け、シーン検出、字幕生成
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - スケールアウト性能: レンダーファームの高スループット I/O
 - FlexClone: 制作環境の瞬時複製（バージョン管理）
 - マルチプロトコル: 制作ツール（SMB）と分析（S3 AP）の同一データアクセス
@@ -258,7 +258,7 @@
 - 在庫最適化: リアルタイム在庫可視化、補充最適化
 - 商品分析: 商品画像の自動分類、属性抽出
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - ストレージ効率（重複排除/圧縮で最大 65% 削減、[**Public**](https://www.netapp.com/learn/aws-fsxn-blg-reduce-costs-and-increase-efficiency-with-fsx-for-ontap/)）: 大量の商品画像・ログのコスト最適化
 - Snapshot: 日次バッチ分析の一貫したスナップショット
 
@@ -285,7 +285,7 @@
 - 資産管理: 設備ライフサイクル管理、メンテナンス最適化
 - 再生可能エネルギー: 発電予測（気象連動）、蓄電最適化
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: SCADA/ヒストリアンの出力を分析基盤へ
 - SnapMirror: 地理的に分散した拠点間のデータレプリケーション
 
@@ -311,7 +311,7 @@
 - 不正検知: SIM スワップ詐欺、課金詐欺のリアルタイム検知
 - カスタマーエクスペリエンス: 解約予測、サービス品質分析
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - スケールアウト性能: 大量 CDR/テレメトリの取り込み
 - Snapshot: 監査・規制対応のための時点データ保全
 - ストレージ効率: 大量ログのコスト最適化
@@ -338,7 +338,7 @@
 - 防衛/安全保障: 機密データ分析（厳格なアクセス制御）
 - スマートシティ: 都市インフラのセンサーデータ分析
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - SnapLock（WORM）: 行政記録の改ざん防止・長期保持
 - SnapMirror: DR・データ保全
 - 暗号化: 機密データの保存時/転送時暗号化
@@ -369,7 +369,7 @@
 - 食品トレーサビリティ: 生産〜流通の系譜追跡（ロット・産地・検査記録）
 - 農機/フリート管理: 自動運転トラクター・収穫機のテレメトリ
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: 圃場ゲートウェイが NFS/SMB で集約したデータを分析基盤へ
 - ストレージ効率: 大量のドローン画像・時系列センサーデータのコスト最適化
 - SnapMirror: 地理分散した農場拠点のデータ集約
@@ -399,7 +399,7 @@
 - コールドチェーン監視: 医薬品・生鮮食品の温度逸脱検知
 - フリート/テレマティクス: 配送ルート最適化、ドライバー行動分析
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - スケールアウト性能: 多拠点倉庫カメラの大量画像の取り込み
 - マルチプロトコル: 倉庫管理システム（WMS）出力と分析の同一データアクセス
 - ストレージ効率: 監視映像・スキャンログのコスト最適化
@@ -429,7 +429,7 @@
 - 混雑/人数管理: 観光地・テーマパーク・施設の人数カウント、動線分析
 - 予約文書処理: 予約・契約文書の OCR・構造化
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: 施設管理システム（PMS/BMS）出力と分析の同一データアクセス
 - ストレージ効率: 点検画像・監視映像のコスト最適化
 - Snapshot: 繁忙期前後の一貫したデータセット保全
@@ -457,7 +457,7 @@
 - e-Discovery: 訴訟対応の文書検索・分類
 - 保持コンプライアンス: 法定保持期間の管理
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - ONTAP REST API: NTFS ACL・所有者・権限メタデータの取得（S3 API では取得不可）
 - SnapLock（WORM）: 法定保持文書の改ざん防止
 - Snapshot: 監査時点のファイルシステム状態保全
@@ -484,7 +484,7 @@
 - 安全コンプライアンス: 現場写真の AI 安全点検（保護具着用検知等）
 - 進捗管理: ドローン空撮による工程進捗の可視化
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - スケールアウト性能: 大容量 BIM モデルの共有ストレージ
 - FlexClone: 設計バージョンの瞬時クローン
 - マルチプロトコル: 設計ツール（SMB）と分析（S3 AP）の同一データアクセス
@@ -509,7 +509,7 @@
 - 学習分析: LMS ログからの学習行動分析、ドロップアウト予測
 - 学術検索: 研究文書の RAG / セマンティック検索
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: 研究者の NFS/SMB アクセスと分析の両立
 - FlexClone: 研究データセットの再現可能なクローン
 - ストレージ効率: 大量の研究データ・動画のコスト最適化
@@ -533,7 +533,7 @@
 - 地理空間インテリジェンス: マルチソースデータの統合分析
 - センサーフュージョン: 複数センサーデータの統合
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - スケールアウト性能: 大容量衛星画像の処理
 - SnapLock: 証拠データの改ざん防止保持
 - 暗号化: 機密データの保存時/転送時暗号化
@@ -560,7 +560,7 @@
 - 環境モニタリング: 大気質・騒音・水質のセンシング
 - 防災: 災害リスクの予測・可視化
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: 都市システムの多様な出力の統合
 - SnapMirror: 拠点分散データの集約・DR
 
@@ -586,7 +586,7 @@
 - キャンペーン分析: 配信パフォーマンス分析、アトリビューション
 - パーソナライゼーション: ターゲティング最適化
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: 制作ツール（SMB）とアセット分析の両立
 - FlexClone: キャンペーン素材のバージョン管理
 - ストレージ効率: 大量クリエイティブアセットのコスト最適化
@@ -615,7 +615,7 @@
 - 保守レポート分析: 点検記録の構造化・傾向分析
 - 安全管理: 運行データの安全分析
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: 保守システム出力と分析の両立
 - スケールアウト性能: 大量点検画像の取り込み
 - SnapLock: 安全記録の改ざん防止保持
@@ -642,7 +642,7 @@
 - サプライチェーン ESG: サプライヤーの ESG 評価
 - 規制報告: CSRD / TCFD 等の開示対応
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: 多様なソースデータの統合
 - SnapLock: 規制報告データの改ざん防止保持
 
@@ -668,7 +668,7 @@
 - ポートフォリオ分析: 物件ポートフォリオの評価・最適化
 - 市場分析: 価格予測、需要分析
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - ストレージ効率: 大量物件画像のコスト最適化
 - マルチプロトコル: 物件管理システム出力と分析の両立
 
@@ -691,7 +691,7 @@
 - 人材マッチング: スキル・要件のマッチング
 - 人事分析: 離職予測、エンゲージメント分析
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - ONTAP REST API: 人事ファイルの厳格なアクセス権限管理
 - SnapLock: 法定保持が必要な人事記録
 
@@ -714,7 +714,7 @@
 - 材料開発: 実験データの分析、材料探索
 - 規制コンプライアンス: 化学物質規制対応
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - マルチプロトコル: ラボシステム出力と分析の両立
 - SnapLock: 規制記録・実験記録の改ざん防止保持
 - FlexClone: 実験データセットの再現可能なクローン
@@ -739,7 +739,7 @@
 - プレイヤー分析: 行動分析、チャーン予測、マッチメイキング最適化
 - ライブオプス: リアルタイムテレメトリ分析
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - FlexClone: ビルド/アセットバージョンの瞬時クローン
 - スケールアウト性能: 大容量アセットの共有ストレージ
 - FlexCache: 分散開発拠点間のアセット共有
@@ -765,7 +765,7 @@
 - バッチ出力分析: ERP バッチ出力の分析基盤への取り込み
 - マスタデータ統合: 製品・取引先マスタの分析
 
-**FSx for ONTAP の価値**:
+**活用する FSx for ONTAP 機能**:
 - 高性能ストレージ: SAP/Oracle/SQL Server のデータストア（[**Public**](https://aws.amazon.com/blogs/industries/fsi-services-spotlight-featuring-amazon-fsx-for-netapp-ontap/)）
 - Snapshot/FlexClone: 基幹 DB の一貫したバックアップ・テスト環境クローン
 - マルチプロトコル: 連携ファイル（NFS/SMB）と分析の両立

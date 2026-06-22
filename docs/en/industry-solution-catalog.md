@@ -15,14 +15,14 @@
 
 - **Purpose**: Provides industry-specific recommended patterns for connecting enterprise file data accumulated in FSx for ONTAP (NFS/SMB/S3/iSCSI) to Databricks Unity Catalog-governed analytics/AI platforms per industry use case
 - **Common principle**: Direct zero-copy UC connection is not supported (see technical guide). Production paths are the indirect paths "DataSync → S3 → UC," "Kafka → Structured Streaming → UC," and "Glue/EMR ETL → UC"
-- **Cross-industry FSx for ONTAP value**: Multiprotocol (simultaneous NFS/SMB/S3 access to same data), Snapshot/FlexClone (consistent point-in-time copies, instant clones), SnapMirror (DR), SnapLock (WORM compliance), storage efficiency (dedup/compression)
+- **Cross-industry FSx for ONTAP capabilities**: Multiprotocol (simultaneous NFS/SMB/S3 access to same data), Snapshot/FlexClone (consistent point-in-time copies, instant clones), SnapMirror (DR), SnapLock (WORM compliance), storage efficiency (dedup/compression)
 - **Regulated industry caveats**: Finance (BCBS 239, etc.), healthcare (HIPAA/GxP), public sector (data sovereignty) must include data classification, audit logs, encryption chains, and cross-border constraints as design prerequisites
 - **How to use this catalog**: Check your industry's section for "use case → recommended path → governance → caveats," then navigate to the relevant path detail in the technical guide via links
 - **Coverage**: 26 industries (manufacturing, automotive, finance, healthcare, semiconductor, media, retail, energy, telecom, public sector, plus agriculture, logistics, tourism, legal, construction, education, defense, smart city, AdTech, transportation, ESG, real estate, HR, chemical, gaming, SAP/ERP). For serverless automation pattern implementations, see the industry use cases (UC1-UC30) in [FSx for ONTAP S3 Access Points Serverless Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns) (same author)
 
 ## Cross-Industry Quick Reference
 
-| Industry | Representative Use Cases | Key FSx for ONTAP Value | Recommended Path | Key Regulations/Constraints |
+| Industry | Representative Use Cases | FSx for ONTAP Features Used | Recommended Path | Key Regulations/Constraints |
 |----------|------------------------|--------------------|--------------------|-----------------------------|
 | Manufacturing / Industrial | Quality analytics, predictive maintenance, traceability | Multiprotocol, Snapshot, FabricPool | DataSync / Kafka(FPolicy) | IATF 16949, OT/IT separation |
 | Automotive | ADAS/AD data, connected vehicle, part genealogy | Scale-out performance, SnapMirror, SnapLock | DataSync / Kafka | Data sovereignty, ISO 26262, retention |
@@ -75,7 +75,7 @@ Regardless of industry, consider these three points early in design.
 
 ## Industry Solutions
 
-Each industry section uses a common template: **Data characteristics → Key use cases → FSx for ONTAP value → Recommended path → Governance/regulation → Caveats**.
+Each industry section uses a common template: **Data characteristics → Key use cases → FSx for ONTAP features used → Recommended path → Governance/regulation → Caveats**.
 
 ---
 
@@ -91,7 +91,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Manufacturing traceability: lot/serial-level genealogy tracking (8D reports, recall response)
 - Digital supply chain: inventory/demand visibility (Databricks official: [Digital Supply Chain Reference Architecture](https://www.databricks.com/resources/architectures/manufacturing-digital-supply-chain-reference-architecture), **Public**)
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: analyze data written by PLC/SCADA via NFS/SMB through S3 AP without conversion
 - Snapshot: use consistent inspection-time datasets as DataSync sync source (avoid production I/O impact)
 - FabricPool: auto-tier cold historical inspection data to S3
@@ -116,7 +116,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Quality traceability: VIN/lot-level genealogy tracking, recall scope identification
 - Supply chain visibility: data linkage with Tier 1/2 suppliers
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Scale-out performance (up to 36 GB/s, 1.2M IOPS, [**Public**](https://aws.amazon.com/about-aws/whats-new/2023/11/amazon-fsx-netapp-ontap-scale-out-file-systems/)): ingestion of large ADAS sensor data
 - SnapMirror: cross-region data replication (designed considering data sovereignty)
 - SnapLock: WORM retention of quality records (regulatory compliance)
@@ -144,7 +144,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Regulatory reporting: BCBS 239 (risk data aggregation), report data generation for regulators
 - Insurance: claims analytics, actuarial models, fraudulent claim detection
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - SnapLock (WORM): tamper-proof retention of regulatory reporting data / transaction records
 - Snapshot: preserve consistent datasets at audit points
 - Encryption: encryption chain at rest (volume encryption) + in transit (NFS krb5p / TLS)
@@ -177,7 +177,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Medical imaging AI: training diagnostic support models (DICOM → UC Volume)
 - Drug discovery: compound screening, clinical trial data management (GxP)
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: route images/records written by healthcare systems via SMB to analytics platform ([**Public**: healthcare systems store patient records on SMB volumes](https://www.netapp.com/blog/ai-insights-ontap-s3-access-points-dremio/))
 - FlexClone: instant clone of production genomics data to isolate research environments (no production impact)
 - SnapLock: WORM retention of clinical trial data (GxP electronic records requirements)
@@ -205,7 +205,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Regression analysis: trend analysis of massive simulation job results
 - Hybrid burst: cloud burst of on-premises EDA workloads ([**Public**](https://aws.amazon.com/blogs/industries/accelerating-eda-with-the-agility-of-aws-and-netapp-data-services/))
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - FlexCache: cache on-premises tools/libraries to cloud (appear local to cloud workloads, [**Public**](https://aws.amazon.com/blogs/industries/accelerating-eda-with-the-agility-of-aws-and-netapp-data-services/))
 - Scale-out performance (36 GB/s, 1.2M IOPS): EDA high-IOPS workloads
 - Snapshot: point-in-time management of design versions
@@ -232,7 +232,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Distribution analytics: viewing log / engagement analysis, recommendations
 - Content AI: auto-tagging, scene detection, subtitle generation
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Scale-out performance: render farm high-throughput I/O
 - FlexClone: instant duplication of production environments (version management)
 - Multiprotocol: same-data access for production tools (SMB) and analytics (S3 AP)
@@ -258,7 +258,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Inventory optimization: real-time inventory visibility, replenishment optimization
 - Product analytics: auto-classification of product images, attribute extraction
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Storage efficiency (up to 65% reduction via dedup/compression, [**Public**](https://www.netapp.com/learn/aws-fsxn-blg-reduce-costs-and-increase-efficiency-with-fsx-for-ontap/)): cost optimization of massive product images/logs
 - Snapshot: consistent snapshots for daily batch analytics
 
@@ -285,7 +285,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Asset management: equipment lifecycle management, maintenance optimization
 - Renewable energy: generation forecasting (weather-linked), storage optimization
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: route SCADA/historian output to analytics platform
 - SnapMirror: data replication between geographically distributed sites
 
@@ -311,7 +311,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Fraud detection: real-time detection of SIM swap fraud, billing fraud
 - Customer experience: churn prediction, service quality analysis
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Scale-out performance: ingestion of massive CDR/telemetry
 - Snapshot: point-in-time data preservation for audit/regulatory compliance
 - Storage efficiency: cost optimization of massive logs
@@ -338,7 +338,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Defense/security: confidential data analysis (strict access control)
 - Smart city: sensor data analysis of urban infrastructure
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - SnapLock (WORM): tamper-proof / long-term retention of administrative records
 - SnapMirror: DR / data preservation
 - Encryption: at-rest/in-transit encryption of confidential data
@@ -369,7 +369,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Food traceability: production-to-distribution genealogy tracking (lot, origin, inspection records)
 - Farm machinery/fleet management: telemetry of autonomous tractors/harvesters
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: route data aggregated by field gateways via NFS/SMB to analytics platform
 - Storage efficiency: cost optimization of massive drone imagery / time-series sensor data
 - SnapMirror: aggregation of data from geographically dispersed farm sites
@@ -399,7 +399,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Cold chain monitoring: temperature excursion detection for pharma/perishable food
 - Fleet/telematics: delivery route optimization, driver behavior analysis
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Scale-out performance: ingestion of massive imagery from multi-site warehouse cameras
 - Multiprotocol: same-data access for WMS output and analytics
 - Storage efficiency: cost optimization of surveillance footage / scan logs
@@ -429,7 +429,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Occupancy/crowd management: people-counting and flow analysis for tourist sites/theme parks/facilities
 - Reservation document processing: OCR/structuring of reservation/contract documents
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: same-data access for facility management system (PMS/BMS) output and analytics
 - Storage efficiency: cost optimization of inspection images / surveillance footage
 - Snapshot: consistent dataset preservation around peak seasons
@@ -457,7 +457,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - e-Discovery: litigation document search/classification
 - Retention compliance: management of legal retention periods
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - ONTAP REST API: retrieval of NTFS ACL/owner/permission metadata (not retrievable via S3 API)
 - SnapLock (WORM): tamper-proofing of legally retained documents
 - Snapshot: preservation of file system state at audit points
@@ -484,7 +484,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Safety compliance: AI safety inspection of site photos (PPE detection, etc.)
 - Progress management: visualization of construction progress via drone aerial imagery
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Scale-out performance: shared storage for large BIM models
 - FlexClone: instant cloning of design versions
 - Multiprotocol: same-data access for design tools (SMB) and analytics (S3 AP)
@@ -509,7 +509,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Learning analytics: learning behavior analysis from LMS logs, dropout prediction
 - Academic search: RAG / semantic search of research documents
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: balance researcher NFS/SMB access with analytics
 - FlexClone: reproducible clones of research datasets
 - Storage efficiency: cost optimization of massive research data/videos
@@ -533,7 +533,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Geospatial intelligence: integrated analysis of multi-source data
 - Sensor fusion: integration of multiple sensor data
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Scale-out performance: processing of large satellite imagery
 - SnapLock: tamper-proof retention of evidence data
 - Encryption: at-rest/in-transit encryption of classified data
@@ -560,7 +560,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Environmental monitoring: air quality/noise/water quality sensing
 - Disaster prevention: prediction/visualization of disaster risk
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: integration of diverse outputs from urban systems
 - SnapMirror: aggregation/DR of dispersed site data
 
@@ -586,7 +586,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Campaign analysis: distribution performance analysis, attribution
 - Personalization: targeting optimization
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: balance production tools (SMB) with asset analytics
 - FlexClone: version management of campaign assets
 - Storage efficiency: cost optimization of massive creative assets
@@ -615,7 +615,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Maintenance report analysis: structuring/trend analysis of inspection records
 - Safety management: safety analysis of operational data
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: balance maintenance system output with analytics
 - Scale-out performance: ingestion of massive inspection images
 - SnapLock: tamper-proof retention of safety records
@@ -642,7 +642,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Supply chain ESG: ESG assessment of suppliers
 - Regulatory reporting: CSRD / TCFD disclosure compliance
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: integration of diverse source data
 - SnapLock: tamper-proof retention of regulatory reporting data
 
@@ -668,7 +668,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Portfolio analysis: evaluation/optimization of property portfolios
 - Market analysis: price prediction, demand analysis
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Storage efficiency: cost optimization of massive property images
 - Multiprotocol: balance property management system output with analytics
 
@@ -691,7 +691,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Talent matching: skill/requirement matching
 - HR analytics: attrition prediction, engagement analysis
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - ONTAP REST API: strict access permission management of HR files
 - SnapLock: HR records requiring legal retention
 
@@ -714,7 +714,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Materials development: analysis of experimental data, materials exploration
 - Regulatory compliance: chemical substance regulation compliance
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - Multiprotocol: balance lab system output with analytics
 - SnapLock: tamper-proof retention of regulatory/experimental records
 - FlexClone: reproducible clones of experimental datasets
@@ -739,7 +739,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Player analytics: behavior analysis, churn prediction, matchmaking optimization
 - LiveOps: real-time telemetry analysis
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - FlexClone: instant cloning of build/asset versions
 - Scale-out performance: shared storage for large assets
 - FlexCache: asset sharing between distributed development sites
@@ -765,7 +765,7 @@ Each industry section uses a common template: **Data characteristics → Key use
 - Batch output analysis: ingestion of ERP batch output into analytics platform
 - Master data integration: analysis of product/business partner master
 
-**FSx for ONTAP value**:
+**FSx for ONTAP features used**:
 - High-performance storage: data store for SAP/Oracle/SQL Server ([**Public**](https://aws.amazon.com/blogs/industries/fsi-services-spotlight-featuring-amazon-fsx-for-netapp-ontap/))
 - Snapshot/FlexClone: consistent backup of core DBs / test environment clones
 - Multiprotocol: balance integration files (NFS/SMB) with analytics
