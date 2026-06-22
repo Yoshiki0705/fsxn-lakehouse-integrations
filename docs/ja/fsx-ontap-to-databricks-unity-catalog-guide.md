@@ -190,11 +190,22 @@ FSx for ONTAP
 
 ## コピー対象と残留データ：具体例
 
-> 「DataSync → S3 → UC」は FSx for ONTAP ボリューム全体を S3 に複製するという意味ではない。実際にコピーされるのは**分析に必要な構造化サブセット**のみであり、通常はソースボリュームの 1% 未満。
+> 「DataSync → S3 → UC」は FSx for ONTAP ボリューム全体を標準 S3 バケットに複製するという意味ではない。実際に書き込まれるのは**分析に必要な構造化サブセット**のみであり、用途に応じて適切な AWS ストレージサービスに格納する。通常はソースボリュームの 1% 未満。
+
+### 本アーキテクチャで使用する S3 関連サービスの区別
+
+| サービス | 本アーキテクチャでの役割 | 書き込まれるデータ |
+|---------|----------------------|------------------|
+| **FSx for ONTAP S3 Access Points** | READ ソース（NFS/SMB データへのゼロコピーアクセス） | なし — このパイプラインでは読み取り専用 |
+| **標準 S3 バケット** | DataSync 同期先 or UC Managed Table（Delta）の書き込み先 | 同期ファイル or Delta テーブルデータファイル |
+| **S3 Tables**（Iceberg、自動コンパクション付き） | 構造化メタデータの書き込み先（Iceberg フォーマット） | ETL 抽出済みメタデータ、測定値、AI 分類結果 |
+| **S3 Vectors** | ベクトル埋め込みの書き込み先 | Titan Embeddings 出力（セマンティック検索用） |
+
+> **重要**: ETL パイプラインは FSx for ONTAP S3 AP から**読み取り**、**S3 Tables、S3 Vectors、または標準 S3 バケット**のいずれかに**書き込む**。これらは特性が異なる別サービスであり、下流の消費者に応じて選択する。
 
 ### 例: 製造業の品質検査（200 ロット/日）
 
-**FSx for ONTAP 上のソースデータ**（NFS/SMB 経由で工場システムがアクセス）:
+**FSx for ONTAP 上のソースデータ**（NFS/SMB 経由で工場システムがアクセス、S3 AP 経由で ETL が読み取り）:
 
 ```
 /quality-inspection/2026-06-20/
@@ -206,45 +217,62 @@ FSx for ONTAP
     (× 200 ロット/日 ≈ 6 GB/日、FSx for ONTAP 上合計)
 ```
 
-**UC Delta テーブルに書き込まれるもの（S3 上）**:
+**ETL 出力先別の内訳**:
 
-| Delta テーブル | 内容 | 行数/日 | S3 サイズ/日 | ソース |
-|-------------|------|:------:|:----------:|--------|
-| `quality.inspection_metadata` | AI 分類済みメタデータ（ロット単位） | 200 | ~100 KB | PDF → Bedrock AI 抽出 |
-| `quality.measurements` | 測定ポイント別の寸法値 | 4,000 | ~800 KB | CSV パース |
-| `quality.sensor_summary` | センサー統計値（ロット単位集計） | 200 | ~50 KB | JSON 集計 |
+| 出力先 | テーブル / コレクション | 内容 | サイズ/日 | フォーマット | 下流の消費者 |
+|--------|----------------------|------|:--------:|-----------|------------|
+| **S3 Tables** | `quality.inspection_metadata` | AI 分類済みメタデータ（ロット単位） | ~100 KB | Iceberg（自動コンパクション） | Athena, EMR, Glue（ネイティブ）; Databricks（Foreign Iceberg / Glue HMS 経由） |
+| **S3 Tables** | `quality.measurements` | 測定ポイント別の寸法値 | ~800 KB | Iceberg | 同上 |
+| **S3 Vectors** | `quality-embeddings` | ドキュメント埋め込み（1024 次元） | ~800 KB | ベクトルインデックス | Bedrock Knowledge Bases, OpenSearch セマンティック検索 |
+| **標準 S3 バケット** | `catalog.schema.sensor_data`（UC） | センサー集計統計 | ~50 KB | Delta（UC Managed Table） | Databricks UC（フルガバナンス: lineage, tags, masks） |
 
-**S3 合計: ~1 MB/日**（Delta テーブル） — **ソース 6 GB/日 の 0.017%**
+**AWS ストレージへの書き込み合計: ~1.75 MB/日** — **FSx for ONTAP 上のソース 6 GB/日 の 0.03%**
 
-**FSx for ONTAP に残るもの**: 画像（TIFF）、完全な PDF、生センサーログ。ドリルダウンが必要な場合に S3 AP または OpenSharing でオンデマンドアクセス。
+**FSx for ONTAP に残るもの**: 画像（TIFF）、完全な PDF、生センサーログ。ドリルダウンが必要な場合に FSx for ONTAP S3 AP または OpenSharing STS credential vending でオンデマンドアクセス。
 
-### 3 つのインジェスト戦略
+### 書き込み先の選び方
 
-| 戦略 | S3 に送るもの | S3 コスト | UC ガバナンス | 実装複雑度 |
-|------|-------------|:-------:|:---:|:---:|
-| **A. 選択的 ETL**（推奨） | 構造化抽出のみ（メタデータ + 測定値） | 最小（ソースの ~0.02%） | フル（Managed Delta） | 中（ETL パイプライン構築要） |
-| **B. ファイル種別フィルタリング** | DataSync `--includes` で CSV/Parquet のみ同期 | 中程度（対象ファイル分） | フル（COPY INTO → Delta） | 低（DataSync + SQL） |
-| **C. ボリューム全量同期** | 全ファイル複製 | 高（= ソースボリューム） | External Table（読み取り専用）or 選択的 COPY INTO | 最低（DataSync のみ） |
+| 下流の消費者 | 書き込み先 | 理由 |
+|------------|----------|------|
+| Athena / EMR / Glue（AWS ネイティブ分析） | **S3 Tables**（Iceberg） | ネイティブ統合、自動コンパクション、テーブル管理不要 |
+| Databricks UC（フルガバナンス必要） | **標準 S3 バケット**（Delta、UC Managed Table） | UC は External Location / Managed Table に標準 S3 を要求 |
+| セマンティック検索 / RAG / 類似度クエリ | **S3 Vectors** | ベクトル埋め込み専用、Bedrock と統合 |
+| Databricks UC AND AWS ネイティブ両方 | **S3 Tables** + UC Foreign Iceberg | S3 Tables（Iceberg）に書き込み; Databricks は Foreign Iceberg（Glue HMS Federation）で読み取り |
+| Snowflake | **標準 S3 バケット** or **S3 Tables** | Snowflake は External Stage（標準 S3）or Managed Iceberg（顧客 S3）で読み取り |
+
+### 3 つのインジェスト戦略（改訂版）
+
+| 戦略 | 読み取り元 | 書き込み先 | AWS ストレージ上のサイズ | UC ガバナンス | 実装複雑度 |
+|------|----------|----------|:------------------:|:---:|:---:|
+| **A. 選択的 ETL**（推奨） | FSx for ONTAP S3 AP | S3 Tables + S3 Vectors + 標準 S3（混合） | 最小（ソースの ~0.03%） | フル（出力先ごと） | 中（ETL パイプライン構築要） |
+| **B. ファイル種別フィルタリング** | FSx for ONTAP NFS（DataSync 経由） | 標準 S3 バケット | 中程度（対象ファイル分） | フル（COPY INTO → UC Delta） | 低（DataSync + SQL） |
+| **C. ボリューム全量同期** | FSx for ONTAP NFS（DataSync 経由） | 標準 S3 バケット | 高（= ソースボリューム） | External Table（読み取り専用）or 選択的 COPY INTO | 最低（DataSync のみ） |
 
 ### 戦略 A: 選択的 ETL パイプライン（推奨）
 
 ```
 FSx for ONTAP (6 GB/日、全ファイル種別)
     │
-    ▼ S3 AP 経由で読み取り（or OpenSharing STS credential vending）
+    ▼ FSx for ONTAP S3 AP 経由で読み取り（or OpenSharing STS credential vending）
 ETL (Databricks Job / Glue / Lambda)
-    ├── CSV → パース → measurements テーブルに INSERT
-    ├── JSON → 集計 → sensor_summary テーブルに INSERT
-    ├── PDF → Bedrock AI → metadata テーブルに INSERT
-    └── TIFF → 参照 URI のみ記録（画像自体はコピーしない）
     │
-    ▼ 書き込み（標準 S3）
-UC Managed Delta Tables (~1 MB/日)
+    ├── CSV → パース → S3 Tables (Iceberg): measurements テーブル
+    ├── JSON → 集計 → S3 Tables (Iceberg): sensor_summary テーブル
+    ├── PDF → Bedrock AI → S3 Tables (Iceberg): metadata テーブル
+    ├── PDF/画像 → Titan Embeddings → S3 Vectors: セマンティックインデックス
+    └── TIFF → 参照 URI のみメタデータに記録（ファイルコピーなし）
+    │
+    ▼ （オプション）Databricks UC 消費者向け:
+標準 S3 バケット → UC Managed Delta Table（センサー集計）
+    or
+S3 Tables → Glue Catalog → UC Foreign Iceberg（追加コピーなし）
 ```
 
-ソースの画像・ドキュメントは FSx for ONTAP に残る。Delta テーブルには**派生した構造化・分析可能データ**が格納され、生ファイルのコピーではない。
+ソースの画像・ドキュメントは FSx for ONTAP に残る。AWS ストレージサービスには**派生した構造化・分析可能データ**のみが格納され、生ファイルのコピーではない。
 
 ### 戦略 B: DataSync のファイル種別フィルタリング
+
+DataSync は FSx for ONTAP NFS から選択したファイルを標準 S3 バケットにコピーする:
 
 ```bash
 # CSV と Parquet のみ同期（画像・PDF はスキップ）
@@ -254,17 +282,17 @@ aws datasync create-task \
   --includes '[{"FilterType":"SIMPLE_PATTERN","Value":"*.csv"},{"FilterType":"SIMPLE_PATTERN","Value":"*.parquet"}]'
 ```
 
-Databricks 側:
+Databricks 側（標準 S3 バケットから読み取り、UC Managed Delta に書き込み）:
 ```sql
 COPY INTO quality.measurements
-FROM 's3://sync-bucket/quality-inspection/'
+FROM 's3://<STANDARD-BUCKET>/quality-inspection/'
 FILEFORMAT = CSV
 PATTERN = '*/measurements.csv';
 ```
 
 ### 戦略 C: ボリューム全量同期（最シンプル・最高コスト）
 
-全ファイル種別へのアクセスが分析に必要な場合（例: 画像 ML トレーニング）のみ適切。この場合でも、専用 S3 prefix に同期して External Table（読み取り専用）を作成し、全てを Delta 変換するのではなく必要部分だけ `COPY INTO` することを推奨。
+DataSync が FSx for ONTAP NFS の全ファイルを標準 S3 バケットにコピーする。全ファイル種別へのアクセスが分析に必要な場合（例: 画像 ML トレーニング）のみ適切。この場合でも、External Table（読み取り専用）を作成し、全てを Delta 変換するのではなく必要部分だけ `COPY INTO` することを推奨。
 
 ---
 

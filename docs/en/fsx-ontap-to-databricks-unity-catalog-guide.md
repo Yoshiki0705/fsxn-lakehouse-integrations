@@ -190,11 +190,24 @@ FSx for ONTAP
 
 ## What Gets Copied vs What Stays: A Concrete Example
 
-> A common misconception is that "DataSync → S3 → UC" means replicating the entire FSx for ONTAP volume to S3. In practice, only the **analytically relevant subset** is copied or transformed — typically less than 1% of the source volume.
+> A common misconception is that "DataSync → S3 → UC" means replicating the entire FSx for ONTAP volume to a standard S3 bucket. In practice, only the **analytically relevant subset** is extracted and written to the appropriate AWS storage service — typically less than 1% of the source volume.
+
+### S3 Storage Services Used in This Architecture
+
+Before diving into examples, clarify the distinct S3-related services:
+
+| Service | Role in this architecture | Data written to it |
+|---------|--------------------------|-------------------|
+| **FSx for ONTAP S3 Access Points** | READ source (zero-copy access to NFS/SMB data) | Nothing — read-only in this pipeline |
+| **Standard S3 bucket** | Write destination for DataSync sync or UC Managed Tables (Delta) | Synced files or Delta table data files |
+| **S3 Tables** (Iceberg, auto-compaction) | Write destination for structured metadata (Iceberg format) | ETL-extracted metadata, measurements, AI classifications |
+| **S3 Vectors** | Write destination for vector embeddings | Titan Embeddings output for semantic search |
+
+> **Key insight**: The ETL pipeline reads from FSx for ONTAP S3 AP and writes to **S3 Tables, S3 Vectors, or standard S3 buckets** depending on the downstream consumer. These are separate services with different characteristics.
 
 ### Example: Manufacturing Quality Inspection (200 lots/day)
 
-**Source on FSx for ONTAP** (accessed via NFS/SMB by factory systems):
+**Source on FSx for ONTAP** (accessed via NFS/SMB by factory systems, read via S3 AP by ETL):
 
 ```
 /quality-inspection/2026-06-20/
@@ -206,45 +219,62 @@ FSx for ONTAP
     (× 200 lots/day ≈ 6 GB/day total on FSx for ONTAP)
 ```
 
-**What ends up in the UC Delta table on S3**:
+**ETL output by destination**:
 
-| Delta Table | Content | Rows/day | S3 Size/day | Source |
-|-------------|---------|:--------:|:-----------:|--------|
-| `quality.inspection_metadata` | AI-classified metadata per lot | 200 | ~100 KB | PDF → Bedrock AI extraction |
-| `quality.measurements` | Dimensional values per measurement point | 4,000 | ~800 KB | CSV parse |
-| `quality.sensor_summary` | Aggregated sensor statistics per lot | 200 | ~50 KB | JSON aggregation |
+| Destination | Table / Collection | Content | Size/day | Format | Downstream consumer |
+|-------------|-------------------|---------|:--------:|--------|-------------------|
+| **S3 Tables** | `quality.inspection_metadata` | AI-classified metadata per lot | ~100 KB | Iceberg (auto-compacted) | Athena, EMR, Glue (native); Databricks (via Foreign Iceberg / Glue HMS) |
+| **S3 Tables** | `quality.measurements` | Dimensional values per point | ~800 KB | Iceberg | Same as above |
+| **S3 Vectors** | `quality-embeddings` | Document embeddings (1024-dim) | ~800 KB | Vector index | Bedrock Knowledge Bases, OpenSearch semantic search |
+| **Standard S3 bucket** | `catalog.schema.sensor_data` (UC) | Aggregated sensor stats | ~50 KB | Delta (UC Managed Table) | Databricks UC (full governance: lineage, tags, masks) |
 
-**S3 total: ~1 MB/day** (Delta tables) — **0.017% of the 6 GB/day source**
+**Total written to AWS storage: ~1.75 MB/day** — **0.03% of the 6 GB/day source on FSx for ONTAP**
 
-**What stays on FSx for ONTAP**: Images (TIFF), full PDFs, raw sensor logs. These are accessed on-demand via S3 AP or OpenSharing when drill-down is needed.
+**What stays on FSx for ONTAP**: Images (TIFF), full PDFs, raw sensor logs. Accessed on-demand via FSx for ONTAP S3 AP or OpenSharing STS credential vending.
 
-### Three Ingestion Strategies
+### Choosing the Write Destination
 
-| Strategy | What goes to S3 | S3 Cost | UC Governance | Complexity |
-|----------|-----------------|:-------:|:---:|:---:|
-| **A. Selective ETL** (recommended) | Structured extraction only (metadata + measurements) | Minimal (~0.02% of source) | Full (Managed Delta) | Medium (ETL pipeline) |
-| **B. File-type filtering** | Only CSVs/Parquet synced via DataSync `--includes` | Moderate (target files only) | Full (COPY INTO → Delta) | Low (DataSync + SQL) |
-| **C. Full volume sync** | All files replicated | High (= source volume) | External Table (read-only) or selective COPY INTO | Lowest (DataSync only) |
+| If downstream consumer is... | Write to | Why |
+|------------------------------|----------|-----|
+| Athena / EMR / Glue (AWS native analytics) | **S3 Tables** (Iceberg) | Native integration, auto-compaction, no table management overhead |
+| Databricks UC (full governance needed) | **Standard S3 bucket** (Delta, UC Managed Table) | UC requires standard S3 for External Location / Managed Table |
+| Semantic search / RAG / similarity queries | **S3 Vectors** | Purpose-built for vector embeddings, integrates with Bedrock |
+| Both Databricks UC AND AWS native engines | **S3 Tables** + UC Foreign Iceberg | Write to S3 Tables (Iceberg); Databricks reads via Foreign Iceberg (Glue HMS Federation) |
+| Snowflake | **Standard S3 bucket** or **S3 Tables** | Snowflake reads via External Stage (standard S3) or Managed Iceberg (customer S3) |
+
+### Three Ingestion Strategies (Revised)
+
+| Strategy | Read from | Write to | Size on AWS storage | UC Governance | Complexity |
+|----------|-----------|----------|:------------------:|:---:|:---:|
+| **A. Selective ETL** (recommended) | FSx for ONTAP S3 AP | S3 Tables + S3 Vectors + Standard S3 (mixed) | Minimal (~0.03% of source) | Full (per destination) | Medium (ETL pipeline) |
+| **B. File-type filtering** | FSx for ONTAP NFS (via DataSync) | Standard S3 bucket | Moderate (target files only) | Full (COPY INTO → Delta on UC) | Low (DataSync + SQL) |
+| **C. Full volume sync** | FSx for ONTAP NFS (via DataSync) | Standard S3 bucket | High (= source volume) | External Table (read-only) or selective COPY INTO | Lowest (DataSync only) |
 
 ### Strategy A: Selective ETL Pipeline (Recommended)
 
 ```
 FSx for ONTAP (6 GB/day, all file types)
     │
-    ▼ Read via S3 AP (or OpenSharing STS credential vending)
+    ▼ Read via FSx for ONTAP S3 AP (or OpenSharing STS credential vending)
 ETL (Databricks Job / Glue / Lambda)
-    ├── CSV → parse → measurements table INSERT
-    ├── JSON → aggregate → sensor_summary table INSERT
-    ├── PDF → Bedrock AI → metadata table INSERT
-    └── TIFF → record reference URI only (no copy)
     │
-    ▼ Write (standard S3)
-UC Managed Delta Tables (~1 MB/day)
+    ├── CSV → parse → S3 Tables (Iceberg): measurements table
+    ├── JSON → aggregate → S3 Tables (Iceberg): sensor_summary table
+    ├── PDF → Bedrock AI → S3 Tables (Iceberg): metadata table
+    ├── PDF/images → Titan Embeddings → S3 Vectors: semantic index
+    └── TIFF → reference URI only recorded in metadata (no file copy)
+    │
+    ▼ (Optional) For Databricks UC consumers:
+Standard S3 bucket → UC Managed Delta Table (sensor aggregates)
+    or
+S3 Tables → Glue Catalog → UC Foreign Iceberg (zero additional copy)
 ```
 
-The source images and documents remain on FSx for ONTAP. The Delta tables contain **derived, structured, analytics-ready data** — not copies of the raw files.
+The source images and documents remain on FSx for ONTAP. AWS storage services hold only **derived, structured, analytics-ready data** — not copies of the raw files.
 
 ### Strategy B: File-Type Filtering with DataSync
+
+DataSync copies selected files from FSx for ONTAP NFS to a standard S3 bucket:
 
 ```bash
 # Sync only CSV and Parquet files (skip images, PDFs)
@@ -254,17 +284,17 @@ aws datasync create-task \
   --includes '[{"FilterType":"SIMPLE_PATTERN","Value":"*.csv"},{"FilterType":"SIMPLE_PATTERN","Value":"*.parquet"}]'
 ```
 
-Then in Databricks:
+Then in Databricks (reads from the standard S3 bucket, writes to UC Managed Delta):
 ```sql
 COPY INTO quality.measurements
-FROM 's3://sync-bucket/quality-inspection/'
+FROM 's3://<STANDARD-BUCKET>/quality-inspection/'
 FILEFORMAT = CSV
 PATTERN = '*/measurements.csv';
 ```
 
 ### Strategy C: Full Volume Sync (Simplest, Highest Cost)
 
-Appropriate only when analytics need access to all file types (e.g., image ML training). Even then, consider syncing to a dedicated S3 prefix and creating External Tables (read-only) rather than converting everything to Delta.
+DataSync copies all files from FSx for ONTAP NFS to a standard S3 bucket. Appropriate only when analytics need access to all file types (e.g., image ML training). Even then, create External Tables (read-only) rather than converting everything to Delta.
 
 ---
 
