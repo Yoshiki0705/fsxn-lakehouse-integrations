@@ -6,6 +6,19 @@
 
 ---
 
+## ここから始める — 役割に合ったパスを選択
+
+| あなたの役割 | まず読むドキュメント | 所要時間 |
+|------------|-------------------|:-------:|
+| 📊 **ビジネスリーダー / 営業 / アカウントマネージャー** | [**わかりやすいビジネスガイド**](docs/ja/quickstart-business-guide.md) — 専門用語なし、何ができるか、いくらかかるか | 5分 |
+| 🏭 **業界ソリューションアーキテクト** | [**業界別ソリューションカタログ**](docs/ja/industry-solution-catalog.md) — 26 業界、ユースケース別推奨パターン | 20分 |
+| 🔧 **技術リード / データエンジニア** | [**UC 接続総合ガイド**](docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) — フルアーキテクチャ、全パス、制約 | 30分 |
+| 🚀 **実装パートナー / SI** | [**PoC 実行ガイド**](docs/implementation-guide/poc-execution-guide-ja.md) — ステップバイステップチェックリスト | 15分 |
+| 📐 **ソリューションアーキテクト** | [**アーキテクチャ比較**](docs/adoption-guide/architecture-comparison-ja.md) — 判断フレームワーク、トレードオフ | 15分 |
+| 🔍 **コストを評価したい** | [**コスト見積もり**](docs/adoption-guide/cost-estimation-ja.md) — コンポーネント別内訳、スケーリング数式 | 10分 |
+
+---
+
 ## 概要
 
 **既存のエンタープライズファイル資産を、NFS/SMB ワークロードを中断することなく、分析・AI 対応データに変換します。**
@@ -31,6 +44,9 @@ FSx for ONTAP S3 Access Points により、データ移動なしでファイル�
 
 ## コア技術機能
 
+<details>
+<summary>ONTAP 機能と Lakehouse での利点（クリックで展開）</summary>
+
 | ONTAP 機能 | Lakehouse での利点 |
 |------------|-------------------|
 | 重複排除 & 圧縮 | 類似データセットのストレージコスト削減 |
@@ -40,10 +56,14 @@ FSx for ONTAP S3 Access Points により、データ移動なしでファイル�
 | FabricPool 階層化 | コールドデータの S3 への自動オフロード |
 | マルチプロトコル (NFS/SMB/iSCSI/S3) | あらゆるワークロードからの統一アクセス |
 
+</details>
+
 ---
 
 ## アーキテクチャパターン
 
+<details>
+<summary>5 つのアーキテクチャパターン（クリックで展開）</summary>
 ### パターン A: 読み取り専用分析
 
 ```
@@ -92,10 +112,14 @@ FSx for ONTAP → OpenSharing Server (共有 + アクセス制御)
 - Presigned-URL 共有モデルが現在の Databricks S3 AP ARN 制限をバイパスする可能性（仮説検証中）
 - [OpenSharing 統合分析](docs/ja/opensharing-integration-analysis.md) を参照
 
+</details>
+
 ---
 
 ## 対応プラットフォーム
 
+<details>
+<summary>プラットフォーム検証ステータス（クリックで展開）</summary>
 | プラットフォーム | 検証ステータス | パターン | 備考 |
 |----------------|:---:|---------|------|
 | [AWS Athena](integrations/athena/) | ✅ セキュリティ検証済み | Glue Data Catalog + Serverless | 読み取り専用。[ベンチマーク: 54.8 MB/s、5M 行 2 秒](verification-pack/athena-parquet-read/) |
@@ -116,9 +140,14 @@ FSx for ONTAP → OpenSharing Server (共有 + アクセス制御)
 
 > **主要な発見**: AWS ネイティブサービス（Athena、Glue、EMR、Bedrock）は正常に動作。サードパーティプラットフォームは明示的な S3 AP ARN 設定が必要: Snowflake は `AWS_ACCESS_POINT_ARN`（完全解決済み）、Databricks は `access_point` フィールド（部分解決）。詳細は [互換性マトリクス](docs/ja/compatibility-matrix.md) を参照。
 
+</details>
+
 ---
 
 ## エンジン選定ガイド
+
+<details>
+<summary>ユースケース別の推奨エンジン（クリックで展開）</summary>
 
 | 主要な質問 | 推奨エンジン | アクセスパターン | ガバナンス | AI 対応度 | PoC コスト (1日) |
 |---|---|---|---|---|---|
@@ -166,9 +195,14 @@ FSx for ONTAP (ソース) → S3 AP / DataSync → S3 → Snowflake Managed Iceb
 | [ヘルスケア](use-cases/healthcare-research/) | 研究データ | パターン B (マネージドテーブル) | 匿名化パイプライン、VPC-origin AP、読み取り専用、合成テストデータのみ、BAA |
 | [メディア](use-cases/media-asset-analytics/) | アセット分析 | パターン A (読み取り専用) | 大ファイル対応 (5 GB アップロード制限)、CloudFront 連携 |
 
+</details>
+
 ---
 
 ## クイックスタート
+
+<details>
+<summary>前提条件とデプロイコマンド（クリックで展開）</summary>
 
 ### 前提条件
 
@@ -207,9 +241,14 @@ python shared/scripts/validate-access.py \
   --region ${AWS_REGION}
 ```
 
+</details>
+
 ---
 
 ## リポジトリ構造
+
+<details>
+<summary>ディレクトリ構成（クリックで展開）</summary>
 
 ```
 fsxn-lakehouse-integrations/
@@ -237,9 +276,14 @@ fsxn-lakehouse-integrations/
 └── .github/workflows/           # CI/CD
 ```
 
+</details>
+
 ---
 
 ## 技術スタック
+
+<details>
+<summary>言語、フレームワーク、テスト済みバージョン（クリックで展開）</summary>
 
 - **インフラストラクチャ**: CloudFormation (YAML) + Terraform (Databricks/Snowflake)
 - **スクリプト**: Python 3.12, Bash
@@ -260,9 +304,14 @@ fsxn-lakehouse-integrations/
 | Amazon Bedrock | Claude 3 Haiku, Titan Embeddings V2 | ビジョン分類 + 1024次元埋め込み |
 | PyArrow | 17.0+ (テスト済み 24.0.0) | Arrow ベース Iceberg 書き込み |
 
+</details>
+
 ---
 
 ## ドキュメント
+
+<details>
+<summary>全ドキュメント索引（クリックで展開）</summary>
 
 | ドキュメント | リンク |
 |------------|------|
@@ -292,9 +341,14 @@ fsxn-lakehouse-integrations/
 | **実装ガイド** | |
 | PoC 実行ガイド | [PoC 実行ガイド](docs/implementation-guide/poc-execution-guide-ja.md) |
 
+</details>
+
 ---
 
 ## ブログシリーズ
+
+<details>
+<summary>公開済み・進行中のブログシリーズ（クリックで展開）</summary>
 
 ### シリーズ 1: 「FSx for ONTAP S3 Access Points × Lakehouse Deep Dive」（公開済み）
 
@@ -324,6 +378,8 @@ FSx for ONTAP 上の非構造化ファイルを S3 にコピーせず即座に�
 **主要結果**: 40 ファイルを 30 秒でカタログ化、AI 分類 $0.01/ファイル、Athena クエリ < 2 秒、スケールトゥゼロベクトル検索（アイドル $0）、フルデモ 47 秒 $0.07。
 
 参照: [アーキテクチャ](docs/ja/iceberg-metadata-catalog.md) | [PoC 結果](integrations/iceberg-metadata-catalog/docs/poc-results-summary.md) | [デモガイド](integrations/iceberg-metadata-catalog/demo/docs/demo-guide.md)
+
+</details>
 
 ---
 
