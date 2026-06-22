@@ -266,6 +266,7 @@ fsxn-lakehouse-integrations/
 
 | ドキュメント | リンク |
 |------------|------|
+| **最初に読む（非技術者向け）** | [**わかりやすいビジネスガイド**](docs/ja/quickstart-business-guide.md) |
 | アーキテクチャ | [アーキテクチャ](docs/ja/architecture.md) |
 | Getting Started | [クイックスタート](docs/ja/getting-started.md) |
 | リージョン設計ガイド | [リージョン設計ガイド](docs/ja/region-design-guide.md) |

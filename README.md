@@ -268,6 +268,7 @@ fsxn-lakehouse-integrations/
 
 | Document | Link |
 |----------|------|
+| **Start Here (Non-Technical)** | [**Plain-Language Business Guide**](docs/en/quickstart-business-guide.md) |
 | Architecture | [Architecture](docs/en/architecture.md) |
 | Getting Started | [Getting Started](docs/en/getting-started.md) |
 | Region Design Guide | [Region Design Guide](docs/en/region-design-guide.md) |
