@@ -159,7 +159,7 @@ graph TD
 | 8 | [OpenSharing 統合分析](./opensharing-integration-analysis.md) | DAIS 2026 新機能の影響評価 | 15分 |
 | 9 | [パートナーオファリング](./partner-offering.md) | SI/ISV 向けパッケージ設計 | 10分 |
 
-**追加参照**: vendor-comparison（代替比較が必要な場合）、region-design-guide（グローバル展開時）
+**追加参照**: vendor-comparison（代替比較が必要な場合）、region-design-guide（グローバル展開時）、[アーキテクチャ比較](../adoption-guide/architecture-comparison-ja.md)（アプローチ選定）、[コスト見積もり](../adoption-guide/cost-estimation-ja.md)（キャパシティプランニング）
 
 ---
 
@@ -208,7 +208,8 @@ graph TD
 | 3 | [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) | 技術的な全パスの理解 | 30分 |
 | 4 | [互換性マトリクス](./compatibility-matrix.md) | 提案時の制約事項の把握 | 15分 |
 | 5 | [DataSync → S3 ガイド](./datasync-to-s3-guide.md) | 実装手順の理解 | 20分 |
-| 6 | [リージョン設計ガイド](./region-design-guide.md) | グローバル展開設計 | 10分 |
+| 6 | [PoC 実行ガイド](../implementation-guide/poc-execution-guide-ja.md) | PoC チェックリストとトラブルシューティング | 15分 |
+| 7 | [リージョン設計ガイド](./region-design-guide.md) | グローバル展開設計 | 10分 |
 
 ---
 
@@ -261,6 +262,11 @@ graph TD
 | **ビジネス** | [Industry Solution Catalog](./industry-solution-catalog.md) | 業界別ソリューション |
 | | [Partner Offering](./partner-offering.md) | パートナー向けパッケージ |
 | | [Cross-repo Strategy](./cross-repo-integration-strategy.md) | リポジトリ間連携 |
+| **採用ガイド** | [テクニカルオーバービュー](../adoption-guide/technical-overview-ja.md) | アーキテクチャとメトリクス概要 |
+| | [アーキテクチャ比較](../adoption-guide/architecture-comparison-ja.md) | アプローチ選定フレームワーク |
+| | [テクニカル FAQ](../adoption-guide/technical-faq-ja.md) | 制約と統合に関する Q&A |
+| | [コスト見積もり](../adoption-guide/cost-estimation-ja.md) | コンポーネント別コスト計画 |
+| | [PoC 実行ガイド](../implementation-guide/poc-execution-guide-ja.md) | PoC のステップバイステップチェックリスト |
 
 ### ハブドキュメント（他の多くのドキュメントから参照される中心ドキュメント）
 

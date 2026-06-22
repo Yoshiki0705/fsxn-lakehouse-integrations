@@ -295,6 +295,13 @@ fsxn-lakehouse-integrations/
 | S3 Annotations Governance | [S3 Annotations 評価](docs/ja/s3-annotations-governance-evaluation.md) | [S3 Annotations Evaluation](docs/en/s3-annotations-governance-evaluation.md) |
 | AWS Context vs Unity Catalog | [AWS Context vs UC](docs/ja/aws-context-vs-unity-catalog.md) | [AWS Context vs UC](docs/en/aws-context-vs-unity-catalog.md) |
 | Cross-Repo Integration Strategy | [クロスリポ連携戦略](docs/ja/cross-repo-integration-strategy.md) | [Cross-Repo Strategy](docs/en/cross-repo-integration-strategy.md) |
+| **Adoption Guide** | | |
+| Technical Overview | [テクニカルオーバービュー](docs/adoption-guide/technical-overview-ja.md) | [Technical Overview](docs/adoption-guide/technical-overview.md) |
+| Architecture Comparison | [アーキテクチャ比較](docs/adoption-guide/architecture-comparison-ja.md) | [Architecture Comparison](docs/adoption-guide/architecture-comparison.md) |
+| Technical FAQ | [テクニカル FAQ](docs/adoption-guide/technical-faq-ja.md) | [Technical FAQ](docs/adoption-guide/technical-faq.md) |
+| Cost Estimation | [コスト見積もり](docs/adoption-guide/cost-estimation-ja.md) | [Cost Estimation](docs/adoption-guide/cost-estimation.md) |
+| **Implementation Guide** | | |
+| PoC Execution Guide | [PoC 実行ガイド](docs/implementation-guide/poc-execution-guide-ja.md) | [PoC Execution Guide](docs/implementation-guide/poc-execution-guide.md) |
 
 ---
 

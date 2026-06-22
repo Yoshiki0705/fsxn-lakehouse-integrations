@@ -159,7 +159,7 @@ graph TD
 | 8 | [OpenSharing Integration Analysis](./opensharing-integration-analysis.md) | DAIS 2026 new feature impact | 15 min |
 | 9 | [Partner Offering](./partner-offering.md) | SI/ISV package design | 10 min |
 
-**Also see**: vendor-comparison (when alternatives needed), region-design-guide (global deployments)
+**Also see**: vendor-comparison (when alternatives needed), region-design-guide (global deployments), [Architecture Comparison](../adoption-guide/architecture-comparison.md) (approach selection), [Cost Estimation](../adoption-guide/cost-estimation.md) (capacity planning)
 
 ---
 
@@ -208,7 +208,8 @@ graph TD
 | 3 | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | Technical understanding of all paths | 30 min |
 | 4 | [Compatibility Matrix](./compatibility-matrix.md) | Constraint awareness for proposals | 15 min |
 | 5 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | Implementation procedure understanding | 20 min |
-| 6 | [Region Design Guide](./region-design-guide.md) | Global deployment design | 10 min |
+| 6 | [PoC Execution Guide](../implementation-guide/poc-execution-guide.md) | PoC checklist and troubleshooting | 15 min |
+| 7 | [Region Design Guide](./region-design-guide.md) | Global deployment design | 10 min |
 
 ---
 
@@ -261,6 +262,11 @@ graph TD
 | **Business** | [Industry Solution Catalog](./industry-solution-catalog.md) | Industry solutions |
 | | [Partner Offering](./partner-offering.md) | Partner packages |
 | | [Cross-repo Strategy](./cross-repo-integration-strategy.md) | Cross-repository integration |
+| **Adoption Guide** | [Technical Overview](../adoption-guide/technical-overview.md) | Architecture and metrics summary |
+| | [Architecture Comparison](../adoption-guide/architecture-comparison.md) | Approach selection framework |
+| | [Technical FAQ](../adoption-guide/technical-faq.md) | Limitations and integration Q&A |
+| | [Cost Estimation](../adoption-guide/cost-estimation.md) | Component-level cost planning |
+| | [PoC Execution Guide](../implementation-guide/poc-execution-guide.md) | Step-by-step PoC checklist |
 
 ### Hub Documents (central docs referenced by many others)
 
