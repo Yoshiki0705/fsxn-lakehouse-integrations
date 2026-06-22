@@ -187,13 +187,13 @@ graph TD
 
 | Order | Document | Why to read | Time |
 |:---:|---|---|:---:|
-| 1 | [Industry Solution Catalog](./industry-solution-catalog.md) | Business value and target industries | 15 min |
-| 2 | [Architecture](./architecture.md) | Executive summary only | 5 min |
-| 3 | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | Executive summary + phased adoption steps | 10 min |
-| 4 | [Partner Offering](./partner-offering.md) | Market positioning | 10 min |
+| 1 | [**Plain-Language Business Guide**](./quickstart-business-guide.md) | The complete picture in non-technical language | 5 min |
+| 2 | [Industry Solution Catalog](./industry-solution-catalog.md) | Business value and target industries | 15 min |
+| 3 | [Architecture](./architecture.md) | Executive summary only | 5 min |
+| 4 | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | Executive summary + phased adoption steps | 10 min |
 | 5 | [KPI and Validation](./kpi-and-validation.md) | Success metrics and progress | 10 min |
 
-**Reading tip**: Read only the "Executive Summary" and "Phased Implementation Steps" sections of each document to get the full picture in under 30 minutes.
+**Reading tip**: Start with the Business Guide — it covers everything a decision-maker needs in 5 minutes. The other documents are for deeper dives on specific topics.
 
 ---
 
