@@ -1,14 +1,14 @@
-🌐 **English** | [日本語](./customer-faq-ja.md)
+🌐 **English** | [日本語](./technical-faq-ja.md)
 
-# Customer FAQ: FSx for ONTAP AI Metadata Catalog
+# Technical FAQ: FSx for ONTAP AI Metadata Catalog
 
-> Honest answers including limitations and constraints.
+> Factual answers including limitations and constraints.
 
 ---
 
 ## General
 
-### Q: Do I need to copy my files?
+### Q: Do files need to be copied?
 
 **A:** No. The solution uses FSx for ONTAP's S3 Access Point to read file content in-place (zero-copy storage). Files never leave the FSx for ONTAP volume. Only extracted metadata is stored externally in S3 Tables.
 
@@ -16,29 +16,31 @@
 
 ---
 
-### Q: What about security and compliance?
+### Q: What security controls are in place?
 
 **A:** Files remain on FSx for ONTAP with existing access controls (NFS/SMB permissions). Only metadata flows through the AI pipeline. Governance is enforced through:
 - **AWS Lake Formation**: Fine-grained access control on metadata tables
 - **AWS CloudTrail**: Full audit trail of all API calls
 - **IAM Policies**: Least-privilege access to S3 Access Points and Bedrock
-- **VPC Private Endpoints**: All traffic stays within your VPC
+- **VPC Private Endpoints**: All traffic stays within the VPC
 
 ---
 
-### Q: What's the cost?
+### Q: What is the approximate cost?
 
 **A:** Approximately **$114/month** for 100,000 files with 1,000 daily changes (assuming 100KB–1MB average file size).
 
 File-size-dependent Bedrock costs:
-| File Size | Cost per File |
-|-----------|:------------:|
+| File Size | Approx. Cost per File |
+|-----------|:--------------------:|
 | 1 KB text | ~$0.01 |
 | 100 KB document | ~$0.05 |
 | 1 MB PDF | ~$0.07 |
 | 10 MB image | ~$0.15 |
 
-Actual cost depends on prompt complexity and output tokens. No upfront commitment — costs scale with file activity. Idle cost: ~$5/month.
+Actual cost depends on prompt complexity and output tokens. Costs scale with file activity. Idle cost: ~$5/month.
+
+See [Cost Estimation](./cost-estimation.md) for full breakdown and formulas.
 
 ---
 
@@ -52,19 +54,19 @@ Actual cost depends on prompt complexity and output tokens. No upfront commitmen
 - Domain terminology (specialized vocabulary may need prompt tuning)
 - File quality (poor scans, handwritten notes reduce accuracy)
 
-We recommend a 1–2 week PoC with your actual files to validate accuracy for your environment.
+A PoC with actual target files is recommended to validate accuracy for a specific environment.
 
 ---
 
 ## Limitations & Constraints
 
-### Q: What DOESN'T work with this solution?
+### Q: What does NOT work with this solution?
 
-**A:** Key constraints to be aware of:
+**A:** Key constraints:
 
 | Limitation | Impact |
 |-----------|--------|
-| S3 AP is used read-only in this pipeline (writes are supported) | Analytics tools cannot write results back to FSx for ONTAP volumes |
+| S3 AP is read-only in this pipeline (writes supported at API level) | Analytics tools cannot write results back to FSx for ONTAP volumes |
 | No S3 Event Notifications via S3 AP | Cannot auto-trigger Snowpipe, EventBridge rules, or bucket notifications |
 | FPolicy adds latency | ~1–5ms per file operation on NAS clients |
 | Lambda ephemeral processing | File content passes through Lambda memory (not truly "zero data movement" at the processing layer) |
@@ -76,7 +78,7 @@ We recommend a 1–2 week PoC with your actual files to validate accuracy for yo
 
 ### Q: Can analytics tools write back to FSx for ONTAP through S3 Access Point?
 
-**A:** No. S3 Access Point on FSx for ONTAP is **read-only**. If your analytics workflow requires writing results back to storage, those results must be written to a separate S3 bucket or other storage. The source FSx for ONTAP volume is not writable via S3 AP.
+**A:** No. S3 Access Point on FSx for ONTAP is used **read-only in this pipeline**. If an analytics workflow requires writing results back, those results must be written to a separate S3 bucket or other storage.
 
 ---
 
@@ -88,7 +90,7 @@ FPolicy can be scoped to specific volumes/shares and event types to minimize imp
 
 ---
 
-### Q: Can I trigger Snowpipe or EventBridge from S3 Access Point?
+### Q: Can Snowpipe or EventBridge be triggered from S3 Access Point?
 
 **A:** No. S3 Access Point on FSx for ONTAP does **not support S3 Event Notifications**. This means:
 - Snowpipe cannot be auto-triggered by file changes via S3 AP
@@ -101,7 +103,7 @@ The workaround is FPolicy → Lambda → direct API call (to Snowpipe REST API, 
 
 ## Platform Integration
 
-### Q: Can I use Snowflake?
+### Q: Can Snowflake be used?
 
 **A:**
 - **Cortex File AI**: Verified ✅ — can process files via presigned URLs
@@ -110,7 +112,7 @@ The workaround is FPolicy → Lambda → direct API call (to Snowpipe REST API, 
 
 ---
 
-### Q: Can I use Databricks?
+### Q: Can Databricks be used?
 
 **A:**
 - **Direct S3 Tables access via Foreign Catalog**: Under evaluation. Databricks Foreign Catalog support for S3 Tables is still evolving (as of 2026-06).
@@ -120,7 +122,7 @@ The workaround is FPolicy → Lambda → direct API call (to Snowpipe REST API, 
 
 ### Q: What about Amazon Athena performance?
 
-**A:** Athena queries against S3 Tables Iceberg work well for analytics workloads. Note:
+**A:** Athena queries against S3 Tables Iceberg work well for analytics workloads:
 - **Cold start**: First query after idle period takes 3–5 seconds additional latency
 - **Subsequent queries**: Sub-second to a few seconds depending on data volume
 - **Partition pruning**: Effective when queries filter on partitioned columns (e.g., scan_date)
@@ -129,7 +131,7 @@ The workaround is FPolicy → Lambda → direct API call (to Snowpipe REST API, 
 
 ### Q: What about OpenSearch Serverless performance?
 
-**A:** OpenSearch Serverless provides vector + keyword search. Note:
+**A:** OpenSearch Serverless provides vector + keyword search:
 - **Warm-up time**: After extended idle, OCU allocation may take 10–30 seconds
 - **Once warm**: Sub-second response for both vector similarity and keyword searches
 - **Scale-to-zero**: Minimizes cost during idle periods but introduces warm-up latency
@@ -145,9 +147,7 @@ The workaround is FPolicy → Lambda → direct API call (to Snowpipe REST API, 
 - **Amazon Titan Embeddings**: Vector embeddings for semantic similarity search
 - **Amazon Comprehend**: PII detection (names, addresses, phone numbers, etc.)
 
-All models run within your AWS account. No data leaves your account or region.
-
-**Accuracy note:** Bedrock classification accuracy varies by file type and language. PoC accuracy on test dataset; production accuracy depends on your specific file mix.
+All models run within the AWS account. No data leaves the account or region.
 
 ---
 
@@ -163,36 +163,33 @@ All models run within your AWS account. No data leaves your account or region.
 ### Q: Can on-premises ONTAP work too?
 
 **A:** Yes. Two paths:
-1. **SnapMirror → FSx for ONTAP**: Mirror on-prem volumes to FSx, then apply AI pipeline to the FSx for ONTAP copy. Maintains zero-copy storage advantage.
+1. **SnapMirror → FSx for ONTAP**: Mirror on-prem volumes to FSx for ONTAP, then apply AI pipeline to the FSx for ONTAP copy. Maintains zero-copy storage advantage.
 2. **AWS DataSync**: Direct file transfer from on-prem to S3 for processing.
 
 ---
 
-## ROI & Business Case
+## PoC Validation
 
-### Q: What's the ROI?
+### Q: What does a PoC involve?
 
-**A:** Using conservative estimates (50% adoption, 10 min/day search reduction, ¥4,000/hr rate):
-- **Monthly net benefit**: ~$3,500 (100K files, 50 users)
-- **Payback period**: ~10 days
-- **Annual ROI**: ~3,000%
+**A:** Typically 1–2 weeks for full validation:
+- Week 1: Infrastructure deploy + AI pipeline configuration + initial classification
+- Week 2: Accuracy tuning + dashboard setup + acceptance testing
 
-These are conservative figures. See [ROI Calculator](./roi-calculator.md) for moderate and optimistic scenarios, plus all assumptions listed.
+A minimal demonstration runs in **30 minutes** using CloudFormation and sample data.
 
-**Key assumptions:**
-- Users actually adopt the search interface (change management required)
-- Freed search time is productively reused
-- Classification accuracy is sufficient for the use case
+See [PoC Execution Guide](../implementation-guide/poc-execution-guide.md) for the full checklist.
 
 ---
 
-### Q: How long does a PoC take?
+## Related Documents
 
-**A:** 1–2 weeks for full validation:
-- Week 1: Infrastructure deploy + AI pipeline configuration + initial classification
-- Week 2: Accuracy tuning + dashboard setup + user acceptance testing
-
-A minimal "Quick Win" demo runs in **30 minutes** using CloudFormation and sample data.
+| Document | Content |
+|----------|---------|
+| [Technical Overview](./technical-overview.md) | Architecture and verified metrics |
+| [Architecture Comparison](./architecture-comparison.md) | Decision framework for choosing the right approach |
+| [Cost Estimation](./cost-estimation.md) | Component-level cost breakdown and scaling formulas |
+| [PoC Execution Guide](../implementation-guide/poc-execution-guide.md) | Step-by-step implementation checklist |
 
 ---
 

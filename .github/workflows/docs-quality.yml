@@ -57,11 +57,11 @@ jobs:
               MISSING=$((MISSING+1))
             fi
           done
-          # Check sales enablement
-          for f in docs/sales-enablement/*.md; do
+          # Check adoption guide
+          for f in docs/adoption-guide/*.md; do
             if [[ "$f" == *"-ja.md" ]]; then continue; fi
             BASE=$(basename "$f" .md)
-            JA="docs/sales-enablement/${BASE}-ja.md"
+            JA="docs/adoption-guide/${BASE}-ja.md"
             if [[ ! -f "$JA" ]] && [[ "$BASE" != "README" ]]; then
               echo "::warning::Missing JA pair: $JA"
               MISSING=$((MISSING+1))
