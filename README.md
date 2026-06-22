@@ -6,6 +6,19 @@
 
 ---
 
+## Start Here — Choose Your Path
+
+| Your role | Start with | Time |
+|-----------|-----------|:----:|
+| 📊 **Business leader / Sales / Account manager** | [**Plain-Language Business Guide**](docs/en/quickstart-business-guide.md) — No jargon, what it does, what it costs | 5 min |
+| 🏭 **Industry solution architect** | [**Industry Solution Catalog**](docs/en/industry-solution-catalog.md) — 26 industries, recommended patterns per use case | 20 min |
+| 🔧 **Technical lead / Data engineer** | [**UC Connection Guide**](docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) — Full architecture, all paths, constraints | 30 min |
+| 🚀 **Implementation partner / SI** | [**PoC Execution Guide**](docs/implementation-guide/poc-execution-guide.md) — Step-by-step checklist, troubleshooting | 15 min |
+| 📐 **Solutions architect** | [**Architecture Comparison**](docs/adoption-guide/architecture-comparison.md) — Decision framework, trade-offs | 15 min |
+| 🔍 **Evaluating cost** | [**Cost Estimation**](docs/adoption-guide/cost-estimation.md) — Component breakdown, scaling formulas | 10 min |
+
+---
+
 ## Overview
 
 **Turn existing enterprise file assets into analytics- and AI-ready data without disrupting NFS/SMB workloads.**
@@ -31,6 +44,9 @@ FSx for ONTAP S3 Access Points enable S3 API access to file data without data mo
 
 ## Core Technical Capabilities
 
+<details>
+<summary>ONTAP capabilities and their lakehouse benefits (click to expand)</summary>
+
 | ONTAP Capability | Lakehouse Benefit |
 |-----------------|-------------------|
 | Deduplication & Compression | Storage cost reduction for similar datasets |
@@ -40,9 +56,14 @@ FSx for ONTAP S3 Access Points enable S3 API access to file data without data mo
 | FabricPool Tiering | Automatic cold data offload to S3 |
 | Multi-protocol (NFS/SMB/iSCSI/S3) | Unified access from any workload |
 
+</details>
+
 ---
 
 ## Architecture Patterns
+
+<details>
+<summary>5 architecture patterns (click to expand)</summary>
 
 ### Pattern A: Read-Only Analytics
 
@@ -92,10 +113,14 @@ FSx for ONTAP → OpenSharing Server (sharing + access control)
 - Presigned-URL sharing model may bypass the current Databricks S3 AP ARN limitation (hypothesis under validation)
 - See [OpenSharing Integration Analysis](docs/en/opensharing-integration-analysis.md)
 
+</details>
+
 ---
 
 ## Supported Integrations
 
+<details>
+<summary>Platform verification status (click to expand)</summary>
 | Platform | Verification Status | Pattern | Notes |
 |----------|:---:|---------|-------|
 | [AWS Athena](integrations/athena/) | ✅ Security Verified | Glue Data Catalog + Serverless | Read-only. [Benchmark: 54.8 MB/s peak, 5M rows in 2s](verification-pack/athena-parquet-read/) |
@@ -118,9 +143,14 @@ FSx for ONTAP → OpenSharing Server (sharing + access control)
 
 > **Note**: The table above shows FSx for ONTAP S3 Access Point integration status (general). For the S3 Tables / Iceberg Metadata Catalog cross-platform status (Databricks Spark, Snowflake Glue REST, etc.), see [integrations/iceberg-metadata-catalog/README.md](integrations/iceberg-metadata-catalog/README.md#cross-platform-status-tested-2026-05-31-updated-2026-06-01).
 
+</details>
+
 ---
 
 ## Engine Selection Guide
+
+<details>
+<summary>Which engine for which use case? (click to expand)</summary>
 
 | Primary Question | Recommended Engine | Access Pattern | Governance | AI Readiness | PoC Cost (1 day) |
 |---|---|---|---|---|---|
@@ -157,6 +187,8 @@ FSx for ONTAP (source) → S3 AP / DataSync → S3 → Snowflake Managed Iceberg
 
 No vendor lock-in. Data ownership retained. Each platform applies its own governance.
 
+</details>
+
 ---
 
 ## Use Cases
@@ -171,6 +203,9 @@ No vendor lock-in. Data ownership retained. Each platform applies its own govern
 ---
 
 ## Quick Start
+
+<details>
+<summary>Prerequisites and deploy commands (click to expand)</summary>
 
 ### Prerequisites
 
@@ -209,10 +244,14 @@ python shared/scripts/validate-access.py \
   --region ${AWS_REGION}
 ```
 
+</details>
+
 ---
 
 ## Repository Structure
 
+<details>
+<summary>Directory layout (click to expand)</summary>
 ```
 fsxn-lakehouse-integrations/
 ├── README.md                    # This file (English)
@@ -239,10 +278,14 @@ fsxn-lakehouse-integrations/
 └── .github/workflows/           # CI/CD
 ```
 
+</details>
+
 ---
 
 ## Technology Stack
 
+<details>
+<summary>Languages, frameworks, and tested versions (click to expand)</summary>
 - **Infrastructure**: CloudFormation (YAML) + Terraform (Databricks/Snowflake)
 - **Scripts**: Python 3.12, Bash
 - **Notebooks**: Jupyter / Databricks Notebooks
@@ -262,10 +305,14 @@ fsxn-lakehouse-integrations/
 | Amazon Bedrock | Claude 3 Haiku, Titan Embeddings V2 | Vision classification + 1024-dim embeddings |
 | PyArrow | 17.0+ (tested 24.0.0) | Arrow-based Iceberg writes |
 
+</details>
+
 ---
 
 ## Documentation
 
+<details>
+<summary>Full document index (click to expand)</summary>
 | Document | Link |
 |----------|------|
 | **Start Here (Non-Technical)** | [**Plain-Language Business Guide**](docs/en/quickstart-business-guide.md) |
@@ -294,10 +341,14 @@ fsxn-lakehouse-integrations/
 | **Implementation Guide** | |
 | PoC Execution Guide | [PoC Execution Guide](docs/implementation-guide/poc-execution-guide.md) |
 
+</details>
+
 ---
 
 ## Blog Series
 
+<details>
+<summary>Published and in-progress blog series (click to expand)</summary>
 ### Series 1: "FSx for ONTAP S3 Access Points × Lakehouse Deep Dive" (Published)
 
 A 7-part validation series on dev.to:
@@ -326,6 +377,8 @@ AI-powered metadata catalog that makes unstructured files on FSx for ONTAP insta
 **Key results**: 40 files cataloged in 30s, AI classification at $0.01/file, Athena queries < 2s, vector search with scale-to-zero ($0 idle), full demo in 47 seconds for $0.07.
 
 See: [Architecture](docs/en/iceberg-metadata-catalog.md) | [PoC Results](integrations/iceberg-metadata-catalog/docs/poc-results-summary.md) | [Demo Guide](integrations/iceberg-metadata-catalog/demo/docs/demo-guide.md)
+
+</details>
 
 ---
 
