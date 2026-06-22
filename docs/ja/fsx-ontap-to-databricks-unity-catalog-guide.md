@@ -125,9 +125,9 @@ UC Volume の要件:
 
 | パス | RPO（データ鮮度） | スループット | UC ガバナンス | データコピー |
 |------|------------------|-------------|--------------|-------------|
-| DataSync → S3 → UC | 5 分〜24 時間（スケジュール依存） | 高（DataSync 最適化） | ✅ フル | 要（S3 に複製） |
-| Kafka → SS → UC | 秒〜10 秒（ストリーミング遅延） | 中〜高（パーティション並列） | ✅ フル | 要（Delta テーブル化） |
-| Glue/EMR ETL → UC | 分〜時間（ジョブスケジュール） | 高（Spark 分散） | ✅ フル | 要（S3 に出力） |
+| DataSync → S3 → UC | 5 分〜24 時間（スケジュール依存） | 高（DataSync 最適化） | ✅ フル | 選択的（構造化サブセットのみ S3 へ; [戦略詳細](#コピー対象と残留データ具体例) 参照） |
+| Kafka → SS → UC | 秒〜10 秒（ストリーミング遅延） | 中〜高（パーティション並列） | ✅ フル | イベント単位（ストリームレコード → Delta） |
+| Glue/EMR ETL → UC | 分〜時間（ジョブスケジュール） | 高（Spark 分散） | ✅ フル | ETL 出力のみ（変換済みデータを S3 へ） |
 | Foreign Iceberg | ニアリアルタイム（REFRESH 依存） | 読み取り専用 | ✅ 読み取り | 最小（メタデータのみ） |
 | Athena + S3 AP (UC 外) | リアルタイム（S3 AP 直接読み取り） | 中 | ❌ AWS 側のみ | 不要（ゼロコピー） |
 | boto3 PoC | リアルタイム | 低（ドライバーのみ） | ❌ なし | 不要 |
@@ -185,6 +185,86 @@ FSx for ONTAP
 | **音声 (WAV/MP3)** | ✅（Volume 登録） | — | ✅（BinaryFile） | — | ✅（ガバナンスなし） |
 
 **凡例**: ✅ = 動作確認済みまたは公式サポート / ⚠️ = 制約あり / — = 非該当
+
+---
+
+## コピー対象と残留データ：具体例
+
+> 「DataSync → S3 → UC」は FSx for ONTAP ボリューム全体を S3 に複製するという意味ではない。実際にコピーされるのは**分析に必要な構造化サブセット**のみであり、通常はソースボリュームの 1% 未満。
+
+### 例: 製造業の品質検査（200 ロット/日）
+
+**FSx for ONTAP 上のソースデータ**（NFS/SMB 経由で工場システムがアクセス）:
+
+```
+/quality-inspection/2026-06-20/
+├── lot-A001-report.pdf          (2.3 MB)   ← 検査レポート PDF
+├── lot-A001-image-front.tiff    (15 MB)    ← 外観検査画像
+├── lot-A001-image-back.tiff     (14 MB)    ← 外観検査画像
+├── lot-A001-measurements.csv    (48 KB)    ← 寸法測定値
+└── lot-A001-sensor-log.json     (120 KB)   ← 製造時センサーログ
+    (× 200 ロット/日 ≈ 6 GB/日、FSx for ONTAP 上合計)
+```
+
+**UC Delta テーブルに書き込まれるもの（S3 上）**:
+
+| Delta テーブル | 内容 | 行数/日 | S3 サイズ/日 | ソース |
+|-------------|------|:------:|:----------:|--------|
+| `quality.inspection_metadata` | AI 分類済みメタデータ（ロット単位） | 200 | ~100 KB | PDF → Bedrock AI 抽出 |
+| `quality.measurements` | 測定ポイント別の寸法値 | 4,000 | ~800 KB | CSV パース |
+| `quality.sensor_summary` | センサー統計値（ロット単位集計） | 200 | ~50 KB | JSON 集計 |
+
+**S3 合計: ~1 MB/日**（Delta テーブル） — **ソース 6 GB/日 の 0.017%**
+
+**FSx for ONTAP に残るもの**: 画像（TIFF）、完全な PDF、生センサーログ。ドリルダウンが必要な場合に S3 AP または OpenSharing でオンデマンドアクセス。
+
+### 3 つのインジェスト戦略
+
+| 戦略 | S3 に送るもの | S3 コスト | UC ガバナンス | 実装複雑度 |
+|------|-------------|:-------:|:---:|:---:|
+| **A. 選択的 ETL**（推奨） | 構造化抽出のみ（メタデータ + 測定値） | 最小（ソースの ~0.02%） | フル（Managed Delta） | 中（ETL パイプライン構築要） |
+| **B. ファイル種別フィルタリング** | DataSync `--includes` で CSV/Parquet のみ同期 | 中程度（対象ファイル分） | フル（COPY INTO → Delta） | 低（DataSync + SQL） |
+| **C. ボリューム全量同期** | 全ファイル複製 | 高（= ソースボリューム） | External Table（読み取り専用）or 選択的 COPY INTO | 最低（DataSync のみ） |
+
+### 戦略 A: 選択的 ETL パイプライン（推奨）
+
+```
+FSx for ONTAP (6 GB/日、全ファイル種別)
+    │
+    ▼ S3 AP 経由で読み取り（or OpenSharing STS credential vending）
+ETL (Databricks Job / Glue / Lambda)
+    ├── CSV → パース → measurements テーブルに INSERT
+    ├── JSON → 集計 → sensor_summary テーブルに INSERT
+    ├── PDF → Bedrock AI → metadata テーブルに INSERT
+    └── TIFF → 参照 URI のみ記録（画像自体はコピーしない）
+    │
+    ▼ 書き込み（標準 S3）
+UC Managed Delta Tables (~1 MB/日)
+```
+
+ソースの画像・ドキュメントは FSx for ONTAP に残る。Delta テーブルには**派生した構造化・分析可能データ**が格納され、生ファイルのコピーではない。
+
+### 戦略 B: DataSync のファイル種別フィルタリング
+
+```bash
+# CSV と Parquet のみ同期（画像・PDF はスキップ）
+aws datasync create-task \
+  --source-location-arn <SRC> \
+  --destination-location-arn <DST> \
+  --includes '[{"FilterType":"SIMPLE_PATTERN","Value":"*.csv"},{"FilterType":"SIMPLE_PATTERN","Value":"*.parquet"}]'
+```
+
+Databricks 側:
+```sql
+COPY INTO quality.measurements
+FROM 's3://sync-bucket/quality-inspection/'
+FILEFORMAT = CSV
+PATTERN = '*/measurements.csv';
+```
+
+### 戦略 C: ボリューム全量同期（最シンプル・最高コスト）
+
+全ファイル種別へのアクセスが分析に必要な場合（例: 画像 ML トレーニング）のみ適切。この場合でも、専用 S3 prefix に同期して External Table（読み取り専用）を作成し、全てを Delta 変換するのではなく必要部分だけ `COPY INTO` することを推奨。
 
 ---
 

@@ -125,9 +125,9 @@ UC Volume requirements:
 
 | Path | RPO (Data Freshness) | Throughput | UC Governance | Data Copy |
 |------|---------------------|-----------|--------------|-----------|
-| DataSync → S3 → UC | 5 min – 24 hours (schedule-dependent) | High (DataSync optimized) | ✅ Full | Required (replicated to S3) |
-| Kafka → SS → UC | Seconds – 10s (streaming latency) | Medium–High (partition parallelism) | ✅ Full | Required (Delta table conversion) |
-| Glue/EMR ETL → UC | Minutes – hours (job schedule) | High (Spark distributed) | ✅ Full | Required (output to S3) |
+| DataSync → S3 → UC | 5 min – 24 hours (schedule-dependent) | High (DataSync optimized) | ✅ Full | Selective (structured subset to S3; see [strategies below](#what-gets-copied-vs-what-stays-a-concrete-example)) |
+| Kafka → SS → UC | Seconds – 10s (streaming latency) | Medium–High (partition parallelism) | ✅ Full | Event-level (stream records to Delta) |
+| Glue/EMR ETL → UC | Minutes – hours (job schedule) | High (Spark distributed) | ✅ Full | ETL output only (transformed data to S3) |
 | Foreign Iceberg | Near-real-time (REFRESH dependent) | Read-only | ✅ Read | Minimal (metadata only) |
 | Athena + S3 AP (outside UC) | Real-time (S3 AP direct read) | Medium | ❌ AWS-side only | None (zero-copy) |
 | boto3 PoC | Real-time | Low (driver only) | ❌ None | None |
@@ -185,6 +185,86 @@ FSx for ONTAP
 | **Audio (WAV/MP3)** | ✅ (Volume registration) | — | ✅ (BinaryFile) | — | ✅ (no governance) |
 
 **Legend**: ✅ = Verified or officially supported / ⚠️ = Constraints apply / — = Not applicable
+
+---
+
+## What Gets Copied vs What Stays: A Concrete Example
+
+> A common misconception is that "DataSync → S3 → UC" means replicating the entire FSx for ONTAP volume to S3. In practice, only the **analytically relevant subset** is copied or transformed — typically less than 1% of the source volume.
+
+### Example: Manufacturing Quality Inspection (200 lots/day)
+
+**Source on FSx for ONTAP** (accessed via NFS/SMB by factory systems):
+
+```
+/quality-inspection/2026-06-20/
+├── lot-A001-report.pdf          (2.3 MB)   ← Inspection report PDF
+├── lot-A001-image-front.tiff    (15 MB)    ← Visual inspection image
+├── lot-A001-image-back.tiff     (14 MB)    ← Visual inspection image
+├── lot-A001-measurements.csv    (48 KB)    ← Dimensional measurements
+└── lot-A001-sensor-log.json     (120 KB)   ← Manufacturing sensor log
+    (× 200 lots/day ≈ 6 GB/day total on FSx for ONTAP)
+```
+
+**What ends up in the UC Delta table on S3**:
+
+| Delta Table | Content | Rows/day | S3 Size/day | Source |
+|-------------|---------|:--------:|:-----------:|--------|
+| `quality.inspection_metadata` | AI-classified metadata per lot | 200 | ~100 KB | PDF → Bedrock AI extraction |
+| `quality.measurements` | Dimensional values per measurement point | 4,000 | ~800 KB | CSV parse |
+| `quality.sensor_summary` | Aggregated sensor statistics per lot | 200 | ~50 KB | JSON aggregation |
+
+**S3 total: ~1 MB/day** (Delta tables) — **0.017% of the 6 GB/day source**
+
+**What stays on FSx for ONTAP**: Images (TIFF), full PDFs, raw sensor logs. These are accessed on-demand via S3 AP or OpenSharing when drill-down is needed.
+
+### Three Ingestion Strategies
+
+| Strategy | What goes to S3 | S3 Cost | UC Governance | Complexity |
+|----------|-----------------|:-------:|:---:|:---:|
+| **A. Selective ETL** (recommended) | Structured extraction only (metadata + measurements) | Minimal (~0.02% of source) | Full (Managed Delta) | Medium (ETL pipeline) |
+| **B. File-type filtering** | Only CSVs/Parquet synced via DataSync `--includes` | Moderate (target files only) | Full (COPY INTO → Delta) | Low (DataSync + SQL) |
+| **C. Full volume sync** | All files replicated | High (= source volume) | External Table (read-only) or selective COPY INTO | Lowest (DataSync only) |
+
+### Strategy A: Selective ETL Pipeline (Recommended)
+
+```
+FSx for ONTAP (6 GB/day, all file types)
+    │
+    ▼ Read via S3 AP (or OpenSharing STS credential vending)
+ETL (Databricks Job / Glue / Lambda)
+    ├── CSV → parse → measurements table INSERT
+    ├── JSON → aggregate → sensor_summary table INSERT
+    ├── PDF → Bedrock AI → metadata table INSERT
+    └── TIFF → record reference URI only (no copy)
+    │
+    ▼ Write (standard S3)
+UC Managed Delta Tables (~1 MB/day)
+```
+
+The source images and documents remain on FSx for ONTAP. The Delta tables contain **derived, structured, analytics-ready data** — not copies of the raw files.
+
+### Strategy B: File-Type Filtering with DataSync
+
+```bash
+# Sync only CSV and Parquet files (skip images, PDFs)
+aws datasync create-task \
+  --source-location-arn <SRC> \
+  --destination-location-arn <DST> \
+  --includes '[{"FilterType":"SIMPLE_PATTERN","Value":"*.csv"},{"FilterType":"SIMPLE_PATTERN","Value":"*.parquet"}]'
+```
+
+Then in Databricks:
+```sql
+COPY INTO quality.measurements
+FROM 's3://sync-bucket/quality-inspection/'
+FILEFORMAT = CSV
+PATTERN = '*/measurements.csv';
+```
+
+### Strategy C: Full Volume Sync (Simplest, Highest Cost)
+
+Appropriate only when analytics need access to all file types (e.g., image ML training). Even then, consider syncing to a dedicated S3 prefix and creating External Tables (read-only) rather than converting everything to Delta.
 
 ---
 
