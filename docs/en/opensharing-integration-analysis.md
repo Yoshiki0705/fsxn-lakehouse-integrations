@@ -1,6 +1,6 @@
 🌐 **English** | [日本語](../ja/opensharing-integration-analysis.md)
 
-> 📖 **FAQ**: For questions like "Can OpenSharing connect directly to FSx for ONTAP?" see the [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) FAQ section (Q1, Q6).
+> 📖 **FAQ**: For questions like "Can OpenSharing connect directly to FSx for ONTAP?" see the [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) FAQ section (Q1, Q6).
 
 # OpenSharing × FSx for ONTAP: Integration Analysis
 

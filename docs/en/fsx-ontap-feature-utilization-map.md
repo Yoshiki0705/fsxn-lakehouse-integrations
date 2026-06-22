@@ -1,4 +1,4 @@
-🌐 **English** | [日本語](../ja/fsxn-feature-utilization-map.md)
+🌐 **English** | [日本語](../ja/fsx-ontap-feature-utilization-map.md)
 
 # FSx for ONTAP Feature Utilization Map
 
@@ -46,7 +46,7 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 | **Used in** | Athena / Glue / EMR / Snowflake / Bedrock KB data access |
 | **Differentiation** | Data written via NFS/SMB is readable via S3 API (no conversion/copy needed) |
 | **Constraints** | Conditional writes not supported, Event Notifications not supported ([BLK-002](./blocker-tracker.md), [BLK-003](./blocker-tracker.md)) |
-| **Related docs** | [Compatibility Matrix](./compatibility-matrix.md), [Networking](./fsxn-s3ap-networking.md) |
+| **Related docs** | [Compatibility Matrix](./compatibility-matrix.md), [Networking](./fsx-ontap-s3ap-networking.md) |
 
 > **The true value of multiprotocol** (FSx for ONTAP Architect lens): The value of S3 AP is not "providing S3 API" but enabling analytics engines to read **the same data** that business users access via NFS/SMB — without transformation. With EBS + S3, data copy or ETL is always required.
 
@@ -101,7 +101,7 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 | **Used in** | Cost optimization (automatic cold data tiering to S3) |
 | **Differentiation** | Automatically moves data from SSD → S3 based on access frequency. Transparent to applications (no path changes) |
 | **Constraints** | Additional latency on first read of tiered data. Consider impact for analytics workloads |
-| **Related docs** | [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) (Future Outlook section) |
+| **Related docs** | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) (Future Outlook section) |
 
 ### SVM (Storage Virtual Machine) Isolation
 
@@ -137,13 +137,13 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 
 | Document | S3 AP | Snapshot | FlexClone | FPolicy | SnapMirror | FabricPool | SVM | Multi-AZ |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) | ● | ● | ● | ● | ○ | ○ | ○ | — |
+| [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | ● | ● | ● | ● | ○ | ○ | ○ | — |
 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | — | ● | ● | ● | — | — | — | — |
 | [Compatibility Matrix](./compatibility-matrix.md) | ● | — | — | — | — | — | ○ | ● |
 | [Kafka-ClickHouse-UC](./kafka-clickhouse-unity-catalog-connectivity.md) | — | — | — | ● | — | — | — | — |
 | [S3 Annotations Evaluation](./s3-annotations-governance-evaluation.md) | — | ○ | — | ● | — | — | — | — |
 | [Recovery Semantics](./recovery-semantics.md) | — | ● | ● | — | ● | — | — | ● |
-| [Networking](./fsxn-s3ap-networking.md) | ● | — | — | — | — | — | ● | — |
+| [Networking](./fsx-ontap-s3ap-networking.md) | ● | — | — | — | — | — | ● | — |
 | [Event-driven Architecture](./event-driven-architecture.md) | — | — | — | ● | — | — | — | — |
 | [Blocker Tracker](./blocker-tracker.md) | ● | — | — | — | ○ | — | — | — |
 
@@ -153,7 +153,7 @@ The core differentiation of FSx for ONTAP is providing **enterprise data protect
 
 ## Related Documents
 
-- [UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) — All connection paths overview
+- [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) — All connection paths overview
 - [Blocker Tracker](./blocker-tracker.md) — Constraint details and resolution outlook
 - [ADR-001](../adr/ADR-001-datasync-as-primary-sync.md) — DataSync adoption rationale (Snapshot/FlexClone usage)
 - [Reading Path Guide](./reading-path-guide.md) — Overall document navigation

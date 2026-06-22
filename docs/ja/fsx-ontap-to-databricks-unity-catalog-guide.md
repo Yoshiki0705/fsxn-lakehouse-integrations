@@ -1,4 +1,4 @@
-🌐 [English](../en/fsxn-to-databricks-unity-catalog-guide.md) | **日本語**
+🌐 [English](../en/fsx-ontap-to-databricks-unity-catalog-guide.md) | **日本語**
 
 # FSx for ONTAP → Databricks Unity Catalog 接続総合ガイド
 

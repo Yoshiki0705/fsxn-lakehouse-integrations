@@ -180,7 +180,7 @@ Annotation pipeline requires access to:
 
 This evaluation is connected to:
 
-- [FSx for ONTAP → Databricks UC Connection Guide](./fsxn-to-databricks-unity-catalog-guide.md) — UC connection overview (annotations are a complementary layer)
+- [FSx for ONTAP → Databricks UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) — UC connection overview (annotations are a complementary layer)
 - [DataSync: FSx for ONTAP → S3 Sync Guide](./datasync-to-s3-guide.md) — staged-to-S3 pattern implementation (prerequisite for annotations)
 - [Kafka-ClickHouse-Unity Catalog Connectivity Guide](./kafka-clickhouse-unity-catalog-connectivity.md) — Streaming infrastructure separation (annotations are cold path)
 - [Compatibility Matrix](./compatibility-matrix.md) — Platform-specific S3 Metadata / Annotations support status

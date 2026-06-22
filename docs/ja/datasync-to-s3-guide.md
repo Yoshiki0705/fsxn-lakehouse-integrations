@@ -1,6 +1,6 @@
 🌐 [English](../en/datasync-to-s3-guide.md) | **日本語**
 
-> 📖 **総合ガイド**: FSx for ONTAP → Databricks UC の全接続パスを俯瞰するには [UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) を参照してください。本ドキュメントは DataSync パスの詳細手順に特化しています。
+> 📖 **総合ガイド**: FSx for ONTAP → Databricks UC の全接続パスを俯瞰するには [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) を参照してください。本ドキュメントは DataSync パスの詳細手順に特化しています。
 
 # AWS DataSync: FSx for ONTAP → S3 同期ガイド
 
@@ -510,7 +510,7 @@ SnapMirror S3（ONTAP S3 バケット → AWS S3 レプリケーション）は 
 
 本ガイドは以下のドキュメントと連携しています:
 
-- [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) — 全接続パスの俯瞰（DataSync はパスの一つ）
+- [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) — 全接続パスの俯瞰（DataSync はパスの一つ）
 - [Kafka-ClickHouse-Unity Catalog 接続ガイド](./kafka-clickhouse-unity-catalog-connectivity.md) — ストリーミングデータとの統合パターン
 - [S3 Annotations ガバナンス評価](./s3-annotations-governance-evaluation.md) — S3 同期後のメタデータガバナンス強化
 - [互換性マトリクス](./compatibility-matrix.md) — プラットフォーム別 API 対応状況と DataSync 必要性判定

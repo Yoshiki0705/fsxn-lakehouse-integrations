@@ -159,7 +159,7 @@ IT VPC:
 
 ## 関連ドキュメント
 
-- [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) — UC 統合の全体像
+- [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) — UC 統合の全体像
 - [DataSync: FSx for ONTAP → S3 同期ガイド](./datasync-to-s3-guide.md) — 書き込みパスに必要な DataSync 設定
 - [S3 Annotations ガバナンス評価](./s3-annotations-governance-evaluation.md) — メタデータ強化の評価
 - [Kafka-ClickHouse-Unity Catalog 接続ガイド](./kafka-clickhouse-unity-catalog-connectivity.md) — ストリーミング統合

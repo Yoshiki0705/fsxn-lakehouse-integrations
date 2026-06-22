@@ -177,7 +177,7 @@ sequenceDiagram
 
 - [DataSync → S3 ガイド](./datasync-to-s3-guide.md) — DataSync パスの実装詳細
 - [Kafka-ClickHouse-UC 接続ガイド](./kafka-clickhouse-unity-catalog-connectivity.md) — FPolicy/Kafka パスの実装
-- [UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) — パス選定ロジック
+- [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) — パス選定ロジック
 - [Runbook #01](../../runbooks/01-datasync-failure-triage.md) — DataSync 障害対応
 - [Runbook #02](../../runbooks/02-fpolicy-lambda-failure.md) — FPolicy/Lambda 障害対応
-- [FSx for ONTAP 機能マップ](./fsxn-feature-utilization-map.md) — 各ステップで使用される ONTAP 機能
+- [FSx for ONTAP 機能マップ](./fsx-ontap-feature-utilization-map.md) — 各ステップで使用される ONTAP 機能

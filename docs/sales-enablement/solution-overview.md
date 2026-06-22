@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](./solution-overview-ja.md)
+
 # FSx for ONTAP × AI Metadata Catalog: Solution Overview
 
 > Technical overview for field engineers and solutions architects

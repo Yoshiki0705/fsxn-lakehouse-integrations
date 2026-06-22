@@ -1,4 +1,4 @@
-🌐 [English](../en/fsxn-feature-utilization-map.md) | **日本語**
+🌐 [English](../en/fsx-ontap-feature-utilization-map.md) | **日本語**
 
 # FSx for ONTAP 機能活用マップ
 
@@ -46,7 +46,7 @@ FSx for ONTAP の最大の差別化は「**エンタープライズデータ保�
 | **使用箇所** | Athena / Glue / EMR / Snowflake / Bedrock KB のデータアクセス |
 | **差別化** | NFS/SMB で書き込んだデータを S3 API で読み取り可能（変換/コピー不要） |
 | **制約** | conditional writes 非サポート、Event Notifications 非サポート（[BLK-002](./blocker-tracker.md), [BLK-003](./blocker-tracker.md)） |
-| **関連ドキュメント** | [互換性マトリクス](./compatibility-matrix.md), [Networking](./fsxn-s3ap-networking.md) |
+| **関連ドキュメント** | [互換性マトリクス](./compatibility-matrix.md), [Networking](./fsx-ontap-s3ap-networking.md) |
 
 > **マルチプロトコルの真価** (FSx for ONTAP Architect lens): S3 AP の価値は「S3 API を追加提供する」ことではなく、「NFS/SMB で業務ユーザーがアクセスする**同じデータ**を変換なしで分析エンジンから読める」ことです。EBS + S3 の組み合わせでは、データのコピーまたは ETL が常に必要になります。
 
@@ -101,7 +101,7 @@ FSx for ONTAP の最大の差別化は「**エンタープライズデータ保�
 | **使用箇所** | コスト最適化（コールドデータの S3 自動階層化） |
 | **差別化** | アクセス頻度に応じてデータを SSD → S3 に自動移動。アプリケーションからは透過的（パス変更不要） |
 | **制約** | 階層化されたデータの最初の読み取りにレイテンシ追加。分析ワークロードでは影響を考慮 |
-| **関連ドキュメント** | [UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md)（今後の展望セクション） |
+| **関連ドキュメント** | [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md)（今後の展望セクション） |
 
 ### SVM（Storage Virtual Machine）分離
 
@@ -137,13 +137,13 @@ FSx for ONTAP の最大の差別化は「**エンタープライズデータ保�
 
 | ドキュメント | S3 AP | Snapshot | FlexClone | FPolicy | SnapMirror | FabricPool | SVM | Multi-AZ |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) | ● | ● | ● | ● | ○ | ○ | ○ | — |
+| [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) | ● | ● | ● | ● | ○ | ○ | ○ | — |
 | [DataSync → S3 ガイド](./datasync-to-s3-guide.md) | — | ● | ● | ● | — | — | — | — |
 | [互換性マトリクス](./compatibility-matrix.md) | ● | — | — | — | — | — | ○ | ● |
 | [Kafka-ClickHouse-UC](./kafka-clickhouse-unity-catalog-connectivity.md) | — | — | — | ● | — | — | — | — |
 | [S3 Annotations 評価](./s3-annotations-governance-evaluation.md) | — | ○ | — | ● | — | — | — | — |
 | [Recovery Semantics](./recovery-semantics.md) | — | ● | ● | — | ● | — | — | ● |
-| [Networking](./fsxn-s3ap-networking.md) | ● | — | — | — | — | — | ● | — |
+| [Networking](./fsx-ontap-s3ap-networking.md) | ● | — | — | — | — | — | ● | — |
 | [Event-driven Architecture](./event-driven-architecture.md) | — | — | — | ● | — | — | — | — |
 | [ブロッカー追跡](./blocker-tracker.md) | ● | — | — | — | ○ | — | — | — |
 
@@ -153,7 +153,7 @@ FSx for ONTAP の最大の差別化は「**エンタープライズデータ保�
 
 ## 関連ドキュメント
 
-- [UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) — 全接続パスの俯瞰
+- [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) — 全接続パスの俯瞰
 - [ブロッカー追跡](./blocker-tracker.md) — 制約の詳細と解消見通し
 - [ADR-001](../adr/ADR-001-datasync-as-primary-sync.md) — DataSync 採用理由（Snapshot/FlexClone 活用含む）
 - [読み順ガイド](./reading-path-guide.md) — ドキュメント全体のナビゲーション

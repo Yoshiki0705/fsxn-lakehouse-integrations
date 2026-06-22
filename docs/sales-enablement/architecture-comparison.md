@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](./architecture-comparison-ja.md)
+
 # Architecture Comparison: Approaches to Unstructured Data Analytics
 
 > A factual comparison of approaches for making NAS-resident unstructured data queryable via analytics platforms.

@@ -31,7 +31,7 @@ This file maps each PoC template module to the corresponding detailed documentat
 | DataSync Guide | [docs/en/datasync-to-s3-guide.md](../docs/en/datasync-to-s3-guide.md) | Module 04 (Databricks) sync mechanism |
 | Unstructured Data | [docs/en/unstructured-data-access.md](../docs/en/unstructured-data-access.md) | Image/PDF/video access patterns |
 | Region Design | [docs/en/region-design-guide.md](../docs/en/region-design-guide.md) | Same-region requirement |
-| Networking | [docs/en/fsxn-s3ap-networking.md](../docs/en/fsxn-s3ap-networking.md) | VPC/Internet origin, DNS/AD issues |
+| Networking | [docs/en/fsx-ontap-s3ap-networking.md](../docs/en/fsx-ontap-s3ap-networking.md) | VPC/Internet origin, DNS/AD issues |
 | Recovery Semantics | [docs/en/recovery-semantics.md](../docs/en/recovery-semantics.md) | Snapshot + table format recovery |
 | Zero-Copy Unstructured Data Governance | [docs/en/zero-copy-media-governance.md](../docs/en/zero-copy-media-governance.md) | S3 dedup + multi-platform governance + FlexCache S3 AP roadmap |
 | Iceberg Metadata Catalog | [docs/en/iceberg-metadata-catalog.md](../docs/en/iceberg-metadata-catalog.md) | S3 Tables + FSx for ONTAP unstructured data metadata management |

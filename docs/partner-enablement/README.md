@@ -1,3 +1,5 @@
+🌐 **English** | [日本語](./README-ja.md)
+
 # SI Partner Enablement: FSx for ONTAP AI Metadata Catalog
 
 > Everything SI partners need to propose, build, and operate the FSx for ONTAP AI Metadata Catalog for their customers.

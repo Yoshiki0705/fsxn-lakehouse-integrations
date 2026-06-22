@@ -180,7 +180,7 @@ annotation パイプラインは以下へのアクセスが必要:
 
 本評価は以下のドキュメントと連携しています:
 
-- [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) — UC 接続の全体像（annotation は補完レイヤー）
+- [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) — UC 接続の全体像（annotation は補完レイヤー）
 - [DataSync: FSx for ONTAP → S3 同期ガイド](./datasync-to-s3-guide.md) — staged-to-S3 パターンの実装手順（annotation の前提）
 - [Kafka-ClickHouse-Unity Catalog 接続ガイド](./kafka-clickhouse-unity-catalog-connectivity.md) — ストリーミング基盤との分離（annotation は cold path）
 - [互換性マトリクス](./compatibility-matrix.md) — プラットフォーム別 S3 Metadata / Annotations サポート状況

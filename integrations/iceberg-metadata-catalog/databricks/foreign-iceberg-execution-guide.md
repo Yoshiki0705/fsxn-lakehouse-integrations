@@ -325,7 +325,7 @@ SELECT * FROM glue_iceberg.metadata_db.unstructured_files LIMIT 10;
 
 ## 関連ドキュメント
 
-- [UC 接続総合ガイド](../../../docs/ja/fsxn-to-databricks-unity-catalog-guide.md) — パス 4: Foreign Iceberg
+- [UC 接続総合ガイド](../../../docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) — パス 4: Foreign Iceberg
 - [ブロッカー追跡](../../../docs/ja/blocker-tracker.md) — BLK-005
 - [互換性マトリクス](../../../docs/ja/compatibility-matrix.md) — S3 Tables セクション
 - [S3 Tables CloudFormation](../cloudformation/s3-tables-setup.yaml) — インフラ構築

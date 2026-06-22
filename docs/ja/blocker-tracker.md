@@ -295,7 +295,7 @@ graph LR
 
 ## 関連ドキュメント
 
-- [UC 接続総合ガイド](./fsxn-to-databricks-unity-catalog-guide.md) — ブロッカーの影響を受けるパス設計
+- [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) — ブロッカーの影響を受けるパス設計
 - [互換性マトリクス](./compatibility-matrix.md) — 制約の技術詳細
 - [DataSync → S3 ガイド](./datasync-to-s3-guide.md) — BLK-001/002/003 の主要回避策
 - [S3 Annotations 評価](./s3-annotations-governance-evaluation.md) — BLK-005 の影響を受ける案3

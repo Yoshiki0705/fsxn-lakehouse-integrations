@@ -6,21 +6,21 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         AWS Account                                   │
-│                                                                       │
-│  ┌──────────────┐     ┌──────────────────┐     ┌─────────────────┐ │
-│  │  Lakehouse   │     │  S3 Access Point │     │  FSx for ONTAP  │ │
-│  │  Platform    │────▶│  (VPC-scoped)    │────▶│  Volume (S3)    │ │
-│  │              │◀────│                  │◀────│                 │ │
-│  └──────────────┘     └──────────────────┘     └─────────────────┘ │
-│        │                       │                        │            │
-│        │                       │                        │            │
-│  ┌─────▼──────┐         ┌─────▼──────┐          ┌─────▼──────┐    │
-│  │ Unity Cat. │         │ S3 AP      │          │ ONTAP      │    │
-│  │ Ext Stage  │         │ Policy     │          │ Features   │    │
-│  │ Ext Table  │         │ (IAM+VPC)  │          │ Dedup/Snap │    │
-│  └────────────┘         └────────────┘          └────────────┘    │
-│                                                                       │
+│                         AWS Account                                 │
+│                                                                     │
+│  ┌──────────────┐     ┌──────────────────┐     ┌─────────────────┐  │
+│  │  Lakehouse   │     │  S3 Access Point │     │  FSx for ONTAP  │  │
+│  │  Platform    │────▶│  (VPC-scoped)    │────▶│  Volume (S3)    │  │
+│  │              │◀────│                  │◀────│                 │  │
+│  └──────────────┘     └──────────────────┘     └─────────────────┘  │
+│        │                       │                        │           │
+│        │                       │                        │           │
+│  ┌─────▼──────┐         ┌──────▼─────┐          ┌───────▼────┐      │
+│  │ Unity Cat. │         │ S3 AP      │          │ ONTAP      │      │
+│  │ Ext Stage  │         │ Policy     │          │ Features   │      │
+│  │ Ext Table  │         │ (IAM+VPC)  │          │ Dedup/Snap │      │
+│  └────────────┘         └────────────┘          └────────────┘      │
+│                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -73,11 +73,11 @@ Each platform accesses FSx for ONTAP via S3 API.
 ### Pattern A: Read-Only Analytics
 
 ```
-┌────────────┐    S3 GetObject     ┌─────────┐    NFS/S3    ┌──────────────┐
-│ Databricks │──────────────────▶│  S3 AP  │────────────▶│FSx for ONTAP │
-│ Athena     │    ListObjectsV2   │ (read)  │             │   Volume     │
-│ Snowflake  │◀──────────────────│         │◀────────────│              │
-└────────────┘                    └─────────┘             └──────────────┘
+┌────────────┐    S3 GetObject     ┌─────────┐    NFS/S3   ┌──────────────┐
+│ Databricks │──────────────────▶  │  S3 AP  │────────────▶│FSx for ONTAP │
+│ Athena     │    ListObjectsV2    │ (read)  │             │   Volume     │
+│ Snowflake  │◀──────────────────  │         │◀────────────│              │
+└────────────┘                     └─────────┘             └──────────────┘
 ```
 
 **Use Cases:**
@@ -93,7 +93,7 @@ Each platform accesses FSx for ONTAP via S3 API.
 
 ```
 ┌────────────┐  Get/Put/Delete   ┌─────────┐             ┌──────────────┐
-│ Databricks │◀────────────────▶│  S3 AP  │◀──────────▶│FSx for ONTAP │
+│ Databricks │◀────────────────▶ │  S3 AP  │◀──────────▶ │FSx for ONTAP │
 │ (Delta)    │  Multipart Upload │ (r/w)   │             │   Volume     │
 │ Snowflake  │                   │         │             │              │
 │ (Iceberg)  │                   └─────────┘             └──────────────┘
@@ -114,7 +114,7 @@ Each platform accesses FSx for ONTAP via S3 API.
 
 ```
 ┌──────────────┐  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌──────────────┐
-│    Source     │─▶│  S3 AP  │─▶│  Glue/   │─▶│  S3 AP  │─▶│ FSx for ONTAP│
+│    Source    │─▶│  S3 AP  │─▶│  Glue/   │─▶│  S3 AP  │─▶│ FSx for ONTAP│
 │    (Raw)     │  │  (read) │  │  EMR/    │  │  (write)│  │    (Gold)    │
 │FSx for ONTAP │  │         │  │  Lambda  │  │         │  │    Volume    │
 └──────────────┘  └─────────┘  └──────────┘  └─────────┘  └──────────────┘
@@ -134,11 +134,11 @@ Each platform accesses FSx for ONTAP via S3 API.
 ### Pattern D: Data Sharing
 
 ```
-┌──────────────┐  ┌─────────────┐    ┌────────────┐
+┌──────────────┐  ┌─────────────┐   ┌────────────┐
 │FSx for ONTAP │─▶│  S3 AP (A)  │──▶│ Consumer A │ (Databricks)
 │    Volume    │  │  prefix=/a/ │   └────────────┘
 │  (Producer)  │  └─────────────┘
-│              │  ┌─────────────┐    ┌────────────┐
+│              │  ┌─────────────┐   ┌────────────┐
 │              │─▶│  S3 AP (B)  │──▶│ Consumer B │ (Snowflake)
 │              │  │  prefix=/b/ │   └────────────┘
 └──────────────┘  └─────────────┘
@@ -162,13 +162,13 @@ Each platform accesses FSx for ONTAP via S3 API.
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│                       VPC                             │
-│                                                       │
-│  ┌──────────┐    ┌──────────────┐    ┌────────┐     │
-│  │ Platform │──▶│ VPC Endpoint │──▶│ S3 AP  │     │
-│  │ (Private │   │ (Interface)  │   │        │     │
-│  │  Subnet) │   │ com.aws.s3   │   │        │     │
-│  └──────────┘    └──────────────┘    └───┬────┘     │
+│                       VPC                            │
+│                                                      │
+│  ┌──────────┐    ┌──────────────┐    ┌────────┐      │
+│  │ Platform │──▶ │ VPC Endpoint │──▶ │ S3 AP  │      │
+│  │ (Private │    │ (Interface)  │    │        │      │
+│  │  Subnet) │    │ com.aws.s3   │    │        │      │
+│  └──────────┘    └──────────────┘    └───┬────┘      │
 │                                          │           │
 │                                  ┌───────▼────────┐  │
 │                                  │ FSx for ONTAP  │  │
