@@ -64,6 +64,7 @@ FSx for ONTAP S3 Access Points により、データ移動なしでファイル�
 
 <details>
 <summary>5 つのアーキテクチャパターン（クリックで展開）</summary>
+
 ### パターン A: 読み取り専用分析
 
 ```
@@ -120,6 +121,7 @@ FSx for ONTAP → OpenSharing Server (共有 + アクセス制御)
 
 <details>
 <summary>プラットフォーム検証ステータス（クリックで展開）</summary>
+
 | プラットフォーム | 検証ステータス | パターン | 備考 |
 |----------------|:---:|---------|------|
 | [AWS Athena](integrations/athena/) | ✅ セキュリティ検証済み | Glue Data Catalog + Serverless | 読み取り専用。[ベンチマーク: 54.8 MB/s、5M 行 2 秒](verification-pack/athena-parquet-read/) |
