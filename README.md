@@ -1,41 +1,35 @@
+🌐 **English** | [日本語](./README-ja.md)
+
 # FSx for ONTAP Lakehouse Integrations
 
-🌐 [日本語](docs/ja/architecture.md) | [English](docs/en/architecture.md)
-
-> **`fsxn-lakehouse-integrations` is a validation framework for testing how different analytics and lakehouse engines interact with FSx for ONTAP S3 Access Points.** Each integration directory contains reproducible evidence, test templates, and observed boundary documentation — not production-ready connectors.
+> **A validation framework for testing how different analytics and lakehouse engines interact with FSx for ONTAP S3 Access Points.** Each integration directory contains reproducible evidence, test templates, and observed boundary documentation — not production-ready connectors.
 
 ---
 
-## Overview / 概要
+## Overview
 
 **Turn existing enterprise file assets into analytics- and AI-ready data without disrupting NFS/SMB workloads.**
 
 Data Lake and Lakehouse platform integrations with **Amazon FSx for NetApp ONTAP (FSx for ONTAP)** via **S3 Access Points**.
 
-既存のエンタープライズファイル資産を、NFS/SMB ワークロードを中断することなく、分析・AI 対応データに変換します。
-
-Amazon FSx for NetApp ONTAP（FSx for ONTAP）のエンタープライズストレージを S3 Access Points 経由で各 Data Lake / Lakehouse プラットフォームと統合するパターン集です。
-
 ---
 
-## Business Outcomes / ビジネス成果
+## Business Outcomes
 
-| Outcome / 成果 | Description / 説明 |
-|----------------|-------------------|
-| **Eliminate data copies** / データコピーの排除 | N redundant copies → 1 authoritative source on FSx for ONTAP |
-| **Remove NAS→S3 sync pipelines** / 同期パイプラインの廃止 | No ETL jobs needed to copy file data to S3 for analytics |
-| **Accelerate time-to-insight** / インサイトまでの時間短縮 | Days of pipeline setup → hours of direct query via S3 Access Point |
-| **Preserve existing NFS/SMB workloads** / 既存ワークロードの維持 | Applications continue writing via NFS/SMB unchanged |
-| **Unified governance** / ガバナンスの統一 | Single data location with dual-layer access control (IAM + file system permissions) |
-| **Enable AI/ML on file data** / ファイルデータでの AI/ML 活用 | Amazon Bedrock, SageMaker, EMR access existing files via S3 AP without data movement |
+| Outcome | Description |
+|---------|-------------|
+| **Eliminate data copies** | N redundant copies → 1 authoritative source on FSx for ONTAP |
+| **Remove NAS→S3 sync pipelines** | No ETL jobs needed to copy file data to S3 for analytics |
+| **Accelerate time-to-insight** | Days of pipeline setup → hours of direct query via S3 Access Point |
+| **Preserve existing NFS/SMB workloads** | Applications continue writing via NFS/SMB unchanged |
+| **Unified governance** | Single data location with dual-layer access control (IAM + file system permissions) |
+| **Enable AI/ML on file data** | Amazon Bedrock, SageMaker, EMR access existing files via S3 AP without data movement |
 
 FSx for ONTAP S3 Access Points enable S3 API access to file data without data movement, allowing S3-compatible applications and AWS services to directly read and write file data. ([AWS Documentation](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html))
 
-FSx for ONTAP S3 Access Points により、データ移動なしでファイルデータへの S3 API アクセスが可能になり、S3 互換アプリケーションや AWS サービスがファイルデータを直接読み書きできます。
-
 ---
 
-## Core Value / コアバリュー
+## Core Technical Capabilities
 
 | ONTAP Capability | Lakehouse Benefit |
 |-----------------|-------------------|
@@ -48,7 +42,7 @@ FSx for ONTAP S3 Access Points により、データ移動なしでファイル�
 
 ---
 
-## Architecture Patterns / アーキテクチャパターン
+## Architecture Patterns
 
 ### Pattern A: Read-Only Analytics
 
@@ -96,11 +90,11 @@ FSx for ONTAP → OpenSharing Server (sharing + access control)
 
 - Forward-looking pattern based on the [OpenSharing announcement](https://www.databricks.com/company/newsroom/press-releases/databricks-announces-opensharing) (2026-06-10), the evolution of Delta Sharing hosted by the Linux Foundation
 - Presigned-URL sharing model may bypass the current Databricks S3 AP ARN limitation (hypothesis under validation)
-- See [OpenSharing Integration Analysis (EN)](docs/en/opensharing-integration-analysis.md) / [統合分析 (JA)](docs/ja/opensharing-integration-analysis.md)
+- See [OpenSharing Integration Analysis](docs/en/opensharing-integration-analysis.md)
 
 ---
 
-## Supported Integrations / 対応プラットフォーム
+## Supported Integrations
 
 | Platform | Verification Status | Pattern | Notes |
 |----------|:---:|---------|-------|
@@ -126,23 +120,19 @@ FSx for ONTAP → OpenSharing Server (sharing + access control)
 
 ---
 
-## Partner Quick Reference: Which Engine for Which Customer?
+## Engine Selection Guide
 
-| Customer's first question | Recommended engine | Part | Access Pattern | Governance | AI Readiness | PoC Cost (1 day) |
-|---|---|:---:|---|---|---|---|
-| "Cheapest way to query NAS data" | DuckDB Lambda | 4 | Zero-copy | None (IAM only) | Discovery / profiling | ~$0.01 |
-| "Serverless SQL, no infrastructure" | Athena | 1 | Zero-copy | Glue + Lake Formation | Discovery → curated dataset | ~$0.05 |
-| "Need Spark ETL with write-back" | EMR Serverless | 5 | Zero-copy (read) + write to FSx for ONTAP | IAM | Curated Parquet / Iceberg creation | ~$0.50 |
-| "Need DWH JOINs + enterprise governance" | Redshift Spectrum + Lake Formation | 6 | Zero-copy | Lake Formation (column/row/tag) | Governed analytics | ~$1.50 |
-| "Need AI on NAS data (summarize, RAG, sentiment)" | Snowflake External Table + Cortex | 3 | Zero-copy | Snowflake RBAC + Tags | **AI-ready** (Cortex AI immediate) | ~$5 |
-| "Already use Databricks, need full UC + ML" | DataSync → S3 → UC | 2 | With S3 sync | Unity Catalog (full) | **Full ML/AI** (Mosaic AI, Feature Store) | ~$10 |
-| "Can we use Delta/Iceberg on FSx for ONTAP?" | No — read from FSx for ONTAP, write to S3 | 7 | Read: zero-copy, Write: S3 | Depends on engine | Depends on engine | ~$0.50 |
+| Primary Question | Recommended Engine | Access Pattern | Governance | AI Readiness | PoC Cost (1 day) |
+|---|---|---|---|---|---|
+| "Cheapest way to query NAS data" | DuckDB Lambda | Zero-copy | None (IAM only) | Discovery / profiling | ~$0.01 |
+| "Serverless SQL, no infrastructure" | Athena | Zero-copy | Glue + Lake Formation | Discovery → curated dataset | ~$0.05 |
+| "Need Spark ETL with write-back" | EMR Serverless | Zero-copy (read) + write to FSx for ONTAP | IAM | Curated Parquet / Iceberg creation | ~$0.50 |
+| "Need DWH JOINs + enterprise governance" | Redshift Spectrum + Lake Formation | Zero-copy | Lake Formation (column/row/tag) | Governed analytics | ~$1.50 |
+| "Need AI on NAS data (summarize, RAG, sentiment)" | Snowflake External Table + Cortex | Zero-copy | Snowflake RBAC + Tags | AI-ready (Cortex AI immediate) | ~$5 |
+| "Already use Databricks, need full UC + ML" | DataSync → S3 → UC | With S3 sync | Unity Catalog (full) | Full ML/AI (Mosaic AI, Feature Store) | ~$10 |
+| "Can we use Delta/Iceberg on FSx for ONTAP?" | No — read from FSx for ONTAP, write to S3 | Read: zero-copy, Write: S3 | Depends on engine | Depends on engine | ~$0.50 |
 
-> **How to use this table**: Find the customer's primary question in the left column. The recommended engine and Part number give you the starting point. PoC cost is for a 1-day validation — enough to confirm the pattern works in the customer's environment. **AI Readiness** indicates how close the pattern gets to production AI/ML outcomes.
->
-> **AI-Ready Data progression**: Discovery → Profiling → Curation → Governance → AI Application. The fastest path to AI value is often Snowflake External Table + Cortex AI (zero-copy, governed, AI functions available immediately on existing NAS data).
-
-### Why FSx for ONTAP, Not Just S3?
+### When FSx for ONTAP + S3 AP Applies (vs S3-only)
 
 | Consideration | S3 only | FSx for ONTAP + S3 AP |
 |---|---|---|
@@ -155,7 +145,7 @@ FSx for ONTAP → OpenSharing Server (sharing + access control)
 
 ### Open Table Format: Multi-Platform Bridge
 
-For customers using both Snowflake and Databricks, curated datasets can be shared via open Iceberg format:
+For environments using both Snowflake and Databricks, curated datasets can be shared via open Iceberg format:
 
 ```
 FSx for ONTAP (source) → S3 AP / DataSync → S3 → Snowflake Managed Iceberg Table
@@ -165,11 +155,11 @@ FSx for ONTAP (source) → S3 AP / DataSync → S3 → Snowflake Managed Iceberg
                                     Databricks UC / Athena / EMR (read Iceberg)
 ```
 
-No vendor lock-in. Data owned by customer. Each platform applies its own governance.
+No vendor lock-in. Data ownership retained. Each platform applies its own governance.
 
 ---
 
-## Use Cases / ユースケース
+## Use Cases
 
 | Industry | Use Case | Key Pattern | Deployment Considerations |
 |----------|----------|-------------|--------------------------|
@@ -180,7 +170,7 @@ No vendor lock-in. Data owned by customer. Each platform applies its own governa
 
 ---
 
-## Quick Start / クイックスタート
+## Quick Start
 
 ### Prerequisites
 
@@ -189,7 +179,7 @@ No vendor lock-in. Data owned by customer. Each platform applies its own governa
 - AWS CLI v2 configured
 - Python 3.12+
 - **Important**: Analytics platform and FSx for ONTAP must be in the same AWS region.
-  See [Region Design Guide (EN)](docs/en/region-design-guide.md) / [リージョン設計ガイド (JA)](docs/ja/region-design-guide.md)
+  See [Region Design Guide](docs/en/region-design-guide.md)
 
 ### Deploy Base Infrastructure
 
@@ -221,14 +211,17 @@ python shared/scripts/validate-access.py \
 
 ---
 
-## Repository Structure / リポジトリ構造
+## Repository Structure
 
 ```
 fsxn-lakehouse-integrations/
-├── README.md                    # This file (bilingual)
+├── README.md                    # This file (English)
+├── README-ja.md                 # Japanese version
 ├── docs/                        # Documentation
 │   ├── ja/                      # Japanese docs
 │   ├── en/                      # English docs
+│   ├── adoption-guide/          # Technical adoption guides (JA/EN pairs)
+│   ├── implementation-guide/    # PoC execution guides (JA/EN pairs)
 │   └── images/                  # Diagrams
 ├── shared/                      # Common modules
 │   ├── cloudformation/          # Base CFn templates
@@ -248,7 +241,7 @@ fsxn-lakehouse-integrations/
 
 ---
 
-## Technology Stack / 技術スタック
+## Technology Stack
 
 - **Infrastructure**: CloudFormation (YAML) + Terraform (Databricks/Snowflake)
 - **Scripts**: Python 3.12, Bash
@@ -271,41 +264,38 @@ fsxn-lakehouse-integrations/
 
 ---
 
-## Documentation / ドキュメント
+## Documentation
 
-| Document | 日本語 | English |
-|----------|--------|---------|
-| Architecture | [アーキテクチャ](docs/ja/architecture.md) | [Architecture](docs/en/architecture.md) |
-| Getting Started | [クイックスタート](docs/ja/getting-started.md) | [Getting Started](docs/en/getting-started.md) |
-| Region Design Guide | [リージョン設計ガイド](docs/ja/region-design-guide.md) | [Region Design Guide](docs/en/region-design-guide.md) |
-| Supported Regions | [対応リージョン](docs/ja/supported-regions.md) | [Supported Regions](docs/en/supported-regions.md) |
-| Vendor Comparison | [ベンダー比較](docs/ja/vendor-comparison.md) | [Vendor Comparison](docs/en/vendor-comparison.md) |
-| Unstructured Data | [非構造化データ](docs/ja/unstructured-data-access.md) | [Unstructured Data](docs/en/unstructured-data-access.md) |
-| Partner Offering | [パートナーオファリング](docs/ja/partner-offering.md) | [Partner Offering](docs/en/partner-offering.md) |
-| Compatibility Matrix | [互換性マトリクス](docs/ja/compatibility-matrix.md) | [Compatibility Matrix](docs/en/compatibility-matrix.md) |
-| Recovery Semantics | [リカバリセマンティクス](docs/ja/recovery-semantics.md) | [Recovery Semantics](docs/en/recovery-semantics.md) |
-| Governance & Compliance | [ガバナンスとコンプライアンス](docs/ja/governance-and-compliance.md) | [Governance & Compliance](docs/en/governance-and-compliance.md) |
-| Zero-Copy Unstructured Data Governance | [ゼロコピー非構造化データガバナンス](docs/ja/zero-copy-media-governance.md) | [Zero-Copy Unstructured Data Governance](docs/en/zero-copy-media-governance.md) |
-| OpenSharing Integration Analysis | [OpenSharing 統合分析](docs/ja/opensharing-integration-analysis.md) | [OpenSharing Integration Analysis](docs/en/opensharing-integration-analysis.md) |
-| Omnigent Multi-Agent Evaluation | [Omnigent マルチエージェント評価](docs/ja/omnigent-multi-agent-evaluation.md) | [Omnigent Multi-Agent Evaluation](docs/en/omnigent-multi-agent-evaluation.md) |
-| KPI & Validation | [KPI と PoC 検証](docs/ja/kpi-and-validation.md) | [KPI & Validation](docs/en/kpi-and-validation.md) |
-| **FSx for ONTAP → Databricks UC Guide** | [**UC 接続総合ガイド**](docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) | [**UC Connection Guide**](docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) |
-| DataSync → S3 Guide | [DataSync ガイド](docs/ja/datasync-to-s3-guide.md) | [DataSync Guide](docs/en/datasync-to-s3-guide.md) |
-| Kafka-ClickHouse-UC Connectivity | [Kafka-CH-UC 接続](docs/ja/kafka-clickhouse-unity-catalog-connectivity.md) | [Kafka-CH-UC Connectivity](docs/en/kafka-clickhouse-unity-catalog-connectivity.md) |
-| S3 Annotations Governance | [S3 Annotations 評価](docs/ja/s3-annotations-governance-evaluation.md) | [S3 Annotations Evaluation](docs/en/s3-annotations-governance-evaluation.md) |
-| AWS Context vs Unity Catalog | [AWS Context vs UC](docs/ja/aws-context-vs-unity-catalog.md) | [AWS Context vs UC](docs/en/aws-context-vs-unity-catalog.md) |
-| Cross-Repo Integration Strategy | [クロスリポ連携戦略](docs/ja/cross-repo-integration-strategy.md) | [Cross-Repo Strategy](docs/en/cross-repo-integration-strategy.md) |
-| **Adoption Guide** | | |
-| Technical Overview | [テクニカルオーバービュー](docs/adoption-guide/technical-overview-ja.md) | [Technical Overview](docs/adoption-guide/technical-overview.md) |
-| Architecture Comparison | [アーキテクチャ比較](docs/adoption-guide/architecture-comparison-ja.md) | [Architecture Comparison](docs/adoption-guide/architecture-comparison.md) |
-| Technical FAQ | [テクニカル FAQ](docs/adoption-guide/technical-faq-ja.md) | [Technical FAQ](docs/adoption-guide/technical-faq.md) |
-| Cost Estimation | [コスト見積もり](docs/adoption-guide/cost-estimation-ja.md) | [Cost Estimation](docs/adoption-guide/cost-estimation.md) |
-| **Implementation Guide** | | |
-| PoC Execution Guide | [PoC 実行ガイド](docs/implementation-guide/poc-execution-guide-ja.md) | [PoC Execution Guide](docs/implementation-guide/poc-execution-guide.md) |
+| Document | Link |
+|----------|------|
+| Architecture | [Architecture](docs/en/architecture.md) |
+| Getting Started | [Getting Started](docs/en/getting-started.md) |
+| Region Design Guide | [Region Design Guide](docs/en/region-design-guide.md) |
+| Supported Regions | [Supported Regions](docs/en/supported-regions.md) |
+| Vendor Comparison | [Vendor Comparison](docs/en/vendor-comparison.md) |
+| Unstructured Data | [Unstructured Data](docs/en/unstructured-data-access.md) |
+| Compatibility Matrix | [Compatibility Matrix](docs/en/compatibility-matrix.md) |
+| Recovery Semantics | [Recovery Semantics](docs/en/recovery-semantics.md) |
+| Governance & Compliance | [Governance & Compliance](docs/en/governance-and-compliance.md) |
+| Zero-Copy Unstructured Data Governance | [Zero-Copy Governance](docs/en/zero-copy-media-governance.md) |
+| OpenSharing Integration Analysis | [OpenSharing Analysis](docs/en/opensharing-integration-analysis.md) |
+| KPI & Validation | [KPI & Validation](docs/en/kpi-and-validation.md) |
+| **FSx for ONTAP → Databricks UC Guide** | [**UC Connection Guide**](docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) |
+| DataSync → S3 Guide | [DataSync Guide](docs/en/datasync-to-s3-guide.md) |
+| Kafka-ClickHouse-UC Connectivity | [Kafka-CH-UC Connectivity](docs/en/kafka-clickhouse-unity-catalog-connectivity.md) |
+| S3 Annotations Governance | [S3 Annotations Evaluation](docs/en/s3-annotations-governance-evaluation.md) |
+| Industry Solution Catalog | [Industry Catalog](docs/en/industry-solution-catalog.md) |
+| **Adoption Guide** | |
+| Technical Overview | [Technical Overview](docs/adoption-guide/technical-overview.md) |
+| Architecture Comparison | [Architecture Comparison](docs/adoption-guide/architecture-comparison.md) |
+| Technical FAQ | [Technical FAQ](docs/adoption-guide/technical-faq.md) |
+| Cost Estimation | [Cost Estimation](docs/adoption-guide/cost-estimation.md) |
+| **Implementation Guide** | |
+| PoC Execution Guide | [PoC Execution Guide](docs/implementation-guide/poc-execution-guide.md) |
 
 ---
 
-## Blog Series / ブログシリーズ
+## Blog Series
 
 ### Series 1: "FSx for ONTAP S3 Access Points × Lakehouse Deep Dive" (Published)
 
