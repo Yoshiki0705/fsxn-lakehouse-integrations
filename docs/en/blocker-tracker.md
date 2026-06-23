@@ -223,8 +223,9 @@ graph TD
 
 | Vendor | Request | Filed | Status |
 |--------|---------|-------|--------|
-| Databricks | UC External Location S3 AP support | 2026-05 | Closed (not entitled — support tier limitation) |
+| Databricks | UC External Location S3 AP support | 2026-05 | Closed (not entitled — support tier limitation). [Community post](https://community.databricks.com/t5/data-engineering/unity-catalog-external-location-with-amazon-s3-access-points/m-p/160296#M54880) (2026-06) |
 | Databricks | `iceberg_rest` Connection Type support | 2026-05 | Closed (not entitled — support tier limitation) |
+| Databricks | OpenSharing STS credential vending on S3 AP | 2026-06 | [Community post](https://community.databricks.com/t5/data-engineering/opensharing-vended-sts-credentials-on-s3-access-points-verified/m-p/160298#M54881) — seeking architecture guidance |
 | AWS | FSx for ONTAP S3 AP conditional writes | 2026-05 | Filed, no response |
 | AWS | FSx for ONTAP S3 AP Event Notifications | 2026-05 | Filed, no response |
 | AWS | Enable SnapMirror S3 on FSx for ONTAP | 2026-05 | Filed, no response |
