@@ -223,8 +223,9 @@ graph TD
 
 | ベンダー | 要望内容 | 提出日 | ステータス |
 |---------|---------|--------|-----------|
-| Databricks | UC External Location の S3 AP サポート | 2026-05 | クローズ（サポートティア不足により資格なし） |
+| Databricks | UC External Location の S3 AP サポート | 2026-05 | クローズ（サポートティア不足により資格なし）。[Community 投稿](https://community.databricks.com/t5/data-engineering/unity-catalog-external-location-with-amazon-s3-access-points/m-p/160296#M54880)（2026-06） |
 | Databricks | `iceberg_rest` Connection Type サポート | 2026-05 | クローズ（サポートティア不足により資格なし） |
+| Databricks | OpenSharing STS credential vending on S3 AP | 2026-06 | [Community 投稿](https://community.databricks.com/t5/data-engineering/opensharing-vended-sts-credentials-on-s3-access-points-verified/m-p/160298#M54881) — アーキテクチャガイダンス募集中 |
 | AWS | FSx for ONTAP S3 AP に conditional writes 追加 | 2026-05 | 提出済み・未回答 |
 | AWS | FSx for ONTAP S3 AP に Event Notifications 追加 | 2026-05 | 提出済み・未回答 |
 | AWS | FSx for ONTAP に SnapMirror S3 有効化 | 2026-05 | 提出済み・未回答 |
