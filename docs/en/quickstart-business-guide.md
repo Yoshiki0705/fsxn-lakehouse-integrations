@@ -26,7 +26,7 @@ Think of it this way:
 │   The analytics extract                =  The card catalog      │
 │   Analytics platforms                  =  The search system     │
 │   (Athena, Snowflake, Databricks,                               │
-│    EMR, OpenSearch, etc.)                                        │
+│    EMR, OpenSearch, etc.)                                       │
 │                                                                 │
 │   You DON'T move the books.                                     │
 │   You CREATE a card catalog that tells you what's on each       │
@@ -66,7 +66,7 @@ The "adapter" pipeline:
 │  (thousands of files,                                               │
 │   images, PDFs, CSVs)                                               │
 │         │                                                           │
-│         │ ① Read relevant files                                    │
+│         │ 1. Read relevant files                                    │
 │         ▼                                                           │
 │  ┌─────────────────┐                                                │
 │  │  Processing     │  An automated pipeline picks out the           │
@@ -76,14 +76,14 @@ The "adapter" pipeline:
 │     ┌─────┼──────────────────────┐                                  │
 │     │     │                      │                                  │
 │     ▼     ▼                      ▼                                  │
-│  ┌──────┐ ┌────────────────┐ ┌──────────────────┐                   │
-│  │Tables│ │Search Index    │ │Analytics Platform │                   │
-│  │(AWS) │ │(for AI-powered │ │(Athena/Snowflake/ │                   │
-│  │      │ │ search)        │ │ Databricks/EMR)   │                   │
-│  └──────┘ └────────────────┘ └──────────────────┘                   │
+│  ┌──────┐ ┌────────────────┐ ┌───────────────────┐                  │
+│  │Tables│ │Search Index    │ │Analytics Platform │                  │
+│  │(AWS) │ │(for AI-powered │ │(Athena/Snowflake/ │                  │
+│  │      │ │ search)        │ │ Databricks/EMR)   │                  │
+│  └──────┘ └────────────────┘ └───────────────────┘                  │
 │                                                                     │
 │                                                                     │
-│  ② Only the "card catalog" is stored here — NOT your files.        │
+│  2. Only the "card catalog" is stored here — NOT your files.        │
 │     Typically less than 1% of the original file volume.             │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
