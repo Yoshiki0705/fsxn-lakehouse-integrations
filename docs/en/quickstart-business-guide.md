@@ -3,6 +3,8 @@
 # How to Use Your File Server Data for Analytics and AI
 
 > For account managers, sales, business leaders, and anyone who needs the "what" and "why" without the implementation details.
+>
+> **Note**: This guide assumes your file server runs on **Amazon FSx for NetApp ONTAP** (FSx for ONTAP) — AWS's managed enterprise file storage that supports Windows shares, Linux mounts, and S3 access simultaneously.
 
 ---
 
@@ -44,9 +46,9 @@ Think of it this way:
 
 Short answer: **Most analytics platforms don't speak the file server's language natively.**
 
-Your file server uses NFS and SMB (the protocols that Windows Explorer and Linux use). Analytics platforms expect data in cloud storage formats. It's like trying to plug a Japanese appliance into a US outlet — you need an adapter.
+Your file server uses NFS and SMB (the technology behind shared network drives — what Windows Explorer and Linux use to access files). Analytics platforms expect data in cloud storage formats. It's like trying to plug a Japanese appliance into a US outlet — you need an adapter.
 
-**Good news**: Some platforms (Athena, Snowflake, EMR) can already read directly from the file server via S3 Access Points — no adapter needed for read-only analytics. For platforms that need managed tables (like Databricks Unity Catalog), a small pipeline extracts and writes the structured data.
+**Good news**: Some platforms (Athena, Snowflake, EMR) can already read directly from the file server via a built-in connector (S3 Access Points) — no adapter needed for read-only analytics. For platforms that need managed tables (like Databricks Unity Catalog), a small pipeline extracts and writes the structured data.
 
 The "adapter" pipeline:
 1. **Reads** relevant data from your file server (no files are moved)
@@ -113,7 +115,7 @@ Do you need to analyze the FILE CONTENTS
          when it changed, AI classification) → Way A (Smart Extract)
 ```
 
-**Most customers start with Way A** because they want to find and categorize their files, not copy them all.
+**Most organizations start with Way A** because they want to find and categorize their files, not copy them all.
 
 ---
 
@@ -185,7 +187,7 @@ Yes. A proof-of-concept with 100–1,000 sample files takes about 1 week and cos
 | Your role | Start here |
 |-----------|-----------|
 | Business leader / executive | You've read enough. Ask your technical team to review the [PoC Execution Guide](../implementation-guide/poc-execution-guide.md) |
-| Account manager / sales | Share this page + the [Cost Estimation](../adoption-guide/cost-estimation.md) with your customer |
+| Account manager / sales | Share this page + the [Cost Estimation](../adoption-guide/cost-estimation.md) with the evaluating team |
 | Technical lead | Continue to the [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) for full architecture details |
 | SI / implementation partner | See the [PoC Execution Guide](../implementation-guide/poc-execution-guide.md) for the step-by-step checklist |
 
