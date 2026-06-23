@@ -22,7 +22,9 @@ Think of it this way:
 │   Your file server (shared drives)     =  The library shelves   │
 │   Files (PDFs, images, CSVs, etc.)     =  The actual books      │
 │   The analytics extract                =  The card catalog      │
-│   Databricks Unity Catalog             =  The search system     │
+│   Analytics platforms                  =  The search system     │
+│   (Athena, Snowflake, Databricks,                               │
+│    EMR, OpenSearch, etc.)                                        │
 │                                                                 │
 │   You DON'T move the books.                                     │
 │   You CREATE a card catalog that tells you what's on each       │
@@ -33,21 +35,23 @@ Think of it this way:
 
 - The **books stay on the shelves** (your files stay on the file server)
 - A small **card catalog** is created (structured data: titles, authors, categories — extracted from the files)
-- The **search system** (Databricks) lets people query the catalog
+- **Analytics platforms** (Athena, Snowflake, Databricks, etc.) let people query the catalog
 - When someone needs the actual book, they go to the shelf (on-demand file access)
 
 ---
 
 ## Why Can't You Just "Connect" Directly?
 
-Short answer: **Databricks doesn't speak the file server's language natively.**
+Short answer: **Most analytics platforms don't speak the file server's language natively.**
 
-Your file server uses NFS and SMB (the protocols that Windows Explorer and Linux use). Databricks expects data in its own managed storage. It's like trying to plug a Japanese appliance into a US outlet — you need an adapter.
+Your file server uses NFS and SMB (the protocols that Windows Explorer and Linux use). Analytics platforms expect data in cloud storage formats. It's like trying to plug a Japanese appliance into a US outlet — you need an adapter.
 
-The "adapter" in this case is a small pipeline that:
+**Good news**: Some platforms (Athena, Snowflake, EMR) can already read directly from the file server via S3 Access Points — no adapter needed for read-only analytics. For platforms that need managed tables (like Databricks Unity Catalog), a small pipeline extracts and writes the structured data.
+
+The "adapter" pipeline:
 1. **Reads** relevant data from your file server (no files are moved)
 2. **Extracts** the useful information (measurements, metadata, classifications)
-3. **Writes** that small extract to Databricks-compatible storage
+3. **Writes** that small extract to analytics-compatible storage
 
 ---
 
@@ -70,11 +74,11 @@ The "adapter" in this case is a small pipeline that:
 │     ┌─────┼──────────────────────┐                                  │
 │     │     │                      │                                  │
 │     ▼     ▼                      ▼                                  │
-│  ┌──────┐ ┌────────────────┐ ┌────────────────┐                     │
-│  │Tables│ │Search Index    │ │Databricks Table│                     │
-│  │(AWS) │ │(for AI-powered │ │(for analytics) │                     │
-│  │      │ │ search)        │ │                │                     │
-│  └──────┘ └────────────────┘ └────────────────┘                     │
+│  ┌──────┐ ┌────────────────┐ ┌──────────────────┐                   │
+│  │Tables│ │Search Index    │ │Analytics Platform │                   │
+│  │(AWS) │ │(for AI-powered │ │(Athena/Snowflake/ │                   │
+│  │      │ │ search)        │ │ Databricks/EMR)   │                   │
+│  └──────┘ └────────────────┘ └──────────────────┘                   │
 │                                                                     │
 │                                                                     │
 │  ② Only the "card catalog" is stored here — NOT your files.        │
@@ -161,14 +165,15 @@ Yes. Files never leave your AWS account. The pipeline reads files inside your pr
 **Q: What happens to my existing workflows?**
 Nothing changes. People using Windows file shares or Linux mounts continue exactly as before. The analytics pipeline is additive — it reads files without modifying them.
 
-**Q: Do I need Databricks?**
-Not necessarily. The analytics extract can also be queried by:
-- Amazon Athena (serverless SQL, pay per query)
-- Amazon QuickSight (dashboards)
-- Snowflake (if you already use it)
-- Any tool that reads standard data formats
+**Q: Which analytics platform should I use?**
+It depends on what you need:
+- **Amazon Athena** — Serverless SQL, no infrastructure, pay per query. Works immediately with zero-copy reads from the file server. The simplest starting point.
+- **Snowflake** — If you already use it. Supports External Tables on the file server + AI features (Cortex). Zero-copy reads verified.
+- **Databricks** — Advanced ML/AI, Unity Catalog governance. Requires a small data extract (indirect path) due to a current platform constraint with file server access points.
+- **Amazon EMR** — Spark-based ETL, read + write verified. Good for large-scale data transformation.
+- **DuckDB (Lambda)** — Lightest option. Serverless, ~$0.00001/query. Good for ad-hoc exploration.
 
-Databricks is the right choice when you need advanced ML/AI capabilities or already have it in your organization.
+Multiple platforms can access the same file server data simultaneously — they are not mutually exclusive.
 
 **Q: Can I try this without committing?**
 Yes. A proof-of-concept with 100–1,000 sample files takes about 1 week and costs less than $50. No changes to your production file server.
