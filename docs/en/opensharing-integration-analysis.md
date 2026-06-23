@@ -4,9 +4,9 @@
 
 # OpenSharing × FSx for ONTAP: Integration Analysis
 
-> **Status**: Forward-looking architecture analysis, now augmented with protocol-level facts read directly from the public OpenSharing specification (2026-06-16). No vendor implementation has been independently validated against FSx for ONTAP by this repository yet. Validation tasks are tracked as a future activity.
+> **Status**: Protocol-level analysis from the public OpenSharing specification + independent verification of STS credential vending against FSx for ONTAP S3 Access Points (2026-06-17). Native vendor implementation (Storage Ecosystem partners) not yet validated (expected end of year). Technical questions posted to the Databricks Community Forum ([post #1](https://community.databricks.com/t5/data-engineering/unity-catalog-external-location-with-amazon-s3-access-points/m-p/160296#M54880), [post #2](https://community.databricks.com/t5/data-engineering/opensharing-vended-sts-credentials-on-s3-access-points-verified/m-p/160298#M54881)).
 
-> **Review note**: This analysis was produced through a multi-lens architecture review. Reviewer lenses are described by **role only** (no individual or employer attribution). Each claim is tagged by evidence tier: **Public** (verifiable from public sources), **Archetype** (generic role-based reasoning).
+> **Evidence tier**: Tagged per claim — **Public** (verifiable from public sources), **Project-context** (reproducible in this repository), **Archetype** (generic role-based reasoning).
 
 ## What Changed (Public Evidence)
 

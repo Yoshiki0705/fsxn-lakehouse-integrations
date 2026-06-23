@@ -4,9 +4,9 @@
 
 # OpenSharing × FSx for ONTAP: 統合分析
 
-> **ステータス**: 将来を見据えたアーキテクチャ分析に、公開 OpenSharing 仕様から直接読み取ったプロトコルレベルの事実を追加（2026-06-16）。本リポジトリによる FSx for ONTAP に対するベンダー実装の独立検証はまだ実施していない。検証タスクは将来のアクティビティとして管理する。
+> **ステータス**: 公開 OpenSharing 仕様のプロトコルレベル分析 + FSx for ONTAP S3 Access Point に対する STS credential vending の独立検証済み（2026-06-17）。Native ベンダー実装（Storage Ecosystem パートナー）の検証は未実施（年末提供予定）。Databricks Community Forum に技術的質問を投稿済み（[投稿 #1](https://community.databricks.com/t5/data-engineering/unity-catalog-external-location-with-amazon-s3-access-points/m-p/160296#M54880)、[投稿 #2](https://community.databricks.com/t5/data-engineering/opensharing-vended-sts-credentials-on-s3-access-points-verified/m-p/160298#M54881)）。
 
-> **レビュー注記**: 本分析は複数レンズによるアーキテクチャレビューで作成した。レビュアーのレンズは**役割のみ**で記述する（個人・所属企業の帰属はしない）。各主張には evidence tier を付す: **Public**（公開ソースで検証可能）、**Archetype**（役割ベースの一般的推論）。
+> **Evidence tier**: 各主張に明記 — **Public**（公開ソースで検証可能）、**Project-context**（本リポジトリ内で再現可能）、**Archetype**（役割ベースの一般的推論）。
 
 ## 何が変わったか（Public Evidence）
 
