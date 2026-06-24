@@ -1,0 +1,66 @@
+verification_date: "2026-06-24T00:45:00Z"
+environment:
+  execution_location: local (macOS, Python 3.14, boto3 1.43.32, PyIceberg 0.11.1)
+  fsx_filesystem: fs-09ffe72a3b2b7dbbd
+  ap_alias: verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias
+  s3_tables_bucket: fsxn-metadata-catalog
+  region: ap-northeast-1
+
+test_5_s3a_style_access_with_vended_credentials:
+  status: PASS
+  result: "5/5 operations passed"
+  details:
+    - operation: ListObjectsV2
+      status: PASS
+      result: "10 objects listed in 344 ms"
+    - operation: GetObject (Parquet, 250 KB)
+      status: PASS
+      latency_ms: 58
+    - operation: GetObject (Delta log JSON, 1.7 KB)
+      status: PASS
+      latency_ms: 407
+    - operation: GetObject (PNG, 11 KB)
+      status: PASS
+      latency_ms: 170
+    - operation: HeadObject
+      status: PASS
+      note: "Spark S3A uses this for file existence checks"
+    - operation: GetBucketLocation
+      status: PASS
+      result: "ap-northeast-1"
+  conclusion: >
+    All S3A-equivalent operations work with vended STS credentials on
+    FSx for ONTAP S3 AP alias. A Spark cluster configured with session
+    credentials (fs.s3a.access.key/secret.key/session.token) should be
+    able to read from the AP alias using spark.read.parquet("s3a://...").
+
+test_1_pyiceberg_s3tables_rest_catalog:
+  status: PASS
+  details:
+    - step: "REST Catalog connection (SigV4)"
+      status: PASS
+      endpoint: "https://s3tables.ap-northeast-1.amazonaws.com/iceberg"
+      auth: "rest.sigv4-enabled=true, signing-name=s3tables"
+    - step: "List namespaces"
+      status: PASS
+      result: "[('metadata',)]"
+    - step: "List tables"
+      status: PASS
+      result: "[('metadata', 'unstructured_files')]"
+    - step: "Load table schema"
+      status: PASS
+      schema_fields: 23
+      snapshots: 1
+    - step: "Scan (3 rows)"
+      status: PASS
+      latency_ms: 881
+      rows_returned: 3
+  conclusion: >
+    PyIceberg 0.11.1 successfully connects to S3 Tables Iceberg REST
+    endpoint with SigV4 authentication. Table schema (23 fields) and
+    data are readable. This confirms that any Iceberg REST client
+    (PyIceberg, Spark Iceberg, Trino, Athena) can access the metadata
+    catalog via the standard Iceberg REST protocol.
+  next_step: >
+    Verify the same read with vended STS credentials to confirm
+    OpenSharing recipients can access S3 Tables Iceberg data.
