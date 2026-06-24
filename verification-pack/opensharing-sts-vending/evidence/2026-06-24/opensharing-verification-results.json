@@ -1,0 +1,113 @@
+{
+  "verification_date": "2026-06-23T20:42:46Z",
+  "ap_alias": "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias",
+  "region": "ap-northeast-1",
+  "sts_credential_vending": {
+    "mode": "sts_credential_vending",
+    "tests": [
+      {
+        "test": "list_allowed",
+        "status": "PASS",
+        "count": 5
+      },
+      {
+        "test": "get_allowed",
+        "key": "media/documents/invoice_sample.png",
+        "status": "PASS",
+        "size": 11338,
+        "content_type": "image/png"
+      },
+      {
+        "test": "get_allowed",
+        "key": "media/documents/metadata-test-doc.txt",
+        "status": "PASS",
+        "size": 79,
+        "content_type": "text/plain"
+      },
+      {
+        "test": "get_allowed",
+        "key": "media/documents/pii-test-document.txt",
+        "status": "PASS",
+        "size": 255,
+        "content_type": "text/plain"
+      },
+      {
+        "test": "get_allowed",
+        "key": "media/images/product_inspection.png",
+        "status": "PASS",
+        "size": 7180,
+        "content_type": "image/png"
+      },
+      {
+        "test": "get_allowed",
+        "key": "media/images/sensor_dashboard.png",
+        "status": "PASS",
+        "size": 9380,
+        "content_type": "image/png"
+      },
+      {
+        "test": "deny_check",
+        "status": "PASS"
+      }
+    ],
+    "sts_generated": true,
+    "expiration": "2026-06-23 20:57:37+00:00"
+  },
+  "presigned_url": {
+    "mode": "presigned_url",
+    "tests": [
+      {
+        "test": "presign_get",
+        "key": "athena-results/athena-s3cp-test.txt",
+        "format": "txt",
+        "status": "PASS",
+        "http_status": 200,
+        "size": 24,
+        "latency_sec": 0.143
+      },
+      {
+        "test": "presign_get",
+        "key": "athena-results/f76630ee-ea8e-4673-875f-deeab9eabf87.csv",
+        "format": "csv",
+        "status": "PASS",
+        "http_status": 200,
+        "size": 11,
+        "latency_sec": 0.692
+      },
+      {
+        "test": "presign_get",
+        "key": "benchmark/sensor_data_large.parquet",
+        "format": "parquet",
+        "status": "PASS",
+        "http_status": 200,
+        "size": 108002572,
+        "latency_sec": 3.11
+      },
+      {
+        "test": "presign_get",
+        "key": "delta-lake/sensor_table/_delta_log/00000000000000000000.json",
+        "format": "json",
+        "status": "PASS",
+        "http_status": 200,
+        "size": 1780,
+        "latency_sec": 0.643
+      },
+      {
+        "test": "presign_get",
+        "key": "media/documents/invoice_sample.png",
+        "format": "png",
+        "status": "PASS",
+        "http_status": 200,
+        "size": 11338,
+        "latency_sec": 0.154
+      }
+    ],
+    "global_endpoint_behavior": 301,
+    "requirement": "Regional endpoint (s3.REGION.amazonaws.com) + SigV4 required"
+  },
+  "conclusion": {
+    "sts_mode": "VERIFIED",
+    "presign_mode": "VERIFIED",
+    "recommendation": "Use STS credential vending as primary mode"
+  }
+}
