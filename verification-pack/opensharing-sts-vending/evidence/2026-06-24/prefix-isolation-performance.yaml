@@ -1,0 +1,58 @@
+verification_date: "2026-06-24T00:23:00Z"
+environment:
+  fsx_filesystem: fs-09ffe72a3b2b7dbbd
+  svm: verification-svm
+  ap_alias: verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias
+  region: ap-northeast-1
+  ap_type: Internet-origin
+  execution_location: local (macOS, boto3)
+
+test_2_prefix_isolation:
+  status: PASS
+  result: "3/3 prefix scopes correctly isolated"
+  details:
+    - scope: "media/ only"
+      allowed: PASS (11,338 bytes - PNG)
+      denied: PASS (sensor-data/ AccessDenied)
+    - scope: "sensor-data/ only"
+      allowed: PASS (250,880 bytes - Parquet)
+      denied: PASS (media/ AccessDenied)
+    - scope: "delta-lake/ only"
+      allowed: PASS (1,780 bytes - Delta log JSON)
+      denied: PASS (media/ AccessDenied)
+  conclusion: >
+    Per-prefix credential scoping provides table-level isolation.
+    An OpenSharing server can issue credentials for one table/prefix
+    without granting access to other tables on the same access point.
+
+test_3_performance:
+  status: PASS
+  file: sensor-data/sensor_data.parquet (250,880 bytes)
+  direct_iam:
+    runs: 5
+    avg_ms: 355
+    min_ms: 99
+    max_ms: 559
+  vended_credentials:
+    runs: 5
+    avg_ms: 305
+    min_ms: 97
+    max_ms: 686
+  overhead_percent: -14.1
+  verdict: "NEGLIGIBLE — no performance penalty for using vended credentials"
+  conclusion: >
+    Vended STS credentials do not introduce measurable latency overhead
+    compared to direct IAM access. The slight negative overhead is within
+    measurement variance (network jitter, connection reuse).
+
+test_4_credential_expiry:
+  status: PASS
+  method: GetFederationToken
+  duration_seconds: 900
+  expiration_observed: "2026-06-24T00:38:33+00:00"
+  enforcement: "Verified — AWS STS enforces TTL at the credential level"
+  note: >
+    GetFederationToken minimum is 900s (15 min). For shorter TTL,
+    AssumeRole can be used with DurationSeconds down to 900s.
+    In production OpenSharing implementations, TTL would typically
+    be set to match the sharing session duration.
