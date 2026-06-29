@@ -121,8 +121,8 @@ response = s3.list_objects_v2(Bucket='<ap-alias>', Prefix='sensor-data/')
                     │  Lambda (arm64, Python 3.12) │
                     │  FastAPI + Mangum adapter    │
                     │                              │
-  Recipient ──────►│  Bearer Token Auth            │
-  (any client)     │  Volume Registry (YAML)       │
+  Recipient ──────► │  Bearer Token Auth           │
+  (any client)      │  Volume Registry (YAML)      │
                     │  OpenTelemetry Traces        │
                     └──────────────┬───────────────┘
                                    │ sts:AssumeRole (VendingRole)

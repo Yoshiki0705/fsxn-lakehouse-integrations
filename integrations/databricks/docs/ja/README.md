@@ -16,6 +16,37 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）と Databricks を S3 Access Point
 
 Unity Catalog External Location は現在セッションポリシーの制約により動作しないため、本番環境での Delta Lake テーブルには [Databricks がサポートするクラウドストレージパターン](https://docs.databricks.com/aws/en/connect/storage/amazon-s3) を使用してください。
 
+## アーキテクチャ
+
+```
+┌───────────────────────────────────────────────────────────────────────┐
+│                              AWS Account                              │
+│                                                                       │
+│  ┌────────────────────┐                                               │
+│  │  Databricks        │                                               │
+│  │  Unity Catalog     │                                               │
+│  │  ┌──────────────┐  │     ┌──────────────┐     ┌───────────────┐    │
+│  │  │ External     │  │     │ S3 Access    │     │ FSx for ONTAP │    │
+│  │  │ Location     │──┼────▶│ Point        │────▶│ Volume        │    │
+│  │  │              │  │     │ (VPC-scoped) │     │ (S3 protocol) │    │
+│  │  └──────────────┘  │     └──────────────┘     └───────────────┘    │
+│  │  ┌──────────────┐  │            │                    │             │
+│  │  │ Storage      │  │     ┌──────▼──────┐      ┌──────▼──────┐      │
+│  │  │ Credential   │──┼────▶│ IAM Role    │      │ Dedup/Snap/ │      │
+│  │  │ (IAM Role)   │  │     │ (AssumeRole)│      │ FlexClone   │      │
+│  │  └──────────────┘  │     └─────────────┘      └─────────────┘      │
+│  └────────────────────┘                                               │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+## S3 Access Point パス
+
+```
+s3://<s3ap-alias>/bronze/    # 取り込み済み生データ
+s3://<s3ap-alias>/silver/    # クレンジング・変換済み
+s3://<s3ap-alias>/gold/      # ビジネスレディ集計
+```
+
 ## 検証結果 (2026-05-17)
 
 | アプローチ | 結果 | 備考 |
