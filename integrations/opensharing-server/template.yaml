@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  OpenSharing Volumes Reference Server — Lambda deployment with IAM roles for
+  credential vending against S3 Access Points (including FSx for ONTAP S3 AP).
+
+Parameters:
+  S3AccessPointAlias:
+    Type: String
+    Description: >
+      S3 Access Point alias (e.g., my-ap-abc123-ext-s3alias).
+      This is the AP your volumes point to.
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+  CredentialDurationSeconds:
+    Type: Number
+    Default: 900
+    MinValue: 900
+    MaxValue: 3600
+    Description: TTL for vended credentials (seconds)
+
+Resources:
+  # --- Vending Role: assumed by Lambda to generate scoped credentials ---
+  VendingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "opensharing-vending-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt LambdaExecutionRole.Arn
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3APReadAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowGetObjectOnAnyAP
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: "arn:aws:s3:*:*:accesspoint/*/object/*"
+              - Sid: AllowListBucketOnAnyAP
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: "arn:aws:s3:*:*:accesspoint/*"
+
+  # --- Lambda Execution Role ---
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "opensharing-lambda-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AssumeVendingRole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource: !GetAtt VendingRole.Arn
+        - PolicyName: STSGetCallerIdentity
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sts:GetCallerIdentity
+                Resource: "*"
+
+  # --- Lambda Function ---
+  VolumesServerFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: VendingRole
+    Properties:
+      FunctionName: !Sub "opensharing-volumes-server-${Environment}"
+      Description: "OpenSharing Volumes API reference server"
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Handler: lambda_handler.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          OPENSHARING_CONFIG: config/volumes.yaml
+          TESTING: "0"
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Component
+          Value: opensharing-volumes-server
+
+  # --- Function URL (public, auth handled at application level) ---
+  FunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      AuthType: NONE
+      TargetFunctionArn: !GetAtt VolumesServerFunction.Arn
+
+  FunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VolumesServerFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
+
+  # --- Log Group ---
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/opensharing-volumes-server-${Environment}"
+      RetentionInDays: 14
+
+Outputs:
+  FunctionUrl:
+    Description: OpenSharing Volumes server endpoint
+    Value: !GetAtt FunctionUrl.FunctionUrl
+
+  FunctionName:
+    Description: Lambda function name
+    Value: !Ref VolumesServerFunction
+
+  VendingRoleArn:
+    Description: >
+      ARN of the vending role. Set this as sts_role_arn in config/volumes.yaml.
+    Value: !GetAtt VendingRole.Arn
+
+  LambdaRoleArn:
+    Description: Lambda execution role ARN
+    Value: !GetAtt LambdaExecutionRole.Arn

@@ -1,0 +1,12 @@
+# Lambda packaging artifacts
+.lambda-pkg/
+deployment.zip
+
+# Generated config (contains AP alias — use volumes.example.yaml as template)
+config/volumes.yaml
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/

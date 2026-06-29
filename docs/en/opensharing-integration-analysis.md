@@ -233,3 +233,14 @@ Still open:
 
 A phased validation activity has been defined (read → Iceberg IRC → governance travel → write-back → unstructured design → publication). See the repository's Supported Integrations table and the upcoming blog series for status updates.
 
+### Reference Server PoC (2026-06-29)
+
+A lightweight OSS reference server implementing the OpenSharing Volumes API has been developed and validated against the FSx for ONTAP S3 AP in this environment:
+
+- **Location**: [`integrations/opensharing-server/`](../../integrations/opensharing-server/)
+- **Scope**: Volumes API (credential vending for unstructured data)
+- **Tests**: 12/12 PASS (API contract + E2E against FSx for ONTAP S3 AP)
+- **Key finding**: S3 AP ARN format requires specific IAM policy patterns (`arn:aws:s3:*:*:accesspoint/*/object/<prefix>*`) — standard bucket ARN patterns fail
+
+This implementation documents the S3 Access Point-specific IAM policy patterns discovered during validation and may be useful as a reference for other implementors targeting S3-compatible backends.
+

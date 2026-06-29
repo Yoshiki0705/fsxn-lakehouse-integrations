@@ -233,3 +233,14 @@ FSx for ONTAP → OpenSharing Server（共有 + アクセス制御）
 
 段階的な検証アクティビティを定義済み（read → Iceberg IRC → ガバナンス travel → write-back → 非構造化設計 → 公開）。ステータスはリポジトリの Supported Integrations テーブルおよび今後のブログシリーズで更新する。
 
+### Reference Server PoC（2026-06-29）
+
+OpenSharing Volumes API の軽量 OSS 参照実装を開発し、本環境の FSx for ONTAP S3 AP に対して検証済み:
+
+- **場所**: [`integrations/opensharing-server/`](../../integrations/opensharing-server/)
+- **スコープ**: Volumes API（非構造化データの credential vending）
+- **テスト**: 12/12 PASS（API コントラクト + E2E FSx for ONTAP S3 AP）
+- **重要な発見**: S3 AP の ARN 形式には特定の IAM ポリシーパターン（`arn:aws:s3:*:*:accesspoint/*/object/<prefix>*`）が必要 — 標準バケット ARN パターンでは失敗
+
+本実装は検証中に発見した S3 Access Point 固有の IAM ポリシーパターンを文書化しており、S3 互換バックエンドを対象とする他の実装者の参考となりうる。
+

@@ -1,0 +1,38 @@
+# OpenSharing Volumes Server Configuration
+# Copy to volumes.yaml and edit for your environment.
+
+server:
+  credential_duration_seconds: 900  # 15 minutes (recommended: 300-900 for production)
+  aws_region: ap-northeast-1
+  # sts_role_arn: arn:aws:iam::123456789012:role/opensharing-vending-role  # Optional: AssumeRole instead of GetFederationToken
+
+auth:
+  # Bearer tokens for recipient authentication
+  # In production, replace with OAuth2/OIDC or external IdP integration
+  tokens:
+    - token: "replace-with-secure-token-for-quality-team"
+      recipient: "quality-team"
+      shares: ["factory"]  # Which shares this token can access
+    - token: "replace-with-secure-token-for-partner"
+      recipient: "partner-corp"
+      shares: ["factory"]
+
+shares:
+  - name: factory
+    comment: "Manufacturing data from Plant Tokyo"
+    schemas:
+      - name: quality
+        comment: "Quality inspection assets"
+        volumes:
+          - name: inspection-images
+            comment: "Visual inspection photos from Line A"
+            storage_location: "s3://<your-ap-alias-ext-s3alias>/quality/lineA/images/"
+          - name: sensor-data
+            comment: "Sensor readings (Parquet, CSV)"
+            storage_location: "s3://<your-ap-alias-ext-s3alias>/sensor-data/"
+      - name: engineering
+        comment: "Engineering documents and drawings"
+        volumes:
+          - name: cad-drawings
+            comment: "CAD files for equipment maintenance"
+            storage_location: "s3://<your-ap-alias-ext-s3alias>/engineering/cad/"
