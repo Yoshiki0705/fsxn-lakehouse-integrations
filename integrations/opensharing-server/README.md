@@ -12,13 +12,13 @@ This reference server fills the gap: a standalone, vendor-neutral server that an
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  OpenSharing Volumes Server (this project)                       │
-│                                                                   │
-│  1. Recipient authenticates (bearer token)                       │
-│  2. Lists available shares / schemas / volumes                   │
-│  3. Requests temporary credentials for a volume                  │
-│  4. Server calls STS (scoped to volume's prefix)                 │
-│  5. Recipient uses credentials to access S3 AP directly          │
+│  OpenSharing Volumes Server (this project)                      │
+│                                                                 │
+│  1. Recipient authenticates (bearer token)                      │
+│  2. Lists available shares / schemas / volumes                  │
+│  3. Requests temporary credentials for a volume                 │
+│  4. Server calls STS (scoped to volume's prefix)                │
+│  5. Recipient uses credentials to access S3 AP directly         │
 └─────────────────────────────────────────────────────────────────┘
          │                              │
          ▼                              ▼
@@ -106,8 +106,8 @@ response = s3.list_objects_v2(Bucket='<ap-alias>', Prefix='sensor-data/')
 ## Architecture
 
 ```
-                    ┌─────────────────────────────┐
-                    │  CloudFormation Stack         │
+                    ┌──────────────────────────────┐
+                    │  CloudFormation Stack        │
                     │  (template.yaml)             │
                     │                              │
                     │  • LambdaExecutionRole       │
@@ -118,24 +118,24 @@ response = s3.list_objects_v2(Bucket='<ap-alias>', Prefix='sensor-data/')
                     └──────────────┬───────────────┘
                                    │
                     ┌──────────────▼───────────────┐
-                    │  Lambda (arm64, Python 3.12)  │
-                    │  FastAPI + Mangum adapter     │
+                    │  Lambda (arm64, Python 3.12) │
+                    │  FastAPI + Mangum adapter    │
                     │                              │
   Recipient ──────►│  Bearer Token Auth            │
   (any client)     │  Volume Registry (YAML)       │
-                    │  OpenTelemetry Traces         │
+                    │  OpenTelemetry Traces        │
                     └──────────────┬───────────────┘
                                    │ sts:AssumeRole (VendingRole)
                                    │ + inline session policy (prefix-scoped)
                                    ▼
                     ┌──────────────────────────────┐
-                    │  AWS STS                      │
+                    │  AWS STS                     │
                     └──────────────┬───────────────┘
                                    │ Scoped temporary credentials
                                    ▼
                     ┌──────────────────────────────┐
-  Recipient ──────►│  FSx for ONTAP S3 AP         │ (direct data access)
-  (same creds)     │  or Standard S3 Bucket       │
+  Recipient ──────► │  FSx for ONTAP S3 AP         │ (direct data access)
+  (same creds)      │  or Standard S3 Bucket       │
                     └──────────────────────────────┘
 ```
 
