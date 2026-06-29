@@ -26,6 +26,35 @@
 | Iceberg Table 書き込み | ❌ | ❌ (conditional writes 非サポート) |
 | GET_PRESIGNED_URL | ✅ (動作確認済み) | ✅ |
 
+## パートナー判断カード（クイックリファレンス）
+
+| 要件 | ステータス | アクション |
+|---|:---:|---|
+| Snowflake から NAS ファイルをクエリ | ✅ | ステージに `AWS_ACCESS_POINT_ARN` を設定 |
+| ガバナンス付き外部テーブル | ✅ | External Table 作成 + タグ適用 |
+| 非構造化データカタログ | ✅ | Directory Table 有効化 + 手動 REFRESH |
+| AI テキスト処理（OCR、要約、翻訳） | ✅ | External Table 上の Cortex 関数 — コピー不要 |
+| AI Vision（画像分析） | ✅ | COPY FILES → 内部ステージ → TO_FILE 回避策 |
+| AI RAG / セマンティック検索（Cortex Search） | ✅ | External Table → COPY INTO → Cortex Search Service (198ms) |
+| 自動化エンリッチメント（Dynamic Table） | ✅ | External Table → Dynamic Table (TARGET_LAG = '1 hour', FULL refresh) |
+| パートナーとキュレート済みデータを共有 | ✅ | External Table / Dynamic Table → Snowflake Data Sharing |
+| マルチエンジン用オープンフォーマット | ✅ | COPY INTO → Managed Iceberg Table → Databricks/Athena が読み取り可能 |
+| リアルタイム自動取り込み（Snowpipe） | ❌ | Task + ALTER EXTERNAL TABLE REFRESH または FPolicy + Lambda を使用 |
+| FSx S3 AP 上の Iceberg 書き戻し | ❌ | トランザクショナル書き込みには標準 S3 を使用 |
+
+> ガバナンス付き外部テーブル、AI 機能、データ共有、マルチエンジン Iceberg 互換が必要な場合は Snowflake を選択。軽量な AWS ネイティブサーバーレス SQL で十分な場合は Athena を選択。
+
+### パートナー会話スクリプト
+
+**NAS データ + AI 要件のある顧客向け:**
+> 「Snowflake は FSx for ONTAP の NAS データに対してコピーなしで直接 AI を実行できます。テストした 10 の Cortex AI 機能のうち 8 つが FSx データ上で動作し、OCR、要約、翻訳、セマンティック検索（Cortex Search で 198ms クエリレイテンシ）を含みます。画像分析には 1 ステップのステージング回避策で Vision AI を有効化できます。NFS/SMB ユーザーがアクセスする同じデータに対して、タグ、マスキング、行レベルセキュリティの完全なガバナンスを実現します。」
+
+**データ移動を懸念する顧客向け:**
+> 「External Table を使えば、データは FSx for ONTAP に残ります。Snowflake ストレージへのコピーは不要です。NFS、SMB、S3 AP で同時にアクセス可能な同じファイルです。Snapshot、FlexClone、SnapLock などの ONTAP 機能がデータを保護し続けます。Snowflake はストレージを所有せずにガバナンスと AI を追加します。」
+
+**NAS 統合で Snowflake vs Databricks を評価中の顧客向け:**
+> 「Snowflake の `AWS_ACCESS_POINT_ARN` 付き External Table は、AI 機能を含むガバナンス付き読み取りアクセスを今日提供します。Databricks Unity Catalog は現在セッションポリシーの制限により S3 Access Points 上でテーブル作成ができません。NAS データに対するガバナンス付き分析には、Snowflake が検証済みパスです。」
+
 ## 概要
 
 Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Point を Snowflake の External Stage として統合し、External Table / Iceberg Table のストレージレイヤーとして使用するパターンです。
@@ -36,11 +65,11 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Point を Snowflake 
 ┌───────────────────────────────────────────────────────────────────────┐
 │                              AWS アカウント                             │
 │                                                                       │
-│  ┌─────────────────┐     ┌──────────────────┐     ┌───────────────┐  │
-│  │ FSx for ONTAP   │     │ FSx for ONTAP    │     │ IAM ロール     │  │
-│  │ (NFS ボリューム)  │◀───▶│ S3 Access Point  │◀────│ (Snowflake    │  │
-│  │                 │     │ (Internet origin) │     │  AssumeRole)  │  │
-│  └─────────────────┘     └────────┬─────────┘     └───────┬───────┘  │
+│  ┌─────────────────┐     ┌──────────────────┐     ┌───────────────┐   │
+│  │ FSx for ONTAP   │     │ FSx for ONTAP    │     │ IAM ロール     │   │
+│  │ (NFS ボリューム)　│◀───▶│ S3 Access Point  │◀────│ (Snowflake    │   │
+│  │                 │     │(Internet origin) │     │  AssumeRole)  │   │
+│  └─────────────────┘     └────────┬─────────┘     └───────┬───────┘   │
 │                                    │                        │         │
 └────────────────────────────────────┼────────────────────────┼─────────┘
                                      │ S3 API                 │ STS
@@ -53,6 +82,25 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Point を Snowflake 
                           │       → Snowpipe (FPolicy + SNS 経由)       │
                           └────────────────────────────────────────────┘
 ```
+
+## FSx for ONTAP S3 Access Point — 対応 S3 オペレーション
+
+| オペレーション | 対応 | 備考 |
+|-------------|:---:|------|
+| ListObjectsV2 | ✅ | 高レイテンシ（数十秒〜分）の場合あり |
+| GetObject | ✅ | |
+| PutObject | ✅ | 最大 5GB |
+| DeleteObject | ✅ | |
+| HeadObject | ✅ | |
+| **Pre-signed URL** | ✅ | AWS ドキュメントでは非サポートと記載されているが実際には動作 |
+| **TO_FILE / FILE データ型** | ❌ | "Remote file not found" — Cortex マルチモーダルが S3 AP ファイルを解決できない |
+| **PARSE_DOCUMENT** | ✅ | 異なるファイルアクセス機構を使用（ステージパス文字列） |
+| S3 Event Notifications | ❌ | 代替として FPolicy を使用 |
+| Object Versioning | ❌ | |
+
+> ℹ️ **注意**: AWS ドキュメントでは Pre-signed URL は「非サポート」と記載されていますが、テストでは `GET_PRESIGNED_URL()` が FSx for ONTAP S3 AP で正しく動作することを確認しています。
+
+> ⚠️ **TO_FILE 制限**: Snowflake の `TO_FILE()` 関数（マルチモーダル AI_COMPLETE/Vision AI で使用）は FSx S3 AP 外部ステージ上のファイルを解決できません。回避策: `COPY FILES` で暗号化なし内部ステージ（SNOWFLAKE_SSE）にコピーし、`TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))` を使用。
 
 ## データフォーマット対応
 
