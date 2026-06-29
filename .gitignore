@@ -71,6 +71,7 @@ aws-exports.js
 *credential*
 !**/docs/**/*credential*
 !**/snowflake/**/*credential*
+!**/opensharing-server/**/*credential*
 !**/docs/**/*secret*
 
 # =============================================================================
