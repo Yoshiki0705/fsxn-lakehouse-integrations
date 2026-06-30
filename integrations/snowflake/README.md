@@ -245,11 +245,11 @@ Q: Does the data need to stay on FSx for ONTAP?
 
 ### Cost Comparison
 
-| Pattern | FSx Storage | Snowflake Storage | Snowflake Compute | Total |
+| Pattern | FSx Storage | Snowflake Storage | Snowflake Compute | Total Cost |
 |---|---|---|---|---|
-| External Table only | ✅ (existing) | None | Query time only | Lowest |
-| COPY INTO (full) | ✅ (existing) | + full copy | Query + COPY time | Highest |
-| Hybrid (External + selective COPY) | ✅ (existing) | + images only | Query + selective COPY | Medium |
+| External Table only | ✅ (existing) | None | Query time only | 💰 Minimal |
+| COPY INTO (full) | ✅ (existing) | + full copy | Query + COPY time | 💰💰💰 Highest |
+| Hybrid (External + selective COPY) | ✅ (existing) | + images only | Query + selective COPY | 💰💰 Moderate |
 
 ### Industry-Specific Recommendations
 
