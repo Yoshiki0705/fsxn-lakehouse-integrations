@@ -52,7 +52,14 @@ Reference: [AWS Tutorial - Transform data with Glue](https://docs.aws.amazon.com
 - **Scheduled Execution**: EventBridge rule for automated daily runs
 - **ZSTD Compression**: Optimal compression for silver/gold Parquet files
 
-## Status: 🚧 Implementation In Progress
+## Status: ✅ Functional Verified (2026-05-23)
+
+| Operation | Status | Details |
+|-----------|:---:|---------|
+| Glue Crawler (schema discovery) | ✅ | Parquet schema auto-detected via S3 AP |
+| Glue ETL Job (Bronze → Silver → Gold) | ✅ | 10K rows, 64 seconds total |
+| Write-back to FSx S3 AP (Parquet) | ✅ | Gold layer written to S3 AP successfully |
+| Job Bookmarks (incremental) | ✅ | Subsequent runs process only new files |
 
 ## Quick Start
 

@@ -31,7 +31,17 @@ Python (Local / Lambda)
 - **Cross-compatibility**: Tables created by Spark readable by delta-rs and vice versa
 - **VPC-scoped**: Network isolation for EMR/EC2 workloads
 
-## Status: 🚧 Implementation In Progress
+## Status: ✅ Read Verified / ❌ Write Not Supported (2026-05-23)
+
+| Operation | Status | Details |
+|-----------|:---:|---------|
+| delta-rs: Open Delta table (metadata + log) | ✅ | Version parsed, schema retrieved (0.91s) |
+| delta-rs: Full data read (to_pyarrow_table) | ✅ | 10,000 rows, 6 columns (1.38s) |
+| delta-rs: Aggregation (to_pandas + GROUP BY) | ✅ | GROUP BY status: normal=8484, warning=1229, critical=287 |
+| delta-rs: metadata() + history() | ✅ | Table ID, created_time, operation history |
+| delta-rs: write_deltalake (new table) | ❌ | `501 Not Implemented` — conditional writes (If-None-Match) |
+
+**Summary**: Delta Lake tables can be **read** from FSx for ONTAP S3 AP using delta-rs. **Write** is not supported due to the same conditional write limitation affecting all transactional table formats on S3 AP.
 
 ## Unstructured Data Support
 
