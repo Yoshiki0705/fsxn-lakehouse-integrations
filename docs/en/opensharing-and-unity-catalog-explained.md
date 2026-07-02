@@ -1,10 +1,10 @@
 🌐 **English** | [日本語](../ja/opensharing-and-unity-catalog-explained.md)
 
-# OpenSharing and Unity Catalog, Explained
+# OpenSharing and Unity Catalog: Concepts and Validation Notes
 
-A neutral, beginner-friendly primer on how open data sharing works between object
-storage (such as Amazon FSx for NetApp ONTAP S3 Access Points) and Databricks
-Unity Catalog — what is available today, what is still evolving, and why.
+A neutral, factual summary of how open data sharing works between object storage
+(such as Amazon FSx for NetApp ONTAP S3 Access Points) and Databricks Unity Catalog
+— what is available today, what is still evolving, and why.
 
 > This document explains concepts and cites primary sources. It is not a product
 > pitch and does not position any vendor against another. Availability and timelines
@@ -18,7 +18,7 @@ Databricks to use that data **with governance** (lineage, tags, access control),
 there are a few different paths. They differ in whether data is **copied**, whether
 **Unity Catalog governance** is applied automatically, and how mature each path is.
 
-This primer focuses on two related mechanisms people often confuse:
+This document focuses on two related mechanisms that are easy to confuse:
 
 - **A native Unity Catalog recipient** — Unity Catalog itself consuming a share and
   governing it as first-class objects.
@@ -60,6 +60,15 @@ Databricks documents two sharing models:
   See [Access data shared with you (recipients)](https://docs.databricks.com/gcp/en/delta-sharing/recipient)
   and [Read shared data (open sharing)](https://docs.databricks.com/en/data-sharing/read-data-open.html).
 
+The core flow (credential vending) looks like this:
+
+```mermaid
+flowchart LR
+  R["Recipient (consumer)"] -->|"1. authenticate (bearer token)"| SV["Sharing server (provider side)"]
+  SV -->|"2. metadata + short-lived scoped credentials"| R
+  R -->|"3. read data directly"| OS["Object storage (e.g., FSx for ONTAP S3 AP)"]
+```
+
 > Note: Unity Catalog also has a separate feature that vends credentials **to external
 > engines** (the reverse direction). That is not the same as OpenSharing; see
 > [UC credential vending](https://docs.databricks.com/gcp/en/external-access/credential-vending).
@@ -82,6 +91,15 @@ Location** — the server vends scoped credentials and the consumer reads object
 directly. The remaining question is how Unity Catalog *consumes* such a share.
 
 ## Two ways to consume data (native recipient vs DIY recipient)
+
+```mermaid
+flowchart TB
+  OS["FSx for ONTAP S3 AP"]
+  OS --> UC["Native Unity Catalog recipient: Foreign Volume/Table"]
+  OS --> NB["DIY recipient in a notebook: requests + boto3/Spark"]
+  UC --> G1["Governance applied automatically (lineage, tags, ACL)"]
+  NB --> G2["Governance not automatic — land in a UC table to regain it"]
+```
 
 **1. Native Unity Catalog recipient (managed, governed).** Unity Catalog acts as the
 recipient and surfaces the shared Volumes/Tables as governed objects (with lineage,

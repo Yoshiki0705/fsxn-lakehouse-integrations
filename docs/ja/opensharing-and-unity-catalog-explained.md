@@ -1,10 +1,10 @@
 🌐 [English](../en/opensharing-and-unity-catalog-explained.md) | **日本語**
 
-# OpenSharing と Unity Catalog をやさしく解説
+# OpenSharing と Unity Catalog: 概念と検証メモ
 
 オブジェクトストレージ（例: Amazon FSx for NetApp ONTAP の S3 Access Points）と
-Databricks Unity Catalog の間で、オープンなデータ共有がどう動くのかを、中立かつ
-入門者向けに整理します。今できること、まだ発展途上のこと、そしてその理由を説明します。
+Databricks Unity Catalog の間で、オープンなデータ共有がどう動くのかを中立に整理します。
+今できること、まだ発展途上のこと、そしてその理由を扱います。
 
 > 本ドキュメントは概念の解説と一次情報の引用を目的とし、特定ベンダーを持ち上げたり
 > 他と対立させたりするものではありません。可用性や提供時期は各プラットフォーム提供元が
@@ -58,6 +58,15 @@ Databricks は2つの共有モデルを文書化しています。
   [共有データへのアクセス（recipient 向け）](https://docs.databricks.com/gcp/en/delta-sharing/recipient)
   と[共有データの読み取り（open sharing）](https://docs.databricks.com/en/data-sharing/read-data-open.html)を参照。
 
+中核の流れ（credential vending）は次のとおりです。
+
+```mermaid
+flowchart LR
+  R["Recipient (consumer)"] -->|"1. authenticate (bearer token)"| SV["Sharing server (provider side)"]
+  SV -->|"2. metadata + short-lived scoped credentials"| R
+  R -->|"3. read data directly"| OS["Object storage (e.g., FSx for ONTAP S3 AP)"]
+```
+
 > 注: Unity Catalog には、**外部エンジンへ**認証情報を vend する別機能もあります（逆方向）。
 > これは OpenSharing とは別物です。
 > [UC credential vending](https://docs.databricks.com/gcp/en/external-access/credential-vending)を参照。
@@ -81,6 +90,15 @@ OpenSharing はこの制約を回避します。**External Location を使わず
 Unity Catalog がそのような共有を*どう取り込む*かです。
 
 ## データ取り込みの2方式（ネイティブ recipient vs 自作 recipient）
+
+```mermaid
+flowchart TB
+  OS["FSx for ONTAP S3 AP"]
+  OS --> UC["Native Unity Catalog recipient: Foreign Volume/Table"]
+  OS --> NB["DIY recipient in a notebook: requests + boto3/Spark"]
+  UC --> G1["Governance applied automatically (lineage, tags, ACL)"]
+  NB --> G2["Governance not automatic — land in a UC table to regain it"]
+```
 
 **1. ネイティブな Unity Catalog recipient（マネージド・ガバナンス付き）。** Unity Catalog
 が recipient として振る舞い、共有された Volumes/Tables をガバナンス付きオブジェクト
