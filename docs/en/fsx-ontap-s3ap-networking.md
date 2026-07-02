@@ -177,7 +177,7 @@ Recreate the AD server at the same IP addresses. This is the heaviest option and
 
 | Test | SVM | DNS Config | CIFS/AD | S3 AP Result |
 |------|-----|-----------|---------|-------------|
-| Before fix | FSxN_OnPre | 10.0.5.22, 10.0.28.223 (both DOWN) | FPOLICY.LOCAL domain | ❌ ReadTimeout |
+| Before fix | FSxN_OnPre | `<DNS-IP-1>, <DNS-IP-2>` (both DOWN) | FPOLICY.LOCAL domain | ❌ ReadTimeout |
 | Before fix | verification-svm | None | None | ✅ Instant success |
 | After fix (Option A) | FSxN_OnPre | Removed | Removed | ✅ Instant success |
 

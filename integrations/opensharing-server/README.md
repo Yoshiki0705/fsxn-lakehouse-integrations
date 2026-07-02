@@ -35,6 +35,20 @@ This reference server fills the gap: a standalone, vendor-neutral server that an
 - An S3 Access Point with data (or FSx for ONTAP S3 AP)
 - pip3 available
 
+> **Cross-platform build note (verified 2026-07)**: dependencies with native
+> extensions (`pydantic_core`, `opentelemetry`) must be installed as Linux/arm64
+> wheels to run on Lambda — building on macOS produces `Runtime.ImportModuleError`.
+> Install with:
+> ```bash
+> pip3 install --target .lambda-pkg \
+>   --platform manylinux2014_aarch64 --only-binary=:all: \
+>   --implementation cp --python-version 3.12 \
+>   fastapi mangum pyyaml \
+>   opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-fastapi
+> ```
+> Ensure the OpenTelemetry packages are included in the deployment package;
+> a missing `opentelemetry` module surfaces as a 502 at the Function URL.
+
 ### 1. Deploy to AWS Lambda
 
 ```bash
@@ -92,6 +106,19 @@ response = s3.list_objects_v2(Bucket='<ap-alias>', Prefix='sensor-data/')
 ```bash
 ./deploy-lambda.sh --destroy
 ```
+
+## Known Deployment Notes (verified 2026-07)
+
+| Symptom | Cause | Workaround |
+|---------|-------|------------|
+| `Circular dependency between resources: [FunctionUrlPermission, VendingRole, FunctionUrl, ...]` | `VendingRole` trust policy and `LambdaExecutionRole` referenced each other's `.Arn` | Break the cycle: have the vending role trust the account root with an `aws:PrincipalArn`-style condition instead of referencing the Lambda role ARN directly; or create the IAM roles + Lambda + Function URL via CLI in dependency order. |
+| `AWS::EarlyValidation::PropertyValidation` change set failure | CloudFormation early validation rejected the template on this account | `validate-template` passes, so create resources directly via `aws iam create-role` / `aws lambda create-function` / `aws lambda create-function-url-config` as a fallback path. |
+| `Runtime.ImportModuleError: No module named 'pydantic_core._pydantic_core'` / `'opentelemetry'` | macOS-built wheels or missing OTel deps in the package | Use the Linux/arm64 wheel install command in [Prerequisites](#prerequisites). |
+| `AccessDenied ... not authorized to perform: sts:AssumeRole` | vending role name in `config/volumes.yaml` did not match the deployed role | Align the `vending_role_arn` in `volumes.yaml` with the actual deployed role name. |
+
+> These reflect one deployment environment (account-level CloudFormation hooks vary).
+> The template path works on accounts without the early-validation hook; the CLI-direct
+> path is the portable fallback.
 
 ## Demo Scenario: Factory Quality Inspection
 
@@ -217,7 +244,55 @@ Export to any OTLP-compatible backend (Jaeger, Grafana Tempo, AWS X-Ray).
 | Credential scope | STS policy limits to volume's prefix only |
 | TTL | Configurable (default 15 min) |
 | Network | Deploy in VPC; optional VPC endpoint for STS |
+| Function URL | Verification deployments use `auth-type NONE` for convenience. For production, use `AWS_IAM` auth (SigV4) or place the function behind API Gateway / a private VPC endpoint — do **not** expose an unauthenticated Function URL that vends credentials. |
 | Audit | CloudTrail (STS calls) + server access log |
+
+## Cost Considerations
+
+> **Sample run vs production estimate**: the figures below separate what was *observed* in one validation environment from an *illustrative production estimate*. Estimates use reference unit prices — confirm current rates for your region with the [AWS Pricing Calculator](https://calculator.aws/).
+
+**Key architectural point**: this server only *vends credentials*. The actual data transfer — the recipient reading objects from the FSx for ONTAP S3 AP — happens **directly between the recipient and S3**, not through this Lambda. So server cost scales with the *number of credential requests*, not with data volume.
+
+**What you pay for**
+
+| Component | Charge basis | Notes |
+|-----------|-------------|-------|
+| Lambda (requests + duration) | per request + GB-seconds | The only compute cost; arm64 is cheaper per GB-second |
+| STS `AssumeRole` | no additional charge | STS API calls are not billed |
+| Function URL | no additional charge | Billed as normal Lambda invocations |
+| CloudWatch Logs | ingestion + storage | Set a retention policy; structured logs are small |
+| Data transfer | not via this server | Recipient ↔ S3 AP GETs are billed as S3 / FSx for ONTAP access |
+
+**Observed (one validation environment — ap-northeast-1, 256 MB, arm64)**
+
+- Cold init ~0.35–0.85 s; warm invoke ~0.38–0.83 s; max memory used ~64–80 MB of 256 MB; deployment package ~3.4 MB.
+- Cold/warm split and concurrency were not systematically benchmarked (single-caller validation). Treat as directional, not a benchmark.
+
+**Illustrative production estimate (reference figures, not a quote)**
+
+Assumptions: 10,000 credential-vend requests/month, 256 MB, ~0.4 s average duration, arm64.
+
+- Lambda requests: 10,000 → ~$0.002 (reference $0.20 / 1M requests)
+- Lambda compute: 10,000 × 0.4 s × 0.25 GB = 1,000 GB-seconds → ~$0.013 (reference arm64 GB-second rate)
+- STS + Function URL: $0
+- CloudWatch Logs: small; depends on log volume and retention
+
+At this volume the server's marginal cost is a fraction of a US dollar per month; it becomes meaningful only at very high request rates or with verbose logging. Validate with the AWS Pricing Calculator and your region's current rates before quoting.
+
+## Partner / SA Q&A
+
+**Q: "Can Databricks use OpenSharing to read our FSx for ONTAP data today?"**
+
+A first-line answer that separates what is verified from what is not:
+
+- **Protocol layer — verified.** This OSS reference server vends scoped STS credentials, and recipients read the FSx for ONTAP S3 AP directly via standard `GetObject` (re-confirmed 2026-07). This does **not** depend on the Unity Catalog External Location session policy that blocks S3 AP ARNs.
+- **Native UC OpenSharing recipient — pending.** Recognition of an OpenSharing share as a UC Foreign Volume/Table is awaiting Databricks' native implementation (expected via the year-end Storage Ecosystem partner delivery). This has not been validated here.
+- **What works today for a PoC.** A notebook-mediated pattern: call this server from a notebook (`requests`) → receive scoped credentials → read the S3 AP (`boto3`/Spark) → optionally write to a UC managed table. On a trial (Serverless-only) workspace, notebook-compute activation can stall — that is *environment-specific*, not a general Databricks Serverless limitation.
+- **If governed ingestion is needed in production today** (not via OpenSharing), use the established DataSync → S3 → UC managed table path.
+
+**Q: "Is this a certified or production integration?"**
+
+No. This is a vendor-neutral reference implementation for validating the protocol against S3-compatible storage. See [Limitations](#limitations-poc-scope) and [Security Considerations](#security-considerations).
 
 ## Limitations (PoC Scope)
 
