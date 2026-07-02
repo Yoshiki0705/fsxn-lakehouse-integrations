@@ -112,13 +112,15 @@ response = s3.list_objects_v2(Bucket='<ap-alias>', Prefix='sensor-data/')
 | Symptom | Cause | Workaround |
 |---------|-------|------------|
 | `Circular dependency between resources: [FunctionUrlPermission, VendingRole, FunctionUrl, ...]` | `VendingRole` trust policy and `LambdaExecutionRole` referenced each other's `.Arn` | Break the cycle: have the vending role trust the account root with an `aws:PrincipalArn`-style condition instead of referencing the Lambda role ARN directly; or create the IAM roles + Lambda + Function URL via CLI in dependency order. |
-| `AWS::EarlyValidation::PropertyValidation` change set failure | CloudFormation early validation rejected the template on this account | `validate-template` passes, so create resources directly via `aws iam create-role` / `aws lambda create-function` / `aws lambda create-function-url-config` as a fallback path. |
+| `AWS::EarlyValidation::PropertyValidation` change set failure (`'Code' is a required property`) | `AWS::Lambda::Function` had no `Code` property. `aws cloudformation validate-template` is lenient and passed, but CloudFormation's change-set early validation (and cfn-lint rule E3003) enforce it. | **Fixed** in `template.yaml`: the function now includes an inline placeholder `Code.ZipFile`. `deploy-lambda.sh` overwrites it via `aws lambda update-function-code` with the real package. Template now validates clean with cfn-lint (0 errors/warnings). |
 | `Runtime.ImportModuleError: No module named 'pydantic_core._pydantic_core'` / `'opentelemetry'` | macOS-built wheels or missing OTel deps in the package | Use the Linux/arm64 wheel install command in [Prerequisites](#prerequisites). |
 | `AccessDenied ... not authorized to perform: sts:AssumeRole` | vending role name in `config/volumes.yaml` did not match the deployed role | Align the `vending_role_arn` in `volumes.yaml` with the actual deployed role name. |
 
-> These reflect one deployment environment (account-level CloudFormation hooks vary).
-> The template path works on accounts without the early-validation hook; the CLI-direct
-> path is the portable fallback.
+> The template is validated with cfn-lint (0 errors/warnings). The two-phase deploy
+> (CloudFormation creates the function shell with a placeholder, then
+> `update-function-code` uploads the real package) keeps the template self-contained
+> with no pre-upload S3 dependency. The CLI-direct path remains a portable fallback for
+> accounts with stricter change-set hooks.
 
 ## Demo Scenario: Factory Quality Inspection
 

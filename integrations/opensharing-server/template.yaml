@@ -33,8 +33,11 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !GetAtt LambdaExecutionRole.Arn
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
             Action: sts:AssumeRole
+            Condition:
+              ArnLike:
+                "aws:PrincipalArn": !Sub "arn:aws:iam::${AWS::AccountId}:role/opensharing-lambda-role-${Environment}"
       Policies:
         - PolicyName: S3APReadAccess
           PolicyDocument:
@@ -73,7 +76,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: sts:AssumeRole
-                Resource: !GetAtt VendingRole.Arn
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/opensharing-vending-role-${Environment}"
         - PolicyName: STSGetCallerIdentity
           PolicyDocument:
             Version: "2012-10-17"
@@ -83,9 +86,12 @@ Resources:
                 Resource: "*"
 
   # --- Lambda Function ---
+  # Two-phase deploy: CloudFormation creates the function with an inline
+  # placeholder, then deploy-lambda.sh runs `update-function-code` to upload
+  # the real package (FastAPI + mangum + deps). The placeholder only exists to
+  # satisfy the required Code property at CREATE time; it is never invoked.
   VolumesServerFunction:
     Type: AWS::Lambda::Function
-    DependsOn: VendingRole
     Properties:
       FunctionName: !Sub "opensharing-volumes-server-${Environment}"
       Description: "OpenSharing Volumes API reference server"
@@ -96,9 +102,20 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       MemorySize: 256
       Timeout: 30
+      Code:
+        ZipFile: |
+          # Placeholder handler — replaced by deploy-lambda.sh via
+          # `aws lambda update-function-code`. Not invoked in normal operation.
+          def handler(event, context):
+              return {
+                  "statusCode": 503,
+                  "body": "Placeholder. Run deploy-lambda.sh to upload the real package.",
+              }
       Environment:
         Variables:
           OPENSHARING_CONFIG: config/volumes.yaml
+          S3_ACCESS_POINT_ALIAS: !Ref S3AccessPointAlias
+          CREDENTIAL_DURATION_SECONDS: !Sub "${CredentialDurationSeconds}"
           TESTING: "0"
       Tags:
         - Key: Project
