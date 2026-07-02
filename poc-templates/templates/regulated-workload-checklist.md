@@ -93,7 +93,7 @@ Complete this checklist BEFORE starting a PoC with regulated data (HIPAA, PCI DS
 - [ ] Segregation of duties (admin ≠ analyst)
 - [ ] Change management process documented
 - [ ] Audit trail retention ≥7 years
-- [ ] DR/BCP plan includes FSx S3 AP path
+- [ ] DR/BCP plan includes FSx for ONTAP S3 AP path
 
 ### Public Sector
 - [ ] Data sovereignty confirmed (single region)

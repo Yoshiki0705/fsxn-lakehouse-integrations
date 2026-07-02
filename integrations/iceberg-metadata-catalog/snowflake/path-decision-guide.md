@@ -14,7 +14,7 @@ Help Snowflake users and partners choose the right integration path for accessin
 | Cortex Search / Intelligence | Sync summary + redacted metadata | ✅ Available now |
 | Zero-copy Iceberg query | Validate Glue REST + vended credentials | ❌ Blocked (Glue REST does not vend credentials; Object Store blocked by S3 Tables internal bucket) |
 | Snowflake-first Iceberg governance | Open Catalog / Polaris | Strategic alternative |
-| Raw file processing in Snowflake | External stage (FSx S3 AP) | ✅ Verified (incl. TO_FILE + Cortex AI) |
+| Raw file processing in Snowflake | External stage (FSx for ONTAP S3 AP) | ✅ Verified (incl. TO_FILE + Cortex AI) |
 | Cross-platform Iceberg interop | Glue REST + vended credentials | ❌ Blocked; track AWS credential vending roadmap |
 
 ## Governance Policy Mapping

@@ -252,7 +252,7 @@ DESCRIBE STAGE DB.SCHEMA.STAGE_NAME;
 
 ## 関連ドキュメント
 
-- [外部ステージ検証（FSx S3 AP）](external-stage-fsx-s3ap-validation.md)
+- [外部ステージ検証（FSx for ONTAP S3 AP）](external-stage-fsx-s3ap-validation.md)
 - [Glue REST クレデンシャル・ベンディング検証](glue-rest-vended-credentials-validation.md)
 - [統合パス決定ガイド](path-decision-guide.md)
 - [Snowflake: TO_FILE 関数](https://docs.snowflake.com/en/sql-reference/functions/to_file)

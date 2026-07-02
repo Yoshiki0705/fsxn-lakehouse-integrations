@@ -68,7 +68,7 @@ Please prepare the following information:
 | Phase | Duration | Deliverable |
 |-------|----------|-------------|
 | Planning | 1-2 weeks | PoC design document, success criteria |
-| Provisioning | 1-2 weeks | FSx ONTAP + S3 Tables + compute |
+| Provisioning | 1-2 weeks | FSx for ONTAP + S3 Tables + compute |
 | Data onboarding | 1 week | Sample data loaded, metadata scanned |
 | Validation | 2-3 weeks | Query performance, AI enrichment, governance |
 | Report | 1 week | Results, recommendations, production sizing |
@@ -161,7 +161,7 @@ Please prepare the following information:
 | フェーズ | 期間 | 成果物 |
 |---------|------|--------|
 | 計画 | 1-2週間 | PoC設計書、成功基準 |
-| プロビジョニング | 1-2週間 | FSx ONTAP + S3 Tables + コンピュート |
+| プロビジョニング | 1-2週間 | FSx for ONTAP + S3 Tables + コンピュート |
 | データオンボーディング | 1週間 | サンプルデータ投入、メタデータスキャン |
 | 検証 | 2-3週間 | クエリ性能、AIエンリッチメント、ガバナンス |
 | レポート | 1週間 | 結果、推奨事項、本番サイジング |

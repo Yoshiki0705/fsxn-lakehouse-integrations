@@ -42,7 +42,7 @@ FSx for ONTAP (CAD, QC reports, maintenance logs)
 # 1. Generate sample manufacturing data
 python sample-data/generate.py --count 100 --output /tmp/mfg-demo
 
-# 2. Run demo (requires FSx S3 AP)
+# 2. Run demo (requires FSx for ONTAP S3 AP)
 ./demo/run-demo.sh --ap-alias <your-alias>
 
 # 3. Or use the main demo with manufacturing data

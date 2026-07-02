@@ -25,8 +25,8 @@ S3 Tables (has_pii=true, anonymization_status='pending')
 
 | 関数 | 入力 | 処理 | 出力 |
 |------|------|------|------|
-| `anonymize-document` | FSx S3 AP からテキスト/PDF | 正規表現 + Comprehend PII 墨消し | 墨消し済みテキスト → S3 |
-| `anonymize-image` | FSx S3 AP から画像 | Rekognition 顔検出 + Pillow ぼかし | ぼかし済み画像 → S3 |
+| `anonymize-document` | FSx for ONTAP S3 AP からテキスト/PDF | 正規表現 + Comprehend PII 墨消し | 墨消し済みテキスト → S3 |
+| `anonymize-image` | FSx for ONTAP S3 AP から画像 | Rekognition 顔検出 + Pillow ぼかし | ぼかし済み画像 → S3 |
 
 ## データクリーンルームパターン
 

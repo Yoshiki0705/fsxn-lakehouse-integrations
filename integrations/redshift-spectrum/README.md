@@ -6,7 +6,7 @@
 
 Query data on Amazon FSx for NetApp ONTAP directly from Amazon Redshift Spectrum
 using Glue Data Catalog and S3 Access Points. Combines DWH local tables with
-external FSxN data in federated queries.
+external FSx for ONTAP data in federated queries.
 
 ## Architecture
 
@@ -25,7 +25,7 @@ Redshift Serverless (DWH)
 ## Key Points
 
 - **Same pattern as Athena**: Internet-origin S3 AP + Glue Catalog
-- **Federated queries**: JOIN local Redshift tables with external FSxN data
+- **Federated queries**: JOIN local Redshift tables with external FSx for ONTAP data
 - **Predicate pushdown**: Spectrum pushes filters to S3 layer (reduces data scanned)
 - **No session policy issues**: AWS-native service, direct IAM role (no third-party intermediary)
 

@@ -12,7 +12,7 @@ Read, transform, and write-back Parquet — no cluster management required.
 - Read 10K rows: 6.78s
 - GROUP BY aggregation: 2.52s
 - Window function: 1.19s
-- Write-back to FSxN: 3.61s
+- Write-back to FSx for ONTAP: 3.61s
 - Total Spark execution: 16.35s (job total: 37s including cold start)
 
 ## Architecture

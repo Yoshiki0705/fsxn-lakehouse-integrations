@@ -14,10 +14,10 @@
 - 複製されるのは Iceberg メタデータテーブルのデータファイルのみ（~MB スケール）
 
 **なぜ標準 S3 であり、FSx S3 Access Point ではないか**:
-- FSx S3 AP は PutObject/DeleteObject/ListObjectsV2 をサポートしているが、Iceberg テーブルのデータファイル保存先として使う場合、PyIceberg/Spark の Iceberg ライブラリが FSx S3 AP エイリアス形式の URI をサポートしているか未検証
-- Iceberg カタログ（Glue Data Catalog）にテーブルロケーションとして FSx S3 AP パスを登録できるか未確認
+- FSx for ONTAP S3 AP は PutObject/DeleteObject/ListObjectsV2 をサポートしているが、Iceberg テーブルのデータファイル保存先として使う場合、PyIceberg/Spark の Iceberg ライブラリが FSx for ONTAP S3 AP エイリアス形式の URI をサポートしているか未検証
+- Iceberg カタログ（Glue Data Catalog）にテーブルロケーションとして FSx for ONTAP S3 AP パスを登録できるか未確認
 - 標準 S3 バケットは Glue + Lake Formation + Snowflake の全コンポーネントとの互換性が確認済みのため、確実なパスとして選択
-- FSx S3 AP をメタデータ Iceberg テーブルの保存先として使えるかは将来の検証候補
+- FSx for ONTAP S3 AP をメタデータ Iceberg テーブルの保存先として使えるかは将来の検証候補
 
 ---
 

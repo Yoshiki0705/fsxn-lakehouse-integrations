@@ -1,4 +1,4 @@
-# Databricks + FSx S3 AP Validation Delivery Plan
+# Databricks + FSx for ONTAP S3 AP Validation Delivery Plan
 
 > This delivery plan is a template for teams conducting a controlled validation of Databricks integration with FSx for ONTAP S3 Access Points. Adapt phases and timelines to your environment.
 
@@ -9,7 +9,7 @@
 
 - [ ] Confirm workspace type (Databricks-managed VPC or Customer-managed VPC)
 - [ ] Confirm cluster access mode (Standard / Dedicated / Dedicated + Instance Profile)
-- [ ] Confirm FSx S3 AP ARN and alias
+- [ ] Confirm FSx for ONTAP S3 AP ARN and alias
 - [ ] Confirm FSx SVM and volume configuration
 - [ ] Confirm governance requirement (Unity Catalog mandatory? Lineage required?)
 - [ ] Confirm IAM role and trust policy
@@ -24,7 +24,7 @@
 **Owner**: Data Engineer / Platform Engineer
 
 - [ ] Regular S3 bucket via Unity Catalog External Location → confirm success
-- [ ] FSx S3 AP via Unity Catalog External Location → document result
+- [ ] FSx for ONTAP S3 AP via Unity Catalog External Location → document result
 - [ ] Instance Profile registration (if applicable)
 - [ ] IMDS access verification
 - [ ] Network connectivity tests (TCP 2049, 111, 635 if NFS path is in scope)
@@ -35,7 +35,7 @@
 **Duration**: 2–3 days  
 **Owner**: Data Engineer
 
-- [ ] Driver-only boto3 access to FSx S3 AP
+- [ ] Driver-only boto3 access to FSx for ONTAP S3 AP
 - [ ] ListObjectsV2, GetObject, HeadObject operations
 - [ ] Negative tests:
   - [ ] PutObject should fail (if read-only policy)

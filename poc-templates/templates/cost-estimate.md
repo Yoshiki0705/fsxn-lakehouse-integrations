@@ -109,9 +109,9 @@ Reference: ~$10 for 1-day validation (1 TB sync + compute)
 
 ---
 
-## Cost Comparison: Current State vs FSx S3 AP
+## Cost Comparison: Current State vs FSx for ONTAP S3 AP
 
-| Metric | Current (with copy pipeline) | With FSx S3 AP | Savings |
+| Metric | Current (with copy pipeline) | With FSx for ONTAP S3 AP | Savings |
 |--------|------------------------------|----------------|---------|
 | S3 storage (duplicate) | $___/month | $0 (no copy) | $___/month |
 | DataSync/ETL pipeline | $___/month | $0 (direct query) | $___/month |

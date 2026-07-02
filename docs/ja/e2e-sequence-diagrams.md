@@ -24,7 +24,7 @@
 sequenceDiagram
     participant PLC as PLC/SCADA
     participant Edge as Edge Gateway
-    participant FSxN as FSx for ONTAP<br/>(NFS Volume)
+    participant FsxOntap as FSx for ONTAP<br/>(NFS Volume)
     participant Snap as Snapshot/FlexClone
     participant DS as AWS DataSync
     participant S3 as Amazon S3<br/>(標準バケット)
@@ -32,16 +32,16 @@ sequenceDiagram
     participant UC as Databricks UC<br/>(Delta Table)
 
     Note over PLC,Edge: OT ネットワーク（工場）
-    Note over FSxN,UC: IT ネットワーク（AWS VPC）
+    Note over FsxOntap,UC: IT ネットワーク（AWS VPC）
 
     PLC->>Edge: センサーデータ送信<br/>(OPC UA / MQTT / CSV export)
-    Edge->>FSxN: NFS 書き込み<br/>(/vol1/data/sensor/*.csv)
+    Edge->>FsxOntap: NFS 書き込み<br/>(/vol1/data/sensor/*.csv)
     
-    Note over FSxN: ファイル蓄積（5秒間隔）
+    Note over FsxOntap: ファイル蓄積（5秒間隔）
 
     rect rgb(240, 248, 255)
-        Note over FSxN,Snap: Phase 2: Snapshot ステージング
-        FSxN->>Snap: Snapshot 取得（瞬時・ゼロコスト）
+        Note over FsxOntap,Snap: Phase 2: Snapshot ステージング
+        FsxOntap->>Snap: Snapshot 取得（瞬時・ゼロコスト）
         Snap->>Snap: FlexClone 作成（瞬時・ゼロストレージ）
     end
 
@@ -94,7 +94,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant PLC as PLC/SCADA
-    participant FSxN as FSx for ONTAP<br/>(NFS Volume)
+    participant FsxOntap as FSx for ONTAP<br/>(NFS Volume)
     participant FP as FPolicy Engine
     participant Lambda as AWS Lambda
     participant SQS as SQS (バッファ)
@@ -102,12 +102,12 @@ sequenceDiagram
     participant SS as Structured Streaming<br/>(Databricks)
     participant UC as UC Delta Table
 
-    Note over PLC,FSxN: OT ネットワーク
+    Note over PLC,FsxOntap: OT ネットワーク
     Note over FP,UC: IT ネットワーク
 
-    PLC->>FSxN: NFS 書き込み<br/>(/vol1/data/quality/*.json)
+    PLC->>FsxOntap: NFS 書き込み<br/>(/vol1/data/quality/*.json)
     
-    FSxN->>FP: ファイル作成イベント検知<br/>(CREATE / MODIFY)
+    FsxOntap->>FP: ファイル作成イベント検知<br/>(CREATE / MODIFY)
     
     rect rgb(255, 248, 240)
         Note over FP,SQS: イベント配信

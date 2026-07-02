@@ -136,7 +136,7 @@ Omnigent (マルチエージェントオーケストレーション)
 
 **AWS 公式チュートリアル**: [Build a RAG application using Amazon Bedrock Knowledge Bases](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)
 
-**repost.aws ガイド**: [Using FSxN S3 Access Points as an Amazon Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w)
+**repost.aws ガイド**: [Using FSx for ONTAP S3 Access Points as an Amazon Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w)
 
 **追加先**:
 - `FSx-for-ONTAP-Agentic-Access-Aware-RAG` の README に公式リンク追加
@@ -315,7 +315,7 @@ Zerobus Ingest → Delta 直接 (Kafka バイパス、Databricks 専用) 🆕 �
 - [ontap-edge-to-cloud-ai](https://github.com/Yoshiki0705/ontap-edge-to-cloud-ai)
 - [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations)
 - [AWS: Build a RAG application with Bedrock KB + FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html)
-- [repost.aws: FSxN S3 AP as Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w)
+- [repost.aws: FSx for ONTAP S3 AP as Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w)
 - [Amazon S3 Vectors GA](https://aws.amazon.com/blogs/aws/amazon-s3-vectors-now-generally-available-with-increased-scale-and-performance/)
 - [Amazon Bedrock Managed Knowledge Base](https://aws.amazon.com/about-aws/whats-new/2026/06/amazon-bedrock-managed-knowledge-base/)
 - 本リポジトリ関連分析: [S3 Annotations ガバナンス評価](./s3-annotations-governance-evaluation.md)（Databricks UC × FSx for ONTAP S3 AP 課題への S3 Annotations/Metadata 適用評価、2026-06-18）
