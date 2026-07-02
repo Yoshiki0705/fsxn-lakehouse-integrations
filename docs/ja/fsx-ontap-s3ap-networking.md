@@ -176,7 +176,7 @@ vserver services dns modify -vserver <SVM名> -name-servers 10.0.0.2 -domains <�
 
 | テスト | SVM | DNS 設定 | CIFS/AD | S3 AP 結果 |
 |------|-----|-----------|---------|-------------|
-| 修正前 | FSxN_OnPre | 10.0.5.22, 10.0.28.223（両方 DOWN） | FPOLICY.LOCAL ドメイン | ❌ ReadTimeout |
+| 修正前 | FSxN_OnPre | `<DNS-IP-1>, <DNS-IP-2>`（両方 DOWN） | FPOLICY.LOCAL ドメイン | ❌ ReadTimeout |
 | 修正前 | verification-svm | なし | なし | ✅ 即座に成功 |
 | 修正後（オプション A） | FSxN_OnPre | 削除済み | 削除済み | ✅ 即座に成功 |
 

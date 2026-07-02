@@ -89,7 +89,7 @@ integrations/iceberg-metadata-catalog/
 │   └── audit-correlation-guide.md         # クロスプラットフォーム監査相関
 ├── snowflake/
 │   ├── glue-rest-vended-credentials-validation.md  # Glue REST credential vending 検証
-│   ├── external-stage-fsx-s3ap-validation.md       # FSx S3 AP の External Stage
+│   ├── external-stage-fsx-s3ap-validation.md       # FSx for ONTAP S3 AP の External Stage
 │   └── path-decision-guide.md                      # Snowflake 統合パス判断
 ├── lakehouse-tools/
 │   └── tool-compatibility-matrix.yaml              # マルチエンジン互換性マトリクス
@@ -120,7 +120,7 @@ integrations/iceberg-metadata-catalog/
 | PyIceberg | ✅ | S3 Tables REST + Glue REST |
 | EMR Spark | ✅ 検証済み | Glue Iceberg REST via EMR Serverless 7.13.0; SHOW NAMESPACES/TABLES/SELECT 全て動作 |
 | Snowflake (Glue REST + VENDED_CREDENTIALS) | ✅ 検証済み | 明示的 `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` + External Volume なし; CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH + Time Travel 動作 (2026-06-05) |
-| Snowflake External Stage | ✅ | FSx S3 AP 動作確認済み（LIST、SELECT、COPY、TO_FILE + Cortex AI すべて検証済み） |
+| Snowflake External Stage | ✅ | FSx for ONTAP S3 AP 動作確認済み（LIST、SELECT、COPY、TO_FILE + Cortex AI すべて検証済み） |
 | Snowflake (S3 Tables 直接 REST) | ⚠️ | 対応カタログタイプではない — Glue REST を使用 |
 | Databricks SQL Warehouse | ⚠️ | テスト済みパスで `iceberg_rest` 接続タイプ非対応 |
 | Databricks UC 監査 | ✅ | 外部エンジンアクセスが `system.access.audit` に完全記録 |
@@ -150,11 +150,11 @@ integrations/iceberg-metadata-catalog/
 | メンテナンス Runbook | [EN](ops/iceberg-maintenance-runbook.md) | [JA](ops/iceberg-maintenance-runbook-ja.md) |
 | 本番化成熟度モデル | [EN](genai/production-maturity-model.md) | [JA](genai/production-maturity-model-ja.md) |
 | 規制ワークロード対応 | [EN](governance/regulated-workload-readiness.md) | [JA](governance/regulated-workload-readiness-ja.md) |
-| FSx S3 AP 本番チェックリスト | [EN](storage/fsx-s3ap-production-checklist.md) | [JA](storage/fsx-s3ap-production-checklist-ja.md) |
+| FSx for ONTAP S3 AP 本番チェックリスト | [EN](storage/fsx-s3ap-production-checklist.md) | [JA](storage/fsx-s3ap-production-checklist-ja.md) |
 | PoC 実行ガイド | [EN](../../docs/implementation-guide/poc-execution-guide.md) | [JA](../../docs/implementation-guide/poc-execution-guide-ja.md) |
 | Snowflake トラブルシューティング | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
 | Snowflake VENDED_CREDENTIALS 検証 | [EN](snowflake/glue-rest-vended-credentials-validation.md) | [JA](snowflake/glue-rest-vended-credentials-validation-ja.md) |
-| S3 Annotations ガバナンス評価 (Databricks UC × FSx S3 AP) | [EN](../../docs/en/s3-annotations-governance-evaluation.md) | [JA](../../docs/ja/s3-annotations-governance-evaluation.md) |
+| S3 Annotations ガバナンス評価 (Databricks UC × FSx for ONTAP S3 AP) | [EN](../../docs/en/s3-annotations-governance-evaluation.md) | [JA](../../docs/ja/s3-annotations-governance-evaluation.md) |
 
 ## ブログシリーズ
 

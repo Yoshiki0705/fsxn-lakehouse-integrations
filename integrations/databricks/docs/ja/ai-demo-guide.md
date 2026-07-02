@@ -49,13 +49,13 @@ print(f"✅ FSx for ONTAP S3 AP から {df.count()} 行を読み取り")
 
 **結果**: FSx for ONTAP 上のセンサー CSV から 1000 行を正常に読み取り（External Location に `access_point` フィールドを設定した明示的ファイルパス）。
 
-![Spark が FSx S3 AP 上の明示的ファイルパスの読み取りに成功](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ai-spark-read-success.png)
+![Spark が FSx for ONTAP S3 AP 上の明示的ファイルパスの読み取りに成功](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ai-spark-read-success.png)
 
 *Spark が Unity Catalog ガバナンス下で、明示的ファイルパスを使用して FSx for ONTAP S3 Access Point からセンサー CSV データを正常に読み取り。*
 
 **制限事項**: 明示的ファイルパスのみ動作。ディレクトリレベルの読み取り（例: `spark.read.parquet("s3://<alias>/bronze/")`）はセッションポリシーによりサブディレクトリ一覧がブロックされるため失敗。
 
-![トップレベル一覧は成功 — FSx S3 AP 上で 287 アイテムが表示](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ls-success-287-items.png)
+![トップレベル一覧は成功 — FSx for ONTAP S3 AP 上で 287 アイテムが表示](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ls-success-287-items.png)
 
 *トップレベルの `dbutils.fs.ls` は 287 アイテムを表示して成功。ただし、サブディレクトリ一覧とテーブル作成は引き続きブロック。*
 
@@ -75,7 +75,7 @@ LOCATION 's3://<s3ap-alias>/bronze/sensor_data/';
 
 **結果**: ❌ `UC_CLOUD_STORAGE_ACCESS_FAILURE` — Unity Catalog の内部検証が S3 AP パスにアクセスできず、テーブル登録が失敗。
 
-![UC セッションポリシーにより FSx S3 AP 上の CREATE TABLE がブロック](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ai-create-table-blocked.png)
+![UC セッションポリシーにより FSx for ONTAP S3 AP 上の CREATE TABLE がブロック](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ai-create-table-blocked.png)
 
 *Unity Catalog が FSx for ONTAP S3 Access Point 上のテーブル作成を拒否。AssumeRole 時に生成されるセッションポリシーが、内部検証操作に対して S3 AP ARN パターンを含まない。*
 
@@ -253,23 +253,23 @@ Governed Tag（分類属性）
 | Schema | ✅ | ✅ (ABAC スコープ) | ✅ (ABAC スコープ) | タグは配下のテーブルにカスケード |
 | Table (Managed) | ✅ | ✅ | ✅ | 完全ガバナンス |
 | Table (External, S3 バケット上) | ✅ | ✅ | ✅ | 完全ガバナンス（標準 S3） |
-| Table (External, FSx S3 AP 上) | ❌ **ブロック** | ❌ | ❌ | **CREATE TABLE 失敗 — ガバナンス適用不可** |
+| Table (External, FSx for ONTAP S3 AP 上) | ❌ **ブロック** | ❌ | ❌ | **CREATE TABLE 失敗 — ガバナンス適用不可** |
 | Column | ✅（テーブル経由） | ✅（直接または ABAC） | — | タグはカラムレベルには継承しない |
 | External Location | ✅（タグのみ） | ❌ | ❌ | 分類のみ、クエリ時の適用なし |
 
 ### 重大な制限: FSx for ONTAP S3 AP
 
-**FSx S3 AP 上での Unity Catalog テーブル作成が現在ブロック**（UC_CLOUD_STORAGE_ACCESS_FAILURE）。これにより:
+**FSx for ONTAP S3 AP 上での Unity Catalog テーブル作成が現在ブロック**（UC_CLOUD_STORAGE_ACCESS_FAILURE）。これにより:
 
-![Databricks ガバナンス影響 — FSx S3 AP 上で UC ガバナンスがブロック](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-summary-governance-impact.png)
+![Databricks ガバナンス影響 — FSx for ONTAP S3 AP 上で UC ガバナンスがブロック](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-summary-governance-impact.png)
 
-*ガバナンス影響サマリー: テーブル作成がセッションポリシーによりブロックされるため、Unity Catalog ガバナンス機能（タグ、マスキング、Row Filter、リネージ）を FSx S3 AP データに適用不可。*
+*ガバナンス影響サマリー: テーブル作成がセッションポリシーによりブロックされるため、Unity Catalog ガバナンス機能（タグ、マスキング、Row Filter、リネージ）を FSx for ONTAP S3 AP データに適用不可。*
 
-- ❌ FSx S3 AP データに UC テーブルとして Governed Tags を適用不可
-- ❌ FSx S3 AP データに ABAC カラムマスクを適用不可
-- ❌ FSx S3 AP データに Row Filter ポリシーを適用不可
-- ❌ FSx S3 AP データのデータリネージを追跡不可
-- ❌ FSx S3 AP データに自動データ分類を使用不可
+- ❌ FSx for ONTAP S3 AP データに UC テーブルとして Governed Tags を適用不可
+- ❌ FSx for ONTAP S3 AP データに ABAC カラムマスクを適用不可
+- ❌ FSx for ONTAP S3 AP データに Row Filter ポリシーを適用不可
+- ❌ FSx for ONTAP S3 AP データのデータリネージを追跡不可
+- ❌ FSx for ONTAP S3 AP データに自動データ分類を使用不可
 
 **回避策（PoC のみ）**: boto3 でデータを読み取り → UC マネージドテーブルに書き込み → そこでガバナンスを適用。これはコピーを作成し、「ゼロコピー」の価値提案を損なう。
 
@@ -284,7 +284,7 @@ spark.sql("""
   WITH ALLOWED_VALUES ('ssn', 'email', 'phone', 'address')
 """)
 
-# 2. FSx S3 AP 上に External Table を作成
+# 2. FSx for ONTAP S3 AP 上に External Table を作成
 spark.sql("""
   CREATE TABLE fsxn_lakehouse.bronze.customer_data
   USING PARQUET
@@ -309,7 +309,7 @@ spark.sql("""
 
 ### Snowflake との比較
 
-| 機能 | Databricks（FSx S3 AP 上） | Snowflake（FSx S3 AP 上） |
+| 機能 | Databricks（FSx for ONTAP S3 AP 上） | Snowflake（FSx for ONTAP S3 AP 上） |
 |---|---|---|
 | タグ作成 | ✅ 動作（Governed Tags） | ✅ 動作（Object Tags） |
 | External Table へのタグ | ❌ **ブロック**（テーブル作成不可） | ✅ **動作**（検証済み） |
@@ -324,7 +324,7 @@ spark.sql("""
 Databricks が S3 Access Point に対する UC セッションポリシーの境界を解消するまで:
 
 1. **FSx for ONTAP データのガバナンス付き分析**: **Snowflake** を使用（External Table + Tag-based Masking + Row Access Policy）
-2. **ガバナンス付き ML パイプライン**: FSx S3 AP から UC マネージドストレージ（S3 バケット）にデータをステージングし、完全 ABAC ガバナンスを適用
+2. **ガバナンス付き ML パイプライン**: FSx for ONTAP S3 AP から UC マネージドストレージ（S3 バケット）にデータをステージングし、完全 ABAC ガバナンスを適用
 3. **PoC/探索のみ**: Instance Profile + boto3 を補償コントロール付きで使用（承認記録、期間限定、監査ログ）
 
 ### ファイルレベルのアクセス制御: ONTAP ネイティブレイヤー
@@ -356,7 +356,7 @@ Layer 2: ONTAP ファイルシステム権限（どのファイルにアクセ�
 
 #### チームごとの S3 Access Point（UC ギャップの補償コントロール）
 
-Databricks UC ガバナンスが FSx S3 AP 上で現在ブロックされているため、複数 Access Point によるファイルレベル分離が補償コントロールを提供:
+Databricks UC ガバナンスが FSx for ONTAP S3 AP 上で現在ブロックされているため、複数 Access Point によるファイルレベル分離が補償コントロールを提供:
 
 ```
 FSx for ONTAP Volume: /vol1
@@ -407,7 +407,7 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 #### 連携の仕組み（将来の状態）
 
 ```
-1. データサイエンティストが FSx S3 AP 上の UC External Table をクエリ
+1. データサイエンティストが FSx for ONTAP S3 AP 上の UC External Table をクエリ
        │
        ▼
 2. Unity Catalog チェック: ユーザーに SELECT 権限あり？ ──── NO → PermissionDenied
@@ -461,8 +461,8 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 
 | トピック | リファレンス |
 |---|---|
-| FSx S3 AP デュアルレイヤー認可 | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
-| FSx S3 AP と Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
+| FSx for ONTAP S3 AP デュアルレイヤー認可 | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
+| FSx for ONTAP S3 AP と Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
 | ONTAP Export Policy（NFS アクセス制御） | [Export rules の仕組み](https://docs.netapp.com/us-en/ontap/nfs-admin/export-rules-concept.html) |
 | ONTAP FPolicy（ファイル監視/ブロック） | [FPolicy 設定タイプ](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
 | ONTAP Storage-Level Access Guard | [SLAG によるファイルアクセス保護](https://docs.netapp.com/us-en/ontap/smb-admin/secure-file-access-storage-level-access-guard-concept.html) |
@@ -475,7 +475,7 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 
 #### ガバナンスレイヤーサマリー（Databricks + ONTAP）
 
-| レイヤー | 適用ポイント | スコープ | FSx S3 AP でのステータス |
+| レイヤー | 適用ポイント | スコープ | FSx for ONTAP S3 AP でのステータス |
 |---|---|---|---|
 | **ONTAP Export Policy** | ファイルシステム | ボリューム/qtree | ✅ 常に適用 |
 | **ONTAP ファイル権限** | ファイルシステム | ファイル/ディレクトリ単位 | ✅ 常に適用 |

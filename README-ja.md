@@ -368,18 +368,19 @@ fsxn-lakehouse-integrations/
 
 ### シリーズ 1: 「FSx for ONTAP S3 Access Points × Lakehouse Deep Dive」（公開済み）
 
-dev.to での 7 パート検証シリーズ:
+dev.to（英語）+ はてなブログ（日本語）での検証シリーズ:
 
-| パート | プラットフォーム | URL |
-|:---:|----------|-----|
-| 0 | シリーズ概要 — 何が動き、何が動かず、なぜか | [dev.to](https://dev.to/aws-builders/fsx-for-ontap-s3-access-points-x-lakehouse-what-works-what-doesnt-and-why-1jo3) |
-| 1 | Athena — NAS データをインプレースでクエリ | [dev.to](https://dev.to/aws-builders/query-nas-data-in-place-with-athena-and-fsx-for-ontap-s3-access-points-3lhh) |
-| 2 | Databricks — レイヤーごとの境界検証 | [dev.to](https://dev.to/aws-builders/databricks-and-fsx-for-ontap-s3-access-points-a-layer-by-layer-validation-of-observed-boundaries-p4d) |
-| 3 | Snowflake — 'Access Denied' から動作する External Tables へ | [dev.to](https://dev.to/aws-builders/snowflake-and-fsx-for-ontap-s3-access-points-from-access-denied-to-working-external-tables-9k8) |
-| 4 | DuckDB Lambda — $0.00001/クエリのサーバーレス分析 | [dev.to](https://dev.to/aws-builders/serverless-analytics-on-nas-data-for-000001query-duckdb-lambda-x-fsx-for-ontap-2o5o) |
-| 5 | EMR Spark — NAS データでの読み書き ETL | [dev.to](https://dev.to/aws-builders/read-write-etl-on-nas-data-with-emr-serverless-spark-no-cluster-no-copy-hgm) |
-| 6 | Redshift Spectrum + Lake Formation — エンタープライズガバナンス | [dev.to](https://dev.to/aws-builders/redshift-spectrum-lake-formation-enterprise-governance-on-nas-data-2pik) |
-| 7 | テーブルフォーマット制約 — Delta/Iceberg/Hudi が書き込めない理由 | [dev.to](https://dev.to/aws-builders/why-delta-iceberg-and-hudi-cant-write-to-fsx-s3-access-points-and-what-works-instead-5be3) |
+| パート | プラットフォーム | 日本語 | English |
+|:---:|----------|-----|-----|
+| 0 | シリーズ概要 — 何が動き、何が動かず、なぜか | [はてなブログ](https://hakobiya.hatenablog.com/entry/fsxn-lakehouse-part0-overview) | [dev.to](https://dev.to/aws-builders/fsx-for-ontap-s3-access-points-x-lakehouse-what-works-what-doesnt-and-why-1jo3) |
+| 1 | Athena — NAS データをインプレースでクエリ | [はてなブログ](https://hakobiya.hatenablog.com/entry/fsxn-lakehouse-part1-athena) | [dev.to](https://dev.to/aws-builders/query-nas-data-in-place-with-athena-and-fsx-for-ontap-s3-access-points-3lhh) |
+| 2 | Databricks — レイヤーごとの境界検証 | [はてなブログ](https://hakobiya.hatenablog.com/entry/fsxn-lakehouse-part2-databricks) | [dev.to](https://dev.to/aws-builders/databricks-and-fsx-for-ontap-s3-access-points-a-layer-by-layer-validation-of-observed-boundaries-p4d) |
+| 3 | Snowflake — ゼロコピー読み取り + Cortex AI | [はてなブログ](https://hakobiya.hatenablog.com/entry/fsxn-lakehouse-part3-snowflake) | [dev.to](https://dev.to/aws-builders/snowflake-and-fsx-for-ontap-s3-access-points-from-access-denied-to-working-external-tables-9k8) |
+| 4 | DuckDB Lambda — $0.00001/クエリのサーバーレス分析 | [はてなブログ](https://hakobiya.hatenablog.com/entry/fsxn-lakehouse-part4-duckdb) | [dev.to](https://dev.to/aws-builders/serverless-analytics-on-nas-data-for-000001query-duckdb-lambda-x-fsx-for-ontap-2o5o) |
+| 5 | EMR Spark — NAS データでの読み書き ETL | [はてなブログ](https://hakobiya.hatenablog.com/entry/fsxn-lakehouse-part5-emr-spark) | [dev.to](https://dev.to/aws-builders/read-write-etl-on-nas-data-with-emr-serverless-spark-no-cluster-no-copy-hgm) |
+| 6 | Redshift Spectrum + Lake Formation — エンタープライズガバナンス | [はてなブログ](https://hakobiya.hatenablog.com/entry/fsxn-lakehouse-part6-redshift-lakeformation) | [dev.to](https://dev.to/aws-builders/redshift-spectrum-lake-formation-enterprise-governance-on-nas-data-2pik) |
+| 7 | テーブルフォーマット制約 — Delta/Iceberg/Hudi が書き込めない理由 | [はてなブログ](https://hakobiya.hatenablog.com/entry/fsxn-lakehouse-part7-table-format) | [dev.to](https://dev.to/aws-builders/why-delta-iceberg-and-hudi-cant-write-to-fsx-s3-access-points-and-what-works-instead-5be3) |
+| 8 | OpenSharing × FSx for ONTAP — ゼロコピー共有の新パス | [はてなブログ](https://hakobiya.hatenablog.com/entry/fsxn-lakehouse-part8-opensharing) | — |
 
 ### シリーズ 2: 「非構造化データ向け Iceberg メタデータカタログ」（進行中）
 

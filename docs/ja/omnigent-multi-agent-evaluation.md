@@ -621,7 +621,7 @@ Layer 3: Application Validation — スキーマ + ビジネスロジック検�
 ### AWS 公式: FSx for ONTAP × Bedrock RAG
 
 - [AWS 公式チュートリアル: Build a RAG application using Amazon Bedrock Knowledge Bases with FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html) — FSx for ONTAP S3 AP を Bedrock KB データソースとして構成する公式ステップバイステップガイド
-- [repost.aws: Using FSxN S3 Access Points as an Amazon Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w) — コミュニティガイド
+- [repost.aws: Using FSx for ONTAP S3 Access Points as an Amazon Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w) — コミュニティガイド
 
 ### Omnigent / Databricks
 

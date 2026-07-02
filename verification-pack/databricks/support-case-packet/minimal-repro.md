@@ -1,4 +1,4 @@
-# Minimal Repro: Unity Catalog External Location to FSx S3 AP
+# Minimal Repro: Unity Catalog External Location to FSx for ONTAP S3 AP
 
 ## Environment
 - Workspace type: Customer-managed VPC
@@ -16,16 +16,16 @@
 
 ## Repro test (demonstrates the boundary)
 1. Use the same Storage Credential / IAM role
-2. Create External Location pointing to FSx S3 AP alias
+2. Create External Location pointing to FSx for ONTAP S3 AP alias
 3. Run `dbutils.fs.ls("s3://<fsx-s3-ap-alias>/path/")`
 4. Expected: AccessDenied with "no session policy allows s3:ListBucket"
 
 ## Key comparison
 - Same IAM role
 - Same permissions (s3:* on *)
-- Different target: regular S3 bucket vs FSx S3 AP alias
+- Different target: regular S3 bucket vs FSx for ONTAP S3 AP alias
 - Regular bucket: succeeds
-- FSx S3 AP: fails with session policy error
+- FSx for ONTAP S3 AP: fails with session policy error
 
 ## Attachments to include
 - Error stack trace (full AccessDenied message)

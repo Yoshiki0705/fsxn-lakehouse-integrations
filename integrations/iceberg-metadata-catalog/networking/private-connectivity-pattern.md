@@ -10,7 +10,7 @@ Document which AWS services in this architecture require VPC endpoints for priva
 
 | Service | Endpoint Type | Required For |
 |---------|:---:|---|
-| S3 | Gateway | FSx S3 AP access, S3 Tables data, batch I/O |
+| S3 | Gateway | FSx for ONTAP S3 AP access, S3 Tables data, batch I/O |
 | Bedrock Runtime | Interface | Real-time AI classification + embeddings |
 | Bedrock | Interface | Batch inference job management |
 | SQS | Interface | FPolicy event queue |
@@ -26,7 +26,7 @@ Document which AWS services in this architecture require VPC endpoints for priva
 ┌─────────────────────────────────────────────────────────┐
 │  VPC (Private Subnets)                                   │
 │                                                          │
-│  Lambda ──→ S3 Gateway Endpoint ──→ FSx S3 AP           │
+│  Lambda ──→ S3 Gateway Endpoint ──→ FSx for ONTAP S3 AP           │
 │         ──→ Bedrock Interface Endpoint ──→ Bedrock      │
 │         ──→ SQS Interface Endpoint ──→ SQS             │
 │         ──→ Glue Interface Endpoint ──→ Glue REST      │

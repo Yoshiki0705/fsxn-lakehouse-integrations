@@ -24,7 +24,7 @@ This document details the 2 primary paths in this repository using mermaid seque
 sequenceDiagram
     participant PLC as PLC/SCADA
     participant Edge as Edge Gateway
-    participant FSxN as FSx for ONTAP<br/>(NFS Volume)
+    participant FsxOntap as FSx for ONTAP<br/>(NFS Volume)
     participant Snap as Snapshot/FlexClone
     participant DS as AWS DataSync
     participant S3 as Amazon S3<br/>(Standard Bucket)
@@ -32,16 +32,16 @@ sequenceDiagram
     participant UC as Databricks UC<br/>(Delta Table)
 
     Note over PLC,Edge: OT Network (Factory)
-    Note over FSxN,UC: IT Network (AWS VPC)
+    Note over FsxOntap,UC: IT Network (AWS VPC)
 
     PLC->>Edge: Sensor data transmission<br/>(OPC UA / MQTT / CSV export)
-    Edge->>FSxN: NFS write<br/>(/vol1/data/sensor/*.csv)
+    Edge->>FsxOntap: NFS write<br/>(/vol1/data/sensor/*.csv)
     
-    Note over FSxN: File accumulation (5s intervals)
+    Note over FsxOntap: File accumulation (5s intervals)
 
     rect rgb(240, 248, 255)
-        Note over FSxN,Snap: Phase 2: Snapshot Staging
-        FSxN->>Snap: Take Snapshot (instant, zero-cost)
+        Note over FsxOntap,Snap: Phase 2: Snapshot Staging
+        FsxOntap->>Snap: Take Snapshot (instant, zero-cost)
         Snap->>Snap: Create FlexClone (instant, zero-storage)
     end
 
@@ -94,7 +94,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant PLC as PLC/SCADA
-    participant FSxN as FSx for ONTAP<br/>(NFS Volume)
+    participant FsxOntap as FSx for ONTAP<br/>(NFS Volume)
     participant FP as FPolicy Engine
     participant Lambda as AWS Lambda
     participant SQS as SQS (Buffer)
@@ -102,12 +102,12 @@ sequenceDiagram
     participant SS as Structured Streaming<br/>(Databricks)
     participant UC as UC Delta Table
 
-    Note over PLC,FSxN: OT Network
+    Note over PLC,FsxOntap: OT Network
     Note over FP,UC: IT Network
 
-    PLC->>FSxN: NFS write<br/>(/vol1/data/quality/*.json)
+    PLC->>FsxOntap: NFS write<br/>(/vol1/data/quality/*.json)
     
-    FSxN->>FP: File create event detected<br/>(CREATE / MODIFY)
+    FsxOntap->>FP: File create event detected<br/>(CREATE / MODIFY)
     
     rect rgb(255, 248, 240)
         Note over FP,SQS: Event Delivery

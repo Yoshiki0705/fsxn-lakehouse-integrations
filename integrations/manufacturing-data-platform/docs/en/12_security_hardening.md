@@ -272,7 +272,7 @@ vserver audit enable -vserver svm-factory-poc
 | Kafka → ClickHouse | SASL_SSL or SSL (mTLS) | Kafka Engine settings |
 | Kafka → Databricks | SASL_SSL | Structured Streaming options |
 | Client → FSx NFS | NFSv4.1 + Kerberos (optional for PoC) | Export policy krb5p (production) |
-| Client → FSx ONTAP S3 | HTTPS (TLS 1.2+) | S3 endpoint on port 443 |
+| Client → FSx for ONTAP S3 | HTTPS (TLS 1.2+) | S3 endpoint on port 443 |
 | Client → ClickHouse | HTTPS (TLS 1.2+) | ClickHouse Cloud enforces TLS |
 | FlexCache intercluster | Cluster peering encryption | `cluster peer create -encryption true` |
 

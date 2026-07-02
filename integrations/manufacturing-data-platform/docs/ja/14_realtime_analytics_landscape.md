@@ -306,7 +306,7 @@ LTAP/Lakebase は structured/operational データの統合だが、FSx for ONTA
 ### AWS 公式: FSx for ONTAP × Bedrock RAG
 
 - [AWS 公式チュートリアル: Build a RAG application using Amazon Bedrock Knowledge Bases with FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html) — S3 AP 経由で FSx for ONTAP を Bedrock KB データソースとして構成する公式ガイド
-- [repost.aws: Using FSxN S3 Access Points as an Amazon Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w) — コミュニティガイド
+- [repost.aws: Using FSx for ONTAP S3 Access Points as an Amazon Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w) — コミュニティガイド
 
 ### Databricks / DAIS 2026
 

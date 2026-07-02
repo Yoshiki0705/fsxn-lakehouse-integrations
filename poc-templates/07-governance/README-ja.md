@@ -18,7 +18,7 @@ Lake Formation (テーブル/カラム/行/タグ権限)
 
 ## 前提条件
 
-- FSx S3 AP を指す Glue Catalog テーブル（モジュール 02 から）
+- FSx for ONTAP S3 AP を指す Glue Catalog テーブル（モジュール 02 から）
 - Lake Formation 管理者権限を持つ IAM ユーザー/ロール
 
 ## 手順

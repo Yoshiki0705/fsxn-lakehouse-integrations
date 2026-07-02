@@ -535,7 +535,7 @@ aws logs filter-log-events \
 #### メタデータ整合性確認（リコンシリエーション）
 
 ```bash
-# FSx S3 AP のファイル数とメタデータテーブルのレコード数を比較
+# FSx for ONTAP S3 AP のファイル数とメタデータテーブルのレコード数を比較
 # 差分がある場合は initial-metadata-scan.py を再実行
 python scripts/initial-metadata-scan.py \
   --access-point-arn "<AP_ALIAS>" \

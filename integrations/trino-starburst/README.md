@@ -4,12 +4,12 @@
 
 ## Overview
 
-Query FSx for ONTAP data via S3 Access Points using Trino — an open-source distributed SQL query engine. Trino uses its own S3 filesystem implementation that supports path-style access, making it compatible with FSx S3 AP aliases.
+Query FSx for ONTAP data via S3 Access Points using Trino — an open-source distributed SQL query engine. Trino uses its own S3 filesystem implementation that supports path-style access, making it compatible with FSx for ONTAP S3 AP aliases.
 
 ## Status: ✅ Read Verified (2026-05-24)
 
-- **Read**: All queries succeed on FSx S3 AP (10K and 5M row Parquet)
-- **Write-back (CTAS)**: Failed due to file-based metastore limitation (not FSx S3 AP issue). Requires Glue Catalog or Hive Metastore for write operations.
+- **Read**: All queries succeed on FSx for ONTAP S3 AP (10K and 5M row Parquet)
+- **Write-back (CTAS)**: Failed due to file-based metastore limitation (not FSx for ONTAP S3 AP issue). Requires Glue Catalog or Hive Metastore for write operations.
 - **No session policy issues**: Direct IAM credentials, no intermediary governance layer
 - Tested on separate SVM (svm-0e5ef72d9b4470f19) while original SVM has a service issue
 
@@ -73,7 +73,7 @@ Trino is a distributed SQL query engine for structured data. It cannot directly 
 
 **Patterns:**
 1. **Metadata table** — Register file paths, sizes, and types as Hive tables for querying
-2. **Multi-source federation** — JOIN FSx S3 AP file catalogs with other data sources (RDS, PostgreSQL)
+2. **Multi-source federation** — JOIN FSx for ONTAP S3 AP file catalogs with other data sources (RDS, PostgreSQL)
 3. **Hive Connector** — Read Parquet metadata directly from S3 AP with path-style access
 
 ```sql
@@ -115,7 +115,7 @@ integrations/trino-starburst/
 │   │   ├── jvm.config                 ← JVM settings
 │   │   ├── node.properties            ← Node identity
 │   │   └── catalog/
-│   │       └── fsxn.properties        ← FSx S3 AP connector config
+│   │       └── fsxn.properties        ← FSx for ONTAP S3 AP connector config
 ├── sql/
 │   ├── 01_create_schema.sql           ← Schema + table DDL
 │   ├── 02_read_queries.sql            ← SELECT, GROUP BY, aggregation

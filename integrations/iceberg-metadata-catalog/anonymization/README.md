@@ -25,8 +25,8 @@ S3 Tables (has_pii=true, anonymization_status='pending')
 
 | Function | Input | Processing | Output |
 |----------|-------|-----------|--------|
-| `anonymize-document` | Text/PDF from FSx S3 AP | Regex + Comprehend PII redaction | Redacted text to S3 |
-| `anonymize-image` | Image from FSx S3 AP | Rekognition face detection + Pillow blur | Blurred image to S3 |
+| `anonymize-document` | Text/PDF from FSx for ONTAP S3 AP | Regex + Comprehend PII redaction | Redacted text to S3 |
+| `anonymize-image` | Image from FSx for ONTAP S3 AP | Rekognition face detection + Pillow blur | Blurred image to S3 |
 
 ## Data Clean Room Pattern
 

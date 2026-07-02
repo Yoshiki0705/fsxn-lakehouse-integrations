@@ -116,7 +116,7 @@ python3 scripts/demo-anonymize.py --ap-alias <your-ap-alias-ext-s3alias>
 
 | Time | Demo Step | Key Message |
 |------|-----------|-------------|
-| 0:00 | Show FSx S3 AP files | "Unstructured data stays on ONTAP — no S3 copy needed" |
+| 0:00 | Show FSx for ONTAP S3 AP files | "Unstructured data stays on ONTAP — no S3 copy needed" |
 | 2:00 | Run metadata scan | "38 files cataloged in 30 seconds" |
 | 4:00 | Show Athena query | "Any file findable in < 2 seconds via SQL" |
 | 6:00 | Show AI classification | "Bedrock automatically classifies images at $0.01/file" |

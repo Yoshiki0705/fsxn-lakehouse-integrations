@@ -86,7 +86,7 @@
 | Kafka → ClickHouse | SASL_SSL or SSL (mTLS) | Kafka Engine settings |
 | Kafka → Databricks | SASL_SSL | Structured Streaming options |
 | クライアント → FSx NFS | NFSv4.1 + Kerberos (PoC ではオプション) | 本番では krb5p |
-| クライアント → FSx ONTAP S3 | HTTPS (TLS 1.2+) | S3 エンドポイント ポート 443 |
+| クライアント → FSx for ONTAP S3 | HTTPS (TLS 1.2+) | S3 エンドポイント ポート 443 |
 | FlexCache インタークラスター | クラスターピアリング暗号化 | `cluster peer create -encryption true` |
 
 ---

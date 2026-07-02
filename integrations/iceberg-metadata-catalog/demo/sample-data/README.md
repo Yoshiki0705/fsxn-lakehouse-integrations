@@ -100,7 +100,7 @@ python generate-sample-data.py \
   --output-dir /tmp/demo-data \
   --file-count 50
 
-# Upload to FSx S3 AP
+# Upload to FSx for ONTAP S3 AP
 aws s3 sync /tmp/demo-data/ s3://<AP_ALIAS>/demo-data/ --region ap-northeast-1
 ```
 

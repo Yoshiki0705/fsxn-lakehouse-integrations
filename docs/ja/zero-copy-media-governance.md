@@ -214,12 +214,14 @@ FSx for ONTAP（クラウドレプリカ）
 
 ---
 
-## Databricks メディアガバナンス（全 Option 共通）
+## Databricks パス
+
+**背景**: 既存の Databricks 資産(UC、Delta Lake、MLflow パイプライン、チームスキル)を活用。
 
 ### UC Volume + メタデータテーブル + タグベースアクセス制御 + Delta Sharing
 
 ```sql
--- 1. External Volume（S3 または FSx S3 AP 経由の DataSync サブセットをバックエンド）
+-- 1. External Volume（S3 または FSx for ONTAP S3 AP 経由の DataSync サブセットをバックエンド）
 CREATE EXTERNAL VOLUME media_assets
   LOCATION 's3://company-media-bucket/assets/';
 
@@ -264,6 +266,67 @@ FROM media_catalog
 GROUP BY checksum HAVING COUNT(*) > 1;
 ```
 
+### AI パス: Mosaic AI（Vision）、Vector Search（RAG）、Model Serving（Whisper）
+
+### 制約
+- UC Volume は S3 バックエンドが必要（FSx for ONTAP S3 AP を直接登録できない）
+- UC Row Filter / Column Mask は外部エンジンには適用されない
+- 外部エンジンのガバナンスには Lake Formation が必要
+
+---
+
+## Snowflake パス
+
+**背景**: 既存の Snowflake 環境(Cortex AI、Data Sharing、Horizon Catalog)を活用。
+
+### ガバナンス: External Table + Row Access Policy + Masking + Secure Data Sharing
+
+### AI パス: Cortex Search（RAG）、Cortex AI Vision、PARSE_DOCUMENT
+
+### 主な特徴
+- **Horizon Iceberg REST Catalog が外部エンジンにガバナンスを適用**（Row Access Policy + Masking）
+- 全エディション対応（課金は 2026 年下期開始）
+- ゼロコピー Data Sharing（受信側でデータ重複なし）
+
+### 制約
+- FSx for ONTAP S3 AP ステージで TO_FILE が失敗（エンジニアリング調査中）
+- 内部ステージへの COPY FILES が必要なのは Vision AI（TO_FILE 経由）のみ。Cortex AI 関数（COMPLETE, SUMMARIZE）と Cortex Search は Managed Iceberg Table 上で直接動作
+- AUTO_REFRESH 非対応（Task + ALTER STAGE REFRESH で回避）
+
+---
+
+## AWS ネイティブパス
+
+**背景**: 既存の AWS ネイティブ環境(Athena、Glue、Bedrock、Lake Formation)を活用。
+
+### ガバナンス: Lake Formation LF-Tags + クロスアカウント grant
+
+### AI パス: Bedrock KB（RAG）、Textract、Transcribe、SageMaker
+
+### 主な特徴
+- Athena / Bedrock から **FSx for ONTAP S3 AP へ直接アクセス**（S3 コピー不要）
+- **Lake Formation が全エンジンにガバナンスを適用**（Athena, Redshift, EMR）
+- Bedrock Knowledge Base は FSx for ONTAP S3 AP を直接データソースにできる
+
+### 制約
+- Athena は VPC-origin AP にアクセスできない（Internet-origin が必要）
+- 組み込みのデータリネージなし（別途構築が必要）
+- Bedrock KB は非構造化データの自動インデックスのみ（構造化クエリは Athena 経由）
+
+---
+
+## プラットフォーム比較
+
+| 観点 | Databricks | Snowflake | AWS ネイティブ |
+|------|-----------|-----------|------------|
+| **FSx for ONTAP S3 AP 直接アクセス** | ❌（UC セッションポリシー） | ⚠️（LIST のみ） | ✅（Athena, Bedrock） |
+| **ガバナンスモデル** | UC Tags + Row Filter | Row Access Policy + Masking | Lake Formation LF-Tags |
+| **外部エンジンへのガバナンス** | ❌ | ✅（Horizon Catalog） | ✅（Lake Formation） |
+| **組織横断共有** | Delta Sharing（オープンプロトコル） | Secure Data Sharing（ゼロコピー） | LF クロスアカウント + RAM |
+| **非構造化 AI** | Mosaic AI, Vector Search | Cortex AI, Cortex Search | Bedrock, Textract, Transcribe |
+| **重複排除** | なし（S3 依存） | なし（S3 依存） | なし（S3 依存） |
+| **FSx for ONTAP 併用** | ✅（Option B/C/D） | ✅（Option B/C/D） | ✅（Option B/C/D） |
+
 ---
 
 ## 推奨マトリクス
@@ -278,14 +341,42 @@ GROUP BY checksum HAVING COUNT(*) > 1;
 
 ---
 
-## ペルソナ別サマリー
+## 選択ガイダンス（パス別サマリー）
 
-| ペルソナ | 主要推奨 |
+| パス / 観点 | 要点 |
+|------------|------|
+| **Snowflake パス** | Horizon Catalog で外部エンジンにガバナンスを適用可能。非構造化データの AI 活用は Cortex Search + Data Sharing。Managed Iceberg Table → Horizon REST Catalog で Databricks/Spark も同じデータを読める。 |
+| **Databricks パス** | UC Volumes + Delta Sharing。非構造化データの自動タグ付けは Mosaic AI。S3 コスト削減に FSx for ONTAP。将来: Lakehouse Federation で FSx for ONTAP S3 AP データへの仮想アクセスが可能になる可能性。 |
+| **AWS ネイティブパス** | FSx for ONTAP S3 AP + Lake Formation で S3 コピー削減と全エンジンガバナンスを両立。Bedrock KB が FSx for ONTAP S3 AP を直接読み取り。Glue Catalog + Iceberg 形式も別の Open Table Format 選択肢。 |
+| **ストレージ最適化** | ONTAP dedup は同一ファイルコピー（版・部門コピー）に有効。類似の画像/動画は同一ブロックが存在する範囲でのみ有効。 |
+| **移行 / ハイブリッド** | DataSync → FSx for ONTAP は確立されたパス（10TB / Direct Connect 1Gbps ≈ 22 時間）。FlexCache + FSx for ONTAP S3 AP はハイブリッド環境で有効。 |
+| **データ主権** | データ主権要件では Option C（オンプレ ONTAP + SnapMirror）が必要な場合あり。医用画像（DICOM）や監視映像は PII/PHI の可能性 — 匿名化パイプラインを検討。 |
+| **アウトカム指標** | ゴール: 「コスト削減 + ガバナンス付き組織横断共有」。段階的導入（Phase 1→2→3）で投資リスクを抑制。指標例: ストレージコスト削減、データ発見時間、共有リクエストからアクセスまでの時間。業界例: 製造（設計文書再利用）、金融（契約コンプライアンス検索）、医療（DICOM 研究共有）。 |
+
+---
+
+## 役割別レンズサマリー
+
+> 以下は役割ベースのレンズによる推奨の要約です(個人名ではなく役割で表記)。
+
+| レンズ(役割) | 主要推奨 |
 |---------|---------|
-| **Snowflake PMM（高橋さん）** | Databricks 決定事項でも、Snowflake Horizon で同じデータに対して外部エンジンへのガバナンス強制が可能。他のコンシューマー向けに Horizon を併用する選択肢あり。 |
-| **Databricks SA（倉光さん）** | UC Volumes + Delta Sharing が正解。S3 コスト削減には即時対応として S3 Intelligent-Tiering、戦略的には FSx for ONTAP を推奨。 |
-| **AWS Iceberg SA（疋田さん）** | FSx for ONTAP S3 AP で S3 コピーの必要性を完全に排除。FlexCache S3 AP（ロードマップ）でさらに 60%+ のコスト削減。 |
-| **Storage Specialist** | ONTAP 重複排除が真のストレージ効率を実現する唯一の方法。S3 にはネイティブ dedup なし。FSx for ONTAP への移行が根本原因の解決。 |
-| **Partner SA** | NetApp BlueXP で統合管理。DataSync → FSx マイグレーションは十分にサポートされたパス。FlexCache S3 AP はハイブリッドアーキテクチャのゲームチェンジャー。 |
-| **Public Sector SA** | データ主権要件によりオンプレ ONTAP + SnapMirror（Option C）が必須の場合あり。FlexCache S3 AP でフルレプリケーションなしにクラウド分析を実現。 |
-| **Outcome SA** | 顧客の真のゴールは「コスト削減 + ガバナンス付き共有」。FlexCache S3 AP（ロードマップ）が最小データ移動で両方を達成。 |
+| **Snowflake PMM レンズ** | Databricks 決定事項でも、Snowflake Horizon で同じデータに対して外部エンジンへのガバナンス強制が可能。他のコンシューマー向けに Horizon を併用する選択肢あり。 |
+| **Databricks SA レンズ** | UC Volumes + Delta Sharing が有効。S3 コスト削減には即時対応として S3 Intelligent-Tiering、戦略的には FSx for ONTAP を推奨。 |
+| **AWS Iceberg SA レンズ** | FSx for ONTAP S3 AP で S3 コピーの必要性を排除。FlexCache S3 AP(ロードマップ)でさらにコスト削減。 |
+| **Storage Specialist レンズ** | ONTAP 重複排除がストレージ効率に有効(S3 にはネイティブ dedup なし)。FSx for ONTAP への移行が根本原因の解決に寄与。 |
+| **Partner SA レンズ** | Amazon CloudWatch と ONTAP REST API で運用を統合管理。DataSync による FSx for ONTAP への移行はサポートされたパス。FlexCache S3 AP(ロードマップ)はハイブリッド構成で有効な選択肢。 |
+| **Public Sector SA レンズ** | データ主権要件によりオンプレ ONTAP + SnapMirror(Option C)が必須の場合あり。FlexCache S3 AP でフルレプリケーションなしにクラウド分析を実現。 |
+| **Outcome SA レンズ** | 顧客のゴールは「コスト削減 + ガバナンス付き共有」。FlexCache S3 AP(ロードマップ)が最小データ移動で両立に寄与。 |
+
+
+---
+
+## 運用監視とセキュリティ
+
+本ドキュメントで提案するアーキテクチャの Observability とセキュリティ監視(SIEM)については、以下の専用プロジェクトを参照してください。
+
+| 領域 | リポジトリ | 内容 |
+|------|-----------|------|
+| **Observability** | [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations) | FSx for ONTAP の監査ログを S3 AP + Lambda パイプライン経由で Datadog / Splunk / Grafana / Elastic に送信。 |
+| **SLO / アラート** | [FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns) | SLO Observability パターン、FPolicy イベント駆動パイプライン、キャパシティガードレール。 |

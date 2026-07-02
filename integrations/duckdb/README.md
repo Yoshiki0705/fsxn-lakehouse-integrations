@@ -24,7 +24,7 @@ DuckDB is an in-process SQL OLAP database — think "SQLite for analytics." It r
 *DuckDB Web Shell — Try SQL queries in your browser at [shell.duckdb.org](https://shell.duckdb.org)*
 
 **Why DuckDB for FSx for ONTAP?**
-- Query Parquet/CSV/JSON on FSx S3 AP without provisioning any analytics infrastructure
+- Query Parquet/CSV/JSON on FSx for ONTAP S3 AP without provisioning any analytics infrastructure
 - Deploy in Lambda for serverless, pay-per-invocation analytics ($0 when idle)
 - No session policy issues (unlike Databricks/Snowflake) — uses direct IAM credentials
 - Sub-second queries on millions of rows

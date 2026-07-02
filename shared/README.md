@@ -23,7 +23,7 @@ Reusable CloudFormation templates, scripts, and utilities for all integrations.
 | `scripts/verify-s3ap-connectivity.py` | Comprehensive S3 AP check with YAML output | `python verify-s3ap-connectivity.py --ap-alias <alias> --output-yaml <path>` |
 | `scripts/generate-sample-data.py` | Generate Parquet/CSV/JSON test data | `python generate-sample-data.py --rows 10000 --format parquet` |
 | `scripts/generate-test-data.py` | Generate sensor_data Parquet (10K/5M rows) | `python generate-test-data.py --ap-alias <alias> --rows 10000` |
-| `scripts/upload-media-samples.sh` | Upload images/documents/video to FSxN | `./upload-media-samples.sh <nfs-mount-path>` |
+| `scripts/upload-media-samples.sh` | Upload images/documents/video to FSx for ONTAP | `./upload-media-samples.sh <nfs-mount-path>` |
 | `scripts/setup-s3ap.sh` | Create and configure S3 Access Point | `./setup-s3ap.sh` |
 | `scripts/mask-screenshots.py` | Mask PII in screenshots | `python mask-screenshots.py <image-path>` |
 | `scripts/pre-push-security-check.sh` | Check for secrets before push | `./pre-push-security-check.sh` |

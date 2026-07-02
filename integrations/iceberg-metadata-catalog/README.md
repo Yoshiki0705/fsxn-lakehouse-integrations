@@ -97,7 +97,7 @@ integrations/iceberg-metadata-catalog/
 │   └── audit-correlation-guide.md         # Cross-platform audit correlation
 ├── snowflake/
 │   ├── glue-rest-vended-credentials-validation.md  # Glue REST credential vending validation
-│   ├── external-stage-fsx-s3ap-validation.md       # External Stage with FSx S3 AP
+│   ├── external-stage-fsx-s3ap-validation.md       # External Stage with FSx for ONTAP S3 AP
 │   ├── path-decision-guide.md                      # Snowflake integration path decision
 │   └── troubleshooting-guide.md                    # Troubleshooting guide (EN/JA)
 ├── lakehouse-tools/
@@ -130,7 +130,7 @@ integrations/iceberg-metadata-catalog/
 | EMR Spark | ✅ Verified | Glue Iceberg REST via EMR Serverless 7.13.0; SHOW NAMESPACES/TABLES/SELECT all work |
 | Snowflake (Glue REST + VENDED_CREDENTIALS) | ✅ Verified | Explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` + no External Volume; CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH + Time Travel all working (2026-06-05) |
 | Snowflake (S3 Tables direct) | ⚠️ | Not a supported catalog type — use Glue REST instead |
-| Snowflake External Stage | ✅ | FSx S3 AP works (LIST, SELECT, COPY, TO_FILE + Cortex AI all verified) |
+| Snowflake External Stage | ✅ | FSx for ONTAP S3 AP works (LIST, SELECT, COPY, TO_FILE + Cortex AI all verified) |
 | Databricks SQL Warehouse | ⚠️ | `iceberg_rest` connection type not supported in tested path |
 | Databricks UC Audit | ✅ | External engine access fully logged in `system.access.audit` |
 | Databricks Spark | ❌ | UC blocks external catalog registration via spark.conf.set; UC Foreign Catalog required |
@@ -159,11 +159,11 @@ Details: [cross-platform-compatibility.yaml](verification-evidence/cross-platfor
 | Maintenance Runbook | [EN](ops/iceberg-maintenance-runbook.md) | [JA](ops/iceberg-maintenance-runbook-ja.md) |
 | Production Maturity Model | [EN](genai/production-maturity-model.md) | [JA](genai/production-maturity-model-ja.md) |
 | Regulated Workload Readiness | [EN](governance/regulated-workload-readiness.md) | [JA](governance/regulated-workload-readiness-ja.md) |
-| FSx S3 AP Production Checklist | [EN](storage/fsx-s3ap-production-checklist.md) | [JA](storage/fsx-s3ap-production-checklist-ja.md) |
+| FSx for ONTAP S3 AP Production Checklist | [EN](storage/fsx-s3ap-production-checklist.md) | [JA](storage/fsx-s3ap-production-checklist-ja.md) |
 | PoC Execution Guide | [EN](../../docs/implementation-guide/poc-execution-guide.md) | [JA](../../docs/implementation-guide/poc-execution-guide-ja.md) |
 | Snowflake Troubleshooting | [EN](snowflake/troubleshooting-guide.md) | [JA](snowflake/troubleshooting-guide-ja.md) |
 | Snowflake VENDED_CREDENTIALS | [EN](snowflake/glue-rest-vended-credentials-validation.md) | [JA](snowflake/glue-rest-vended-credentials-validation-ja.md) |
-| S3 Annotations Governance Eval (Databricks UC × FSx S3 AP) | [EN](../../docs/en/s3-annotations-governance-evaluation.md) | [JA](../../docs/ja/s3-annotations-governance-evaluation.md) |
+| S3 Annotations Governance Eval (Databricks UC × FSx for ONTAP S3 AP) | [EN](../../docs/en/s3-annotations-governance-evaluation.md) | [JA](../../docs/ja/s3-annotations-governance-evaluation.md) |
 
 ## Blog Series
 

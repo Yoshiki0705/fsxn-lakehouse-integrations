@@ -61,6 +61,12 @@ Understanding Databricks' storage and ingestion concepts is essential for evalua
 
 > **Partner Quick Reference**: If your customer asks "Can Databricks read our NAS data via S3 Access Points?" — the answer is "partially, with limitations." File-level read works under UC governance, but table creation and directory listing are blocked. For governed analytics on NAS data today, recommend Snowflake External Table or Athena. For Databricks-specific workloads, recommend staged ingestion to S3 → UC Managed Table (see [Recommended Architecture Pattern](#recommended-architecture-pattern-today)). If the customer already uses Databricks, the FPolicy → Lambda → S3 → Auto Loader pattern preserves full UC governance on ingested data.
 
+> **Partner Quick Reference (OpenSharing)**: If your customer asks "Can Databricks read our FSx for ONTAP data via **OpenSharing**?" — the first-line answer:
+> - **Protocol layer is verified**: OpenSharing OSS reference server → STS credential vending → S3 AP read (re-confirmed 2026-07). Reproducible implementation: [opensharing-server](https://github.com/Yoshiki0705/fsxn-lakehouse-integrations/tree/main/integrations/opensharing-server).
+> - **Native recipient in Databricks UC (Foreign Volume/Table recognition) is pending** (expected via the year-end Storage Ecosystem partner delivery).
+> - **What works today**: a notebook-mediated PoC (`requests` + `boto3` → credential vending → S3 AP read → optionally write to a UC table). On a trial (Serverless-only) workspace, watch for notebook-compute activation issues — that is *environment-specific*, not a general Databricks Serverless limitation.
+> - **If governed ingestion is needed in production today**, use the established DataSync → S3 → UC managed table path.
+
 ### Storage Credential → External Location → External Table/Volume
 
 ```
@@ -72,7 +78,7 @@ Storage Credential (IAM Role ARN + External ID)
             └── External Volume (non-tabular: images, documents, audio)
 ```
 
-| Concept | Description | FSx S3 AP Status | Reference |
+| Concept | Description | FSx for ONTAP S3 AP Status | Reference |
 |---|---|:---:|---|
 | **[Storage Credential](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)** | IAM Role that Databricks assumes to access cloud storage. During AssumeRole, Databricks generates a session policy that restricts what the assumed session can do — even if the IAM role itself has broader permissions. | ✅ Created | [Docs](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) |
 | **[External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual)** | Maps S3 path to a Storage Credential; defines access boundary | ⚠️ Created (with `access_point` field — not GA; see [Support Confirmation](#support-confirmation-2026-05-26)) | [Docs](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual) |
@@ -85,16 +91,16 @@ Storage Credential (IAM Role ARN + External ID)
 
 [Auto Loader](https://docs.databricks.com/ingestion/auto-loader/index.html) is Databricks' equivalent of Snowflake's Snowpipe — it incrementally processes new files as they arrive in cloud storage.
 
-| Mode | Description | S3 Event Notifications Required | FSx S3 AP Status |
+| Mode | Description | S3 Event Notifications Required | FSx for ONTAP S3 AP Status |
 |---|---|:---:|:---:|
 | **[Directory Listing](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/directory-listing-mode)** | Periodically lists directory to find new files | ❌ No | ⚠️ Requires External Location (blocked) |
-| **[File Notification](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/file-notification-mode)** | Uses S3 Event Notifications + SQS for real-time detection | ✅ Yes | ❌ Not possible (FSx S3 AP doesn't support S3 Events) |
+| **[File Notification](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/file-notification-mode)** | Uses S3 Event Notifications + SQS for real-time detection | ✅ Yes | ❌ Not possible (FSx for ONTAP S3 AP doesn't support S3 Events) |
 
 **Comparison with Snowflake:**
 
-| Feature | Snowflake (Snowpipe) | Databricks (Auto Loader) | FSx S3 AP Support |
+| Feature | Snowflake (Snowpipe) | Databricks (Auto Loader) | FSx for ONTAP S3 AP Support |
 |---|---|---|:---:|
-| Event-driven ingestion | Snowpipe (S3 Events → SNS → Snowflake) | File Notification mode (S3 Events → SQS) | ❌ Both blocked (no S3 Events on FSx S3 AP) |
+| Event-driven ingestion | Snowpipe (S3 Events → SNS → Snowflake) | File Notification mode (S3 Events → SQS) | ❌ Both blocked (no S3 Events on FSx for ONTAP S3 AP) |
 | Polling-based ingestion | Scheduled `ALTER STAGE REFRESH` (Task) | Directory Listing mode | ⚠️ Snowflake: works; Databricks: blocked by UC |
 | Alternative for FSx | FPolicy → Lambda → SNS → Snowpipe | FPolicy → Lambda → write to S3 → Auto Loader | ✅ Workaround available |
 | Incremental processing | Snowpipe tracks loaded files | Auto Loader tracks processed files (checkpoint) | — |
@@ -127,13 +133,13 @@ Storage Credential (IAM Role ARN + External ID)
 
 ### Data Ingestion Alternatives for FSx for ONTAP (When Auto Loader Is Blocked)
 
-Since Auto Loader requires External Location (currently blocked on FSx S3 AP), use these alternatives:
+Since Auto Loader requires External Location (currently blocked on FSx for ONTAP S3 AP), use these alternatives:
 
 | Method | Description | Latency | Governance | Reference |
 |---|---|---|---|---|
 | **FPolicy → Lambda → S3 → Auto Loader** | FPolicy detects file changes on FSx → Lambda copies to S3 bucket → Auto Loader ingests | Seconds | ✅ Full UC (on S3 copy) | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
-| **AWS Glue ETL** | Glue job reads from FSx S3 AP → writes to S3/Delta | Minutes | AWS-side | [Glue + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
-| **EMR Serverless** | Spark job reads from FSx S3 AP → writes to S3/Delta | Minutes | AWS-side | [EMR + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-run-spark-with-emr-serverless.html) |
+| **AWS Glue ETL** | Glue job reads from FSx for ONTAP S3 AP → writes to S3/Delta | Minutes | AWS-side | [Glue + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
+| **EMR Serverless** | Spark job reads from FSx for ONTAP S3 AP → writes to S3/Delta | Minutes | AWS-side | [EMR + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-run-spark-with-emr-serverless.html) |
 | **AWS DataSync** | Scheduled sync from FSx NFS → S3 bucket | Minutes-Hours | AWS-side | [DataSync docs](https://docs.aws.amazon.com/datasync/latest/userguide/create-ontap-location.html) |
 | **SnapMirror to S3** | ONTAP-native replication to S3 bucket | Minutes | ONTAP-side | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
 | **Instance Profile + boto3 (PoC)** | Direct S3 AP read from Databricks driver | Real-time | ❌ No UC | Bypasses governance |
@@ -151,17 +157,17 @@ FSx for ONTAP ──FPolicy──▶ Lambda ──▶ S3 Bucket ──▶ Auto L
 
 [Unity Catalog Volumes](https://docs.databricks.com/aws/en/volumes/managed-vs-external) are the Databricks equivalent of Snowflake's Directory Table — they provide governed access to non-tabular files (images, documents, audio, video).
 
-| Concept | Snowflake Equivalent | Description | FSx S3 AP Status |
+| Concept | Snowflake Equivalent | Description | FSx for ONTAP S3 AP Status |
 |---|---|---|:---:|
 | **External Volume** | Directory Table on External Stage | Governed file access on external storage | ❌ Blocked (requires External Location) |
 | **Managed Volume** | Internal Stage + Directory Table | Governed file access on Databricks-managed storage | ✅ Works (standard S3) |
-| **Volume path** (`/Volumes/catalog/schema/volume/`) | `@stage/path/` | Unified path for file access in SQL/Python | ❌ Not available for FSx S3 AP |
+| **Volume path** (`/Volumes/catalog/schema/volume/`) | `@stage/path/` | Unified path for file access in SQL/Python | ❌ Not available for FSx for ONTAP S3 AP |
 
-**Key difference**: Snowflake's Directory Table works on FSx S3 AP external stages today. Databricks' External Volumes require External Location creation, which is blocked by the session policy.
+**Key difference**: Snowflake's Directory Table works on FSx for ONTAP S3 AP external stages today. Databricks' External Volumes require External Location creation, which is blocked by the session policy.
 
 ### Concept Mapping: Snowflake ↔ Databricks
 
-| Snowflake Concept | Databricks Equivalent | Purpose | FSx S3 AP (Snowflake) | FSx S3 AP (Databricks) |
+| Snowflake Concept | Databricks Equivalent | Purpose | FSx for ONTAP S3 AP (Snowflake) | FSx for ONTAP S3 AP (Databricks) |
 |---|---|---|:---:|:---:|
 | Storage Integration | Storage Credential | IAM Role reference | ✅ | ✅ |
 | External Stage | External Location | Cloud storage path mapping | ✅ | ✅ (partial) |
@@ -174,20 +180,20 @@ FSx for ONTAP ──FPolicy──▶ Lambda ──▶ S3 Bucket ──▶ Auto L
 
 ## Data Format Support
 
-> **Important**: The table below represents intended validation targets, not production support status. Unity Catalog External Location did not succeed in the tested environment due to a session policy boundary. The Databricks Unity Catalog + FSx S3 AP path is currently documented as an observed boundary in this validation.
+> **Important**: The table below represents intended validation targets, not production support status. Unity Catalog External Location did not succeed in the tested environment due to a session policy boundary. The Databricks Unity Catalog + FSx for ONTAP S3 AP path is currently documented as an observed boundary in this validation.
 
 | Format | Validation Status | Notes |
 |--------|-------------------|-------|
-| Parquet | Not validated as production Databricks path on FSx S3 AP | Requires UC External Location (currently blocked by session policy) |
-| Delta Lake | Not validated for write-path semantics on FSx S3 AP | Delta commit requires atomic rename (not available on S3 AP) |
-| Iceberg | Not validated for production use on FSx S3 AP | S3FileIO metadata write fails on AP alias |
+| Parquet | Not validated as production Databricks path on FSx for ONTAP S3 AP | Requires UC External Location (currently blocked by session policy) |
+| Delta Lake | Not validated for write-path semantics on FSx for ONTAP S3 AP | Delta commit requires atomic rename (not available on S3 AP) |
+| Iceberg | Not validated for production use on FSx for ONTAP S3 AP | S3FileIO metadata write fails on AP alias |
 | CSV | Driver-only boto3 PoC possible | Bypasses UC governance; not a production path |
 | JSON | Driver-only boto3 PoC possible | Bypasses UC governance; not a production path |
 | ORC | Not validated | — |
 
 ## Managed Table vs External Table — Design Guide
 
-Understanding the difference between managed and external tables in Unity Catalog is critical for architecture decisions — especially given the current FSx S3 AP session policy limitation.
+Understanding the difference between managed and external tables in Unity Catalog is critical for architecture decisions — especially given the current FSx for ONTAP S3 AP session policy limitation.
 
 > **Key concepts**: [External Table](https://docs.databricks.com/aws/en/tables/external) (UC governs metadata, not storage) | [Managed Table](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external) (UC governs both) | [External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) (maps cloud path to credential)
 >
@@ -195,7 +201,7 @@ Understanding the difference between managed and external tables in Unity Catalo
 
 ### Comparison Matrix
 
-| Aspect | UC External Table (on FSx S3 AP) | UC Managed Table (on S3 bucket) | boto3 PoC (no UC table) |
+| Aspect | UC External Table (on FSx for ONTAP S3 AP) | UC Managed Table (on S3 bucket) | boto3 PoC (no UC table) |
 |---|---|---|---|
 | **Data location** | FSx for ONTAP (zero-copy) | Databricks-managed S3 | FSx for ONTAP |
 | **UC governance** | ❌ **Blocked** (CREATE TABLE fails) | ✅ Full (tags, masks, lineage) | ❌ None |
@@ -228,7 +234,7 @@ FSx for ONTAP S3 AP
 
 ### Recommended Architecture Pattern (Today)
 
-Since UC External Tables on FSx S3 AP are blocked, the recommended pattern is a **staged ingestion** approach:
+Since UC External Tables on FSx for ONTAP S3 AP are blocked, the recommended pattern is a **staged ingestion** approach:
 
 ```
 FSx for ONTAP ──S3 AP──▶ Ingestion Job ──▶ S3 Bucket ──▶ UC Managed Table ──▶ ML/AI
@@ -248,7 +254,7 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 | Requirement | Recommended Pattern | Why |
 |---|---|---|
 | Governed ML training data | S3 bucket → UC Managed Table | Full UC governance, Feature Store, lineage |
-| Read-only SQL analytics on NAS | Athena + FSx S3 AP | No copy, serverless, governed |
+| Read-only SQL analytics on NAS | Athena + FSx for ONTAP S3 AP | No copy, serverless, governed |
 | Governed external tables on NAS | Snowflake External Table | Works today with full governance |
 | Exploratory data access (PoC) | Instance Profile + boto3 | Quick access, no governance |
 | Production Delta Lake tables | S3 bucket (standard pattern) | Required for ACID, MERGE, OPTIMIZE |
@@ -258,7 +264,7 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 
 | Pattern | Storage Cost | Governance | Performance | ONTAP Features |
 |---|---|---|---|---|
-| **Athena + FSx S3 AP** | Lowest (FSx only) | AWS-side (IAM, S3 AP) | Good (serverless) | ✅ Preserved |
+| **Athena + FSx for ONTAP S3 AP** | Lowest (FSx only) | AWS-side (IAM, S3 AP) | Good (serverless) | ✅ Preserved |
 | **Snowflake External Table** | Low (FSx only) | ✅ Full (tags, masking) | Moderate | ✅ Preserved |
 | **Staged to S3 → UC Table** | Higher (FSx + S3) | ✅ Full UC | Best (Delta optimized) | ❌ Lost on copy |
 | **boto3 PoC** | Lowest (FSx only) | ❌ None | Poor (driver-only) | ✅ Preserved |
@@ -267,11 +273,11 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 
 | Pattern | Access Pattern | Governance | Performance | AI Capability | Cost | Operational Simplicity | Overall |
 |---|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Athena + FSx S3 AP** | Zero-copy | ★★★☆☆ | ★★★★☆ | ★☆☆☆☆ (SQL only) | ★★★★★ | ★★★★★ | **3.6** |
+| **Athena + FSx for ONTAP S3 AP** | Zero-copy | ★★★☆☆ | ★★★★☆ | ★☆☆☆☆ (SQL only) | ★★★★★ | ★★★★★ | **3.6** |
 | **Snowflake External Table** | Zero-copy | ★★★★☆ | ★★★☆☆ | ★★★★☆ (Cortex AI) | ★★★★★ | ★★★★☆ | **4.0** |
 | **Staged to S3 → UC Table** | With S3 sync | ★★★★★ | ★★★★★ | ★★★★★ (full Mosaic AI) | ★★☆☆☆ | ★★☆☆☆ | **3.8** |
 | **boto3 PoC (Databricks)** | Zero-copy (no governance) | ★☆☆☆☆ | ★★☆☆☆ | ★★★☆☆ (driver-only) | ★★★★★ | ★★★☆☆ | **2.8** |
-| **Bedrock KB + FSx S3 AP** | Zero-copy | ★★★☆☆ | ★★★★☆ | ★★★★☆ (RAG) | ★★★★☆ | ★★★★☆ | **3.8** |
+| **Bedrock KB + FSx for ONTAP S3 AP** | Zero-copy | ★★★☆☆ | ★★★★☆ | ★★★★☆ (RAG) | ★★★★☆ | ★★★★☆ | **3.8** |
 
 - **Access Pattern**: Whether data is read directly from FSx for ONTAP S3 AP (zero-copy) or requires sync to S3 first
 - **Governance**: UC lineage, tags, masking, row filters
@@ -282,7 +288,7 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 
 > **Scoring methodology**: Each dimension rated by the author based on validated evidence in this repository. This is not an official AWS assessment. Scores reflect observed capabilities in one test environment (DBR 17.3 LTS, ap-northeast-1).
 
-> **Performance note**: Performance scores reflect relative comparison within FSx S3 AP access patterns, not comparison with native S3 bucket performance. All patterns accessing FSx S3 AP have higher latency than equivalent native S3 operations.
+> **Performance note**: Performance scores reflect relative comparison within FSx for ONTAP S3 AP access patterns, not comparison with native S3 bucket performance. All patterns accessing FSx for ONTAP S3 AP have higher latency than equivalent native S3 operations.
 
 > **How to use this score**: Use Overall score as a starting point for pattern selection. Scores ≥ 4.0 indicate strong fit for governed production workloads. Scores 3.5–3.9 indicate viable paths with trade-offs to evaluate. Scores < 3.0 indicate PoC-only paths requiring compensating controls and explicit approval.
 
@@ -434,6 +440,6 @@ Databricks Support (May 2026) confirmed:
 4. CREATE TABLE and write operations on S3 AP paths are not supported — this is a platform limitation in the session policy generator
 5. Feature gap reported to UC engineering team — engineering timeline pending
 
-**Recommended interim path**: Sync data from FSx ONTAP into a standard S3 bucket (DataSync), then register that S3 bucket as a UC External Location.
+**Recommended interim path**: Sync data from FSx for ONTAP into a standard S3 bucket (DataSync), then register that S3 bucket as a UC External Location.
 
-For read-only analytics without UC governance, use AWS-native services (Athena, EMR Serverless, DuckDB Lambda) or Snowflake directly on FSx S3 AP.
+For read-only analytics without UC governance, use AWS-native services (Athena, EMR Serverless, DuckDB Lambda) or Snowflake directly on FSx for ONTAP S3 AP.

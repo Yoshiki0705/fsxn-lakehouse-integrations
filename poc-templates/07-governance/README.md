@@ -18,7 +18,7 @@ All sharing the same Glue Catalog + Lake Formation permissions
 
 ## Prerequisites
 
-- Glue Catalog table pointing to FSx S3 AP (from Module 02)
+- Glue Catalog table pointing to FSx for ONTAP S3 AP (from Module 02)
 - IAM user/role with Lake Formation admin permissions
 
 ## Steps

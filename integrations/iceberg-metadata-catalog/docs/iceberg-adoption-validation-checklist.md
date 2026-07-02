@@ -14,7 +14,7 @@
 | Raw data | FSx for ONTAP files (read via S3 AP) | Files are NOT migrated to S3 |
 | Metadata | File inventory + AI enrichment in S3 Tables Iceberg | Raw file content storage |
 | Consumers | Athena, EMR Spark, Snowflake, Databricks (via activation) | Direct file processing in Snowflake/Databricks |
-| Out-of-scope paths | — | Iceberg write to FSx S3 AP, Databricks UC direct S3 Tables access |
+| Out-of-scope paths | — | Iceberg write to FSx for ONTAP S3 AP, Databricks UC direct S3 Tables access |
 
 ## Validation Checklist
 

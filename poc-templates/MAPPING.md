@@ -109,7 +109,7 @@ The Demo Guides (in `integrations/*/docs/`) assume a pre-configured environment.
 | Step | What to do | Where |
 |:---:|---|---|
 | 1 | Generate sample data | `poc-templates/sample-data/generate-sensor-data.py` |
-| 2 | Upload to FSx S3 AP | `aws s3 cp sensor_data.parquet s3://<AP_ALIAS>/sensor-data/` |
+| 2 | Upload to FSx for ONTAP S3 AP | `aws s3 cp sensor_data.parquet s3://<AP_ALIAS>/sensor-data/` |
 | 3 | Create Storage Integration | `poc-templates/03-snowflake-integration/01-storage-integration.sql` |
 | 4 | Update IAM trust policy | See Step 2 in `03-snowflake-integration/README.md` |
 | 5 | Create Stage + External Table | `poc-templates/03-snowflake-integration/02-stage-and-table.sql` |
@@ -136,7 +136,7 @@ The Demo Guides (in `integrations/*/docs/`) assume a pre-configured environment.
 
 | Step | What to do | Where |
 |:---:|---|---|
-| 1 | Upload sample data to FSx S3 AP | Same as Athena Step 2 |
+| 1 | Upload sample data to FSx for ONTAP S3 AP | Same as Athena Step 2 |
 | 2 | Upload spark-job.py to regular S3 | `aws s3 cp poc-templates/05-emr-spark-etl/spark-job.py s3://<BUCKET>/scripts/` |
 | 3 | Create EMR Serverless app | See `poc-templates/05-emr-spark-etl/README.md` |
 | 4 | **Submit job** | `aws emr-serverless start-job-run ...` |

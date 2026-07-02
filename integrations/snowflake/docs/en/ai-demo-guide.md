@@ -27,7 +27,7 @@ SELECT SNOWFLAKE.CORTEX.PARSE_DOCUMENT(
 
 **Result**: Structured text extracted from the image (~8s).
 
-![PARSE_DOCUMENT OCR extracts text from image on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-08-parse-document-ocr.png)
+![PARSE_DOCUMENT OCR extracts text from image on FSx for ONTAP S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-08-parse-document-ocr.png)
 
 *PARSE_DOCUMENT successfully extracts text from an invoice image stored on FSx for ONTAP via S3 Access Point. The result includes structured fields such as invoice number, customer name, and amount.*
 
@@ -46,7 +46,7 @@ LIMIT 1;
 
 **Result**: "The text is a JSON object containing data on humidity, pressure, temperature, sensor ID, status, and timestamp." (3.3s)
 
-![Cortex SUMMARIZE generates AI summary from External Table on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-07-cortex-llm-summary.png)
+![Cortex SUMMARIZE generates AI summary from External Table on FSx for ONTAP S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-07-cortex-llm-summary.png)
 
 *Cortex SUMMARIZE generates an AI summary of sensor data stored on FSx for ONTAP, accessed via External Table (3.3s).*
 
@@ -71,7 +71,7 @@ ORDER BY LAST_MODIFIED DESC;
 
 **Result**: File catalog with downloadable URLs for each image.
 
-![Directory Table with presigned URLs for unstructured data on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-06-directory-table-presigned-url.png)
+![Directory Table with presigned URLs for unstructured data on FSx for ONTAP S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-06-directory-table-presigned-url.png)
 
 *Directory Table catalogs image files on FSx for ONTAP with metadata and generates download URLs for each file.*
 
@@ -90,11 +90,11 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 ) AS defect_analysis;
 ```
 
-**Status**: ✅ **Verified with workaround** — Vision AI works when files are copied to an unencrypted [internal stage](https://docs.snowflake.com/en/user-guide/data-load-local-file-system-create-stage). Direct `TO_FILE()` on FSx S3 AP [external stage](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage) returns "Remote file not found." See [Internal vs External Table Design Guide](../../README.md#internal-table-vs-external-table--design-guide) for architecture trade-offs.
+**Status**: ✅ **Verified with workaround** — Vision AI works when files are copied to an unencrypted [internal stage](https://docs.snowflake.com/en/user-guide/data-load-local-file-system-create-stage). Direct `TO_FILE()` on FSx for ONTAP S3 AP [external stage](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage) returns "Remote file not found." See [Internal vs External Table Design Guide](../../README.md#internal-table-vs-external-table--design-guide) for architecture trade-offs.
 
 **Workaround (validated)**:
 ```sql
--- Step 1: Copy file from FSx S3 AP to unencrypted internal stage
+-- Step 1: Copy file from FSx for ONTAP S3 AP to unencrypted internal stage
 CREATE OR REPLACE STAGE fsxn_ai_noenc_stage ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE');
 COPY FILES INTO @fsxn_ai_noenc_stage FROM @fsxn_ap_arn_test_stage/media/documents/invoice_sample.png;
 ALTER STAGE fsxn_ai_noenc_stage SET DIRECTORY = (ENABLE = TRUE);
@@ -122,17 +122,17 @@ FROM (
 
 *Cortex COMPLETE (pixtral-large) correctly extracts invoice details from an image originally stored on FSx for ONTAP, accessed via the COPY FILES → internal stage → TO_FILE workaround.*
 
-**Why direct TO_FILE on FSx S3 AP fails**:
+**Why direct TO_FILE on FSx for ONTAP S3 AP fails**:
 
-![TO_FILE returns "Remote file not found" on FSx S3 AP external stage](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-10-tofile-remote-not-found.png)
+![TO_FILE returns "Remote file not found" on FSx for ONTAP S3 AP external stage](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-10-tofile-remote-not-found.png)
 
-*TO_FILE() cannot resolve files on FSx S3 AP external stages. The same file is accessible via PARSE_DOCUMENT (which uses a different file access mechanism) but not via TO_FILE.*
+*TO_FILE() cannot resolve files on FSx for ONTAP S3 AP external stages. The same file is accessible via PARSE_DOCUMENT (which uses a different file access mechanism) but not via TO_FILE.*
 
 **Manufacturing use case**: Automated visual quality inspection — natural language instructions like "identify scratches on this component" or "check alignment of this assembly." Requires the COPY FILES workaround for now.
 
 ## Demo 5: Text-based Cortex AI Functions (All Working)
 
-All text-based Cortex AI functions work directly on FSx S3 AP External Table data without any workaround:
+All text-based Cortex AI functions work directly on FSx for ONTAP S3 AP External Table data without any workaround:
 
 ```sql
 -- TRANSLATE: Translate sensor status to Japanese
@@ -154,17 +154,17 @@ SELECT SNOWFLAKE.CORTEX.EXTRACT_ANSWER(VALUE::VARCHAR,
 ) AS extracted FROM fsxn_sensor_ext_table LIMIT 1;
 ```
 
-![CORTEX.TRANSLATE successfully translates External Table data from FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-11-cortex-translate-success.png)
+![CORTEX.TRANSLATE successfully translates External Table data from FSx for ONTAP S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-11-cortex-translate-success.png)
 
-*CORTEX.TRANSLATE translates sensor status text from English to Japanese directly from External Table on FSx S3 AP (5.1s).*
+*CORTEX.TRANSLATE translates sensor status text from English to Japanese directly from External Table on FSx for ONTAP S3 AP (5.1s).*
 
-![CORTEX.COMPLETE generates AI analysis of sensor data from FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-12-cortex-complete-text-success.png)
+![CORTEX.COMPLETE generates AI analysis of sensor data from FSx for ONTAP S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-12-cortex-complete-text-success.png)
 
 *CORTEX.COMPLETE (mistral-large2) generates detailed AI analysis of IoT sensor data stored on FSx for ONTAP (16s).*
 
 ## Cortex AI Comprehensive Compatibility Matrix
 
-| Function | Input Source | FSx S3 AP Direct | Workaround | Duration |
+| Function | Input Source | FSx for ONTAP S3 AP Direct | Workaround | Duration |
 |---|---|:---:|:---:|---|
 | **PARSE_DOCUMENT (OCR)** | Stage path string | ✅ Direct | — | ~8s |
 | **CORTEX.SUMMARIZE** | External Table column | ✅ Direct | — | 3.3s |
@@ -173,14 +173,14 @@ SELECT SNOWFLAKE.CORTEX.EXTRACT_ANSWER(VALUE::VARCHAR,
 | **CORTEX.COMPLETE (text)** | External Table column | ✅ Direct | — | 16s |
 | **CORTEX.EXTRACT_ANSWER** | External Table column | ✅ Direct | — | 2.7s |
 | **COMPLETE (vision/multimodal)** | TO_FILE + image | ❌ Remote file not found | ✅ COPY FILES → internal stage | 41s |
-| **TO_FILE on external stage** | FSx S3 AP stage | ❌ Not supported | COPY FILES to internal | — |
+| **TO_FILE on external stage** | FSx for ONTAP S3 AP stage | ❌ Not supported | COPY FILES to internal | — |
 | **TO_FILE on encrypted internal** | Default internal stage | ❌ Encryption not supported | Use SNOWFLAKE_SSE | — |
 
 ### Key Findings
 
 1. **Text-based functions work directly** — No workaround needed for SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE (text), EXTRACT_ANSWER on External Table data
 2. **PARSE_DOCUMENT works directly** — Uses stage path string (different mechanism from TO_FILE)
-3. **TO_FILE does NOT work on FSx S3 AP external stages** — "Remote file not found" (confirmed, matches NetApp support case)
+3. **TO_FILE does NOT work on FSx for ONTAP S3 AP external stages** — "Remote file not found" (confirmed, matches NetApp support case)
 4. **Vision AI workaround exists**: `COPY FILES` → unencrypted internal stage → `TO_FILE(BUILD_SCOPED_FILE_URL())` → COMPLETE multimodal
 5. **Cross-Region Inference required** for vision models in ap-northeast-1
 
@@ -196,7 +196,7 @@ SELECT SNOWFLAKE.CORTEX.EXTRACT_ANSWER(VALUE::VARCHAR,
 | CORTEX.EXTRACT_ANSWER | ✅ Verified | 2.7s | Information extraction from text |
 | COMPLETE (vision) via workaround | ✅ Verified | 41s | Image analysis, defect detection |
 | Directory Table + URLs | ✅ Verified | 1.3s | Unstructured data catalog |
-| TO_FILE on FSx S3 AP | ❌ Blocked | — | Multimodal direct access not supported |
+| TO_FILE on FSx for ONTAP S3 AP | ❌ Blocked | — | Multimodal direct access not supported |
 
 ## Screenshots
 
@@ -235,7 +235,7 @@ Object Tag (classification)
 |---|:---:|:---:|:---:|---|
 | Database | ✅ | ✅ (inherited) | — | Tags cascade to all schemas/tables below |
 | Schema | ✅ | ✅ (inherited) | — | Tags cascade to all tables below |
-| Table (including External Table) | ✅ | ✅ | ✅ | **Full governance on FSx S3 AP data** |
+| Table (including External Table) | ✅ | ✅ | ✅ | **Full governance on FSx for ONTAP S3 AP data** |
 | Column | ✅ | ✅ (direct) | — | Most granular masking target |
 | Stage / File | ✅ (tag only) | ❌ | ❌ | Tags for classification; no query-time enforcement |
 
@@ -245,7 +245,7 @@ Unlike some platforms, Snowflake applies the same governance controls to Externa
 
 ![SELECT fails without AWS_ACCESS_POINT_ARN — access denied despite LIST working](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-03-select-denied.png)
 
-*Without `AWS_ACCESS_POINT_ARN`: SELECT fails with "access denied" even though LIST works. With the parameter set, full governance (tags, masking, row policies) can be applied to External Tables on FSx S3 AP.*
+*Without `AWS_ACCESS_POINT_ARN`: SELECT fails with "access denied" even though LIST works. With the parameter set, full governance (tags, masking, row policies) can be applied to External Tables on FSx for ONTAP S3 AP.*
 
 ```sql
 -- 1. Create classification tag
@@ -283,7 +283,7 @@ ALTER TAG data_classification SET MASKING POLICY pii_mask;
 | Tag-based column masking | ✅ Tag-based Masking Policy (Enterprise) | ✅ ABAC Governed Tags + Column Masks |
 | Row-level filtering | ✅ Row Access Policy (Enterprise) | ✅ ABAC Row Filter Policies |
 | Auto-classification (PII detection) | ✅ Built-in (Enterprise) | ✅ Built-in (automated data classification) |
-| Governance on External Table | ✅ **Full support** (verified on FSx S3 AP) | ❌ **Blocked** (CREATE TABLE fails on S3 AP) |
+| Governance on External Table | ✅ **Full support** (verified on FSx for ONTAP S3 AP) | ❌ **Blocked** (CREATE TABLE fails on S3 AP) |
 | Tag inheritance | Database → Schema → Table → Column | Catalog → Schema → Table (not to column) |
 | Enforcement boundary | Query-time rewrite (server-side) | Query-time rewrite (server-side) |
 | Data never leaves governed path | ✅ Masking at query time, no raw data export | ✅ Masking at query time, no raw data export |
@@ -295,7 +295,7 @@ ALTER TAG data_classification SET MASKING POLICY pii_mask;
 *Complete validation summary: LIST, SELECT, External Table, COPY INTO, Directory Table, and Governance Tags all verified with `AWS_ACCESS_POINT_ARN`.*
 
 In our validation environment (Standard edition), we confirmed:
-- ✅ `CREATE TAG` + `ALTER TABLE SET TAG` works on External Tables backed by FSx S3 AP
+- ✅ `CREATE TAG` + `ALTER TABLE SET TAG` works on External Tables backed by FSx for ONTAP S3 AP
 - ✅ `SYSTEM$GET_TAG` retrieves tag values correctly
 - ⚠️ Tag-based Masking Policies require Enterprise Edition (not tested in Standard)
 - ⚠️ Row Access Policies require Enterprise Edition (not tested in Standard)
@@ -415,8 +415,8 @@ The two governance layers (ONTAP file-level and Snowflake tag-based) operate ind
 
 | Topic | Reference |
 |---|---|
-| FSx S3 AP dual-layer authorization | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
-| FSx S3 AP with Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
+| FSx for ONTAP S3 AP dual-layer authorization | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
+| FSx for ONTAP S3 AP with Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
 | ONTAP Export Policy (NFS access control) | [How export rules work](https://docs.netapp.com/us-en/ontap/nfs-admin/export-rules-concept.html) |
 | ONTAP FPolicy (file monitoring/blocking) | [FPolicy configuration types](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
 | ONTAP Storage-Level Access Guard | [Secure file access with SLAG](https://docs.netapp.com/us-en/ontap/smb-admin/secure-file-access-storage-level-access-guard-concept.html) |
@@ -525,7 +525,7 @@ The two governance layers (ONTAP file-level and Snowflake tag-based) operate ind
 
 ## Getting Started
 
-1. **Set up FSx S3 AP stage** — Follow the [Configuration Guide](../../README.md)
+1. **Set up FSx for ONTAP S3 AP stage** — Follow the [Configuration Guide](../../README.md)
 2. **Upload sample data** — Place images/documents on FSx for ONTAP via NFS
 3. **Refresh Directory Table** — `ALTER STAGE REFRESH` to detect new files
 4. **Run Cortex functions** — Use the SQL examples above

@@ -90,7 +90,7 @@
 |----------|-------|-------------|-----------|
 | Factory network outage | Edge devices → buffer fills → Kafka starved → ClickHouse/Databricks stale | Dashboards show old data; no new Delta rows | Edge buffer (10 GB); accept staleness; alert on lag |
 | MSK cluster failure | Kafka unavailable → ClickHouse stops ingesting → Databricks stops streaming | All downstream stale | MSK Multi-AZ; edge buffer holds events |
-| FSx ONTAP full | Uploads fail → dead-letter → no new payloads → Delta tables have NULL payload_uri | Analytics on events continues; payload access broken | Capacity alarm at 80%; auto-tier cold data |
+| FSx for ONTAP full | Uploads fail → dead-letter → no new payloads → Delta tables have NULL payload_uri | Analytics on events continues; payload access broken | Capacity alarm at 80%; auto-tier cold data |
 | ClickHouse + Databricks both down | Only Kafka and FSx running | No analytics available; data still safe in Kafka + ONTAP | Accept temporary analytics blackout; data preserved |
 
 ---

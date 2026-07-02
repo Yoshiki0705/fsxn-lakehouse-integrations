@@ -10,7 +10,7 @@
 
 | サービス | エンドポイントタイプ | 用途 |
 |---------|:---:|------|
-| S3 | Gateway | FSx S3 AP アクセス、S3 Tables データ、バッチ I/O |
+| S3 | Gateway | FSx for ONTAP S3 AP アクセス、S3 Tables データ、バッチ I/O |
 | Bedrock Runtime | Interface | リアルタイム AI 分類 + エンベディング |
 | Bedrock | Interface | バッチ推論ジョブ管理 |
 | SQS | Interface | FPolicy イベントキュー |
@@ -26,7 +26,7 @@
 ┌─────────────────────────────────────────────────────────┐
 │  VPC（プライベートサブネット）                              │
 │                                                          │
-│  Lambda ──→ S3 Gateway Endpoint ──→ FSx S3 AP           │
+│  Lambda ──→ S3 Gateway Endpoint ──→ FSx for ONTAP S3 AP           │
 │         ──→ Bedrock Interface Endpoint ──→ Bedrock      │
 │         ──→ SQS Interface Endpoint ──→ SQS             │
 │         ──→ Glue Interface Endpoint ──→ Glue REST      │

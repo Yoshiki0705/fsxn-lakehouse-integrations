@@ -307,7 +307,7 @@ On-premises                              Cloud (AWS)
 ### AWS Official: FSx for ONTAP × Bedrock RAG
 
 - [AWS Official Tutorial: Build a RAG application using Amazon Bedrock Knowledge Bases with FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-build-rag-with-bedrock.html) — Step-by-step guide for configuring FSx for ONTAP S3 AP as a Bedrock KB data source
-- [repost.aws: Using FSxN S3 Access Points as an Amazon Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w) — Community guide
+- [repost.aws: Using FSx for ONTAP S3 Access Points as an Amazon Bedrock Data Source](https://repost.aws/articles/AReKa8-o8XRGeVW2Nicbg1_w) — Community guide
 
 ### Databricks / DAIS 2026
 

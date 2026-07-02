@@ -86,7 +86,7 @@ conclusion: |
 | Step | 実行内容 | 場所 |
 |:---:|---|---|
 | 1 | サンプルデータ生成 | `poc-templates/sample-data/generate-sensor-data.py` |
-| 2 | FSx S3 AP にアップロード | `aws s3 cp sensor_data.parquet s3://<AP_ALIAS>/sensor-data/` |
+| 2 | FSx for ONTAP S3 AP にアップロード | `aws s3 cp sensor_data.parquet s3://<AP_ALIAS>/sensor-data/` |
 | 3 | Storage Integration 作成 | `poc-templates/03-snowflake-integration/01-storage-integration.sql` |
 | 4 | IAM trust policy 更新 | `03-snowflake-integration/README-ja.md` の Step 2 参照 |
 | 5 | Stage + External Table 作成 | `poc-templates/03-snowflake-integration/02-stage-and-table.sql` |
@@ -113,7 +113,7 @@ conclusion: |
 
 | Step | 実行内容 | 場所 |
 |:---:|---|---|
-| 1 | サンプルデータを FSx S3 AP にアップロード | Athena Step 2 と同じ |
+| 1 | サンプルデータを FSx for ONTAP S3 AP にアップロード | Athena Step 2 と同じ |
 | 2 | spark-job.py を通常の S3 にアップロード | `aws s3 cp poc-templates/05-emr-spark-etl/spark-job.py s3://<BUCKET>/scripts/` |
 | 3 | EMR Serverless アプリ作成 | `poc-templates/05-emr-spark-etl/README-ja.md` 参照 |
 | 4 | **ジョブ送信** | `aws emr-serverless start-job-run ...` |
