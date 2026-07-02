@@ -214,7 +214,9 @@ FSx for ONTAP（クラウドレプリカ）
 
 ---
 
-## Databricks メディアガバナンス（全 Option 共通）
+## Databricks パス
+
+**背景**: 既存の Databricks 資産(UC、Delta Lake、MLflow パイプライン、チームスキル)を活用。
 
 ### UC Volume + メタデータテーブル + タグベースアクセス制御 + Delta Sharing
 
@@ -264,6 +266,67 @@ FROM media_catalog
 GROUP BY checksum HAVING COUNT(*) > 1;
 ```
 
+### AI パス: Mosaic AI（Vision）、Vector Search（RAG）、Model Serving（Whisper）
+
+### 制約
+- UC Volume は S3 バックエンドが必要（FSx for ONTAP S3 AP を直接登録できない）
+- UC Row Filter / Column Mask は外部エンジンには適用されない
+- 外部エンジンのガバナンスには Lake Formation が必要
+
+---
+
+## Snowflake パス
+
+**背景**: 既存の Snowflake 環境(Cortex AI、Data Sharing、Horizon Catalog)を活用。
+
+### ガバナンス: External Table + Row Access Policy + Masking + Secure Data Sharing
+
+### AI パス: Cortex Search（RAG）、Cortex AI Vision、PARSE_DOCUMENT
+
+### 主な特徴
+- **Horizon Iceberg REST Catalog が外部エンジンにガバナンスを適用**（Row Access Policy + Masking）
+- 全エディション対応（課金は 2026 年下期開始）
+- ゼロコピー Data Sharing（受信側でデータ重複なし）
+
+### 制約
+- FSx for ONTAP S3 AP ステージで TO_FILE が失敗（エンジニアリング調査中）
+- 内部ステージへの COPY FILES が必要なのは Vision AI（TO_FILE 経由）のみ。Cortex AI 関数（COMPLETE, SUMMARIZE）と Cortex Search は Managed Iceberg Table 上で直接動作
+- AUTO_REFRESH 非対応（Task + ALTER STAGE REFRESH で回避）
+
+---
+
+## AWS ネイティブパス
+
+**背景**: 既存の AWS ネイティブ環境(Athena、Glue、Bedrock、Lake Formation)を活用。
+
+### ガバナンス: Lake Formation LF-Tags + クロスアカウント grant
+
+### AI パス: Bedrock KB（RAG）、Textract、Transcribe、SageMaker
+
+### 主な特徴
+- Athena / Bedrock から **FSx for ONTAP S3 AP へ直接アクセス**（S3 コピー不要）
+- **Lake Formation が全エンジンにガバナンスを適用**（Athena, Redshift, EMR）
+- Bedrock Knowledge Base は FSx for ONTAP S3 AP を直接データソースにできる
+
+### 制約
+- Athena は VPC-origin AP にアクセスできない（Internet-origin が必要）
+- 組み込みのデータリネージなし（別途構築が必要）
+- Bedrock KB は非構造化データの自動インデックスのみ（構造化クエリは Athena 経由）
+
+---
+
+## プラットフォーム比較
+
+| 観点 | Databricks | Snowflake | AWS ネイティブ |
+|------|-----------|-----------|------------|
+| **FSx for ONTAP S3 AP 直接アクセス** | ❌（UC セッションポリシー） | ⚠️（LIST のみ） | ✅（Athena, Bedrock） |
+| **ガバナンスモデル** | UC Tags + Row Filter | Row Access Policy + Masking | Lake Formation LF-Tags |
+| **外部エンジンへのガバナンス** | ❌ | ✅（Horizon Catalog） | ✅（Lake Formation） |
+| **組織横断共有** | Delta Sharing（オープンプロトコル） | Secure Data Sharing（ゼロコピー） | LF クロスアカウント + RAM |
+| **非構造化 AI** | Mosaic AI, Vector Search | Cortex AI, Cortex Search | Bedrock, Textract, Transcribe |
+| **重複排除** | なし（S3 依存） | なし（S3 依存） | なし（S3 依存） |
+| **FSx for ONTAP 併用** | ✅（Option B/C/D） | ✅（Option B/C/D） | ✅（Option B/C/D） |
+
 ---
 
 ## 推奨マトリクス
@@ -275,6 +338,20 @@ GROUP BY checksum HAVING COUNT(*) > 1;
 | **将来最適（最低コスト）** | Option D（FlexCache S3 AP） | キャッシュのみのストレージ = 現行比 80% コスト削減 |
 | **最小変更** | Option A（S3 最適化） | 階層化のみ、削減効果は限定的 |
 | **Databricks ガバナンス** | UC Volume + Tags + Delta Sharing | 全 Option 共通、ストレージ選択に依存しない |
+
+---
+
+## 選択ガイダンス（パス別サマリー）
+
+| パス / 観点 | 要点 |
+|------------|------|
+| **Snowflake パス** | Horizon Catalog で外部エンジンにガバナンスを適用可能。非構造化データの AI 活用は Cortex Search + Data Sharing。Managed Iceberg Table → Horizon REST Catalog で Databricks/Spark も同じデータを読める。 |
+| **Databricks パス** | UC Volumes + Delta Sharing。非構造化データの自動タグ付けは Mosaic AI。S3 コスト削減に FSx for ONTAP。将来: Lakehouse Federation で FSx for ONTAP S3 AP データへの仮想アクセスが可能になる可能性。 |
+| **AWS ネイティブパス** | FSx for ONTAP S3 AP + Lake Formation で S3 コピー削減と全エンジンガバナンスを両立。Bedrock KB が FSx for ONTAP S3 AP を直接読み取り。Glue Catalog + Iceberg 形式も別の Open Table Format 選択肢。 |
+| **ストレージ最適化** | ONTAP dedup は同一ファイルコピー（版・部門コピー）に有効。類似の画像/動画は同一ブロックが存在する範囲でのみ有効。 |
+| **移行 / ハイブリッド** | DataSync → FSx for ONTAP は確立されたパス（10TB / Direct Connect 1Gbps ≈ 22 時間）。FlexCache + FSx for ONTAP S3 AP はハイブリッド環境で有効。 |
+| **データ主権** | データ主権要件では Option C（オンプレ ONTAP + SnapMirror）が必要な場合あり。医用画像（DICOM）や監視映像は PII/PHI の可能性 — 匿名化パイプラインを検討。 |
+| **アウトカム指標** | ゴール: 「コスト削減 + ガバナンス付き組織横断共有」。段階的導入（Phase 1→2→3）で投資リスクを抑制。指標例: ストレージコスト削減、データ発見時間、共有リクエストからアクセスまでの時間。業界例: 製造（設計文書再利用）、金融（契約コンプライアンス検索）、医療（DICOM 研究共有）。 |
 
 ---
 
@@ -291,3 +368,15 @@ GROUP BY checksum HAVING COUNT(*) > 1;
 | **Partner SA レンズ** | Amazon CloudWatch と ONTAP REST API で運用を統合管理。DataSync による FSx for ONTAP への移行はサポートされたパス。FlexCache S3 AP(ロードマップ)はハイブリッド構成で有効な選択肢。 |
 | **Public Sector SA レンズ** | データ主権要件によりオンプレ ONTAP + SnapMirror(Option C)が必須の場合あり。FlexCache S3 AP でフルレプリケーションなしにクラウド分析を実現。 |
 | **Outcome SA レンズ** | 顧客のゴールは「コスト削減 + ガバナンス付き共有」。FlexCache S3 AP(ロードマップ)が最小データ移動で両立に寄与。 |
+
+
+---
+
+## 運用監視とセキュリティ
+
+本ドキュメントで提案するアーキテクチャの Observability とセキュリティ監視(SIEM)については、以下の専用プロジェクトを参照してください。
+
+| 領域 | リポジトリ | 内容 |
+|------|-----------|------|
+| **Observability** | [fsxn-observability-integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations) | FSx for ONTAP の監査ログを S3 AP + Lambda パイプライン経由で Datadog / Splunk / Grafana / Elastic に送信。 |
+| **SLO / アラート** | [FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns) | SLO Observability パターン、FPolicy イベント駆動パイプライン、キャパシティガードレール。 |
