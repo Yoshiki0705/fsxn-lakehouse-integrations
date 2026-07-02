@@ -49,13 +49,13 @@ print(f"✅ Read {df.count()} rows from FSx for ONTAP S3 AP")
 
 **Result**: 1000 rows read successfully from sensor CSV on FSx for ONTAP (explicit file path with `access_point` field set on External Location).
 
-![Spark read succeeds for explicit file path on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ai-spark-read-success.png)
+![Spark read succeeds for explicit file path on FSx for ONTAP S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ai-spark-read-success.png)
 
 *Spark successfully reads sensor CSV data from FSx for ONTAP S3 Access Point using an explicit file path under Unity Catalog governance.*
 
 **Limitation**: Only explicit file paths work. Directory-level reads (e.g., `spark.read.parquet("s3://<alias>/bronze/")`) fail because subdirectory listing is blocked by the session policy.
 
-![Top-level listing succeeds — 287 items visible on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ls-success-287-items.png)
+![Top-level listing succeeds — 287 items visible on FSx for ONTAP S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ls-success-287-items.png)
 
 *Top-level `dbutils.fs.ls` succeeds with 287 items visible. However, subdirectory listing and table creation remain blocked.*
 
@@ -75,7 +75,7 @@ LOCATION 's3://<s3ap-alias>/bronze/sensor_data/';
 
 **Result**: ❌ `UC_CLOUD_STORAGE_ACCESS_FAILURE` — Unity Catalog's internal validation cannot access the S3 AP path for table registration.
 
-![CREATE TABLE blocked by UC session policy on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ai-create-table-blocked.png)
+![CREATE TABLE blocked by UC session policy on FSx for ONTAP S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-ai-create-table-blocked.png)
 
 *Unity Catalog rejects table creation on FSx for ONTAP S3 Access Point. The session policy generated during AssumeRole does not include the S3 AP ARN pattern for internal validation operations.*
 
@@ -253,23 +253,23 @@ Governed Tag (classification attribute)
 | Schema | ✅ | ✅ (ABAC scope) | ✅ (ABAC scope) | Tags cascade to tables below |
 | Table (Managed) | ✅ | ✅ | ✅ | Full governance |
 | Table (External, on S3 bucket) | ✅ | ✅ | ✅ | Full governance (standard S3) |
-| Table (External, on FSx S3 AP) | ❌ **Blocked** | ❌ | ❌ | **CREATE TABLE fails — no governance possible** |
+| Table (External, on FSx for ONTAP S3 AP) | ❌ **Blocked** | ❌ | ❌ | **CREATE TABLE fails — no governance possible** |
 | Column | ✅ (via table) | ✅ (direct or ABAC) | — | Tags do NOT inherit to column level |
 | External Location | ✅ (tag only) | ❌ | ❌ | Classification only, no query-time enforcement |
 
 ### Critical Limitation: FSx for ONTAP S3 AP
 
-**Unity Catalog table creation on FSx S3 AP is currently blocked** (UC_CLOUD_STORAGE_ACCESS_FAILURE). This means:
+**Unity Catalog table creation on FSx for ONTAP S3 AP is currently blocked** (UC_CLOUD_STORAGE_ACCESS_FAILURE). This means:
 
-![Databricks governance impact — UC governance blocked on FSx S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-summary-governance-impact.png)
+![Databricks governance impact — UC governance blocked on FSx for ONTAP S3 AP](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/databricks-summary-governance-impact.png)
 
-*Governance Impact Summary: Unity Catalog governance features (tags, masking, row filters, lineage) cannot be applied to FSx S3 AP data because table creation is blocked by the session policy.*
+*Governance Impact Summary: Unity Catalog governance features (tags, masking, row filters, lineage) cannot be applied to FSx for ONTAP S3 AP data because table creation is blocked by the session policy.*
 
-- ❌ Cannot apply governed tags to FSx S3 AP data as a UC table
-- ❌ Cannot apply ABAC column masks to FSx S3 AP data
-- ❌ Cannot apply row filter policies to FSx S3 AP data
-- ❌ Cannot track data lineage for FSx S3 AP data
-- ❌ Cannot use automated data classification on FSx S3 AP data
+- ❌ Cannot apply governed tags to FSx for ONTAP S3 AP data as a UC table
+- ❌ Cannot apply ABAC column masks to FSx for ONTAP S3 AP data
+- ❌ Cannot apply row filter policies to FSx for ONTAP S3 AP data
+- ❌ Cannot track data lineage for FSx for ONTAP S3 AP data
+- ❌ Cannot use automated data classification on FSx for ONTAP S3 AP data
 
 **Workaround (PoC only)**: Read data via boto3 → write to UC-managed table → apply governance there. This creates a copy and breaks the "zero-copy" value proposition.
 
@@ -284,7 +284,7 @@ spark.sql("""
   WITH ALLOWED_VALUES ('ssn', 'email', 'phone', 'address')
 """)
 
-# 2. Create External Table on FSx S3 AP
+# 2. Create External Table on FSx for ONTAP S3 AP
 spark.sql("""
   CREATE TABLE fsxn_lakehouse.bronze.customer_data
   USING PARQUET
@@ -309,7 +309,7 @@ spark.sql("""
 
 ### Comparison with Snowflake
 
-| Capability | Databricks (on FSx S3 AP) | Snowflake (on FSx S3 AP) |
+| Capability | Databricks (on FSx for ONTAP S3 AP) | Snowflake (on FSx for ONTAP S3 AP) |
 |---|---|---|
 | Tag creation | ✅ Works (governed tags) | ✅ Works (object tags) |
 | Tag on External Table | ❌ **Blocked** (no table creation) | ✅ **Works** (verified) |
@@ -324,7 +324,7 @@ spark.sql("""
 Until Databricks resolves the UC session policy boundary for S3 Access Points:
 
 1. **For governed analytics on FSx for ONTAP data**: Use **Snowflake** (External Table + Tag-based Masking + Row Access Policy)
-2. **For governed ML pipelines**: Stage data from FSx S3 AP into UC-managed storage (S3 bucket), then apply full ABAC governance
+2. **For governed ML pipelines**: Stage data from FSx for ONTAP S3 AP into UC-managed storage (S3 bucket), then apply full ABAC governance
 3. **For PoC/exploration only**: Use Instance Profile + boto3 with compensating controls (approval record, time-limited, audit logging)
 
 ### File-Level Access Control: ONTAP Native Layer
@@ -356,7 +356,7 @@ Each S3 Access Point is mapped to a **file system user**. All S3 API operations 
 
 #### Per-Team S3 Access Points (Compensating Control for UC Gap)
 
-Since Databricks UC governance is currently blocked on FSx S3 AP, file-level isolation via multiple access points provides a compensating control:
+Since Databricks UC governance is currently blocked on FSx for ONTAP S3 AP, file-level isolation via multiple access points provides a compensating control:
 
 ```
 FSx for ONTAP Volume: /vol1
@@ -407,7 +407,7 @@ The two governance layers (ONTAP file-level and Databricks ABAC) are designed to
 #### How They Would Work Together (Future State)
 
 ```
-1. Data scientist queries UC External Table on FSx S3 AP
+1. Data scientist queries UC External Table on FSx for ONTAP S3 AP
        │
        ▼
 2. Unity Catalog checks: user has SELECT privilege? ──── If NO → PermissionDenied
@@ -461,8 +461,8 @@ The two governance layers (ONTAP file-level and Databricks ABAC) are designed to
 
 | Topic | Reference |
 |---|---|
-| FSx S3 AP dual-layer authorization | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
-| FSx S3 AP with Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
+| FSx for ONTAP S3 AP dual-layer authorization | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
+| FSx for ONTAP S3 AP with Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
 | ONTAP Export Policy (NFS access control) | [How export rules work](https://docs.netapp.com/us-en/ontap/nfs-admin/export-rules-concept.html) |
 | ONTAP FPolicy (file monitoring/blocking) | [FPolicy configuration types](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
 | ONTAP Storage-Level Access Guard | [Secure file access with SLAG](https://docs.netapp.com/us-en/ontap/smb-admin/secure-file-access-storage-level-access-guard-concept.html) |
@@ -475,7 +475,7 @@ The two governance layers (ONTAP file-level and Databricks ABAC) are designed to
 
 #### Governance Layers Summary (Databricks + ONTAP)
 
-| Layer | Enforcement Point | Scope | Status on FSx S3 AP |
+| Layer | Enforcement Point | Scope | Status on FSx for ONTAP S3 AP |
 |---|---|---|---|
 | **ONTAP Export Policy** | File system | Volume/qtree | ✅ Always enforced |
 | **ONTAP File Permissions** | File system | Per-file/directory | ✅ Always enforced |

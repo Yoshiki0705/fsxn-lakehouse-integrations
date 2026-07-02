@@ -232,7 +232,7 @@ PARTITIONED BY (event_type, date(event_timestamp));
 │                                                     │
 │  ┌──────────────┐  ┌──────────────┐                │
 │  │ Private Sub  │  │ Private Sub  │                │
-│  │ (FSx ONTAP)  │  │ (Databricks) │                │
+│  │ (FSx for ONTAP)  │  │ (Databricks) │                │
 │  │ 10.0.3.0/24  │  │ 10.0.4.0/24  │                │
 │  └──────────────┘  └──────────────┘                │
 │                                                     │

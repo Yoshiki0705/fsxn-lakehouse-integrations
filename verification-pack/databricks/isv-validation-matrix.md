@@ -13,7 +13,7 @@ S3 API compatibility at the SDK level does not guarantee compatibility with ever
 | Direct SDK access | boto3 / AWS SDK against S3 AP alias | Confirms basic S3 API compatibility |
 | Platform connector access | Platform-native storage connector (e.g., Unity Catalog External Location) | Platform may add session policies or ARN restrictions |
 | Distributed executor behavior | Multi-node / multi-worker credential and network propagation | Driver success ≠ executor success |
-| Write-path behavior | PutObject, multipart upload, conditional writes | FSx S3 AP may not support all S3 write semantics |
+| Write-path behavior | PutObject, multipart upload, conditional writes | FSx for ONTAP S3 AP may not support all S3 write semantics |
 | Governance integration | Platform lineage, audit, access control | Bypassing platform governance creates compliance gaps |
 | Audit evidence | CloudTrail, platform audit logs, ONTAP audit | Required for regulated workloads |
 | Performance and retry behavior | Latency, throughput, error rate under load | FSx throughput is bounded by provisioned capacity |
@@ -42,10 +42,10 @@ FSx S3 Access Points use a different ARN format than standard S3 buckets:
 
 ```
 Standard S3:  arn:aws:s3:::bucket-name
-FSx S3 AP:    arn:aws:s3:<region>:<account>:accesspoint/<name>
+FSx for ONTAP S3 AP:    arn:aws:s3:<region>:<account>:accesspoint/<name>
 ```
 
-Applications or platforms that validate or restrict S3 ARN patterns may not recognize the FSx S3 AP format. This is the root cause of the Databricks Unity Catalog and Snowflake session policy failures documented in this repository.
+Applications or platforms that validate or restrict S3 ARN patterns may not recognize the FSx for ONTAP S3 AP format. This is the root cause of the Databricks Unity Catalog and Snowflake session policy failures documented in this repository.
 
 ## References
 

@@ -70,15 +70,21 @@ Databricks サポート（2026 年 5 月）により以下が確認されまし�
 4. CREATE TABLE および書き込み操作は S3 AP パスでサポートされていない — セッションポリシージェネレーターのプラットフォーム制限
 5. 機能ギャップとして UC エンジニアリングチームに報告済み — エンジニアリングタイムラインは未定
 
-**推奨される暫定パス**: FSx ONTAP から標準 S3 バケットにデータを同期（DataSync）し、その S3 バケットを UC External Location として登録。
+**推奨される暫定パス**: FSx for ONTAP から標準 S3 バケットにデータを同期（DataSync）し、その S3 バケットを UC External Location として登録。
 
-UC ガバナンスなしの読み取り専用分析には、AWS ネイティブサービス（Athena、EMR Serverless、DuckDB Lambda）または Snowflake を FSx S3 AP 上で直接使用。
+UC ガバナンスなしの読み取り専用分析には、AWS ネイティブサービス（Athena、EMR Serverless、DuckDB Lambda）または Snowflake を FSx for ONTAP S3 AP 上で直接使用。
 
 ## 主要概念: Databricks ストレージ & 取り込みアーキテクチャ
 
 Databricks のストレージと取り込みの概念を理解することが、FSx for ONTAP S3 AP 統合の評価に不可欠です。
 
 > **パートナー向けクイックリファレンス**: 顧客から「Databricks で NAS データを S3 Access Points 経由で読めますか？」と聞かれた場合 — 答えは「部分的に可能だが制限あり」。ファイルレベルの読み取りは UC ガバナンス下で動作するが、テーブル作成とディレクトリ一覧はブロックされている。NAS データに対するガバナンス付き分析には、現時点で Snowflake External Table または Athena を推奨。Databricks 固有のワークロードには、S3 へのステージング取り込み → UC マネージドテーブルを推奨（[推奨アーキテクチャパターン](#推奨アーキテクチャパターン現時点)参照）。顧客が既に Databricks を使用している場合、FPolicy → Lambda → S3 → Auto Loader パターンで取り込みデータに完全 UC ガバナンスを維持可能。
+
+> **パートナー向けクイックリファレンス(OpenSharing)**: 顧客から「Databricks で **OpenSharing** 経由で FSx for ONTAP のデータを読めますか?」と聞かれた場合の一次回答:
+> - **プロトコル層は検証済み**: OpenSharing OSS リファレンスサーバー → STS credential vending → S3 AP 読み取り(2026-07 再確認)。再現可能な実装は [opensharing-server](https://github.com/Yoshiki0705/fsxn-lakehouse-integrations/tree/main/integrations/opensharing-server)。
+> - **Databricks ネイティブ recipient(UC Foreign Volume/Table 認識)は実装待ち**(年末の Storage Ecosystem パートナー提供見込み)。
+> - **今できること**: notebook 経由の PoC(`requests` + `boto3` で cred vending → S3 AP 読み取り → 必要に応じて UC テーブル書き込み)。trial(Serverless only)ワークスペースでは compute 起動事象に注意 — これは *環境固有* であり Databricks Serverless 一般の制限ではない。
+> - **本番でガバナンス付き取り込みが今必要**なら、従来どおり DataSync → S3 → UC マネージドテーブル。
 
 ### Storage Credential → External Location → External Table/Volume
 
@@ -91,7 +97,7 @@ Storage Credential（IAM ロール ARN + External ID）
             └── External Volume（非表形式: 画像、ドキュメント、音声）
 ```
 
-| 概念 | 説明 | FSx S3 AP ステータス | リファレンス |
+| 概念 | 説明 | FSx for ONTAP S3 AP ステータス | リファレンス |
 |---|---|:---:|---|
 | **[Storage Credential](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)** | Databricks がクラウドストレージにアクセスするために引き受ける IAM ロール。AssumeRole 時に Databricks がセッションポリシーを生成し、IAM ロール自体がより広い権限を持っていても、引き受けたセッションの操作を制限する。 | ✅ 作成済み | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials) |
 | **[External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual)** | S3 パスを Storage Credential にマッピング。アクセス境界を定義 | ⚠️ 作成済み（`access_point` フィールド付き — GA ではない; [サポート確認](#サポート確認-2026-05-26)参照） | [ドキュメント](https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual) |
@@ -104,16 +110,16 @@ Storage Credential（IAM ロール ARN + External ID）
 
 [Auto Loader](https://docs.databricks.com/ingestion/auto-loader/index.html) は Snowflake の Snowpipe に相当する機能 — クラウドストレージに到着した新しいファイルを増分的に処理します。
 
-| モード | 説明 | S3 Event Notifications 必要 | FSx S3 AP ステータス |
+| モード | 説明 | S3 Event Notifications 必要 | FSx for ONTAP S3 AP ステータス |
 |---|---|:---:|:---:|
 | **[Directory Listing](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/directory-listing-mode)** | 定期的にディレクトリを一覧して新規ファイルを検出 | ❌ 不要 | ⚠️ External Location が必要（ブロック） |
-| **[File Notification](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/file-notification-mode)** | S3 Event Notifications + SQS でリアルタイム検出 | ✅ 必要 | ❌ 不可（FSx S3 AP は S3 Events 非サポート） |
+| **[File Notification](https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader/file-notification-mode)** | S3 Event Notifications + SQS でリアルタイム検出 | ✅ 必要 | ❌ 不可（FSx for ONTAP S3 AP は S3 Events 非サポート） |
 
 **Snowflake との比較:**
 
-| 機能 | Snowflake (Snowpipe) | Databricks (Auto Loader) | FSx S3 AP サポート |
+| 機能 | Snowflake (Snowpipe) | Databricks (Auto Loader) | FSx for ONTAP S3 AP サポート |
 |---|---|---|:---:|
-| イベント駆動取り込み | Snowpipe (S3 Events → SNS → Snowflake) | File Notification モード (S3 Events → SQS) | ❌ 両方ブロック（FSx S3 AP に S3 Events なし） |
+| イベント駆動取り込み | Snowpipe (S3 Events → SNS → Snowflake) | File Notification モード (S3 Events → SQS) | ❌ 両方ブロック（FSx for ONTAP S3 AP に S3 Events なし） |
 | ポーリングベース取り込み | スケジュール `ALTER STAGE REFRESH` (Task) | Directory Listing モード | ⚠️ Snowflake: 動作; Databricks: UC でブロック |
 | FSx 向け代替手段 | FPolicy → Lambda → SNS → Snowpipe | FPolicy → Lambda → S3 に書き込み → Auto Loader | ✅ 回避策あり |
 | 増分処理 | Snowpipe がロード済みファイルを追跡 | Auto Loader がチェックポイントで処理済みファイルを追跡 | — |
@@ -146,13 +152,13 @@ Storage Credential（IAM ロール ARN + External ID）
 
 ### FSx for ONTAP 向けデータ取り込み代替手段（Auto Loader がブロックされている場合）
 
-Auto Loader は External Location が必要（FSx S3 AP 上で現在ブロック）のため、以下の代替手段を使用:
+Auto Loader は External Location が必要（FSx for ONTAP S3 AP 上で現在ブロック）のため、以下の代替手段を使用:
 
 | 方法 | 説明 | レイテンシ | ガバナンス | リファレンス |
 |---|---|---|---|---|
 | **FPolicy → Lambda → S3 → Auto Loader** | FPolicy が FSx 上のファイル変更を検知 → Lambda が S3 バケットにコピー → Auto Loader が取り込み | 秒 | ✅ 完全 UC（S3 コピー上） | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
-| **AWS Glue ETL** | Glue ジョブが FSx S3 AP から読み取り → S3/Delta に書き込み | 分 | AWS 側 | [Glue + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
-| **EMR Serverless** | Spark ジョブが FSx S3 AP から読み取り → S3/Delta に書き込み | 分 | AWS 側 | [EMR + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-run-spark-with-emr-serverless.html) |
+| **AWS Glue ETL** | Glue ジョブが FSx for ONTAP S3 AP から読み取り → S3/Delta に書き込み | 分 | AWS 側 | [Glue + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
+| **EMR Serverless** | Spark ジョブが FSx for ONTAP S3 AP から読み取り → S3/Delta に書き込み | 分 | AWS 側 | [EMR + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-run-spark-with-emr-serverless.html) |
 | **AWS DataSync** | FSx NFS → S3 バケットのスケジュール同期 | 分〜時間 | AWS 側 | [DataSync ドキュメント](https://docs.aws.amazon.com/datasync/latest/userguide/create-ontap-location.html) |
 | **SnapMirror to S3** | ONTAP ネイティブの S3 バケットへのレプリケーション | 分 | ONTAP 側 | [SnapMirror S3](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-snapmirror.html) |
 | **Instance Profile + boto3 (PoC)** | Databricks ドライバーからの直接 S3 AP 読み取り | リアルタイム | ❌ UC なし | ガバナンスをバイパス |
@@ -170,17 +176,17 @@ FSx for ONTAP ──FPolicy──▶ Lambda ──▶ S3 バケット ──▶ 
 
 [Unity Catalog Volumes](https://docs.databricks.com/aws/en/volumes/managed-vs-external) は Snowflake の Directory Table に相当 — 非表形式ファイル（画像、ドキュメント、音声、動画）へのガバナンス付きアクセスを提供します。
 
-| 概念 | Snowflake 相当 | 説明 | FSx S3 AP ステータス |
+| 概念 | Snowflake 相当 | 説明 | FSx for ONTAP S3 AP ステータス |
 |---|---|---|:---:|
 | **External Volume** | 外部ステージの Directory Table | 外部ストレージ上のガバナンス付きファイルアクセス | ❌ ブロック（External Location が必要） |
 | **Managed Volume** | 内部ステージ + Directory Table | Databricks マネージドストレージ上のガバナンス付きファイルアクセス | ✅ 動作（標準 S3） |
-| **Volume パス** (`/Volumes/catalog/schema/volume/`) | `@stage/path/` | SQL/Python でのファイルアクセス統一パス | ❌ FSx S3 AP では利用不可 |
+| **Volume パス** (`/Volumes/catalog/schema/volume/`) | `@stage/path/` | SQL/Python でのファイルアクセス統一パス | ❌ FSx for ONTAP S3 AP では利用不可 |
 
-**重要な違い**: Snowflake の Directory Table は FSx S3 AP 外部ステージで今日動作します。Databricks の External Volumes は External Location の作成が必要で、セッションポリシーによりブロックされています。
+**重要な違い**: Snowflake の Directory Table は FSx for ONTAP S3 AP 外部ステージで今日動作します。Databricks の External Volumes は External Location の作成が必要で、セッションポリシーによりブロックされています。
 
 ### 概念マッピング: Snowflake ↔ Databricks
 
-| Snowflake 概念 | Databricks 相当 | 目的 | FSx S3 AP (Snowflake) | FSx S3 AP (Databricks) |
+| Snowflake 概念 | Databricks 相当 | 目的 | FSx for ONTAP S3 AP (Snowflake) | FSx for ONTAP S3 AP (Databricks) |
 |---|---|---|:---:|:---:|
 | Storage Integration | Storage Credential | IAM ロール参照 | ✅ | ✅ |
 | External Stage | External Location | クラウドストレージパスマッピング | ✅ | ✅（部分的） |
@@ -193,7 +199,7 @@ FSx for ONTAP ──FPolicy──▶ Lambda ──▶ S3 バケット ──▶ 
 
 ## マネージドテーブル vs 外部テーブル — 設計ガイド
 
-Unity Catalog におけるマネージドテーブルと外部テーブルの違いを理解することがアーキテクチャ判断に不可欠です — 特に現在の FSx S3 AP セッションポリシーの制限を考慮して。
+Unity Catalog におけるマネージドテーブルと外部テーブルの違いを理解することがアーキテクチャ判断に不可欠です — 特に現在の FSx for ONTAP S3 AP セッションポリシーの制限を考慮して。
 
 > **主要概念**: [外部テーブル](https://docs.databricks.com/aws/en/tables/external)（UC がメタデータのみ管理）| [マネージドテーブル](https://docs.databricks.com/aws/en/data-governance/unity-catalog/managed-versus-external)（UC が両方管理）| [External Location](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials)（クラウドパスをクレデンシャルにマッピング）
 >
@@ -201,7 +207,7 @@ Unity Catalog におけるマネージドテーブルと外部テーブルの違
 
 ### 比較マトリクス
 
-| 観点 | UC 外部テーブル（FSx S3 AP 上） | UC マネージドテーブル（S3 バケット上） | boto3 PoC（UC テーブルなし） |
+| 観点 | UC 外部テーブル（FSx for ONTAP S3 AP 上） | UC マネージドテーブル（S3 バケット上） | boto3 PoC（UC テーブルなし） |
 |---|---|---|---|
 | **データ所在** | FSx for ONTAP（ゼロコピー） | Databricks マネージド S3 | FSx for ONTAP |
 | **UC ガバナンス** | ❌ **ブロック**（CREATE TABLE 失敗） | ✅ 完全（タグ、マスク、リネージ） | ❌ なし |
@@ -234,7 +240,7 @@ FSx for ONTAP S3 AP
 
 ### 推奨アーキテクチャパターン（現時点）
 
-FSx S3 AP 上の UC 外部テーブルがブロックされているため、推奨パターンは**ステージング取り込み**アプローチ:
+FSx for ONTAP S3 AP 上の UC 外部テーブルがブロックされているため、推奨パターンは**ステージング取り込み**アプローチ:
 
 ```
 FSx for ONTAP ──S3 AP──▶ 取り込みジョブ ──▶ S3 バケット ──▶ UC マネージドテーブル ──▶ ML/AI
@@ -254,7 +260,7 @@ FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
 | 要件 | 推奨パターン | 理由 |
 |---|---|---|
 | ガバナンス付き ML 学習データ | S3 バケット → UC マネージドテーブル | 完全 UC ガバナンス、Feature Store、リネージ |
-| NAS 上の読み取り専用 SQL 分析 | Athena + FSx S3 AP | コピー不要、サーバーレス、ガバナンス付き |
+| NAS 上の読み取り専用 SQL 分析 | Athena + FSx for ONTAP S3 AP | コピー不要、サーバーレス、ガバナンス付き |
 | NAS 上のガバナンス付き外部テーブル | Snowflake External Table | 現時点で完全ガバナンス付きで動作 |
 | 探索的データアクセス（PoC） | Instance Profile + boto3 | 迅速なアクセス、ガバナンスなし |
 | 本番 Delta Lake テーブル | S3 バケット（標準パターン） | ACID, MERGE, OPTIMIZE に必要 |
@@ -264,7 +270,7 @@ FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
 
 | パターン | ストレージコスト | ガバナンス | 性能 | ONTAP 機能 |
 |---|---|---|---|---|
-| **Athena + FSx S3 AP** | 最低（FSx のみ） | AWS 側（IAM, S3 AP） | 良好（サーバーレス） | ✅ 保持 |
+| **Athena + FSx for ONTAP S3 AP** | 最低（FSx のみ） | AWS 側（IAM, S3 AP） | 良好（サーバーレス） | ✅ 保持 |
 | **Snowflake External Table** | 低（FSx のみ） | ✅ 完全（タグ、マスキング） | 中程度 | ✅ 保持 |
 | **S3 にステージング → UC テーブル** | 高（FSx + S3） | ✅ 完全 UC | 最高（Delta 最適化） | ❌ コピーで失われる |
 | **boto3 PoC** | 最低（FSx のみ） | ❌ なし | 低（ドライバーのみ） | ✅ 保持 |
@@ -273,11 +279,11 @@ FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
 
 | パターン | ガバナンス | 性能 | AI 機能 | コスト | 運用容易性 | 総合 |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Athena + FSx S3 AP** | ★★★☆☆ | ★★★★☆ | ★☆☆☆☆ (SQL のみ) | ★★★★★ | ★★★★★ | **3.6** |
+| **Athena + FSx for ONTAP S3 AP** | ★★★☆☆ | ★★★★☆ | ★☆☆☆☆ (SQL のみ) | ★★★★★ | ★★★★★ | **3.6** |
 | **Snowflake External Table** | ★★★★☆ | ★★★☆☆ | ★★★★☆ (Cortex AI) | ★★★★★ | ★★★★☆ | **4.0** |
 | **S3 にステージング → UC テーブル** | ★★★★★ | ★★★★★ | ★★★★★ (全 Mosaic AI) | ★★☆☆☆ | ★★☆☆☆ | **3.8** |
 | **boto3 PoC (Databricks)** | ★☆☆☆☆ | ★★☆☆☆ | ★★★☆☆ (ドライバーのみ) | ★★★★★ | ★★★☆☆ | **2.8** |
-| **Bedrock KB + FSx S3 AP** | ★★★☆☆ | ★★★★☆ | ★★★★☆ (RAG) | ★★★★☆ | ★★★★☆ | **3.8** |
+| **Bedrock KB + FSx for ONTAP S3 AP** | ★★★☆☆ | ★★★★☆ | ★★★★☆ (RAG) | ★★★★☆ | ★★★★☆ | **3.8** |
 
 - **ガバナンス**: UC リネージ、タグ、マスキング、Row Filter
 - **性能**: クエリレイテンシ、分散処理
@@ -287,7 +293,7 @@ FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
 
 > **スコアリング方法論**: 各次元は本リポジトリの検証済みエビデンスに基づき著者が評価。AWS の公式アセスメントではありません。スコアは1つのテスト環境（DBR 17.3 LTS, ap-northeast-1）での観測結果を反映。
 
-> **性能スコアに関する注意**: 性能スコアは FSx S3 AP アクセスパターン内での相対比較であり、ネイティブ S3 バケット性能との比較ではありません。FSx S3 AP 経由の全パターンは、同等のネイティブ S3 操作より高いレイテンシを持ちます。
+> **性能スコアに関する注意**: 性能スコアは FSx for ONTAP S3 AP アクセスパターン内での相対比較であり、ネイティブ S3 バケット性能との比較ではありません。FSx for ONTAP S3 AP 経由の全パターンは、同等のネイティブ S3 操作より高いレイテンシを持ちます。
 
 > **スコアの使い方**: Overall スコアをパターン選択の出発点として使用。4.0 以上はガバナンス付き本番ワークロードに適合。3.5〜3.9 はトレードオフを評価した上で利用可能。3.0 未満は PoC 専用パスで、補償コントロールと明示的承認が必要。
 

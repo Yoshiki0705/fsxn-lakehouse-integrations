@@ -58,7 +58,7 @@ Reference: [AWS Tutorial - Transform data with Glue](https://docs.aws.amazon.com
 |-----------|:---:|---------|
 | Glue Crawler (schema discovery) | ✅ | Parquet schema auto-detected via S3 AP |
 | Glue ETL Job (Bronze → Silver → Gold) | ✅ | 10K rows, 64 seconds total |
-| Write-back to FSx S3 AP (Parquet) | ✅ | Gold layer written to S3 AP successfully |
+| Write-back to FSx for ONTAP S3 AP (Parquet) | ✅ | Gold layer written to S3 AP successfully |
 | Job Bookmarks (incremental) | ✅ | Subsequent runs process only new files |
 
 ## Quick Start

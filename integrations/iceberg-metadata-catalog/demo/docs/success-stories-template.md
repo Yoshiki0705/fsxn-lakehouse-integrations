@@ -14,7 +14,7 @@
 
 ### Overview
 
-These hypothetical scenarios illustrate how the Iceberg Metadata Catalog for FSx ONTAP
+These hypothetical scenarios illustrate how the Iceberg Metadata Catalog for FSx for ONTAP
 could deliver value across different industries. Each story follows the pattern:
 **Challenge → Solution → Projected Impact**.
 
@@ -26,7 +26,7 @@ could deliver value across different industries. Each story follows the pattern:
 
 #### Challenge
 
-- 500,000+ CAD files (DWG, STEP, IGES) across multiple FSx ONTAP volumes
+- 500,000+ CAD files (DWG, STEP, IGES) across multiple FSx for ONTAP volumes
 - Engineers spend ~3 days searching for reusable designs manually
 - Duplicate designs created because existing ones can't be found
 - No searchable catalog — only folder structure and tribal knowledge
@@ -34,7 +34,7 @@ could deliver value across different industries. Each story follows the pattern:
 #### Solution with Metadata Catalog
 
 ```
-FSx ONTAP (CAD files) → S3 Access Point → Metadata Scan
+FSx for ONTAP (CAD files) → S3 Access Point → Metadata Scan
     → AI Classification (Bedrock Vision: "pump housing", "valve assembly")
     → Iceberg Table (searchable metadata)
     → Athena SQL: "Find all pump housings > 200mm diameter"
@@ -69,7 +69,7 @@ FSx ONTAP (CAD files) → S3 Access Point → Metadata Scan
 #### Solution with Metadata Catalog
 
 ```
-FSx ONTAP (contracts) → S3 Access Point → Metadata Scan
+FSx for ONTAP (contracts) → S3 Access Point → Metadata Scan
     → AI Summarization (Bedrock Claude: extract key clauses)
     → PII Detection (Comprehend: identify sensitive data)
     → Iceberg Table + Cortex Search
@@ -105,7 +105,7 @@ FSx ONTAP (contracts) → S3 Access Point → Metadata Scan
 #### Solution with Metadata Catalog
 
 ```
-FSx ONTAP (DICOM files) → S3 Access Point → Metadata Scan
+FSx for ONTAP (DICOM files) → S3 Access Point → Metadata Scan
     → AI Classification (modality, body part, study type)
     → PII Anonymization (patient identifiers removed from metadata)
     → Iceberg Table + Row Access Policy (department-level)
@@ -142,7 +142,7 @@ FSx ONTAP (DICOM files) → S3 Access Point → Metadata Scan
 #### Solution with Metadata Catalog
 
 ```
-FSx ONTAP (video files) → S3 Access Point → Metadata Scan
+FSx for ONTAP (video files) → S3 Access Point → Metadata Scan
     → AI Analysis (Bedrock Vision: scene description, objects, text)
     → Vector Embeddings (semantic similarity search)
     → Iceberg Table + OpenSearch
@@ -187,7 +187,7 @@ FSx ONTAP (video files) → S3 Access Point → Metadata Scan
 
 ### 概要
 
-以下の仮想シナリオは、FSx ONTAP 向け Iceberg メタデータカタログが
+以下の仮想シナリオは、FSx for ONTAP 向け Iceberg メタデータカタログが
 各業界でどのように価値を提供できるかを示しています。
 各ストーリーは **課題 → ソリューション → 予測効果** のパターンに従います。
 
@@ -199,7 +199,7 @@ FSx ONTAP (video files) → S3 Access Point → Metadata Scan
 
 #### 課題
 
-- 複数のFSx ONTAPボリュームに50万件以上のCADファイル（DWG、STEP、IGES）
+- 複数のFSx for ONTAPボリュームに50万件以上のCADファイル（DWG、STEP、IGES）
 - エンジニアが再利用可能な設計を手動で探すのに約3日かかる
 - 既存の設計が見つからないため重複設計が発生
 - 検索可能なカタログがない — フォルダ構造と属人的知識のみ
@@ -207,7 +207,7 @@ FSx ONTAP (video files) → S3 Access Point → Metadata Scan
 #### メタデータカタログによるソリューション
 
 ```
-FSx ONTAP (CADファイル) → S3アクセスポイント → メタデータスキャン
+FSx for ONTAP (CADファイル) → S3アクセスポイント → メタデータスキャン
     → AI分類 (Bedrock Vision: "ポンプハウジング", "バルブアセンブリ")
     → Icebergテーブル (検索可能なメタデータ)
     → Athena SQL: "直径200mm以上のポンプハウジングを全て検索"
@@ -242,7 +242,7 @@ FSx ONTAP (CADファイル) → S3アクセスポイント → メタデータ�
 #### メタデータカタログによるソリューション
 
 ```
-FSx ONTAP (契約書) → S3アクセスポイント → メタデータスキャン
+FSx for ONTAP (契約書) → S3アクセスポイント → メタデータスキャン
     → AI要約 (Bedrock Claude: 主要条項の抽出)
     → PII検出 (Comprehend: 機密データの特定)
     → Icebergテーブル + Cortex Search
@@ -278,7 +278,7 @@ FSx ONTAP (契約書) → S3アクセスポイント → メタデータスキ�
 #### メタデータカタログによるソリューション
 
 ```
-FSx ONTAP (DICOMファイル) → S3アクセスポイント → メタデータスキャン
+FSx for ONTAP (DICOMファイル) → S3アクセスポイント → メタデータスキャン
     → AI分類 (モダリティ、部位、検査種別)
     → PII匿名化 (患者識別子をメタデータから除去)
     → Icebergテーブル + Row Access Policy (部門レベル)
@@ -315,7 +315,7 @@ FSx ONTAP (DICOMファイル) → S3アクセスポイント → メタデータ
 #### メタデータカタログによるソリューション
 
 ```
-FSx ONTAP (映像ファイル) → S3アクセスポイント → メタデータスキャン
+FSx for ONTAP (映像ファイル) → S3アクセスポイント → メタデータスキャン
     → AI分析 (Bedrock Vision: シーン説明、オブジェクト、テキスト)
     → ベクトル埋め込み (セマンティック類似検索)
     → Icebergテーブル + OpenSearch

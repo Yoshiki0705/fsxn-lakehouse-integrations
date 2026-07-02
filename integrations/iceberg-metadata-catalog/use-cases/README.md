@@ -99,7 +99,7 @@ python ../../demo/sample-data/generate-sample-data.py --industry manufacturing -
 | Option | Command | Cost |
 |--------|---------|------|
 | S3-only (no FSx) | `deploy.sh --industry <name>` | $0 idle |
-| With FSx S3 AP | `deploy.sh --industry <name> --ap-alias <alias>` | $0 idle |
+| With FSx for ONTAP S3 AP | `deploy.sh --industry <name> --ap-alias <alias>` | $0 idle |
 | With vector search | `deploy.sh --industry <name> --opensearch` | $0 idle (cold start 10-30s) |
 | Delete | `deploy.sh --delete --industry <name>` | — |
 

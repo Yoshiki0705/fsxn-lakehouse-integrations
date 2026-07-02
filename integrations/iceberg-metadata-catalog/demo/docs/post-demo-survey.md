@@ -8,7 +8,7 @@
 
 ## English Version
 
-### FSx ONTAP Iceberg Metadata Catalog — Demo Feedback
+### FSx for ONTAP Iceberg Metadata Catalog — Demo Feedback
 
 Thank you for attending the demo. Your feedback helps us prioritize features and tailor the solution to your needs.
 
@@ -74,7 +74,7 @@ Other: _______________________________________________
 | Total unstructured data volume | ☐ < 1 TB ☐ 1-10 TB ☐ 10-50 TB ☐ 50-100 TB ☐ 100+ TB |
 | Approximate file count | ☐ < 10K ☐ 10K-100K ☐ 100K-1M ☐ 1M-10M ☐ 10M+ |
 | Primary file types | _____________________________________ |
-| Current storage platform | ☐ FSx ONTAP ☐ On-prem ONTAP ☐ Other NAS ☐ S3 ☐ Other |
+| Current storage platform | ☐ FSx for ONTAP ☐ On-prem ONTAP ☐ Other NAS ☐ S3 ☐ Other |
 
 ---
 
@@ -135,7 +135,7 @@ _____________________________________________
 
 ## 日本語版
 
-### FSx ONTAP Iceberg メタデータカタログ — デモフィードバック
+### FSx for ONTAP Iceberg メタデータカタログ — デモフィードバック
 
 デモへのご参加ありがとうございました。いただいたフィードバックは機能の優先順位付けとソリューションのカスタマイズに活用させていただきます。
 
@@ -201,7 +201,7 @@ _____________________________________________
 | 非構造化データ総量 | ☐ 1TB未満 ☐ 1-10TB ☐ 10-50TB ☐ 50-100TB ☐ 100TB以上 |
 | おおよそのファイル数 | ☐ 1万未満 ☐ 1-10万 ☐ 10-100万 ☐ 100-1000万 ☐ 1000万以上 |
 | 主要ファイル形式 | _____________________________________ |
-| 現在のストレージ | ☐ FSx ONTAP ☐ オンプレONTAP ☐ 他NAS ☐ S3 ☐ その他 |
+| 現在のストレージ | ☐ FSx for ONTAP ☐ オンプレONTAP ☐ 他NAS ☐ S3 ☐ その他 |
 
 ---
 

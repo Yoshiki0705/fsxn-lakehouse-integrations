@@ -14,7 +14,7 @@
 | 生データ | FSx for ONTAP ファイル（S3 AP 経由で読み取り） | ファイルは S3 に移行しない |
 | メタデータ | S3 Tables Iceberg のファイルインベントリ + AI エンリッチメント | 生ファイルコンテンツの保存 |
 | コンシューマー | Athena, EMR Spark, Snowflake, Databricks（アクティベーション経由） | Snowflake/Databricks での直接ファイル処理 |
-| スコープ外パス | — | FSx S3 AP への Iceberg 書き込み、Databricks UC 直接 S3 Tables アクセス |
+| スコープ外パス | — | FSx for ONTAP S3 AP への Iceberg 書き込み、Databricks UC 直接 S3 Tables アクセス |
 
 ## 検証チェックリスト
 

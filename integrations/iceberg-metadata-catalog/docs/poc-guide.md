@@ -523,7 +523,7 @@ aws logs filter-log-events \
 #### Metadata Reconciliation
 
 ```bash
-# Compare FSx S3 AP file count with metadata table record count
+# Compare FSx for ONTAP S3 AP file count with metadata table record count
 # Re-run initial scan if gap detected
 python scripts/initial-metadata-scan.py \
   --access-point-arn "<AP_ALIAS>" \

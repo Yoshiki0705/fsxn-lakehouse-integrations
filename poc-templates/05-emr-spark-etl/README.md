@@ -45,7 +45,7 @@ aws emr-serverless start-job-run \
 
 - **Use `s3://` (EMRFS)**, NOT `s3a://` — S3A cannot parse AP aliases
 - **Parquet timestamps must be microsecond** — nanosecond (pandas default) causes Spark errors
-- **Script must be on regular S3** — not on FSx S3 AP
+- **Script must be on regular S3** — not on FSx for ONTAP S3 AP
 
 ## Benchmark
 
@@ -54,7 +54,7 @@ aws emr-serverless start-job-run \
 | Read 10K rows | 6.78s |
 | GROUP BY aggregation | 2.52s |
 | Window function | 1.19s |
-| Write-back to FSxN | 3.61s |
+| Write-back to FSx for ONTAP | 3.61s |
 | **Total Spark execution** | **16.35s** |
 | Job total (with cold start) | 37s |
 | **Cost per job** | **~$0.05** |

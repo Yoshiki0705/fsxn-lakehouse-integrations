@@ -584,5 +584,5 @@ FROM metadata WHERE classification = 'sap_invoice' AND creation_date >= '2026-01
 
 1. **Try the S3-only quickstart** (10 min, no infrastructure needed): [quickstart-s3-only.md](../demo/docs/quickstart-s3-only.md)
 2. **Request infrastructure** (send to platform team): [infrastructure-request-template.md](infrastructure-request-template.md)
-3. **Run the full demo** (15 min, requires FSx S3 AP): [demo-guide.md](../demo/docs/demo-guide.md)
+3. **Run the full demo** (15 min, requires FSx for ONTAP S3 AP): [demo-guide.md](../demo/docs/demo-guide.md)
 4. **Review architecture**: [Architecture Document](../../docs/en/iceberg-metadata-catalog.md)

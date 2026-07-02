@@ -40,7 +40,7 @@
 | パートナーとキュレート済みデータを共有 | ✅ | External Table / Dynamic Table → Snowflake Data Sharing |
 | マルチエンジン用オープンフォーマット | ✅ | COPY INTO → Managed Iceberg Table → Databricks/Athena が読み取り可能 |
 | リアルタイム自動取り込み（Snowpipe） | ❌ | Task + ALTER EXTERNAL TABLE REFRESH または FPolicy + Lambda を使用 |
-| FSx S3 AP 上の Iceberg 書き戻し | ❌ | トランザクショナル書き込みには標準 S3 を使用 |
+| FSx for ONTAP S3 AP 上の Iceberg 書き戻し | ❌ | トランザクショナル書き込みには標準 S3 を使用 |
 
 > ガバナンス付き外部テーブル、AI 機能、データ共有、マルチエンジン Iceberg 互換が必要な場合は Snowflake を選択。軽量な AWS ネイティブサーバーレス SQL で十分な場合は Athena を選択。
 
@@ -100,7 +100,7 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Point を Snowflake 
 
 > ℹ️ **注意**: AWS ドキュメントでは Pre-signed URL は「非サポート」と記載されていますが、テストでは `GET_PRESIGNED_URL()` が FSx for ONTAP S3 AP で正しく動作することを確認しています。
 
-> ⚠️ **TO_FILE 制限**: Snowflake の `TO_FILE()` 関数（マルチモーダル AI_COMPLETE/Vision AI で使用）は FSx S3 AP 外部ステージ上のファイルを解決できません。回避策: `COPY FILES` で暗号化なし内部ステージ（SNOWFLAKE_SSE）にコピーし、`TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))` を使用。
+> ⚠️ **TO_FILE 制限**: Snowflake の `TO_FILE()` 関数（マルチモーダル AI_COMPLETE/Vision AI で使用）は FSx for ONTAP S3 AP 外部ステージ上のファイルを解決できません。回避策: `COPY FILES` で暗号化なし内部ステージ（SNOWFLAKE_SSE）にコピーし、`TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))` を使用。
 
 ## データフォーマット対応
 
@@ -122,7 +122,7 @@ FSx for ONTAP と Snowflake を統合する際、内部（マネージド）テ�
 
 ### 比較マトリクス
 
-| 観点 | 外部テーブル（FSx S3 AP 上） | 内部テーブル（COPY INTO） |
+| 観点 | 外部テーブル（FSx for ONTAP S3 AP 上） | 内部テーブル（COPY INTO） |
 |---|---|---|
 | **データ所在** | FSx for ONTAP に残る（ゼロコピー） | Snowflake マネージドストレージにコピー |
 | **データ所有権** | 顧客がデータライフサイクルを管理 | Snowflake がストレージライフサイクルを管理 |
@@ -134,7 +134,7 @@ FSx for ONTAP と Snowflake を統合する際、内部（マネージド）テ�
 | **Time Travel** | ❌ 利用不可 | ✅ 利用可能（最大90日） |
 | **クラスタリング / 最適化** | ❌ 利用不可 | ✅ AUTO_CLUSTERING, OPTIMIZE |
 | **Cortex AI（テキスト関数）** | ✅ 直接（SUMMARIZE, TRANSLATE 等） | ✅ 直接 |
-| **Cortex AI（Vision/TO_FILE）** | ❌ FSx S3 AP で TO_FILE ブロック | ✅ 内部ステージで動作 |
+| **Cortex AI（Vision/TO_FILE）** | ❌ FSx for ONTAP S3 AP で TO_FILE ブロック | ✅ 内部ステージで動作 |
 | **ONTAP 機能の保持** | ✅ Snapshot, FlexClone, Dedup, FPolicy | ❌ データは ONTAP 外 |
 | **ストレージコスト** | FSx for ONTAP のみ（Snowflake ストレージなし） | FSx + Snowflake ストレージ（重複） |
 | **コンプライアンス（データレジデンシー）** | ✅ データは FSx に残る（管理された場所） | ⚠️ Snowflake マネージドストレージにデータ |
@@ -157,7 +157,7 @@ FSx for ONTAP ──S3 AP──▶ Snowflake External Table ──▶ クエリ 
 
 **制限事項:**
 - Time Travel、クラスタリング、マイクロパーティション最適化なし
-- クエリ性能は FSx S3 AP レイテンシとファイルレイアウトに依存
+- クエリ性能は FSx for ONTAP S3 AP レイテンシとファイルレイアウトに依存
 - TO_FILE（Vision AI）が直接動作しない — COPY FILES 回避策が必要
 - AUTO_REFRESH 利用不可（手動 REFRESH またはスケジュール Task が必要）
 
@@ -297,7 +297,7 @@ SELECT RELATIVE_PATH, SIZE, LAST_MODIFIED FROM DIRECTORY(@fsxn_stage);
 SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 ```
 
-> **注意**: FSx S3 AP は S3 Event Notifications をサポートしていないため、AUTO_REFRESH は使用できません。`ALTER STAGE REFRESH` を手動または Snowflake Task でスケジュール実行してください。
+> **注意**: FSx for ONTAP S3 AP は S3 Event Notifications をサポートしていないため、AUTO_REFRESH は使用できません。`ALTER STAGE REFRESH` を手動または Snowflake Task でスケジュール実行してください。
 
 ## ONTAP の価値
 
@@ -344,13 +344,13 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | 画像 (JPEG, PNG, TIFF) | Directory Table + GET_PRESIGNED_URL / PARSE_DOCUMENT (OCR) | Cortex AI でテキスト抽出。Vision AI は COPY FILES 回避策経由 |
 | 動画 (MP4, MOV) | Directory Table + GET_PRESIGNED_URL → 外部処理 | CloudFront 経由ストリーミングまたは外部フレーム処理 |
 | 音声 (WAV, MP3) | Directory Table + GET_PRESIGNED_URL → 文字起こしサービス | 外部 ASR（Bedrock, Whisper）または将来の AI_TRANSCRIBE |
-| ドキュメント (PDF, DOCX) | PARSE_DOCUMENT（ステージ上で直接） | OCR/LAYOUT モードで FSx S3 AP から直接テキスト抽出 |
+| ドキュメント (PDF, DOCX) | PARSE_DOCUMENT（ステージ上で直接） | OCR/LAYOUT モードで FSx for ONTAP S3 AP から直接テキスト抽出 |
 | バイナリ / アーカイブ | GET_PRESIGNED_URL → 外部処理 | ダウンロードして Snowflake 外で処理 |
 | DB エクスポート | Snowpark UDF でカスタムパース | SQL/dump フォーマットを構造化データにパース |
 
 ### FSx for ONTAP 向けデータ取り込み代替手段（Snowpipe が利用不可の場合）
 
-FSx S3 AP は S3 Event Notifications をサポートしないため、標準 Snowpipe 自動取り込みは利用不可。以下の代替手段を使用:
+FSx for ONTAP S3 AP は S3 Event Notifications をサポートしないため、標準 Snowpipe 自動取り込みは利用不可。以下の代替手段を使用:
 
 | 方法 | 説明 | レイテンシ | 複雑さ | リファレンス |
 |---|---|---|---|---|
@@ -360,7 +360,7 @@ FSx S3 AP は S3 Event Notifications をサポートしないため、標準 Sno
 > **FPolicy スループットに関する注意**: FPolicy は NFS/SMB I/O パスに最小限のレイテンシを追加します（パススルーモードで通常 1 操作あたり <1ms）。ただし、高頻度ファイル書き込みワークロード（毎秒数千ファイル）では、本番デプロイ前に FSx for ONTAP ファイルシステムへのスループット影響を検証してください。
 | **Snowflake Task + ALTER STAGE REFRESH** | スケジュール Task が Directory Table メタデータを更新 | 分 | 低 | [Tasks ドキュメント](https://docs.snowflake.com/en/user-guide/tasks-intro) |
 | **External function + Lambda** | Snowflake が Lambda を呼び出して新規ファイルを確認 | オンデマンド | 中 | [External functions](https://docs.snowflake.com/en/sql-reference/external-functions) |
-| **AWS Glue → Snowflake** | Glue が FSx S3 AP から読み取り → コネクタ経由で Snowflake に書き込み | 分 | 中 | [Glue + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
+| **AWS Glue → Snowflake** | Glue が FSx for ONTAP S3 AP から読み取り → コネクタ経由で Snowflake に書き込み | 分 | 中 | [Glue + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
 | **Snowpipe REST API（手動トリガー）** | アプリケーションがファイルリスト付きで Snowpipe REST API を呼び出し | 秒 | 低 | [Snowpipe REST](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-rest-overview) |
 
 **推奨本番パターン:**
@@ -399,11 +399,11 @@ cp params.example.json params.json  # 編集: S3AccessPointArn を設定
 以下の制限事項は、FSx for ONTAP S3 AP を Snowflake External Stage として使用した場合に観測されたものです:
 
 1. **FSx for ONTAP S3 AP レイテンシ**: ListObjects に数十秒〜数分かかる場合がある
-2. **Pre-signed URL（FSx S3 AP 側の制限）**: AWS の FSx for ONTAP S3 AP ドキュメントでは Pre-signed URL を「非サポート」と記載しているが、Snowflake の `GET_PRESIGNED_URL()` 関数で実際にはダウンロード可能な URL が生成されることを確認済み。ただし公式サポート外のため、本番利用は自己責任
-3. **S3 Event Notifications 非サポート（FSx S3 AP 側の制限）**: FSx for ONTAP S3 AP が S3 Event Notifications をサポートしないため、Snowpipe の自動取り込みトリガーが不可（FPolicy + Lambda で代替）
+2. **Pre-signed URL（FSx for ONTAP S3 AP 側の制限）**: AWS の FSx for ONTAP S3 AP ドキュメントでは Pre-signed URL を「非サポート」と記載しているが、Snowflake の `GET_PRESIGNED_URL()` 関数で実際にはダウンロード可能な URL が生成されることを確認済み。ただし公式サポート外のため、本番利用は自己責任
+3. **S3 Event Notifications 非サポート（FSx for ONTAP S3 AP 側の制限）**: FSx for ONTAP S3 AP が S3 Event Notifications をサポートしないため、Snowpipe の自動取り込みトリガーが不可（FPolicy + Lambda で代替）
 4. **最大アップロードサイズ**: 5GB（Multipart Upload 対応）
 5. **AUTO_REFRESH 不可**: S3 Event Notifications に依存するため利用不可。手動 REFRESH または Snowflake Task でスケジュール実行が必要
-6. **TO_FILE / FILE データ型（Snowflake 側の制限）**: FSx S3 AP 外部ステージでは `TO_FILE()` が "Remote file not found" を返し、Vision AI に直接使用不可。回避策: `COPY FILES` で暗号化なし内部ステージ（SNOWFLAKE_SSE）にコピー後、`TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))` を使用
+6. **TO_FILE / FILE データ型（Snowflake 側の制限）**: FSx for ONTAP S3 AP 外部ステージでは `TO_FILE()` が "Remote file not found" を返し、Vision AI に直接使用不可。回避策: `COPY FILES` で暗号化なし内部ステージ（SNOWFLAKE_SSE）にコピー後、`TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))` を使用
 
 ## 顧客適格化質問
 

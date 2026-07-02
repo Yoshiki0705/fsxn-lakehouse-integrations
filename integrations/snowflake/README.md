@@ -40,7 +40,7 @@
 | Share curated data with partners | ✅ | External Table or Dynamic Table → Snowflake Data Sharing |
 | Open format for multi-engine access | ✅ | COPY INTO → Managed Iceberg Table → Databricks/Athena can read — confirmed May 2026 |
 | Real-time auto-ingest (Snowpipe) | ❌ | Use Task + ALTER EXTERNAL TABLE REFRESH or FPolicy + Lambda |
-| Iceberg write-back on FSx S3 AP | ❌ | Use native S3 for transactional writes |
+| Iceberg write-back on FSx for ONTAP S3 AP | ❌ | Use native S3 for transactional writes |
 
 > Choose Snowflake when governed external tables, AI functions, data sharing, or multi-engine Iceberg interoperability are required. Choose Athena when lightweight AWS-native serverless SQL over NAS data is sufficient.
 
@@ -130,7 +130,7 @@ External Stages, using them as the storage layer for External Tables and Iceberg
 
 > ℹ️ **Note**: AWS documentation states Pre-signed URLs are "Not supported," but testing confirms `GET_PRESIGNED_URL()` works correctly with FSx for ONTAP S3 AP.
 
-> ⚠️ **TO_FILE limitation**: Snowflake's `TO_FILE()` function (used by multimodal AI_COMPLETE/Vision AI) cannot resolve files on FSx S3 AP external stages. Workaround: `COPY FILES` to an unencrypted internal stage (SNOWFLAKE_SSE), then use `TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))`.
+> ⚠️ **TO_FILE limitation**: Snowflake's `TO_FILE()` function (used by multimodal AI_COMPLETE/Vision AI) cannot resolve files on FSx for ONTAP S3 AP external stages. Workaround: `COPY FILES` to an unencrypted internal stage (SNOWFLAKE_SSE), then use `TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))`.
 
 ## Data Format Support
 
@@ -153,7 +153,7 @@ Understanding the difference between internal (managed) tables and external tabl
 
 ### Comparison Matrix
 
-| Aspect | External Table (on FSx S3 AP) | Internal Table (COPY INTO) |
+| Aspect | External Table (on FSx for ONTAP S3 AP) | Internal Table (COPY INTO) |
 |---|---|---|
 | **Data location** | Remains on FSx for ONTAP (zero-copy) | Copied into Snowflake-managed storage |
 | **Data ownership** | Customer owns and manages data lifecycle | Snowflake manages storage lifecycle |
@@ -165,7 +165,7 @@ Understanding the difference between internal (managed) tables and external tabl
 | **Time Travel** | ❌ Not available | ✅ Available (up to 90 days) |
 | **Clustering / Optimization** | ❌ Not available | ✅ AUTO_CLUSTERING, OPTIMIZE |
 | **Cortex AI (text functions)** | ✅ Direct (SUMMARIZE, TRANSLATE, etc.) | ✅ Direct |
-| **Cortex AI (Vision/TO_FILE)** | ❌ TO_FILE blocked on FSx S3 AP | ✅ Works on internal stage |
+| **Cortex AI (Vision/TO_FILE)** | ❌ TO_FILE blocked on FSx for ONTAP S3 AP | ✅ Works on internal stage |
 | **ONTAP features preserved** | ✅ Snapshot, FlexClone, Dedup, FPolicy | ❌ Data is outside ONTAP |
 | **Storage cost** | FSx for ONTAP only (no Snowflake storage) | FSx + Snowflake storage (duplicate) |
 | **Compliance (data residency)** | ✅ Data stays on FSx (controlled location) | ⚠️ Data in Snowflake-managed storage |
@@ -188,7 +188,7 @@ FSx for ONTAP ──S3 AP──▶ Snowflake External Table ──▶ Query / Go
 
 **Limitations:**
 - No Time Travel, no clustering, no micro-partition optimization
-- Query performance depends on FSx S3 AP latency and file layout
+- Query performance depends on FSx for ONTAP S3 AP latency and file layout
 - TO_FILE (Vision AI) does not work directly — requires COPY FILES workaround
 - AUTO_REFRESH not available (manual REFRESH or scheduled Task required)
 
@@ -239,7 +239,7 @@ Q: Does the data need to stay on FSx for ONTAP?
 │
 └── NO → COPY INTO internal table
           Q: Do you need real-time freshness?
-          ├── YES → Snowpipe (if S3 bucket) or scheduled COPY INTO (if FSx S3 AP)
+          ├── YES → Snowpipe (if S3 bucket) or scheduled COPY INTO (if FSx for ONTAP S3 AP)
           └── NO → Batch COPY INTO on schedule
 ```
 
@@ -320,7 +320,7 @@ SELECT RELATIVE_PATH, SIZE, LAST_MODIFIED FROM DIRECTORY(@fsxn_stage);
 SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 ```
 
-> **Note**: AUTO_REFRESH is not available because FSx S3 AP does not support S3 Event Notifications. Use `ALTER STAGE REFRESH` manually or on a schedule (via Snowflake Task).
+> **Note**: AUTO_REFRESH is not available because FSx for ONTAP S3 AP does not support S3 Event Notifications. Use `ALTER STAGE REFRESH` manually or on a schedule (via Snowflake Task).
 
 ## ONTAP Value for Snowflake
 
@@ -367,13 +367,13 @@ SELECT GET_PRESIGNED_URL(@fsxn_stage, 'images/photo001.jpg', 3600);
 | Images (JPEG, PNG, TIFF) | Directory Table + GET_PRESIGNED_URL / PARSE_DOCUMENT (OCR) | Use Cortex AI for text extraction; Vision AI via COPY FILES workaround |
 | Video (MP4, MOV) | Directory Table + GET_PRESIGNED_URL → external processing | Stream via CloudFront or process frames externally |
 | Audio (WAV, MP3) | Directory Table + GET_PRESIGNED_URL → transcription service | Use external ASR (Bedrock, Whisper) or future AI_TRANSCRIBE |
-| Documents (PDF, DOCX) | PARSE_DOCUMENT (direct on stage) | OCR/LAYOUT mode extracts text directly from FSx S3 AP |
+| Documents (PDF, DOCX) | PARSE_DOCUMENT (direct on stage) | OCR/LAYOUT mode extracts text directly from FSx for ONTAP S3 AP |
 | Binary / Archives | GET_PRESIGNED_URL → external processing | Download and process outside Snowflake |
 | Database exports | Custom parsing via Snowpark UDF | Parse SQL/dump format into structured data |
 
 ### Data Ingestion Alternatives for FSx for ONTAP (When Snowpipe Is Unavailable)
 
-Since FSx S3 AP does not support S3 Event Notifications, standard Snowpipe auto-ingest is not available. Use these alternatives:
+Since FSx for ONTAP S3 AP does not support S3 Event Notifications, standard Snowpipe auto-ingest is not available. Use these alternatives:
 
 | Method | Description | Latency | Complexity | Reference |
 |---|---|---|---|---|
@@ -383,7 +383,7 @@ Since FSx S3 AP does not support S3 Event Notifications, standard Snowpipe auto-
 > **FPolicy throughput note**: FPolicy introduces minimal latency on the NFS/SMB I/O path (typically <1ms per operation for passthrough mode). However, under high-frequency file write workloads (thousands of files/second), validate throughput impact on the FSx for ONTAP file system before production deployment.
 | **Snowflake Task + ALTER STAGE REFRESH** | Scheduled Task refreshes Directory Table metadata | Minutes | Low | [Tasks docs](https://docs.snowflake.com/en/user-guide/tasks-intro) |
 | **External function + Lambda** | Snowflake calls Lambda to check for new files | On-demand | Medium | [External functions](https://docs.snowflake.com/en/sql-reference/external-functions) |
-| **AWS Glue → Snowflake** | Glue reads FSx S3 AP → writes to Snowflake via connector | Minutes | Medium | [Glue + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
+| **AWS Glue → Snowflake** | Glue reads FSx for ONTAP S3 AP → writes to Snowflake via connector | Minutes | Medium | [Glue + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
 | **Snowpipe REST API (manual trigger)** | Application calls Snowpipe REST API with file list | Seconds | Low | [Snowpipe REST](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-rest-overview) |
 
 **Recommended production pattern:**
@@ -436,8 +436,8 @@ cp params.example.json params.json  # Edit: set S3AccessPointArn
 The following limitations are observed when using FSx for ONTAP S3 AP as a Snowflake External Stage:
 
 1. **FSx for ONTAP S3 AP latency**: ListObjects can take tens of seconds to minutes
-2. **Pre-signed URL (FSx S3 AP limitation)**: AWS FSx for ONTAP S3 AP documentation states Pre-signed URLs are "Not supported," but Snowflake's `GET_PRESIGNED_URL()` function generates working download URLs in practice. Use at own risk as this is outside official FSx S3 AP support
-3. **S3 Event Notifications not supported (FSx S3 AP limitation)**: FSx for ONTAP S3 AP does not support S3 Event Notifications, so Snowpipe auto-ingest trigger is not possible (use FPolicy + Lambda as alternative)
+2. **Pre-signed URL (FSx for ONTAP S3 AP limitation)**: AWS FSx for ONTAP S3 AP documentation states Pre-signed URLs are "Not supported," but Snowflake's `GET_PRESIGNED_URL()` function generates working download URLs in practice. Use at own risk as this is outside official FSx for ONTAP S3 AP support
+3. **S3 Event Notifications not supported (FSx for ONTAP S3 AP limitation)**: FSx for ONTAP S3 AP does not support S3 Event Notifications, so Snowpipe auto-ingest trigger is not possible (use FPolicy + Lambda as alternative)
 4. **Max upload size**: 5GB (Multipart Upload supported)
 5. **AUTO_REFRESH unavailable**: Depends on S3 Event Notifications which are not supported. Use manual `ALTER STAGE REFRESH` or schedule via Snowflake Task
-6. **TO_FILE / FILE data type (Snowflake limitation)**: `TO_FILE()` returns "Remote file not found" on FSx S3 AP external stages — Vision AI cannot be used directly. Workaround: `COPY FILES` to unencrypted internal stage (SNOWFLAKE_SSE), then use `TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))`
+6. **TO_FILE / FILE data type (Snowflake limitation)**: `TO_FILE()` returns "Remote file not found" on FSx for ONTAP S3 AP external stages — Vision AI cannot be used directly. Workaround: `COPY FILES` to unencrypted internal stage (SNOWFLAKE_SSE), then use `TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))`

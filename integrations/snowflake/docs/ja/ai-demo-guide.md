@@ -27,7 +27,7 @@ SELECT SNOWFLAKE.CORTEX.PARSE_DOCUMENT(
 
 **結果**: 画像から構造化テキストを抽出（約8秒）。
 
-![PARSE_DOCUMENT OCR が FSx S3 AP 上の画像からテキストを抽出](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-08-parse-document-ocr.png)
+![PARSE_DOCUMENT OCR が FSx for ONTAP S3 AP 上の画像からテキストを抽出](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-08-parse-document-ocr.png)
 
 *PARSE_DOCUMENT が FSx for ONTAP S3 Access Point 経由で保存された請求書画像からテキストを抽出。請求書番号、顧客名、金額などの構造化フィールドを含む結果を返却。*
 
@@ -46,7 +46,7 @@ LIMIT 1;
 
 **結果**: "The text is a JSON object containing data on humidity, pressure, temperature, sensor ID, status, and timestamp."（3.3秒）
 
-![Cortex SUMMARIZE が External Table 経由で FSx S3 AP データの AI 要約を生成](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-07-cortex-llm-summary.png)
+![Cortex SUMMARIZE が External Table 経由で FSx for ONTAP S3 AP データの AI 要約を生成](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-07-cortex-llm-summary.png)
 
 *Cortex SUMMARIZE が FSx for ONTAP に保存されたセンサーデータの AI 要約を生成（External Table 経由、3.3秒）。*
 
@@ -71,7 +71,7 @@ ORDER BY LAST_MODIFIED DESC;
 
 **結果**: 各画像のダウンロード URL 付きファイルカタログ。
 
-![Directory Table が FSx S3 AP 上の非構造化データをカタログ化し presigned URL を生成](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-06-directory-table-presigned-url.png)
+![Directory Table が FSx for ONTAP S3 AP 上の非構造化データをカタログ化し presigned URL を生成](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-06-directory-table-presigned-url.png)
 
 *Directory Table が FSx for ONTAP 上の画像ファイルをメタデータ付きでカタログ化し、各ファイルのダウンロード URL を生成。*
 
@@ -90,11 +90,11 @@ SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
 ) AS defect_analysis;
 ```
 
-**ステータス**: ✅ **回避策で検証済み** — ファイルを暗号化なし[内部ステージ](https://docs.snowflake.com/en/user-guide/data-load-local-file-system-create-stage)にコピーすれば Vision AI が動作。FSx S3 AP [外部ステージ](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage)への直接 `TO_FILE()` は "Remote file not found" を返す。アーキテクチャのトレードオフについては[内部テーブル vs 外部テーブル設計ガイド](../../README.md)を参照。
+**ステータス**: ✅ **回避策で検証済み** — ファイルを暗号化なし[内部ステージ](https://docs.snowflake.com/en/user-guide/data-load-local-file-system-create-stage)にコピーすれば Vision AI が動作。FSx for ONTAP S3 AP [外部ステージ](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage)への直接 `TO_FILE()` は "Remote file not found" を返す。アーキテクチャのトレードオフについては[内部テーブル vs 外部テーブル設計ガイド](../../README.md)を参照。
 
 **回避策（検証済み）**:
 ```sql
--- Step 1: FSx S3 AP から暗号化なし内部ステージにファイルをコピー
+-- Step 1: FSx for ONTAP S3 AP から暗号化なし内部ステージにファイルをコピー
 CREATE OR REPLACE STAGE fsxn_ai_noenc_stage ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE');
 COPY FILES INTO @fsxn_ai_noenc_stage FROM @fsxn_ap_arn_test_stage/media/documents/invoice_sample.png;
 ALTER STAGE fsxn_ai_noenc_stage SET DIRECTORY = (ENABLE = TRUE);
@@ -122,17 +122,17 @@ FROM (
 
 *Cortex COMPLETE (pixtral-large) が FSx for ONTAP に保存された画像から請求書詳細を正確に抽出。COPY FILES → 内部ステージ → TO_FILE 回避策を使用。*
 
-**FSx S3 AP で直接 TO_FILE が失敗する理由**:
+**FSx for ONTAP S3 AP で直接 TO_FILE が失敗する理由**:
 
-![TO_FILE が FSx S3 AP 外部ステージで "Remote file not found" を返す](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-10-tofile-remote-not-found.png)
+![TO_FILE が FSx for ONTAP S3 AP 外部ステージで "Remote file not found" を返す](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-10-tofile-remote-not-found.png)
 
-*TO_FILE() は FSx S3 AP 外部ステージのファイルを解決できない。同じファイルは PARSE_DOCUMENT（異なるファイルアクセスメカニズムを使用）ではアクセス可能だが、TO_FILE では不可。*
+*TO_FILE() は FSx for ONTAP S3 AP 外部ステージのファイルを解決できない。同じファイルは PARSE_DOCUMENT（異なるファイルアクセスメカニズムを使用）ではアクセス可能だが、TO_FILE では不可。*
 
 **製造業ユースケース**: 自動視覚品質検査 — 「このコンポーネントの傷を特定」「このアセンブリのアライメントを確認」などの自然言語指示。現時点では COPY FILES 回避策が必要。
 
 ## デモ 5: テキストベース Cortex AI 関数（全て動作）
 
-全てのテキストベース Cortex AI 関数が FSx S3 AP External Table データで回避策なしに直接動作:
+全てのテキストベース Cortex AI 関数が FSx for ONTAP S3 AP External Table データで回避策なしに直接動作:
 
 ```sql
 -- TRANSLATE: センサーステータスを日本語に翻訳
@@ -154,17 +154,17 @@ SELECT SNOWFLAKE.CORTEX.EXTRACT_ANSWER(VALUE::VARCHAR,
 ) AS extracted FROM fsxn_sensor_ext_table LIMIT 1;
 ```
 
-![CORTEX.TRANSLATE が FSx S3 AP の External Table データを正常に翻訳](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-11-cortex-translate-success.png)
+![CORTEX.TRANSLATE が FSx for ONTAP S3 AP の External Table データを正常に翻訳](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-11-cortex-translate-success.png)
 
-*CORTEX.TRANSLATE が FSx S3 AP 上の External Table からセンサーステータステキストを英語から日本語に翻訳（5.1秒）。*
+*CORTEX.TRANSLATE が FSx for ONTAP S3 AP 上の External Table からセンサーステータステキストを英語から日本語に翻訳（5.1秒）。*
 
-![CORTEX.COMPLETE が FSx S3 AP のセンサーデータの AI 分析を生成](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-12-cortex-complete-text-success.png)
+![CORTEX.COMPLETE が FSx for ONTAP S3 AP のセンサーデータの AI 分析を生成](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-12-cortex-complete-text-success.png)
 
 *CORTEX.COMPLETE (mistral-large2) が FSx for ONTAP に保存された IoT センサーデータの詳細な AI 分析を生成（16秒）。*
 
 ## Cortex AI 包括的互換性マトリクス
 
-| 関数 | 入力ソース | FSx S3 AP 直接 | 回避策 | 所要時間 |
+| 関数 | 入力ソース | FSx for ONTAP S3 AP 直接 | 回避策 | 所要時間 |
 |---|---|:---:|:---:|---|
 | **PARSE_DOCUMENT (OCR)** | ステージパス文字列 | ✅ 直接 | — | 約8秒 |
 | **CORTEX.SUMMARIZE** | External Table カラム | ✅ 直接 | — | 3.3秒 |
@@ -173,14 +173,14 @@ SELECT SNOWFLAKE.CORTEX.EXTRACT_ANSWER(VALUE::VARCHAR,
 | **CORTEX.COMPLETE (テキスト)** | External Table カラム | ✅ 直接 | — | 16秒 |
 | **CORTEX.EXTRACT_ANSWER** | External Table カラム | ✅ 直接 | — | 2.7秒 |
 | **COMPLETE (vision/multimodal)** | TO_FILE + 画像 | ❌ Remote file not found | ✅ COPY FILES → 内部ステージ | 41秒 |
-| **TO_FILE on 外部ステージ** | FSx S3 AP ステージ | ❌ 非サポート | COPY FILES to internal | — |
+| **TO_FILE on 外部ステージ** | FSx for ONTAP S3 AP ステージ | ❌ 非サポート | COPY FILES to internal | — |
 | **TO_FILE on 暗号化内部ステージ** | デフォルト内部ステージ | ❌ 暗号化非サポート | SNOWFLAKE_SSE を使用 | — |
 
 ### 重要な発見
 
 1. **テキストベース関数は直接動作** — SUMMARIZE, TRANSLATE, SENTIMENT, COMPLETE (text), EXTRACT_ANSWER は External Table データで回避策不要
 2. **PARSE_DOCUMENT は直接動作** — ステージパス文字列を使用（TO_FILE とは異なるメカニズム）
-3. **TO_FILE は FSx S3 AP 外部ステージで動作しない** — "Remote file not found"（確認済み、NetApp サポートケースと一致）
+3. **TO_FILE は FSx for ONTAP S3 AP 外部ステージで動作しない** — "Remote file not found"（確認済み、NetApp サポートケースと一致）
 4. **Vision AI 回避策が存在**: `COPY FILES` → 暗号化なし内部ステージ → `TO_FILE(BUILD_SCOPED_FILE_URL())` → COMPLETE multimodal
 5. **Cross-Region Inference が必要** — ap-northeast-1 での Vision モデル利用に必須
 
@@ -196,7 +196,7 @@ SELECT SNOWFLAKE.CORTEX.EXTRACT_ANSWER(VALUE::VARCHAR,
 | CORTEX.EXTRACT_ANSWER | ✅ 検証済み | 2.7秒 | テキストからの情報抽出 |
 | COMPLETE (vision) 回避策経由 | ✅ 検証済み | 41秒 | 画像分析、欠陥検出 |
 | Directory Table + URLs | ✅ 検証済み | 1.3秒 | 非構造化データカタログ |
-| TO_FILE on FSx S3 AP | ❌ ブロック | — | マルチモーダル直接アクセス非サポート |
+| TO_FILE on FSx for ONTAP S3 AP | ❌ ブロック | — | マルチモーダル直接アクセス非サポート |
 
 ## スクリーンショット
 
@@ -235,7 +235,7 @@ Object Tag（分類）
 |---|:---:|:---:|:---:|---|
 | データベース | ✅ | ✅（継承） | — | タグは配下の全スキーマ/テーブルにカスケード |
 | スキーマ | ✅ | ✅（継承） | — | タグは配下の全テーブルにカスケード |
-| テーブル（External Table 含む） | ✅ | ✅ | ✅ | **FSx S3 AP データに完全ガバナンス適用可能** |
+| テーブル（External Table 含む） | ✅ | ✅ | ✅ | **FSx for ONTAP S3 AP データに完全ガバナンス適用可能** |
 | カラム | ✅ | ✅（直接） | — | 最も粒度の細かいマスキング対象 |
 | ステージ / ファイル | ✅（タグのみ） | ❌ | ❌ | 分類用タグ。クエリ時の適用なし |
 
@@ -245,7 +245,7 @@ Object Tag（分類）
 
 ![AWS_ACCESS_POINT_ARN なしでは SELECT が失敗 — LIST は動作するのに access denied](https://raw.githubusercontent.com/Yoshiki0705/fsxn-lakehouse-integrations/main/docs/images/snowflake-03-select-denied.png)
 
-*`AWS_ACCESS_POINT_ARN` なし: LIST は動作するが SELECT は "access denied" で失敗。パラメータ設定後は、FSx S3 AP 上の External Table に完全なガバナンス（タグ、マスキング、Row Policy）を適用可能。*
+*`AWS_ACCESS_POINT_ARN` なし: LIST は動作するが SELECT は "access denied" で失敗。パラメータ設定後は、FSx for ONTAP S3 AP 上の External Table に完全なガバナンス（タグ、マスキング、Row Policy）を適用可能。*
 
 ```sql
 -- 1. 分類タグを作成
@@ -283,7 +283,7 @@ ALTER TAG data_classification SET MASKING POLICY pii_mask;
 | タグベースカラムマスキング | ✅ Tag-based Masking Policy (Enterprise) | ✅ ABAC Governed Tags + Column Masks |
 | 行レベルフィルタリング | ✅ Row Access Policy (Enterprise) | ✅ ABAC Row Filter Policies |
 | 自動分類（PII 検出） | ✅ 組み込み (Enterprise) | ✅ 組み込み（自動データ分類） |
-| External Table へのガバナンス | ✅ **完全サポート**（FSx S3 AP で検証済み） | ❌ **ブロック**（S3 AP 上の CREATE TABLE 失敗） |
+| External Table へのガバナンス | ✅ **完全サポート**（FSx for ONTAP S3 AP で検証済み） | ❌ **ブロック**（S3 AP 上の CREATE TABLE 失敗） |
 | タグ継承 | Database → Schema → Table → Column | Catalog → Schema → Table（Column には継承しない） |
 | 適用境界 | クエリ時リライト（サーバーサイド） | クエリ時リライト（サーバーサイド） |
 | データがガバナンスパスから出ない | ✅ クエリ時マスキング、生データエクスポート不可 | ✅ クエリ時マスキング、生データエクスポート不可 |
@@ -295,7 +295,7 @@ ALTER TAG data_classification SET MASKING POLICY pii_mask;
 *検証結果サマリー: LIST、SELECT、External Table、COPY INTO、Directory Table、Governance Tags の全てを `AWS_ACCESS_POINT_ARN` 付きで検証済み。*
 
 検証環境（Standard edition）で以下を確認:
-- ✅ `CREATE TAG` + `ALTER TABLE SET TAG` が FSx S3 AP バックエンドの External Table で動作
+- ✅ `CREATE TAG` + `ALTER TABLE SET TAG` が FSx for ONTAP S3 AP バックエンドの External Table で動作
 - ✅ `SYSTEM$GET_TAG` がタグ値を正しく取得
 - ⚠️ Tag-based Masking Policies は Enterprise Edition が必要（Standard では未テスト）
 - ⚠️ Row Access Policies は Enterprise Edition が必要（Standard では未テスト）
@@ -415,8 +415,8 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 
 | トピック | リファレンス |
 |---|---|
-| FSx S3 AP デュアルレイヤー認可 | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
-| FSx S3 AP と Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
+| FSx for ONTAP S3 AP デュアルレイヤー認可 | [Managing access point access](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-ap-manage-access-fsxn.html) |
+| FSx for ONTAP S3 AP と Active Directory | [Enabling AI-powered analytics on enterprise file data](https://aws.amazon.com/blogs/storage/enabling-ai-powered-analytics-on-enterprise-file-data-configuring-s3-access-points-for-amazon-fsx-for-netapp-ontap-with-active-directory/) |
 | ONTAP Export Policy（NFS アクセス制御） | [Export rules の仕組み](https://docs.netapp.com/us-en/ontap/nfs-admin/export-rules-concept.html) |
 | ONTAP FPolicy（ファイル監視/ブロック） | [FPolicy 設定タイプ](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
 | ONTAP Storage-Level Access Guard | [SLAG によるファイルアクセス保護](https://docs.netapp.com/us-en/ontap/smb-admin/secure-file-access-storage-level-access-guard-concept.html) |
@@ -525,7 +525,7 @@ FPolicy は ONTAP レベルでリアルタイムのファイルアクセス監�
 
 ## はじめに
 
-1. **FSx S3 AP ステージの設定** — [設定ガイド](../../README.md) に従う
+1. **FSx for ONTAP S3 AP ステージの設定** — [設定ガイド](../../README.md) に従う
 2. **サンプルデータのアップロード** — NFS 経由で FSx for ONTAP に画像/ドキュメントを配置
 3. **Directory Table の更新** — `ALTER STAGE REFRESH` で新規ファイルを検出
 4. **Cortex 関数の実行** — 上記の SQL サンプルを使用
