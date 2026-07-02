@@ -187,6 +187,22 @@ Problems:
 
 ---
 
+## Role-based Lens Summary
+
+> Role-based lenses (referenced by role, not by individual name).
+
+| Lens (role) | Primary recommendation |
+|---|---|
+| **Snowflake PMM lens** | Even on a Databricks decision, Snowflake Horizon can enforce governance on the same data for external engines; consider using Horizon alongside for other consumers. |
+| **Databricks SA lens** | UC Volumes + Delta Sharing works well. For S3 cost, use S3 Intelligent-Tiering short-term and FSx for ONTAP strategically. |
+| **AWS Iceberg SA lens** | FSx for ONTAP S3 AP removes the need to copy to S3. FlexCache S3 AP (roadmap) reduces cost further. |
+| **Storage Specialist lens** | ONTAP dedup is effective for storage efficiency (S3 has no native dedup). Migrating to FSx for ONTAP addresses the root cause. |
+| **Partner SA lens** | Operate and monitor via Amazon CloudWatch and the ONTAP REST API. DataSync migration to FSx for ONTAP is a supported path. FlexCache S3 AP (roadmap) is a viable option for hybrid architectures. |
+| **Public Sector SA lens** | Data-sovereignty requirements may mandate on-prem ONTAP + SnapMirror (Option C). FlexCache S3 AP enables cloud analytics without full replication. |
+| **Outcome SA lens** | The customer goal is "cost reduction + governed sharing." FlexCache S3 AP (roadmap) helps achieve both with minimal data movement. |
+
+---
+
 ## Operational Monitoring & Security
 
 For Observability and Security Monitoring (SIEM) of the architectures proposed in this document, refer to the following dedicated projects:
