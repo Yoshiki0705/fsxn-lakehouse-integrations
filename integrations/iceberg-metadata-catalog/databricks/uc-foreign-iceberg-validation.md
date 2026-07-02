@@ -171,7 +171,7 @@ SELECT snapshot_id FROM glue_metadata.metadata.unstructured_files.history LIMIT 
 | Workspace URL | `https://dbc-fca81837-d98c.cloud.databricks.com` |
 | Account ID | `60786ac3-b832-4138-b5e7-d617e152a000` |
 | SQL Warehouse | Serverless Starter Warehouse (Small) |
-| S3 Tables bucket | `fsxn-metadata-catalog` (arn:aws:s3tables:ap-northeast-1:178625946981:bucket/fsxn-metadata-catalog) |
+| S3 Tables bucket | `fsxn-metadata-catalog` (arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog) |
 | S3 Tables table | `metadata.unstructured_files` |
 | S3 Tables data bucket | `s3://4163c10e-279c-43da-twofx9eqndyjcrko43kkrcwjsuedeapn1b--table-s3` |
 | IAM Role | `fsxn-databricks-executor-validation-role` (Glue + S3 Tables + S3 permissions) |
@@ -193,7 +193,7 @@ CREATE CONNECTION IF NOT EXISTS glue_iceberg_rest
 TYPE iceberg_rest
 OPTIONS (
   uri = 'https://glue.ap-northeast-1.amazonaws.com/iceberg',
-  warehouse = '178625946981:s3tablescatalog/fsxn-metadata-catalog',
+  warehouse = '<ACCOUNT_ID>:s3tablescatalog/fsxn-metadata-catalog',
   credential_name = 'glue_s3tables_conn'
 );
 ```
