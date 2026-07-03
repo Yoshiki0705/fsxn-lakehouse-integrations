@@ -119,6 +119,68 @@ recipient は任意のツールで構いません。**Databricks notebook**（Ju
 トレードオフとして、自作読み取りには Unity Catalog のガバナンスが**自動適用されません**。
 ガバナンスを効かせたい場合は、読んだデータを UC マネージドテーブルへ格納します。
 
+## 補足パターン: ファイルプロトコル（NFS/SMB）ストレージ向けの自己管理 provider ブリッジ（設計例）
+
+ストレージをオブジェクトインターフェースではなく**ファイルプロトコル（NFS/SMB）**で
+アクセスする場合、オブジェクトストレージ認証情報を vend する代わりに、**自分で運用する
+provider** がファイルを NFS/SMB で読み、その実体を HTTPS で配信する構成も考えられます。
+これは**設計例（illustrative）であり、検証済みでも製品化された経路でもありません**。
+とくに、ネイティブな Unity Catalog recipient が自己ホストの URL を受理するかは
+**未検証・仕様外**です（自作 recipient なら成立し得ます）。可用性やネイティブ対応可否は
+Databricks に確認してください。
+
+この構成は役割の異なる2層に分かれます。
+
+- **制御面** — OpenSharing API（認証・メタデータ・ルーティング）。軽量でイベント駆動。
+- **データ面ブリッジ** — ストレージを NFS/SMB でマウントし、ファイル実体を HTTPS で
+  ストリーム配信する常駐コンポーネント。
+
+```mermaid
+flowchart LR
+  C["Consumer (notebook / any tool)"]
+  CP["Control plane: sharing API - auth, metadata (e.g., Lambda + Function URL)"]
+  DP["Data-plane bridge: mounts NFS/SMB, streams over HTTPS (e.g., ECS/EC2 behind ALB/NLB)"]
+  FS["FSx for ONTAP (NFS / SMB)"]
+  C -->|"1. HTTPS 443 + bearer token"| CP
+  CP -->|"2. metadata + time-limited download URL"| C
+  C -->|"3. HTTPS 443 byte stream"| DP
+  DP -->|"4. NFS 2049 / SMB 445"| FS
+```
+
+データの流れ:
+1. 消費側が制御面に認証（HTTPS 443・bearer token）。
+2. 制御面がメタデータと、データ面ブリッジを指す時間制限付きダウンロード URL を返す。
+3. 消費側がデータ面ブリッジからファイル実体を HTTPS(443) で取得。
+4. データ面ブリッジがストレージを NFS(2049)/SMB(445) で読み、ストリーム返却。
+
+コンピュートの選択（役割別）:
+
+| 役割 | AWS の選択肢 | 理由 |
+|---|---|---|
+| 制御面（認証・メタデータ・ルーティング） | Lambda + Function URL | 軽量・イベント駆動。本リポジトリのリファレンスサーバーが該当 |
+| データ面ブリッジ（マネージド） | ECS on Fargate | サーバー運用が軽い。特権 kernel マウント不可のため userspace の NFS/SMB クライアント実装が前提 |
+| データ面ブリッジ（高スループット・大容量） | EC2 / ECS on EC2 | host で `mount -t nfs`/`cifs` 可・高帯域・実行時間無制限 |
+| データ面には不向き | Lambda | 15 分上限・応答サイズ上限・任意 NFS マウント不可 |
+
+開けるポート:
+
+| 方向 | ポート | 用途 |
+|---|---|---|
+| 消費側 → provider エンドポイント | TCP 443（HTTPS/TLS） | 共有 API とバイトストリーム |
+| データ面ブリッジ → ストレージ | TCP 2049（+ NFSv3 は portmapper 111） | NFS |
+| データ面ブリッジ → ストレージ | TCP 445 | SMB |
+
+考慮事項:
+- **自己運用**: パッチ・スケール・HA（マルチ AZ + ALB/NLB）・常駐コストは運用側の責任。
+- **データ面がバイト経路上に入る**（帯域・コスト・レイテンシ・単一障害点）。credential
+  vending（消費側がストレージを直読み）とは性質が異なる。ブリッジはステートレスにして
+  水平スケール・マルチ AZ で冗長化する。
+- **SMB + Active Directory**: ブリッジはサービスアカウントで認証（Kerberos/NTLM）。ストレージ側の
+  export policy（NFS）/ share ACL（SMB）でブリッジを許可する。ファイル ACL を recipient の
+  ID に対応づける（permission-aware）のは追加設計であり、権限不明時は既定で拒否する。
+- **認証**: 公開する場合も TLS + bearer token（必要に応じて mTLS）で保護し、非認証の
+  エンドポイントは公開しない。私設接続なら PrivateLink / NCC を優先。
+
 ## 本リポジトリの独立検証
 
 オープンソースのリファレンスサーバー（本リポジトリ）と決定論的な実行により、
@@ -146,6 +208,8 @@ FSx for ONTAP S3 Access Points で以下を観測しました。
   （Athena、または vend された認証情報で notebook の自作 recipient）。
 - **ゼロコピー*かつ*ネイティブな UC ガバナンスが欲しい** → ネイティブ recipient /
   Storage Ecosystem の動向を追い、可用性を Databricks に確認。
+- **ストレージをファイルプロトコル（NFS/SMB）でしか出せない** → 上記の自己管理 provider
+  ブリッジ（設計例）を検討。ただし運用責任と、ネイティブ UC 取り込みが未検証である点に留意。
 
 各選択肢は異なる文脈に適します。ガバナンス・鮮度・コストの要件に基づいて選んでください。
 
