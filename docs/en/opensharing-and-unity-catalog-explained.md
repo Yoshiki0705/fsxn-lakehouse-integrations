@@ -120,6 +120,64 @@ the sharing server, receive credentials, and read the data with `boto3`/Spark. T
 The trade-off: Unity Catalog governance is **not** applied automatically to a DIY read;
 to regain governance you would land the data in a UC-managed table.
 
+## Supplementary pattern: a self-managed provider bridge for file-protocol (NFS/SMB) storage (illustrative)
+
+When storage is accessed over **file protocols (NFS/SMB)** rather than an object
+interface, an alternative to vending object-store credentials is to run a
+**self-managed provider** that reads files over NFS/SMB and serves the bytes over
+HTTPS. This is an **illustrative design pattern — not a validated or productized path**.
+In particular, whether a native Unity Catalog recipient accepts self-hosted URLs is
+**unverified and spec-external** (a DIY recipient can consume it). Confirm availability
+and native support with Databricks.
+
+The pattern splits into two layers with different roles:
+
+- **Control plane** — the OpenSharing API (authentication, metadata, routing);
+  lightweight and event-driven.
+- **Data-plane bridge** — a long-running component that mounts the storage over NFS/SMB
+  and streams file bytes over HTTPS.
+
+```mermaid
+flowchart LR
+  C["Consumer (notebook / any tool)"]
+  CP["Control plane: sharing API - auth, metadata (e.g., Lambda + Function URL)"]
+  DP["Data-plane bridge: mounts NFS/SMB, streams over HTTPS (e.g., ECS/EC2 behind ALB/NLB)"]
+  FS["FSx for ONTAP (NFS / SMB)"]
+  C -->|"1. HTTPS 443 + bearer token"| CP
+  CP -->|"2. metadata + time-limited download URL"| C
+  C -->|"3. HTTPS 443 byte stream"| DP
+  DP -->|"4. NFS 2049 / SMB 445"| FS
+```
+
+Data flow:
+1. The consumer authenticates to the control plane (HTTPS 443, bearer token).
+2. The control plane returns metadata plus a time-limited download URL pointing to the data-plane bridge.
+3. The consumer fetches the file bytes from the data-plane bridge over HTTPS (443).
+4. The data-plane bridge reads from storage over NFS (2049) / SMB (445) and streams the bytes back.
+
+Compute choices (by role):
+
+| Role | AWS option | Why |
+|---|---|---|
+| Control plane (auth, metadata, routing) | Lambda + Function URL | Lightweight, event-driven; this repository's reference server |
+| Data-plane bridge (managed) | ECS on Fargate | Low server ops; requires a userspace NFS/SMB client (no privileged kernel mount) |
+| Data-plane bridge (high throughput / large files) | EC2 / ECS on EC2 | Host-level `mount -t nfs`/`cifs`, high bandwidth, no execution-time limit |
+| Not suitable for the data plane | Lambda | 15-minute limit, response-size limits, no arbitrary NFS mount |
+
+Ports to open:
+
+| Direction | Port(s) | Purpose |
+|---|---|---|
+| Consumer → provider endpoint | TCP 443 (HTTPS/TLS) | Sharing API and byte stream |
+| Data-plane bridge → storage | TCP 2049 (+ portmapper 111 for NFSv3) | NFS |
+| Data-plane bridge → storage | TCP 445 | SMB |
+
+Considerations:
+- **Self-operated**: patching, scaling, HA (multi-AZ behind ALB/NLB), and always-on cost are the operator's responsibility.
+- **The data plane sits on the byte path** (bandwidth, cost, latency, single point of failure) — unlike credential vending, where the consumer reads storage directly. Keep the bridge stateless to scale horizontally and run redundantly across AZs.
+- **SMB + Active Directory**: the bridge authenticates as a service account (Kerberos/NTLM); the storage export policy (NFS) / share ACL (SMB) must allow the bridge. Mapping file ACLs to recipient identity (permission-aware access) is additional design work; default to deny when permissions are unknown.
+- **Authentication**: expose only over TLS with bearer-token auth (and mTLS where appropriate); do not expose an unauthenticated endpoint. Prefer PrivateLink / NCC for private connectivity.
+
 ## What this repository independently validated
 
 Using an open-source reference server (this repository) and deterministic runs, the
@@ -147,6 +205,9 @@ recipient** for a non-Databricks Volumes provider. Reproducible server and steps
   directly (Athena, or a DIY recipient in a notebook with vended credentials).
 - **Want zero-copy *and* native UC governance** → track the native recipient / Storage
   Ecosystem direction and confirm availability with Databricks.
+- **Storage can only be exposed over file protocols (NFS/SMB)** → consider the
+  self-managed provider bridge above (illustrative), noting the operational
+  responsibility and that native UC consumption is unverified.
 
 Each option suits a different context; choose based on your governance, freshness, and
 cost requirements.
