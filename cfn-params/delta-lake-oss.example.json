@@ -1,0 +1,7 @@
+[
+  {"ParameterKey": "VpcId", "ParameterValue": "vpc-0EXAMPLE1234abcde"},
+  {"ParameterKey": "FileSystemId", "ParameterValue": "fs-0EXAMPLE1234abcde"},
+  {"ParameterKey": "VolumeId", "ParameterValue": "fsvol-0EXAMPLE1234abcde"},
+  {"ParameterKey": "S3AccessPointName", "ParameterValue": "fsxn-delta-oss-ap"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"}
+]

@@ -1,0 +1,10 @@
+[
+  {"ParameterKey": "FileSystemId", "ParameterValue": "fs-0EXAMPLE1234abcde"},
+  {"ParameterKey": "StorageVirtualMachineId", "ParameterValue": "svm-0EXAMPLE1234abcde"},
+  {"ParameterKey": "VolumeId", "ParameterValue": "fsvol-0EXAMPLE1234abcde"},
+  {"ParameterKey": "S3AccessPointName", "ParameterValue": "fsxn-athena-ap"},
+  {"ParameterKey": "GlueDatabaseName", "ParameterValue": "fsxn_athena_db"},
+  {"ParameterKey": "AthenaWorkgroupName", "ParameterValue": "fsxn-verification"},
+  {"ParameterKey": "AthenaResultsBucket", "ParameterValue": "YOUR-athena-results-bucket"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"}
+]

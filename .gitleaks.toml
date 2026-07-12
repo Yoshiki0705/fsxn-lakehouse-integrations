@@ -146,4 +146,5 @@ paths = [
   '''\.kiro/settings/''',
   '''\.private/''',
   '''integrations/trino-starburst/config/''',
+  '''cfn-params/''',
 ]
