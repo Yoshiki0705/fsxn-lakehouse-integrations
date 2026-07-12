@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-This repository provides integration patterns for connecting Amazon FSx for NetApp ONTAP to AWS analytics services (Athena, Glue, EMR, SageMaker) via S3 Access Points.
+This repository provides integration patterns for connecting Amazon FSx for NetApp ONTAP to AWS analytics services (Athena, Glue, EMR, SageMaker, DuckDB, Snowflake, Databricks) via S3 Access Points. It contains 28+ CloudFormation templates, verification scripts, and bilingual documentation (JA/EN).
 
 ## Build & Test Commands
 
@@ -14,92 +14,134 @@ npm install
 
 # Run tests
 npm test
+
+# Validate all CFn parameter files
+for f in cfn-params/*.json shared/params/*.json; do python3 -c "import json; json.load(open('$f'))"; done
+
+# Run preflight check before deploying
+./scripts/preflight-check.sh --integration athena
 ```
 
 ## Coding Conventions
 
-- Python 3.12 for Lambda functions
+- Python 3.12 for Lambda functions (arm64 preferred)
 - TypeScript for CDK/infrastructure code
 - Structured JSON logging
 - Property-based tests with Hypothesis
+- CloudFormation parameter files: `[{"ParameterKey":"X","ParameterValue":"Y"}]` format
+- Example IPs: RFC 5737 range (`198.51.100.x`) — never use real IPs
 
 ## Supply-Chain Security
 
-### Automated Security Workflows
+Enforced by pre-commit hooks (`.githooks/pre-commit`) and CI workflows:
 
 | Workflow | File | Purpose |
 |----------|------|---------|
-| zizmor | `.github/workflows/zizmor.yml` | GitHub Actions security linting (SHA-pinning, credential persistence, injection) |
-| gitleaks | `.github/workflows/gitleaks.yml` | Secret detection — custom rules in `.gitleaks.toml` |
-| OpenSSF Scorecard | `.github/workflows/scorecard.yml` | Automated security health scoring |
-| Renovate | `renovate.json` | Automated dependency updates ([Renovate GitHub App](https://github.com/apps/renovate) must be enabled on the repo) |
+| zizmor | `.github/workflows/zizmor.yml` | GitHub Actions security linting |
+| gitleaks | `.github/workflows/gitleaks.yml` | Secret detection (custom rules in `.gitleaks.toml`) |
+| OpenSSF Scorecard | `.github/workflows/scorecard.yml` | Security health scoring |
+| Renovate | `renovate.json` | Automated dependency updates |
 
-### Local Security Checks
+**Actions pinning**: All third-party Actions pinned to SHA hashes. Verify: `zizmor .github/workflows/`
 
-```bash
-# Pre-commit hook runs automatically on commit (via .githooks/pre-commit):
-#   1. Author email verification
-#   2. gitleaks secret scanning (staged files)
-#   3. zizmor lint (if workflow files changed)
-
-# Manual verification
-gitleaks detect --config .gitleaks.toml --no-git --source .
-zizmor .github/workflows/
-```
-
-### Actions Pinning Policy
-
-- All third-party Actions MUST be pinned to SHA hashes: `uses: owner/action@<sha> # vX.Y.Z`
-- `actions/checkout` must set `persist-credentials: false`
-- Verify with `zizmor .github/workflows/` before committing workflow changes
-
-### Custom Secret Detection (.gitleaks.toml)
-
-Detects: internal IPs (10.x/172.16-31.x/192.168.x), AWS Account IDs, internal hostnames (`.internal.`/`.corp.`), VPN configs, NetApp internal references
+**gitleaks allowlist**: `cfn-params/` and `shared/params/` are globally allowlisted (example data only).
 
 ## Agent Output Standards
 
-> Mirror of the user-level Kiro global steering so any agent/contributor follows these even
-> without that steering loaded. Enforced in CI by `.github/workflows/agent-output-audit.yml`
-> (naming, neutrality, leak, JA/EN parity) and `.github/workflows/gitleaks.yml` (secrets).
+> Full rules in global Kiro steering. Summary enforced by `.github/workflows/agent-output-audit.yml`.
 
-### Naming (NetApp / AWS)
+- **Naming**: "FSx for ONTAP" (never FSxN/bare FSx). "FSx for ONTAP S3 AP" for access points.
+- **Neutrality**: No vendor-versus framing. Present trade-offs symmetrically.
+- **Safety**: No PII, account IDs, internal IPs, persona names in public output.
+- **Bilingual**: JA/EN parity (same section structure/count).
+- **Pre-commit**: `gitleaks detect --config .gitleaks.toml --no-git --source .`
 
-- Use **Amazon FSx for NetApp ONTAP** on first mention, then **FSx for ONTAP**. Never use
-  `FSxN`, bare `FSx`, or `FSx ONTAP`. Use **FSx for ONTAP S3 AP** for the access point.
-- Do **not** propose NetApp Workload Factory, NetApp Console, or BlueXP — reframe to native
-  equivalents (CloudWatch, ONTAP REST API, FabricPool, AWS DataSync, Snapshot/FlexClone/SnapMirror).
-- Exception: external citation titles quoted verbatim (mark the line with an `allow:naming` comment).
+## Project-Specific Technical Knowledge
 
-### Vendor neutrality (right-tool-for-the-job)
+### SSM Domain Join — Correct Pattern (verified failure)
 
-- No vendor-versus or superiority framing ("best", "beats X", "X より優れている", "競合ツール",
-  "優位性", "game-changer"). Present alternatives as options and state trade-offs symmetrically,
-  including the recommended option's own constraints.
+When joining Windows EC2 to AD via CloudFormation:
 
-### Public-output safety
+```yaml
+# ✅ CORRECT: Separate AWS::SSM::Association with AWS-managed document
+DomainJoinAssociation:
+  Type: AWS::SSM::Association
+  Properties:
+    Name: AWS-JoinDirectoryServiceDomain  # AWS-managed, not custom
+    Targets:
+      - Key: InstanceIds
+        Values:
+          - !Ref WindowsInstance
+    Parameters:
+      directoryId:
+        - !Ref ManagedAD
+      directoryName:
+        - !Ref AdDomainName
+      dnsIpAddresses:
+        - !Select [0, !GetAtt ManagedAD.DnsIpAddresses]
+        - !Select [1, !GetAtt ManagedAD.DnsIpAddresses]
 
-- Never commit personal/persona names, emails, AWS account IDs, internal IPs/hostnames, support
-  case numbers, or vendor-internal ticket IDs. Use role-based references ("Storage Specialist
-  lens") and "an internal product request (tracked)".
-- No process-metadata noise: do not add "Persona Review Summary" sections, review rounds, dates,
-  or lens counts to published docs. Weave review findings as inline role-based lens notes
-  (`> **Topic** (Role lens): ...`); keep provenance in `.private/` (gitignored).
+# ❌ BROKEN: EC2 SsmAssociations property + custom SSM Document with aws:domainJoin
+# Fails with: "Document schema version 2.2 is not supported by association
+#              that is created with instance id"
+```
 
-### Bilingual docs (JA primary + EN)
+Required IAM policies for domain-joined instances:
+- `arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore`
+- `arn:aws:iam::aws:policy/AmazonSSMDirectoryServiceAccess`
 
-- Keep JA/EN parity: matching section structure/count and equivalent inline notes. Mirror any
-  add/restructure across both languages in the same change.
+### S3 Access Point Networking — Critical Gotcha
 
-### Technical reference / guide docs
+**S3 Gateway Endpoint may block FSx for ONTAP S3 AP traffic** for internet-origin APs.
 
-- Include: an executive-summary verdict, FAQ / common misconceptions, a selection flowchart
-  (mermaid or ASCII), OT/IT security considerations (where relevant), phased adoption steps,
-  a Related-Documents section with backlinks, and ≥10 inline role-based lens reviews.
+- FSx for ONTAP S3 AP aliases resolve to `s3-r-w.<region>.amazonaws.com`
+- This hostname may NOT be in the S3 prefix list used by Gateway endpoints
+- Impact: VPC-attached Lambda/EC2 → S3 Gateway EP → timeout for internet-origin APs
 
-### Before committing docs
+Solutions:
+1. Place Lambda outside VPC (simplest for internet-origin APs)
+2. Use NAT Gateway for S3 AP traffic
+3. Use VPC-scoped S3 AP + S3 Interface Endpoint (production recommended)
+
+Full details: `docs/en/fsx-ontap-s3ap-networking.md`
+
+### ONTAP Version Detection
+
+The FSx console and `describe-file-systems` API do NOT expose ONTAP version. Use ONTAP REST API:
 
 ```bash
-gitleaks detect --config .gitleaks.toml --no-git --source .
-# CI mirrors the agent-output checks; see .github/workflows/agent-output-audit.yml
+# ONTAP REST API query (authenticate via Secrets Manager — do not inline passwords)
+# GET https://<MGMT-IP>/api/cluster?fields=version
+# Auth: Basic fsxadmin:<password-from-secrets-manager>
+# See: shared/scripts/demo-ad-join-svm.sh for full authentication pattern
 ```
+
+Minimum versions: S3 AP basic (9.14.1), S3 AP enhanced (9.15.1), FPolicy (9.8+).
+
+### SVM and S3 AP Structural Conflict
+
+FSx for ONTAP S3 Access Points CANNOT coexist with a native ONTAP S3 object-store server on the same SVM. Creating an S3 AP on an SVM that has `vserver object-store-server` configured will fail with:
+
+> "Amazon FSx is unable to create an S3 access point because of an existing ONTAP object storage server on SVM..."
+
+This is a structural conflict (not a timing issue). Use a different SVM or delete the native S3 server first.
+
+### S3 AP WINDOWS User Type — AD Requirement
+
+S3 APs with `FileSystemIdentity.Type=WINDOWS` require the SVM to be AD-joined (CIFS server configured). Template: `shared/templates/demo-ad-environment.yaml`. Script: `shared/scripts/demo-ad-join-svm.sh`.
+
+## Template Inventory (28 templates)
+
+| Category | Path Prefix | Count | Purpose |
+|----------|-------------|:-----:|---------|
+| Shared infra | `shared/cloudformation/` | 8 | VPC, FSx for ONTAP base, IAM, FPolicy pipeline, sample data |
+| Shared AD | `shared/templates/` | 1 | AD environment (3 patterns) |
+| Athena/Glue/DuckDB/Delta | `integrations/*/template.yaml` | 5 | Analytics engine integrations |
+| Databricks | `integrations/databricks/` | 3 | Network, S3 AP, VPC peering |
+| Snowflake | `integrations/snowflake/` | 2 | IAM role + Snowpipe poller |
+| OpenSharing | `integrations/opensharing-server/` | 1 | Credential vending server |
+| Iceberg Catalog | `integrations/iceberg-metadata-catalog/` | 4 | S3 Tables, sync, demos |
+| Manufacturing PoC | `integrations/manufacturing-data-platform/` | 4 | VPC, S3, FSx for ONTAP, MSK |
+| PoC Quick-Start | `poc-templates/` | 2 | DuckDB Lambda, DataSync |
+
+Deployment guide: `docs/en/deployment-guide.md` (EN) / `docs/ja/deployment-guide.md` (JA)
