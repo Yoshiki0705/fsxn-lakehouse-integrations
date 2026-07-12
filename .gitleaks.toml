@@ -147,4 +147,5 @@ paths = [
   '''\.private/''',
   '''integrations/trino-starburst/config/''',
   '''cfn-params/''',
+  '''shared/params/''',
 ]

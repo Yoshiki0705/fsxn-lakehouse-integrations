@@ -44,6 +44,7 @@ Start here:
 | Validate environment before deploy | [Preflight Check](#preflight-check) |
 | Estimate costs | [Cost Reference](#cost-reference) |
 | Roll back a failed deployment | [Rollback Procedures](#rollback-procedures) |
+| Test WINDOWS user type S3 APs | [AD Environment Setup](#ad-environment-for-windows-user-type) |
 
 ---
 
@@ -602,6 +603,68 @@ aws s3 ls "s3://YOUR-AP-ALIAS/" --region ap-northeast-1
 
 # 3. If timeout, check DNS resolution
 nslookup YOUR-AP-ALIAS.s3.ap-northeast-1.amazonaws.com
+```
+
+---
+
+## AD Environment for WINDOWS User Type
+
+FSx for ONTAP S3 Access Points support three `FileSystemIdentity` types:
+
+| Type | AD Required | Use Case |
+|---|:---:|---|
+| `UNIX` | No | NFS workloads, simplest setup |
+| `WINDOWS` | **Yes** | NTFS-secured data, AD-authenticated access |
+| `NONE` | No | Root access (testing only, not recommended) |
+
+To test WINDOWS-type S3 APs, the SVM must be joined to an Active Directory domain (CIFS server configured).
+
+### Quick Deploy
+
+```bash
+# 1. Deploy AD environment (choose pattern: ManagedAD, SimpleAD, or SelfManagedEC2)
+aws cloudformation create-stack \
+  --stack-name demo-ad-env \
+  --template-body file://shared/templates/demo-ad-environment.yaml \
+  --parameters file://shared/params/demo-ad-environment.example.json \
+  --capabilities CAPABILITY_NAMED_IAM
+
+# 2. Wait for AD to become Active (~15-30 min)
+aws cloudformation wait stack-create-complete --stack-name demo-ad-env
+
+# 3. Get DNS IPs from stack outputs
+DNS_IPS=$(aws cloudformation describe-stacks --stack-name demo-ad-env \
+  --query 'Stacks[0].Outputs[?OutputKey==`DnsIpAddresses`].OutputValue' --output text)
+
+# 4. Join SVM to domain
+./shared/scripts/demo-ad-join-svm.sh \
+  --fsxn-mgmt-ip YOUR-MGMT-IP \
+  --svm-name YOUR-SVM-NAME \
+  --domain lakehouse.example.com \
+  --dns-ips "$DNS_IPS" \
+  --secret-arn $(aws cloudformation describe-stacks --stack-name demo-ad-env \
+    --query 'Stacks[0].Outputs[?OutputKey==`CredentialsSecretArn`].OutputValue' --output text)
+
+# 5. Create WINDOWS-type S3 AP
+aws fsx create-and-attach-s3-access-point \
+  --name windows-test-ap --type ONTAP \
+  --ontap-configuration '{"VolumeId":"YOUR-VOL-ID","FileSystemIdentity":{"Type":"WINDOWS","WindowsUser":{"Name":"LAKEHOUSE\\lakehouse-reader"}}}'
+```
+
+### Pattern Comparison
+
+| Pattern | Deploy Time | Monthly Cost | Best For |
+|---|---|---|---|
+| AWS Managed Microsoft AD | ~20 min | ~$100 (Standard) | Production, multi-AZ HA |
+| Simple AD | ~15 min | ~$50 (Small) | Dev/test, cost-sensitive |
+| Self-Managed EC2 | ~10 min + config | ~$30 (t3.medium) | Existing domain, custom config |
+
+### Tear-down
+
+```bash
+# Important: Unjoin SVM from domain BEFORE deleting AD
+# (via ONTAP: vserver cifs delete -vserver <svm>)
+aws cloudformation delete-stack --stack-name demo-ad-env
 ```
 
 ---

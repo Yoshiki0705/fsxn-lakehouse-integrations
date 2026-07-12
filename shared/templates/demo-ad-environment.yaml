@@ -1,0 +1,454 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Demo Active Directory Environment for FSx for ONTAP S3 AP WINDOWS User Type Testing.
+
+  This template provisions an AD environment required to test S3 Access Points with
+  FileSystemIdentity Type=WINDOWS. The SVM must be domain-joined (CIFS server configured)
+  before creating WINDOWS-type S3 APs.
+
+  Three patterns (select via ADPattern parameter):
+    A) AWS Managed Microsoft AD (Enterprise) — production-ready, multi-AZ, ~$100/mo
+    B) Simple AD (Samba 4) — lightweight dev/test, single-region, ~$50/mo
+    C) Self-Managed AD on EC2 — bring your own domain controller, maximum control
+
+  Post-deploy: Run shared/scripts/demo-ad-join-svm.sh to join the SVM to the domain.
+
+  Reference: https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/self-managed-AD.html
+
+Parameters:
+  # --- Pattern Selection ---
+  ADPattern:
+    Type: String
+    Default: ManagedAD
+    AllowedValues:
+      - ManagedAD
+      - SimpleAD
+      - SelfManagedEC2
+    Description: |
+      AD deployment pattern:
+        ManagedAD    = AWS Managed Microsoft AD (Enterprise edition, multi-AZ)
+        SimpleAD     = Simple AD (Samba 4, dev/test only)
+        SelfManagedEC2 = Windows Server EC2 as domain controller
+
+  # --- Network ---
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where AD and FSx for ONTAP reside (must be the same VPC)
+
+  PrivateSubnetId1:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private subnet in AZ-1 (for AD directory or EC2 DC)
+
+  PrivateSubnetId2:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private subnet in AZ-2 (for multi-AZ AD; ignored for SelfManagedEC2)
+
+  VpcCidr:
+    Type: String
+    Default: '198.51.100.0/16'
+    Description: VPC CIDR for security group rules (RFC 5737 example range)
+
+  # --- Domain Configuration ---
+  DomainName:
+    Type: String
+    Default: lakehouse.example.com
+    Description: Fully qualified AD domain name
+    AllowedPattern: '^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$'
+
+  DomainShortName:
+    Type: String
+    Default: LAKEHOUSE
+    Description: NetBIOS domain name (max 15 chars, uppercase)
+    MaxLength: 15
+
+  AdminPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 64
+    Description: |
+      AD Administrator password. Must meet complexity requirements:
+      uppercase + lowercase + number + special char, min 8 chars.
+
+  # --- AD Edition (ManagedAD only) ---
+  ManagedADEdition:
+    Type: String
+    Default: Standard
+    AllowedValues:
+      - Standard
+      - Enterprise
+    Description: |
+      AWS Managed AD edition:
+        Standard  = up to 5,000 users, 2 DCs (~$100/mo)
+        Enterprise = up to 500,000 users, 2 DCs (~$300/mo)
+
+  # --- EC2 DC (SelfManagedEC2 only) ---
+  EC2InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+      - m5.large
+    Description: Instance type for self-managed DC (SelfManagedEC2 pattern only)
+
+  EC2KeyPairName:
+    Type: String
+    Default: ''
+    Description: EC2 Key Pair name for RDP access (SelfManagedEC2 only; leave empty to skip)
+
+  # --- Environment ---
+  Environment:
+    Type: String
+    Default: demo
+    AllowedValues: [demo, dev, staging]
+    Description: Environment tag
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Pattern Selection"
+        Parameters:
+          - ADPattern
+      - Label:
+          default: "Network"
+        Parameters:
+          - VpcId
+          - PrivateSubnetId1
+          - PrivateSubnetId2
+          - VpcCidr
+      - Label:
+          default: "Domain Configuration"
+        Parameters:
+          - DomainName
+          - DomainShortName
+          - AdminPassword
+      - Label:
+          default: "AWS Managed AD Options"
+        Parameters:
+          - ManagedADEdition
+      - Label:
+          default: "Self-Managed EC2 Options"
+        Parameters:
+          - EC2InstanceType
+          - EC2KeyPairName
+      - Label:
+          default: "Environment"
+        Parameters:
+          - Environment
+
+Conditions:
+  IsManagedAD: !Equals [!Ref ADPattern, 'ManagedAD']
+  IsSimpleAD: !Equals [!Ref ADPattern, 'SimpleAD']
+  IsSelfManaged: !Equals [!Ref ADPattern, 'SelfManagedEC2']
+  HasKeyPair: !Not [!Equals [!Ref EC2KeyPairName, '']]
+
+Resources:
+  # ============================================================
+  # Security Group (shared across all patterns)
+  # ============================================================
+  ADSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub '${Environment} AD domain controller access'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # DNS
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: !Ref VpcCidr
+          Description: DNS TCP
+        - IpProtocol: udp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: !Ref VpcCidr
+          Description: DNS UDP
+        # Kerberos
+        - IpProtocol: tcp
+          FromPort: 88
+          ToPort: 88
+          CidrIp: !Ref VpcCidr
+          Description: Kerberos TCP
+        - IpProtocol: udp
+          FromPort: 88
+          ToPort: 88
+          CidrIp: !Ref VpcCidr
+          Description: Kerberos UDP
+        # LDAP
+        - IpProtocol: tcp
+          FromPort: 389
+          ToPort: 389
+          CidrIp: !Ref VpcCidr
+          Description: LDAP TCP
+        - IpProtocol: udp
+          FromPort: 389
+          ToPort: 389
+          CidrIp: !Ref VpcCidr
+          Description: LDAP UDP
+        # LDAPS
+        - IpProtocol: tcp
+          FromPort: 636
+          ToPort: 636
+          CidrIp: !Ref VpcCidr
+          Description: LDAPS
+        # SMB/CIFS (for domain join)
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          CidrIp: !Ref VpcCidr
+          Description: SMB/CIFS
+        # RPC
+        - IpProtocol: tcp
+          FromPort: 135
+          ToPort: 135
+          CidrIp: !Ref VpcCidr
+          Description: RPC Endpoint Mapper
+        # RPC dynamic ports
+        - IpProtocol: tcp
+          FromPort: 49152
+          ToPort: 65535
+          CidrIp: !Ref VpcCidr
+          Description: RPC dynamic ports
+        # NTP
+        - IpProtocol: udp
+          FromPort: 123
+          ToPort: 123
+          CidrIp: !Ref VpcCidr
+          Description: NTP
+        # Global Catalog
+        - IpProtocol: tcp
+          FromPort: 3268
+          ToPort: 3269
+          CidrIp: !Ref VpcCidr
+          Description: Global Catalog (LDAP + LDAPS)
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-ad-sg'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Purpose
+          Value: active-directory
+
+  # ============================================================
+  # Pattern A: AWS Managed Microsoft AD
+  # ============================================================
+  ManagedMicrosoftAD:
+    Type: AWS::DirectoryService::MicrosoftAD
+    Condition: IsManagedAD
+    Properties:
+      Name: !Ref DomainName
+      ShortName: !Ref DomainShortName
+      Password: !Ref AdminPassword
+      Edition: !Ref ManagedADEdition
+      VpcSettings:
+        VpcId: !Ref VpcId
+        SubnetIds:
+          - !Ref PrivateSubnetId1
+          - !Ref PrivateSubnetId2
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-managed-ad'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+
+  # ============================================================
+  # Pattern B: Simple AD
+  # ============================================================
+  SimpleADDirectory:
+    Type: AWS::DirectoryService::SimpleAD
+    Condition: IsSimpleAD
+    Properties:
+      Name: !Ref DomainName
+      ShortName: !Ref DomainShortName
+      Password: !Ref AdminPassword
+      Size: Small
+      VpcSettings:
+        VpcId: !Ref VpcId
+        SubnetIds:
+          - !Ref PrivateSubnetId1
+          - !Ref PrivateSubnetId2
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-simple-ad'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+
+  # ============================================================
+  # Pattern C: Self-Managed AD on EC2
+  # ============================================================
+  SelfManagedDCRole:
+    Type: AWS::IAM::Role
+    Condition: IsSelfManaged
+    Properties:
+      RoleName: !Sub '${Environment}-ad-dc-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+
+  SelfManagedDCInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: IsSelfManaged
+    Properties:
+      Roles:
+        - !Ref SelfManagedDCRole
+
+  SelfManagedDC:
+    Type: AWS::EC2::Instance
+    Condition: IsSelfManaged
+    Properties:
+      InstanceType: !Ref EC2InstanceType
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base}}'
+      SubnetId: !Ref PrivateSubnetId1
+      IamInstanceProfile: !Ref SelfManagedDCInstanceProfile
+      SecurityGroupIds:
+        - !Ref ADSecurityGroup
+      KeyName: !If [HasKeyPair, !Ref EC2KeyPairName, !Ref 'AWS::NoValue']
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 50
+            VolumeType: gp3
+            Encrypted: true
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>
+          # Install AD DS role and promote to domain controller
+          Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
+
+          # Configure AD DS Forest
+          $SecurePassword = ConvertTo-SecureString '${AdminPassword}' -AsPlainText -Force
+          Install-ADDSForest `
+            -DomainName '${DomainName}' `
+            -DomainNetBIOSName '${DomainShortName}' `
+            -SafeModeAdministratorPassword $SecurePassword `
+            -InstallDns:$true `
+            -NoRebootOnCompletion:$false `
+            -Force:$true
+
+          # Server will reboot after promotion
+          </powershell>
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-ad-dc-01'
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Role
+          Value: domain-controller
+
+  # ============================================================
+  # DHCP Options Set (points VPC DNS to AD)
+  # ============================================================
+  # Note: For Managed AD and Simple AD, AWS automatically handles DNS.
+  # For Self-Managed, you need to update VPC DHCP options to point to the DC IP.
+  # This is NOT done automatically to avoid disrupting existing VPC DNS.
+  # Run: aws ec2 create-dhcp-options --dhcp-configurations \
+  #        "Key=domain-name-servers,Values=<DC-Private-IP>,198.51.100.2" \
+  #        "Key=domain-name,Values=${DomainName}"
+
+  # ============================================================
+  # Secrets Manager — Store AD credentials for SVM join script
+  # ============================================================
+  ADCredentialsSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${Environment}/ad-credentials'
+      Description: AD Administrator credentials for SVM domain join
+      SecretString: !Sub |
+        {
+          "domain": "${DomainName}",
+          "netbios": "${DomainShortName}",
+          "username": "Admin",
+          "password": "${AdminPassword}"
+        }
+      Tags:
+        - Key: Project
+          Value: fsxn-lakehouse-integrations
+        - Key: Purpose
+          Value: svm-domain-join
+
+Outputs:
+  ADPattern:
+    Description: Deployed AD pattern
+    Value: !Ref ADPattern
+
+  DirectoryId:
+    Description: Directory Service ID (ManagedAD or SimpleAD only)
+    Value: !If
+      - IsManagedAD
+      - !Ref ManagedMicrosoftAD
+      - !If
+        - IsSimpleAD
+        - !Ref SimpleADDirectory
+        - 'N/A (Self-Managed)'
+
+  DnsIpAddresses:
+    Description: |
+      DNS IP addresses for the AD domain controllers.
+      Use these as DNS servers in SVM configuration.
+    Value: !If
+      - IsManagedAD
+      - !Join [',', !GetAtt ManagedMicrosoftAD.DnsIpAddresses]
+      - !If
+        - IsSimpleAD
+        - !Join [',', !GetAtt SimpleADDirectory.DnsIpAddresses]
+        - !Sub '(Check EC2 instance ${SelfManagedDC} private IP after boot)'
+
+  DomainName:
+    Description: AD domain FQDN
+    Value: !Ref DomainName
+    Export:
+      Name: !Sub '${Environment}-ADDomainName'
+
+  DomainShortName:
+    Description: NetBIOS domain name
+    Value: !Ref DomainShortName
+
+  ADSecurityGroupId:
+    Description: Security group ID for AD communication
+    Value: !Ref ADSecurityGroup
+    Export:
+      Name: !Sub '${Environment}-ADSecurityGroupId'
+
+  CredentialsSecretArn:
+    Description: Secrets Manager ARN with AD admin credentials (for demo-ad-join-svm.sh)
+    Value: !Ref ADCredentialsSecret
+
+  SelfManagedDCInstanceId:
+    Condition: IsSelfManaged
+    Description: EC2 Instance ID of self-managed domain controller
+    Value: !Ref SelfManagedDC
+
+  NextSteps:
+    Description: Post-deployment instructions
+    Value: |
+      1. Wait for directory to become Active (~15-30 min for Managed/Simple AD)
+      2. Note the DNS IP addresses from the DnsIpAddresses output
+      3. Run: ./shared/scripts/demo-ad-join-svm.sh \
+           --fsxn-mgmt-ip <MGMT_IP> \
+           --svm-name <SVM_NAME> \
+           --domain <DOMAIN_FQDN> \
+           --dns-ips <DNS_IP1>,<DNS_IP2> \
+           --secret-arn <CredentialsSecretArn output>
+      4. Create S3 AP with WINDOWS user type:
+         aws fsx create-and-attach-s3-access-point \
+           --name windows-test-ap \
+           --type ONTAP \
+           --ontap-configuration '{
+             "VolumeId": "<VOL_ID>",
+             "FileSystemIdentity": {
+               "Type": "WINDOWS",
+               "WindowsUser": {"Name": "DOMAIN\\username"}
+             }
+           }'
