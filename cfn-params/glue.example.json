@@ -1,0 +1,9 @@
+[
+  {"ParameterKey": "FileSystemId", "ParameterValue": "fs-0EXAMPLE1234abcde"},
+  {"ParameterKey": "VolumeId", "ParameterValue": "fsvol-0EXAMPLE1234abcde"},
+  {"ParameterKey": "S3AccessPointName", "ParameterValue": "fsxn-glue-ap"},
+  {"ParameterKey": "GlueDatabaseName", "ParameterValue": "fsxn_glue_db"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "ETLScriptBucket", "ParameterValue": "YOUR-etl-script-bucket"},
+  {"ParameterKey": "ScheduleExpression", "ParameterValue": "cron(0 2 * * ? *)"}
+]

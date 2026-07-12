@@ -1,0 +1,11 @@
+[
+  {"ParameterKey": "FPolicyClusterArn", "ParameterValue": "arn:aws:ecs:ap-northeast-1:123456789012:cluster/YOUR-CLUSTER"},
+  {"ParameterKey": "FPolicyServiceName", "ParameterValue": "fsxn-fpolicy-server-FPolicyService-XXXX"},
+  {"ParameterKey": "OntapManagementIp", "ParameterValue": "198.51.100.10"},
+  {"ParameterKey": "OntapCredentialSecretArn", "ParameterValue": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:ontap-admin-creds-XXXXXX"},
+  {"ParameterKey": "SvmName", "ParameterValue": "YOUR-SVM-NAME"},
+  {"ParameterKey": "EngineName", "ParameterValue": "fpolicy_lakehouse_engine"},
+  {"ParameterKey": "FPolicyPort", "ParameterValue": "9898"},
+  {"ParameterKey": "SubnetIds", "ParameterValue": "subnet-0EXAMPLEaaa,subnet-0EXAMPLEbbb"},
+  {"ParameterKey": "SecurityGroupId", "ParameterValue": "sg-0EXAMPLE1234abcde"}
+]

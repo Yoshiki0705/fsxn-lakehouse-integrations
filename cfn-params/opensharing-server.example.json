@@ -1,0 +1,5 @@
+[
+  {"ParameterKey": "S3AccessPointAlias", "ParameterValue": "fsxn-opensharing-ap-123456789012-ext-s3alias"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "CredentialDurationSeconds", "ParameterValue": "900"}
+]
