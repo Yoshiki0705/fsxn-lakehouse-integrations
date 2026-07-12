@@ -32,6 +32,7 @@ npm test
 | zizmor | `.github/workflows/zizmor.yml` | GitHub Actions security linting (SHA-pinning, credential persistence, injection) |
 | gitleaks | `.github/workflows/gitleaks.yml` | Secret detection — custom rules in `.gitleaks.toml` |
 | OpenSSF Scorecard | `.github/workflows/scorecard.yml` | Automated security health scoring |
+| Renovate | `renovate.json` | Automated dependency updates ([Renovate GitHub App](https://github.com/apps/renovate) must be enabled on the repo) |
 
 ### Local Security Checks
 
