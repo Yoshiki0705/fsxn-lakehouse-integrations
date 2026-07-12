@@ -13,6 +13,14 @@ Description: |
 
   Post-deploy: Run shared/scripts/demo-ad-join-svm.sh to join the SVM to the domain.
 
+  IMPORTANT — SSM Domain Join for Windows Clients:
+    If you need to join additional Windows EC2 instances to the domain created here,
+    use AWS::SSM::Association with the AWS-managed document "AWS-JoinDirectoryServiceDomain"
+    as a SEPARATE resource. Do NOT use EC2 SsmAssociations property with custom SSM Documents
+    containing aws:domainJoin — this causes "Document schema version 2.2 is not supported
+    by association that is created with instance id" deployment failures.
+    See: https://docs.aws.amazon.com/systems-manager/latest/userguide/sysman-state-assoc.html
+
   Reference: https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/self-managed-AD.html
 
 Parameters:
@@ -293,6 +301,7 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonSSMDirectoryServiceAccess
       Tags:
         - Key: Project
           Value: fsxn-lakehouse-integrations
@@ -360,6 +369,8 @@ Resources:
   # ============================================================
   # Secrets Manager — Store AD credentials for SVM join script
   # ============================================================
+  # Secrets Manager — Store AD credentials for SVM join script
+  # ============================================================
   ADCredentialsSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -377,6 +388,31 @@ Resources:
           Value: fsxn-lakehouse-integrations
         - Key: Purpose
           Value: svm-domain-join
+
+  # ============================================================
+  # Example: SSM Association for joining Windows CLIENTS to domain
+  # (Uncomment if you deploy Windows EC2 instances that need domain join)
+  #
+  # CORRECT pattern: Use AWS-managed document as a separate resource.
+  # DO NOT use EC2 SsmAssociations property with custom documents.
+  # ============================================================
+  # DomainJoinAssociation:
+  #   Type: AWS::SSM::Association
+  #   Condition: IsManagedAD  # or IsSimpleAD — works with Directory Service directories
+  #   Properties:
+  #     Name: AWS-JoinDirectoryServiceDomain
+  #     Targets:
+  #       - Key: InstanceIds
+  #         Values:
+  #           - !Ref YourWindowsClientInstance
+  #     Parameters:
+  #       directoryId:
+  #         - !Ref ManagedMicrosoftAD
+  #       directoryName:
+  #         - !Ref DomainName
+  #       dnsIpAddresses:
+  #         - !Select [0, !GetAtt ManagedMicrosoftAD.DnsIpAddresses]
+  #         - !Select [1, !GetAtt ManagedMicrosoftAD.DnsIpAddresses]
 
 Outputs:
   ADPattern:
