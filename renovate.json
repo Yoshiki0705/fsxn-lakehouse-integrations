@@ -1,0 +1,56 @@
+{
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommitsDisabled"
+  ],
+  "timezone": "Asia/Tokyo",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "commitMessagePrefix": "chore(deps):",
+  "dependencyDashboard": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "description": "Group all GitHub Actions updates together, keep SHA pinning per repo policy",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "pinDigests": true
+    },
+    {
+      "description": "Group Python pip requirements.txt updates",
+      "matchManagers": ["pip_requirements"],
+      "groupName": "python-pip-dependencies"
+    },
+    {
+      "description": "Group Python pyproject.toml (PEP 621) updates",
+      "matchManagers": ["pep621"],
+      "groupName": "python-pep621-dependencies"
+    },
+    {
+      "description": "Group Terraform provider and module updates",
+      "matchManagers": ["terraform"],
+      "groupName": "terraform-dependencies"
+    },
+    {
+      "description": "Group Docker base image updates",
+      "matchManagers": ["dockerfile"],
+      "groupName": "docker-dependencies"
+    },
+    {
+      "description": "Require manual approval for major version bumps",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    ".venv/**",
+    ".pytest_cache/**",
+    "cdk.out/**"
+  ]
+}
