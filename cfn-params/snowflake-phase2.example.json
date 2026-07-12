@@ -1,0 +1,9 @@
+[
+  {"ParameterKey": "EnvironmentName", "ParameterValue": "fsxn-lakehouse"},
+  {"ParameterKey": "S3AccessPointArn", "ParameterValue": "arn:aws:s3:ap-northeast-1:123456789012:accesspoint/fsxn-snowflake-ap"},
+  {"ParameterKey": "S3AccessPointAlias", "ParameterValue": "fsxn-snowflake-ap-123456789012-ext-s3alias"},
+  {"ParameterKey": "SnowflakeAccountId", "ParameterValue": "YOUR-SNOWFLAKE-AWS-ACCOUNT-ID"},
+  {"ParameterKey": "SnowflakeExternalId", "ParameterValue": "YOUR-STORAGE_AWS_EXTERNAL_ID-FROM-DESCRIBE-INTEGRATION"},
+  {"ParameterKey": "EnableSnowpipe", "ParameterValue": "true"},
+  {"ParameterKey": "SnowflakeSqsArn", "ParameterValue": "arn:aws:sqs:ap-northeast-1:YOUR-SNOWFLAKE-ACCOUNT:sf-snowpipe-XXXXXXXX"}
+]

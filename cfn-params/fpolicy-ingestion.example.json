@@ -1,0 +1,8 @@
+[
+  {"ParameterKey": "VpcId", "ParameterValue": "vpc-0EXAMPLE1234abcde"},
+  {"ParameterKey": "PrivateSubnetIds", "ParameterValue": "subnet-0EXAMPLEaaa,subnet-0EXAMPLEbbb"},
+  {"ParameterKey": "VpcEndpointSecurityGroupId", "ParameterValue": "sg-0EXAMPLE1234abcde"},
+  {"ParameterKey": "SNSTopicArn", "ParameterValue": "arn:aws:sns:ap-northeast-1:123456789012:fsxn-fpolicy-routing-snowpipe-topic"},
+  {"ParameterKey": "S3AccessPointAlias", "ParameterValue": "fsxn-snowflake-ap-123456789012-ext-s3alias"},
+  {"ParameterKey": "EventBusName", "ParameterValue": ""}
+]

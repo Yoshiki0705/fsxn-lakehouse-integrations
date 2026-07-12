@@ -1,0 +1,14 @@
+[
+  {"ParameterKey": "TargetType", "ParameterValue": "SNS_SNOWPIPE"},
+  {"ParameterKey": "SnowflakeSqsArn", "ParameterValue": "arn:aws:sqs:ap-northeast-1:YOUR-SNOWFLAKE-ACCOUNT:sf-snowpipe-XXXXXXXX"},
+  {"ParameterKey": "SnowflakeIamUserArn", "ParameterValue": "arn:aws:iam::YOUR-SNOWFLAKE-ACCOUNT:user/XXXXXXXX"},
+  {"ParameterKey": "EventBusName", "ParameterValue": "fsxn-fpolicy-events"},
+  {"ParameterKey": "GlueJobName", "ParameterValue": ""},
+  {"ParameterKey": "GlueCrawlerName", "ParameterValue": ""},
+  {"ParameterKey": "DatabricksWorkspaceUrl", "ParameterValue": ""},
+  {"ParameterKey": "DatabricksJobId", "ParameterValue": ""},
+  {"ParameterKey": "DatabricksTokenSecretArn", "ParameterValue": ""},
+  {"ParameterKey": "StateMachineArn", "ParameterValue": ""},
+  {"ParameterKey": "LambdaFunctionArn", "ParameterValue": ""},
+  {"ParameterKey": "FilterExtensions", "ParameterValue": ".parquet,.csv,.json"}
+]

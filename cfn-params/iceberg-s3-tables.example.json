@@ -1,0 +1,5 @@
+[
+  {"ParameterKey": "TableBucketName", "ParameterValue": "fsxn-metadata-catalog"},
+  {"ParameterKey": "AthenaResultsBucket", "ParameterValue": "YOUR-athena-results-bucket"},
+  {"ParameterKey": "QueryUserArn", "ParameterValue": "arn:aws:iam::123456789012:role/YOUR-QUERY-ROLE"}
+]

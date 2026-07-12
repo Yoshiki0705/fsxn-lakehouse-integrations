@@ -1,0 +1,16 @@
+[
+  {"ParameterKey": "VpcId", "ParameterValue": "vpc-0EXAMPLE1234abcde"},
+  {"ParameterKey": "SubnetIds", "ParameterValue": "subnet-0EXAMPLEaaa,subnet-0EXAMPLEbbb"},
+  {"ParameterKey": "FsxnSvmSecurityGroupId", "ParameterValue": "sg-0EXAMPLE1234abcde"},
+  {"ParameterKey": "SqsQueueUrl", "ParameterValue": "https://sqs.ap-northeast-1.amazonaws.com/123456789012/fsxn-fpolicy-ingestion-fpolicy-events"},
+  {"ParameterKey": "SqsQueueArn", "ParameterValue": "arn:aws:sqs:ap-northeast-1:123456789012:fsxn-fpolicy-ingestion-fpolicy-events"},
+  {"ParameterKey": "ContainerImage", "ParameterValue": "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/fpolicy-server:latest"},
+  {"ParameterKey": "FPolicyPort", "ParameterValue": "9898"},
+  {"ParameterKey": "WriteCompleteDelaySec", "ParameterValue": "5"},
+  {"ParameterKey": "Mode", "ParameterValue": "realtime"},
+  {"ParameterKey": "DesiredCount", "ParameterValue": "1"},
+  {"ParameterKey": "Cpu", "ParameterValue": "256"},
+  {"ParameterKey": "Memory", "ParameterValue": "512"},
+  {"ParameterKey": "SvmName", "ParameterValue": "YOUR-SVM-NAME"},
+  {"ParameterKey": "VolumeName", "ParameterValue": "vol1"}
+]

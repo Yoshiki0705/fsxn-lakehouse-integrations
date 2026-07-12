@@ -1,0 +1,5 @@
+[
+  {"ParameterKey": "EnvironmentName", "ParameterValue": "fsxn-lakehouse"},
+  {"ParameterKey": "S3AccessPointArn", "ParameterValue": "arn:aws:s3:ap-northeast-1:123456789012:accesspoint/fsxn-lakehouse-ap"},
+  {"ParameterKey": "AllowedVpcId", "ParameterValue": ""}
+]

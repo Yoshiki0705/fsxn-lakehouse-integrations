@@ -1,0 +1,13 @@
+[
+  {"ParameterKey": "EnvironmentName", "ParameterValue": "databricks-fsxn-verify"},
+  {"ParameterKey": "VpcId", "ParameterValue": "vpc-0EXAMPLE1234abcde"},
+  {"ParameterKey": "VpcCidr", "ParameterValue": "198.51.100.0/16"},
+  {"ParameterKey": "PublicSubnetId", "ParameterValue": "subnet-0EXAMPLEpublic"},
+  {"ParameterKey": "DatabricksSubnet1Cidr", "ParameterValue": "198.51.100.32/19"},
+  {"ParameterKey": "DatabricksSubnet2Cidr", "ParameterValue": "198.51.100.64/19"},
+  {"ParameterKey": "AvailabilityZone1", "ParameterValue": "ap-northeast-1a"},
+  {"ParameterKey": "AvailabilityZone2", "ParameterValue": "ap-northeast-1c"},
+  {"ParameterKey": "FsxNfsIp", "ParameterValue": "198.51.100.133"},
+  {"ParameterKey": "FsxMgmtIp", "ParameterValue": "198.51.100.72"},
+  {"ParameterKey": "S3VpcEndpointId", "ParameterValue": ""}
+]
