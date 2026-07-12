@@ -1,0 +1,14 @@
+[
+  {"ParameterKey": "ADPattern", "ParameterValue": "ManagedAD"},
+  {"ParameterKey": "VpcId", "ParameterValue": "vpc-0EXAMPLE1234abcde"},
+  {"ParameterKey": "PrivateSubnetId1", "ParameterValue": "subnet-0EXAMPLEaaa"},
+  {"ParameterKey": "PrivateSubnetId2", "ParameterValue": "subnet-0EXAMPLEbbb"},
+  {"ParameterKey": "VpcCidr", "ParameterValue": "198.51.100.0/16"},
+  {"ParameterKey": "DomainName", "ParameterValue": "lakehouse.example.com"},
+  {"ParameterKey": "DomainShortName", "ParameterValue": "LAKEHOUSE"},
+  {"ParameterKey": "AdminPassword", "ParameterValue": "REPLACE-WITH-SECURE-PASSWORD"},
+  {"ParameterKey": "ManagedADEdition", "ParameterValue": "Standard"},
+  {"ParameterKey": "EC2InstanceType", "ParameterValue": "t3.medium"},
+  {"ParameterKey": "EC2KeyPairName", "ParameterValue": ""},
+  {"ParameterKey": "Environment", "ParameterValue": "demo"}
+]

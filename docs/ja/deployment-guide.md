@@ -44,6 +44,7 @@
 | デプロイ前の環境検証 | [プリフライトチェック](#プリフライトチェック) |
 | コスト見積もり | [コストリファレンス](#コストリファレンス) |
 | 失敗時のロールバック | [ロールバック手順](#ロールバック手順) |
+| WINDOWS ユーザータイプ S3 AP テスト | [AD 環境セットアップ](#windows-ユーザータイプ用-ad-環境) |
 
 ---
 
@@ -527,6 +528,68 @@ aws s3 ls "s3://YOUR-AP-ALIAS/" --region ap-northeast-1
 
 # 3. タイムアウト時、DNS 解決を確認
 nslookup YOUR-AP-ALIAS.s3.ap-northeast-1.amazonaws.com
+```
+
+---
+
+## WINDOWS ユーザータイプ用 AD 環境
+
+FSx for ONTAP S3 Access Points は 3 つの `FileSystemIdentity` タイプをサポートする:
+
+| タイプ | AD 必須 | ユースケース |
+|---|:---:|---|
+| `UNIX` | No | NFS ワークロード、最もシンプル |
+| `WINDOWS` | **Yes** | NTFS セキュリティデータ、AD 認証アクセス |
+| `NONE` | No | root アクセス（テスト専用、非推奨） |
+
+WINDOWS タイプの S3 AP をテストするには、SVM が Active Directory ドメインに参加済み（CIFS サーバー構成済み）である必要がある。
+
+### クイックデプロイ
+
+```bash
+# 1. AD 環境デプロイ（パターン選択: ManagedAD, SimpleAD, SelfManagedEC2）
+aws cloudformation create-stack \
+  --stack-name demo-ad-env \
+  --template-body file://shared/templates/demo-ad-environment.yaml \
+  --parameters file://shared/params/demo-ad-environment.example.json \
+  --capabilities CAPABILITY_NAMED_IAM
+
+# 2. AD が Active になるまで待機（約 15-30 分）
+aws cloudformation wait stack-create-complete --stack-name demo-ad-env
+
+# 3. スタック出力から DNS IP を取得
+DNS_IPS=$(aws cloudformation describe-stacks --stack-name demo-ad-env \
+  --query 'Stacks[0].Outputs[?OutputKey==`DnsIpAddresses`].OutputValue' --output text)
+
+# 4. SVM をドメインに参加
+./shared/scripts/demo-ad-join-svm.sh \
+  --fsxn-mgmt-ip YOUR-MGMT-IP \
+  --svm-name YOUR-SVM-NAME \
+  --domain lakehouse.example.com \
+  --dns-ips "$DNS_IPS" \
+  --secret-arn $(aws cloudformation describe-stacks --stack-name demo-ad-env \
+    --query 'Stacks[0].Outputs[?OutputKey==`CredentialsSecretArn`].OutputValue' --output text)
+
+# 5. WINDOWS タイプ S3 AP を作成
+aws fsx create-and-attach-s3-access-point \
+  --name windows-test-ap --type ONTAP \
+  --ontap-configuration '{"VolumeId":"YOUR-VOL-ID","FileSystemIdentity":{"Type":"WINDOWS","WindowsUser":{"Name":"LAKEHOUSE\\lakehouse-reader"}}}'
+```
+
+### パターン比較
+
+| パターン | デプロイ時間 | 月額コスト | 用途 |
+|---|---|---|---|
+| AWS Managed Microsoft AD | 約 20 分 | 約 $100（Standard） | 本番、マルチ AZ HA |
+| Simple AD | 約 15 分 | 約 $50（Small） | 開発/テスト、コスト重視 |
+| Self-Managed EC2 | 約 10 分 + 設定 | 約 $30（t3.medium） | 既存ドメイン、カスタム設定 |
+
+### 削除
+
+```bash
+# 重要: AD 削除前に SVM のドメイン参加を解除すること
+# (ONTAP: vserver cifs delete -vserver <svm>)
+aws cloudformation delete-stack --stack-name demo-ad-env
 ```
 
 ---
