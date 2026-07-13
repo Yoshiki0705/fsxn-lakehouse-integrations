@@ -15,7 +15,7 @@
 | 事実 | ソース |
 |------|--------|
 | OpenSharing は構造化データに加え、AI アセット（agent skills、AI models、非構造化データ）を扱う初のオープンプロトコル | [Databricks Press Release](https://www.databricks.com/company/newsroom/press-releases/databricks-announces-opensharing) |
-| Apache Iceberg IRC クライアントに対応し、Delta Sharing recipient を超えてリーチを拡大 | 同上 |
+| Apache Iceberg IRC クライアントに対応し、従来の Delta Sharing recipient を超えてリーチを拡大 | 同上 |
 | Storage Ecosystem は zero-copy アーキテクチャでハイブリッド/オンプレストレージを Unity Catalog に接続 | [Databricks Blog](https://www.databricks.com/blog/announcing-databricks-storage-ecosystem-governing-enterprise-data-estate-wherever-it-lives) |
 | GA/プレビューの launch partner にオブジェクトストレージ/ハイブリッドストレージのベンダーが含まれ、追加のエンタープライズストレージパートナーが "coming soon"（年内）として記載 | 同上 |
 | 非構造化データ向け Volumes APIs が次ステップとして明示的に予告 | 同上 |
@@ -36,7 +36,7 @@
 
 ## 技術ノート: FSx for ONTAP の presigned URL 挙動
 
-Delta Sharing / OpenSharing は短命の presigned URL に依存するため、FSx for ONTAP の presigned URL 挙動が本分析の中核となる。以下の2つの問いは**分けて**考える必要がある:
+OpenSharing は短命の presigned URL または STS 認証情報に依存するため、FSx for ONTAP の presigned URL 挙動が本分析の中核となる。以下の2つの問いは**分けて**考える必要がある:
 
 1. **ドキュメントが Presign をサポートと記載しているか**（記載上の立場）
 2. **クライアントが生成した presigned URL が実際にエンドポイントで動作するか**（実証された挙動）

@@ -1,24 +1,24 @@
 🌐 [English](../en/delta-sharing-volume-guide.md) | **日本語**
 
-# Delta Sharing & Volume Sharing 統合ガイド
+# OpenSharing & Volume Sharing 統合ガイド
 
 > **ステータス**: アーキテクチャリファレンス — Pattern A/B は PoC 実施可能、Pattern C は Databricks UC 機能開発待ち（ブロック中）
 >
-> **コンテキスト**: このガイドは、FSx for ONTAP S3 Access Points との直接的な UC External Location 統合が[現在サポートされていない](../../README.md#support-confirmation-2026-05-26)状況において、Delta Sharing を使って FSx for ONTAP データを Databricks Unity Catalog ガバナンス下で利用する方法を文書化しています。
+> **コンテキスト**: このガイドは、FSx for ONTAP S3 Access Points との直接的な UC External Location 統合が[現在サポートされていない](../../README.md#support-confirmation-2026-05-26)状況において、OpenSharing を使って FSx for ONTAP データを Databricks Unity Catalog ガバナンス下で利用する方法を文書化しています。
 
 ## エグゼクティブサマリー
 
-Delta Sharing は**共有プロトコル**であり、変換エンジンではありません。任意の NAS ファイル（画像、動画、PDF）をその場でクエリ可能なテーブルに変換するものではありません。Delta Sharing が公開するのは、**準備済みの表形式データセット**です。
+OpenSharing は**共有プロトコル**であり、変換エンジンではありません。任意の NAS ファイル（画像、動画、PDF）をその場でクエリ可能なテーブルに変換するものではありません。OpenSharing が公開するのは、**準備済みの表形式データセット**です。
 
-FSx for ONTAP と Databricks の統合において、Delta Sharing は以下の場合に実用的な共有レイヤーを提供します：
+FSx for ONTAP と Databricks の統合において、OpenSharing は以下の場合に実用的な共有レイヤーを提供します：
 - Databricks がストレージの直接所有者ではなく**受信者（Recipient）**として機能する場合
 - データが先に Delta または Parquet テーブルに変換されている場合
 - Unity Catalog Volumes がガバナンス付き非表形式ファイルアクセスに使用される場合
 
 ### 基本原則
 
-1. **Delta Sharing = 共有プロトコル**（変換エンジンではない）
-2. **FSx for ONTAP S3 Access Points はオブジェクトアクセスを提供** — Delta Sharing にはテーブルセマンティクスが必要
+1. **OpenSharing = 共有プロトコル**（変換エンジンではない）
+2. **FSx for ONTAP S3 Access Points はオブジェクトアクセスを提供** — OpenSharing にはテーブルセマンティクスが必要
 3. **非構造化データの場合**: 共有可能な資産は派生した構造化表現（メタデータ、抽出テキスト、キャプション、embedding）
 4. **真のゼロコピー Raw ファイルアクセスには**: Unity Catalog が FSx for ONTAP S3 AP をファーストクラスのストレージロケーションとしてサポートする必要あり（機能ギャップ — [Databricks エンジニアリングに報告済み](../../README.md#support-confirmation-2026-05-26)）
 
@@ -27,8 +27,8 @@ FSx for ONTAP と Databricks の統合において、Delta Sharing は以下の�
 | あなたの状況 | 推奨アクション | パターン |
 |---|---|---|
 | **Databricks 顧客で NAS データのガバナンス付き分析が必要** | DataSync → S3 → UC External Location → Delta Tables | DataSync パス（検証済み） |
-| **ファイルメタデータを Databricks ユーザーと共有したい** | Lambda + ListObjectsV2 → Delta Table → Delta Sharing | Pattern A |
-| **NAS ドキュメントに対する AI/RAG が Databricks で必要** | Textract/Bedrock → Delta Table → Delta Sharing | Pattern B |
+| **ファイルメタデータを Databricks ユーザーと共有したい** | Lambda + ListObjectsV2 → Delta Table → OpenSharing | Pattern A |
+| **NAS ドキュメントに対する AI/RAG が Databricks で必要** | Textract/Bedrock → Delta Table → OpenSharing | Pattern B |
 | **Raw ファイル（画像/動画/PDF）を Databricks で閲覧したい** | DataSync → S3 → UC External Volume → Volume Sharing | Pattern C（S3 同期あり） |
 | **ゼロコピー直接アクセスが欲しい（S3 バケットなし）** | 現時点では利用不可 — Databricks UC 機能開発待ち | Pattern C（ブロック中） |
 
@@ -38,7 +38,7 @@ FSx for ONTAP と Databricks の統合において、Delta Sharing は以下の�
 
 ### Pattern A: メタデータテーブル共有（推奨初回 PoC）
 
-Raw ファイルそのものではなく、**ファイルカタログ**を Delta Sharing で共有する。
+Raw ファイルそのものではなく、**ファイルカタログ**を OpenSharing で共有する。
 
 ```
 FSx for ONTAP
@@ -47,7 +47,7 @@ AWS Lambda / Glue / Step Functions
   ↓ ファイルインベントリ抽出
 Parquet or Delta メタデータテーブル (S3上)
   ↓
-Delta Sharing (UC Share or OSS Server)
+OpenSharing (UC Share or OSS Server)
   ↓
 Databricks 受信者
 ```
@@ -72,9 +72,9 @@ Databricks 受信者
 - AWS Lambda — 小規模 PoC（ListObjectsV2 → メタデータ抽出）
 - AWS Step Functions — バッチ処理のワークフロー制御
 - AWS Glue — Parquet/Delta への ETL、カタログ管理
-- Amazon S3 — メタデータテーブル保存先（Delta Sharing との互換性のため推奨）
+- Amazon S3 — メタデータテーブル保存先（OpenSharing との互換性のため推奨）
 
-**PoC 成功基準:** Databricks が FSx for ONTAP ファイルメタデータを表す Delta Sharing テーブルをクエリできること。
+**PoC 成功基準:** Databricks が FSx for ONTAP ファイルメタデータを表す OpenSharing テーブルをクエリできること。
 
 **このパターンでの ONTAP の価値**: Snapshot により過去のファイルインベントリを即座に復元可能。メタデータスキャンが不正確な結果を生成した場合、以前の Snapshot に戻して再スキャン — データ損失なし、再アップロード不要。
 
@@ -84,14 +84,14 @@ Databricks 受信者
 - [ ] 監視: CloudWatch メトリクス（Lambda エラー、呼び出し回数、実行時間）
 - [ ] コストモデル: Lambda 呼び出し × ファイル数 × スケジュール頻度
 - [ ] スキーマ進化: 新しいファイルタイプやメタデータフィールドの追加方法
-- [ ] アクセス制御: 共有メタデータテーブルを誰がクエリできるか（Delta Sharing Recipient 権限）
+- [ ] アクセス制御: 共有メタデータテーブルを誰がクエリできるか（OpenSharing Recipient 権限）
 - [ ] 運用ランブック: メタデータテーブルが古い場合や Lambda 失敗時の対応手順
 
 ---
 
 ### Pattern B: AI 処理済みテーブル共有（RAG / 検索 / 分析）
 
-非構造化データを AI サービスで処理し、**派生した構造化出力**を Delta Sharing で共有する。
+非構造化データを AI サービスで処理し、**派生した構造化出力**を OpenSharing で共有する。
 
 ```
 FSx for ONTAP (Raw ファイル: PDF, 画像, 音声, 動画)
@@ -100,7 +100,7 @@ AWS AI サービス (Textract, Rekognition, Transcribe, Bedrock)
   ↓ 抽出テキスト / キャプション / 文字起こし / embedding
 Parquet or Delta テーブル (S3上)
   ↓
-Delta Sharing
+OpenSharing
   ↓
 Databricks 受信者 (Mosaic AI, Vector Search, MLflow)
 ```
@@ -158,7 +158,7 @@ Databricks 受信者 (Mosaic AI, Vector Search, MLflow)
 | 音声 | Amazon Transcribe | Bedrock (要約) | 文字起こし, 話者 ID |
 | 動画 | Rekognition Video | Transcribe + Bedrock | ラベル, シーン, 文字起こし |
 
-**PoC 成功基準:** Databricks が AI 処理済みメタデータ（抽出テキスト、ラベル、要約、embedding）を Delta Sharing 経由でクエリできること。
+**PoC 成功基準:** Databricks が AI 処理済みメタデータ（抽出テキスト、ラベル、要約、embedding）を OpenSharing 経由でクエリできること。
 
 **このパターンでの ONTAP の価値**: FlexClone により AI 処理用のデータセットを即座にゼロコピーで複製可能 — 本番 NFS/SMB ワークロードに影響なし。Storage Efficiency（重複排除 + 圧縮）によりソースファイルと AI 派生テーブルの両方を維持するコストを削減。
 
@@ -186,7 +186,7 @@ Databricks UC External Location (直接)
   ↓
 UC External Volume
   ↓
-Delta Sharing (Volume Sharing)
+OpenSharing (Volume Sharing)
   ↓
 Databricks 受信者 (read_files, ai_query, ai_parse_document)
 ```
@@ -201,7 +201,7 @@ Databricks UC External Location
   ↓
 UC External Volume
   ↓
-Delta Sharing (Volume Sharing)
+OpenSharing (Volume Sharing)
   ↓
 Databricks 受信者
 ```
@@ -321,7 +321,7 @@ FROM read_files(
 | **FSx for ONTAP 上のデータ** | 残存（直接共有しない） | 残存（派生物を共有） | 残存（直接アクセス） |
 | **S3 コピー必要量** | メタデータのみ (~KB) | 派生テーブル (~MB-GB) | 全ファイル同期 (~GB-TB) |
 | **PoC 複雑度** | 低 | 中 | ブロック中（Databricks UC 機能開発が必要） |
-| **ガバナンス** | Delta Sharing + UC | Delta Sharing + UC | UC Volume ACL |
+| **ガバナンス** | OpenSharing + UC | OpenSharing + UC | UC Volume ACL |
 | **AI/ML 対応度** | カタログのみ | 完全（embedding, RAG） | 完全（read_files + ai_query） |
 | **リアルタイム鮮度** | ポーリングベース | パイプライン依存 | ほぼリアルタイム（サポート時） |
 | **Snowflake 連携** | ✅ 同じ curated Iceberg を S3 上で共有可能 | ✅ Open format で共有可能 | ❌ UC Volume は Databricks 専用 |
@@ -440,7 +440,7 @@ FROM read_files(
 - Delta Table にはバイト列の**コピー**が含まれる（参照ではない）
 - テーブル内ではファイルは元の形式ではない — Parquet 内のバイト配列
 
-**使用すべき場面**: ファイル内容自体に ACID、Time Travel、Delta Sharing が必要な場合。
+**使用すべき場面**: ファイル内容自体に ACID、Time Travel、OpenSharing が必要な場合。
 
 #### 方法 3: メタデータのみテーブル化（ファイルは元の場所に残る）
 
@@ -462,7 +462,7 @@ FROM read_files(
 
 ### 比較: 元ファイルはどうなるか？
 
-| 方法 | 元ファイル形式が保持されるか？ | ファイルの所在 | UC ガバナンスレベル | Delta Sharing 対応？ |
+| 方法 | 元ファイル形式が保持されるか？ | ファイルの所在 | UC ガバナンスレベル | OpenSharing 対応？ |
 |------|:---:|---|---|---|
 | **UC Volume** | ✅ はい（JPEG は JPEG のまま） | Volume ストレージ（S3 バケット） | Volume レベル (READ/WRITE VOLUME) | ✅ Volume Sharing |
 | **Delta Table (binaryFile)** | ❌ いいえ（Parquet 内のバイト列） | Delta Table（Parquet ファイル） | テーブルレベル (SELECT, カラムマスク) | ✅ Table Sharing |
@@ -638,11 +638,11 @@ display(spark.read.table("shared_catalog.schema.image_table")
 |------|---|---|
 | **データ所在** | UC 内にデータが必要（S3 バケット） | どこでも可（FSx for ONTAP → 処理 → 共有） |
 | **ガバナンス** | UC がアクセスを統制 | Provider が統制; UC はローカルポリシー適用 |
-| **アーキテクチャ** | FSx for ONTAP → S3 → UC → Share | FSx for ONTAP → Lambda/Glue → Delta table → OSS Delta Sharing Server → Databricks |
+| **アーキテクチャ** | FSx for ONTAP → S3 → UC → Share | FSx for ONTAP → Lambda/Glue → Delta table → OSS OpenSharing Server → Databricks |
 | **複雑度** | シンプル（UC が全て処理） | 柔軟（顧客管理の共有サーバー） |
 | **推奨対象** | Databricks 中心の組織 | マルチプラットフォーム環境 |
 
-**重要な洞察**: Databricks が**受信者**の場合、顧客管理の [OSS Delta Sharing サーバー](https://github.com/delta-io/delta-sharing)が FSx for ONTAP ベースのデータセットを UC にデータを置くことなく公開できます。
+**重要な洞察**: Databricks が**受信者**の場合、顧客管理の [OSS OpenSharing サーバー](https://github.com/delta-io/delta-sharing)が FSx for ONTAP ベースのデータセットを UC にデータを置くことなく公開できます。
 
 ---
 
@@ -653,7 +653,7 @@ display(spark.read.table("shared_catalog.schema.image_table")
 | FSx ファイル権限 | NFS/SMB ACL, UNIX ユーザー | FSx for ONTAP |
 | S3 AP ポリシー | IAM ベース、アクセスポイント単位 | AWS IAM |
 | FPolicy | ファイル操作の監査/ブロック | ONTAP |
-| Delta Sharing | Share レベル、Recipient レベル | 共有サーバーまたは UC |
+| OpenSharing | Share レベル、Recipient レベル | 共有サーバーまたは UC |
 | Unity Catalog | テーブル/Volume/カラム/行レベル | Databricks |
 
 本番デプロイでは、組織要件に基づいて**主要ガバナンスポイント**を定義してください。
@@ -676,7 +676,7 @@ display(spark.read.table("shared_catalog.schema.image_table")
 ```
 Phase 1: Pattern A — ファイルメタデータ共有
 ├── Lambda 関数: FSx for ONTAP S3 AP で ListObjectsV2 → Parquet テーブル
-├── Delta Sharing: メタデータテーブルを Databricks に公開
+├── OpenSharing: メタデータテーブルを Databricks に公開
 ├── Databricks: ファイルカタログをクエリ、タイプ/日付/サイズでフィルタ
 └── 成功: Databricks がガバナンス付き FSx for ONTAP ファイルインベントリを参照可能
 
@@ -684,7 +684,7 @@ Phase 2: Pattern B — AI 処理済み共有
 ├── Textract: FSx for ONTAP 上の PDF からテキスト抽出
 ├── Bedrock: embedding と要約を生成
 ├── Delta テーブル: チャンク + embedding を保存
-├── Delta Sharing: Databricks に公開
+├── OpenSharing: Databricks に公開
 └── 成功: Databricks Vector Search で FSx for ONTAP 由来コンテンツを検索可能
 
 Phase 3: Pattern C — ブロック中（Databricks UC 機能開発が必要）
@@ -698,11 +698,11 @@ Phase 3: Pattern C — ブロック中（Databricks UC 機能開発が必要）
 
 ## FAQ: なぜ「EC2 で Delta Table を作るだけ」では ETL 不要にならないのか？
 
-よくある誤解として、Delta Sharing は純粋にメタデータの問題であり、FSx for ONTAP 上のファイルに Delta Table を向けるだけで ETL やデータ移動なしに共有できる、というものがあります。このセクションでは、なぜそれが成立しないかを Databricks ドキュメントの参照付きで説明します。
+よくある誤解として、OpenSharing は純粋にメタデータの問題であり、FSx for ONTAP 上のファイルに Delta Table を向けるだけで ETL やデータ移動なしに共有できる、というものがあります。このセクションでは、なぜそれが成立しないかを Databricks ドキュメントの参照付きで説明します。
 
-### 誤解: 「Delta Sharing はメタデータだけの問題なので、EC2 で Delta Table を作って共有すればよい」
+### 誤解: 「OpenSharing はメタデータだけの問題なので、EC2 で Delta Table を作って共有すればよい」
 
-**前提の想定**: FSx for ONTAP にファイルがある → EC2 インスタンスがそのファイルを指す Delta Table を作成 → Delta Sharing でテーブルを公開 → Databricks が読む。ETL なし、コピーなし。
+**前提の想定**: FSx for ONTAP にファイルがある → EC2 インスタンスがそのファイルを指す Delta Table を作成 → OpenSharing でテーブルを公開 → Databricks が読む。ETL なし、コピーなし。
 
 **FSx for ONTAP S3 Access Points でこれが動作しない理由:**
 
@@ -745,21 +745,21 @@ FSx for ONTAP S3 AP では、UC セッションポリシーが `PutObject` と�
 
 参照: [Access denied when writing Delta Lake tables to S3](https://kb.databricks.com/en_US/delta/s3-permissions-delta) — "Delta Lake requires creation of a _delta_log directory. The write operation also needs to check the latest version of the commit logs."
 
-#### 4. Delta Sharing にはテーブルの Unity Catalog 登録が必要
+#### 4. OpenSharing にはテーブルの Unity Catalog 登録が必要
 
-Delta Sharing（Databricks-to-Databricks プロトコル）は **Unity Catalog に登録されたテーブル**を共有します。UC に登録されたテーブルは以下のいずれかに存在する必要があります：
+OpenSharing（Databricks-to-Databricks プロトコル）は **Unity Catalog に登録されたテーブル**を共有します。UC に登録されたテーブルは以下のいずれかに存在する必要があります：
 - **UC Managed Storage** ロケーション（Databricks 管理の S3 バケット）、または
 - **UC External Location**（Storage Credential で登録された顧客 S3 バケット）
 
 FSx for ONTAP S3 AP は UC External Location として登録できません（Databricks サポートにより 2026 年 5 月確認済み）。したがって、仮に FSx for ONTAP S3 AP 上に Delta Table を作成できたとしても、共有のために UC に登録することはできません。
 
-参照: [Create and manage shares for Delta Sharing](https://docs.databricks.com/en/delta-sharing/create-share.html) — Share は "only one Unity Catalog metastore" のアセットのみ含むことができる。
+参照: [Create and manage shares for OpenSharing](https://docs.databricks.com/en/delta-sharing/create-share.html) — Share は "only one Unity Catalog metastore" のアセットのみ含むことができる。
 
-参照: [What is the Delta Sharing Databricks-to-Databricks protocol?](https://docs.databricks.com/aws/en/delta-sharing/share-data-databricks) — UC 対応ワークスペースと UC 登録アセットが必要。
+参照: [What is the OpenSharing Databricks-to-Databricks protocol?](https://docs.databricks.com/aws/en/delta-sharing/share-data-databricks) — UC 対応ワークスペースと UC 登録アセットが必要。
 
-#### 5. OSS Delta Sharing Server でも有効な Delta Table が必要
+#### 5. OSS OpenSharing Server でも有効な Delta Table が必要
 
-[OSS Delta Sharing サーバー](https://github.com/delta-io/delta-sharing)を使用する場合（UC をバイパス）でも、サーバーは一貫した `_delta_log` を持つ有効な Delta Table を指す必要があります。同じストレージ要件が適用されます — Delta コミットプロトコルをサポートするストレージバックエンドが必要です。
+[OSS OpenSharing サーバー](https://github.com/delta-io/delta-sharing)を使用する場合（UC をバイパス）でも、サーバーは一貫した `_delta_log` を持つ有効な Delta Table を指す必要があります。同じストレージ要件が適用されます — Delta コミットプロトコルをサポートするストレージバックエンドが必要です。
 
 ### 「EC2 で Delta Table を作成する」とは実際に何を意味するか
 
@@ -772,7 +772,7 @@ EC2 / EMR / Glue (Spark ジョブ)
   ↓ spark.read → 変換 → spark.write.format("delta")
 S3 バケット (Delta Table: Parquet ファイル + _delta_log/)
   ↓ UC に登録
-Delta Sharing
+OpenSharing
 ```
 
 これは「メタデータだけ」ではありません。以下を行っています：
@@ -790,7 +790,7 @@ Delta Sharing
 | Delta コミットログの書き込み | FSx for ONTAP S3 AP で条件付き書き込みが非サポート |
 | UC への登録 | UC External Location が S3 AP ARN を非サポート |
 | マルチクラスター安全性 | FSx for ONTAP S3 AP 用の DynamoDB LogStore 相当がない |
-| Delta Sharing | UC 登録テーブルまたはサポートされたストレージ上の有効な Delta Table が必要 |
+| OpenSharing | UC 登録テーブルまたはサポートされたストレージ上の有効な Delta Table が必要 |
 
 ### 唯一の真の「Zero Copy」パス
 
@@ -798,14 +798,14 @@ Delta Sharing
 
 **現在のステータス**: ブロック中 — Databricks UC 機能開発待ち（2026 年 5 月報告済み、タイムラインなし）。
 
-### 代替案: OSS Delta Sharing Server による Parquet 直接参照（実験的、未検証）
+### 代替案: OSS OpenSharing Server による Parquet 直接参照（実験的、未検証）
 
-[OSS Delta Sharing サーバー](https://github.com/delta-io/delta-sharing)は、完全な Delta コミットログなしで Parquet ファイルを共有することをサポートしています。FSx for ONTAP S3 AP 上に既知のスキーマを持つ構造化された Parquet ファイルが既に存在する場合、OSS サーバーがそれらを共有テーブルとして公開できる可能性があります。
+[OSS OpenSharing サーバー](https://github.com/delta-io/delta-sharing)は、完全な Delta コミットログなしで Parquet ファイルを共有することをサポートしています。FSx for ONTAP S3 AP 上に既知のスキーマを持つ構造化された Parquet ファイルが既に存在する場合、OSS サーバーがそれらを共有テーブルとして公開できる可能性があります。
 
 **動作の仕組み:**
 1. Parquet ファイルが FSx for ONTAP 上に存在（ETL ジョブ、NFS クライアント、他のエンジンが書き込み）
-2. OSS Delta Sharing サーバーが S3 AP パスを指す `delta-sharing-server.yaml` で設定
-3. Recipient が Delta Sharing プロトコル経由で共有「テーブル」をクエリ
+2. OSS OpenSharing サーバーが S3 AP パスを指す `delta-sharing-server.yaml` で設定
+3. Recipient が OpenSharing プロトコル経由で共有「テーブル」をクエリ
 
 **制約とリスク:**
 - ACID 保証なし（コミットログなし = トランザクション分離なし）
@@ -823,7 +823,7 @@ Delta Sharing
 
 ## 次のステップ
 
-1. **Pattern A PoC を開始**: FSx for ONTAP S3 AP で ListObjectsV2 を呼び出す Lambda 関数をデプロイし、メタデータを S3 上の Delta Table に書き込み、Delta Sharing で公開
+1. **Pattern A PoC を開始**: FSx for ONTAP S3 AP で ListObjectsV2 を呼び出す Lambda 関数をデプロイし、メタデータを S3 上の Delta Table に書き込み、OpenSharing で公開
 2. **Databricks への即時アクセス**: DataSync → S3 → UC External Location を設定して完全ガバナンスを実現（[README 設定ガイド](../../README.md#quick-start)）
 3. **Databricks 機能ギャップを追跡**: UC エンジニアリングの FSx for ONTAP S3 AP ネイティブサポートへの回答を監視（2026年5月報告済み、タイムラインなし）
 
@@ -833,9 +833,9 @@ Delta Sharing
 
 - [Work with unstructured data in volumes](https://docs.databricks.com/aws/en/volumes/unstructured-data-tutorial) — Volume Sharing を含む完全チュートリアル
 - [What are Unity Catalog volumes?](https://docs.databricks.com/aws/en/volumes/managed-vs-external) — Managed vs External volumes
-- [Volume Sharing with Delta Sharing (Video)](https://www.databricks.com/resources/demos/videos/data-sharing/volume-sharing-delta-sharing) — デモ動画
+- [Volume Sharing with OpenSharing (Video)](https://www.databricks.com/resources/demos/videos/data-sharing/volume-sharing-delta-sharing) — デモ動画
 - [Create and manage shares](https://docs.databricks.com/en/delta-sharing/create-share.html) — Share に Volume を追加する手順
-- [Delta Sharing OSS](https://github.com/delta-io/delta-sharing) — オープンソース Delta Sharing サーバー
+- [OpenSharing OSS](https://github.com/delta-io/delta-sharing) — オープンソース OpenSharing サーバー
 - [FSx for ONTAP S3 Access Points](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/s3-access-points.html) — AWS ドキュメント
 
 ---

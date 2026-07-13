@@ -25,16 +25,46 @@ This document focuses on two related mechanisms that are easy to confuse:
 - **A "do-it-yourself" recipient in a notebook** — reading shared data with your own
   code (the "use any tool" model).
 
-## Background: Delta Sharing and OpenSharing
+## Background: OpenSharing (formerly Delta Sharing)
 
-**Delta Sharing** is an open protocol for sharing data across organizations and tools.
-**OpenSharing** is its successor, announced by Databricks in 2026 and hosted by the
-Linux Foundation, extending sharing to unstructured **Volumes** (via short-lived
-credential vending), **Tables**, ML models, and agent skills.
+**OpenSharing** is an open protocol for securely sharing data and AI assets across
+organizations, clouds, and platforms — without copying data. It was announced at
+Data+AI Summit 2026 (June 10, 2026) as the successor to Delta Sharing, and is now
+an independent open-source project hosted by the **Linux Foundation** under Apache 2.0.
+
+The protocol defines a **three-level asset hierarchy** (`Share → Schema → Asset`) and
+supports the following asset types:
+
+| Asset type | Status | Description |
+|------------|--------|-------------|
+| **Table** | Specified | Structured data in Delta Lake, Apache Iceberg, or Parquet formats |
+| **Volume** | Specified | Directories of files (documents, media, embeddings) via scoped credentials |
+| **AgentSkill** | Specified | Reusable AI agent capabilities with scoped storage access |
+| **Model** | Specified | ML model artifacts with version metadata and provenance |
+| **Agent** | Community proposal | Live callable agent services |
+| **Page** | Community proposal | Named business entities, metrics, or term definitions |
+
+Key properties: **vendor-neutral** (any compliant server or client is valid),
+**AI-native** (covers the full range of shared assets), **zero-copy** (assets stay
+in the provider's storage), and **works where data lives** (S3, ADLS, GCS, R2,
+on-premises).
+
+Two access modes are defined for tables:
+- **`url` mode** — server returns presigned URLs; client fetches data directly
+- **`dir` mode** — server vends temporary STS credentials; client reads with standard `GetObject`
+
+For Volumes, only the `dir` (STS credential) mode is used.
 
 - OpenSharing announcement: <https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era>
-- Protocol specification: <https://github.com/OpenSharing-IO/OpenSharing>
+- Protocol specification (GitHub): <https://github.com/OpenSharing-IO/OpenSharing>
 - Linux Foundation press release: <https://www.linuxfoundation.org/press/linux-foundation-announces-opensharing-project-to-standardize-ai-asset-and-data-exchange>
+- Databricks OpenSharing product page: <https://www.databricks.com/product/opensharing>
+
+> **Historical note**: Delta Sharing was launched by Databricks in 2021 as a sub-project
+> of Delta Lake. OpenSharing retains full backward compatibility with the Delta Sharing
+> protocol while extending scope to AI assets, Iceberg interoperability, and the
+> `dir`-mode credential vending. Existing Delta Sharing integrations continue to work
+> under OpenSharing.
 
 "Credential vending" means the sharing server issues **short-lived, scoped cloud
 credentials** (e.g., AWS STS) so the consumer reads the data **directly from object
@@ -54,11 +84,11 @@ Databricks documents two sharing models:
 
 - **Databricks-to-Databricks** — both sides use Unity Catalog; provider objects are
   created automatically in the recipient's metastore, and governance applies on both
-  sides. See [Manage providers for recipients](https://docs.databricks.com/aws/en/delta-sharing/manage-provider).
+  sides. See [Manage providers for recipients](https://docs.databricks.com/aws/en/opensharing/manage-provider).
 - **Databricks-to-Open** — the provider is Databricks/UC and the recipient can be
   **any tool** (including non-Databricks), using a credential file or activation URL.
-  See [Access data shared with you (recipients)](https://docs.databricks.com/gcp/en/delta-sharing/recipient)
-  and [Read shared data (open sharing)](https://docs.databricks.com/en/data-sharing/read-data-open.html).
+  See [Access data shared with you (recipients)](https://docs.databricks.com/aws/en/opensharing/recipient)
+  and [Read shared data (OpenSharing)](https://docs.databricks.com/aws/en/opensharing/share-data-open).
 
 The core flow (credential vending) looks like this:
 
@@ -109,6 +139,17 @@ unstructured Volumes** (the FSx for ONTAP S3 Access Point case) as native govern
 objects is the newer area; Databricks announced **Storage Ecosystem** connections for
 hybrid/on-prem storage over OpenSharing — see the
 [Storage Ecosystem announcement](https://www.databricks.com/blog/announcing-databricks-storage-ecosystem-governing-enterprise-data-estate-wherever-it-lives).
+
+Storage Ecosystem partner status (DAIS 2026, June 2026):
+
+| Partner | Status |
+|---------|--------|
+| MinIO | GA |
+| Everpure (formerly Pure Storage) | Private Preview |
+| Qumulo | Private Preview (July 2026) |
+| VAST Data | Private Preview (August 2026) |
+| NetApp, Cohesity, Commvault, HPE, Nutanix, Rubrik | Native integration committed by end of 2026 |
+
 Confirm scope and availability with Databricks.
 
 **2. A "do-it-yourself" recipient in a notebook (any tool).** In the Databricks-to-Open
@@ -196,6 +237,81 @@ Not validated here (dependent on platform features): a **native Unity Catalog
 recipient** for a non-Databricks Volumes provider. Reproducible server and steps are in
 [integrations/opensharing-server](../../integrations/opensharing-server/).
 
+## UC Recipient: Current Availability and Responsibility Map
+
+The OpenSharing protocol has two sides. The **provider** side (the sharing server) is
+open and implementable by anyone — this repository demonstrates a working
+implementation. The **recipient** side — where Unity Catalog consumes a share and
+applies governance — is a Databricks platform feature that is being rolled out via the
+Storage Ecosystem program.
+
+### Responsibility split
+
+```
+Provider side (open, anyone can implement)     Recipient side (Databricks platform)
+┌─────────────────────────────────────┐       ┌────────────────────────────────────┐
+│ • OpenSharing server                │       │ • CREATE PROVIDER                  │
+│ • Bearer token issuance             │ ───── │ • SHOW SHARES IN PROVIDER          │
+│ • Credential vending (STS)          │  API  │ • CREATE CATALOG USING SHARE       │
+│ • Asset discovery (list/get)        │       │ • Foreign Volume / Table in UC     │
+│                                     │       │ • Governance (tags, ABAC, lineage) │
+└─────────────────────────────────────┘       └────────────────────────────────────┘
+  This repository: ✅ Done                      Status: ⏳ Pending for non-Databricks
+  (FSx for ONTAP S3 AP validated)               Volume providers (Storage Ecosystem
+                                                rollout in progress)
+```
+
+### What MinIO GA proves
+
+MinIO is GA as a Storage Ecosystem partner (DAIS 2026). This means:
+- The UC **recipient-side code exists** for consuming a non-Databricks provider's share
+- Unity Catalog can `CREATE CATALOG USING SHARE` from an external OpenSharing server
+- The mechanism works end-to-end for at least one partner
+
+**What is unclear**: whether this recipient-side path is open to any protocol-compliant
+server, or restricted to Databricks-certified partners via allowlisting.
+
+### Remaining platform capabilities (Databricks scope)
+
+| Capability | Description | Owner |
+|------------|-------------|-------|
+| UC acceptance of non-certified providers | Allow `CREATE PROVIDER` with a credential profile pointing to any OpenSharing-compliant endpoint | Databricks |
+| Foreign Volume governance for external shares | Apply tags, ABAC, lineage, column masks to Volumes consumed via OpenSharing | Databricks |
+| Open sharing Volume support for open recipients | Currently Volumes shared D2D only; open-recipient Volume access undocumented | Databricks |
+
+### Why Notebook access without UC is insufficient
+
+UC governance (tags, ABAC / row filters / column masks, audit lineage) applies **only**
+to UC-registered objects. Data read in a notebook via `boto3` or Spark with external
+credentials is **outside UC governance** — no tags, no ABAC, no lineage, no masking.
+
+For regulated or governed workloads, UC registration is not optional. The path forward
+requires UC to accept shares from non-Databricks providers as first-class governed
+objects.
+
+### Storage Ecosystem: who does what
+
+| Responsibility | Owner | Status |
+|---------------|-------|--------|
+| Implement OpenSharing provider server for ONTAP (on-prem) | NetApp | Committed by end of 2026 |
+| Implement OpenSharing provider server for FSx for ONTAP (AWS) | AWS / NetApp (partnership) | Unclear — may follow on-prem or may be separate |
+| Accept non-Databricks provider shares in UC (recipient side) | Databricks | GA for MinIO; availability for other partners pending |
+| Certify new partners in Storage Ecosystem | Databricks + partner jointly | Partner Well-Architected Framework |
+| OSS reference server (protocol-compliant, validates feasibility) | This repository | ✅ Done |
+
+### How to accelerate
+
+1. **Validate technically** — attempt `CREATE PROVIDER` with a credential profile from
+   the reference server. Document the result (success or error message).
+2. **Feature request** — file with Databricks product team: "UC recipient for
+   non-Databricks OpenSharing Volumes providers" with evidence of protocol-compliant
+   server.
+3. **Partner leverage** — NetApp's Storage Ecosystem commitment covers on-prem ONTAP.
+   FSx for ONTAP (AWS-managed) should be included in the same timeline.
+4. **Public evidence** — publish the validation showing that the provider side is
+   protocol-compliant and the remaining dependency is on the platform recipient
+   feature, creating community visibility and interest.
+
 ## How to choose today
 
 - **Need governed analytics now** → stage data to a standard S3 bucket (for example via
@@ -230,12 +346,14 @@ cost requirements.
 ## References
 
 - OpenSharing announcement (Databricks): <https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era>
+- OpenSharing and Marketplace capabilities (DAIS 2026): <https://www.databricks.com/blog/announcing-new-opensharing-and-marketplace-capabilities-ai-era>
 - Storage Ecosystem announcement (Databricks): <https://www.databricks.com/blog/announcing-databricks-storage-ecosystem-governing-enterprise-data-estate-wherever-it-lives>
-- OpenSharing specification: <https://github.com/OpenSharing-IO/OpenSharing>
+- OpenSharing specification (GitHub): <https://github.com/OpenSharing-IO/OpenSharing>
 - Linux Foundation press release: <https://www.linuxfoundation.org/press/linux-foundation-announces-opensharing-project-to-standardize-ai-asset-and-data-exchange>
-- Access data shared with you (recipients): <https://docs.databricks.com/gcp/en/delta-sharing/recipient>
-- Manage providers for recipients: <https://docs.databricks.com/aws/en/delta-sharing/manage-provider>
-- Read shared data (open sharing): <https://docs.databricks.com/en/data-sharing/read-data-open.html>
+- Databricks OpenSharing product page: <https://www.databricks.com/product/opensharing>
+- Access data shared with you (recipients): <https://docs.databricks.com/aws/en/opensharing/recipient>
+- Manage providers for recipients: <https://docs.databricks.com/aws/en/opensharing/manage-provider>
+- Read shared data (OpenSharing): <https://docs.databricks.com/aws/en/opensharing/share-data-open>
 - Unity Catalog credential vending: <https://docs.databricks.com/gcp/en/external-access/credential-vending>
 - Databricks notebooks: <https://docs.databricks.com/aws/en/notebooks/>
 - This repository — reference server: [integrations/opensharing-server](../../integrations/opensharing-server/)

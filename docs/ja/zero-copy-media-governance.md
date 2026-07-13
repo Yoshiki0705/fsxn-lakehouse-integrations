@@ -218,7 +218,7 @@ FSx for ONTAP（クラウドレプリカ）
 
 **背景**: 既存の Databricks 資産(UC、Delta Lake、MLflow パイプライン、チームスキル)を活用。
 
-### UC Volume + メタデータテーブル + タグベースアクセス制御 + Delta Sharing
+### UC Volume + メタデータテーブル + タグベースアクセス制御 + OpenSharing
 
 ```sql
 -- 1. External Volume（S3 または FSx for ONTAP S3 AP 経由の DataSync サブセットをバックエンド）
@@ -255,7 +255,7 @@ RETURN
 ALTER TABLE media_catalog SET ROW FILTER media_access_filter
   ON (department, classification);
 
--- 5. Delta Sharing（組織横断共有）
+-- 5. OpenSharing（組織横断共有）
 CREATE SHARE media_partner_share;
 ALTER SHARE media_partner_share ADD TABLE media_catalog;
 
@@ -322,7 +322,7 @@ GROUP BY checksum HAVING COUNT(*) > 1;
 | **FSx for ONTAP S3 AP 直接アクセス** | ❌（UC セッションポリシー） | ⚠️（LIST のみ） | ✅（Athena, Bedrock） |
 | **ガバナンスモデル** | UC Tags + Row Filter | Row Access Policy + Masking | Lake Formation LF-Tags |
 | **外部エンジンへのガバナンス** | ❌ | ✅（Horizon Catalog） | ✅（Lake Formation） |
-| **組織横断共有** | Delta Sharing（オープンプロトコル） | Secure Data Sharing（ゼロコピー） | LF クロスアカウント + RAM |
+| **組織横断共有** | OpenSharing（オープンプロトコル） | Secure Data Sharing（ゼロコピー） | LF クロスアカウント + RAM |
 | **非構造化 AI** | Mosaic AI, Vector Search | Cortex AI, Cortex Search | Bedrock, Textract, Transcribe |
 | **重複排除** | なし（S3 依存） | なし（S3 依存） | なし（S3 依存） |
 | **FSx for ONTAP 併用** | ✅（Option B/C/D） | ✅（Option B/C/D） | ✅（Option B/C/D） |
@@ -337,7 +337,7 @@ GROUP BY checksum HAVING COUNT(*) > 1;
 | **最大の帯域効率** | Option C（SnapMirror） | ブロックレベル差分 = DataSync の 2500 倍効率的 |
 | **将来最適（最低コスト）** | Option D（FlexCache S3 AP） | キャッシュのみのストレージ = 現行比 80% コスト削減 |
 | **最小変更** | Option A（S3 最適化） | 階層化のみ、削減効果は限定的 |
-| **Databricks ガバナンス** | UC Volume + Tags + Delta Sharing | 全 Option 共通、ストレージ選択に依存しない |
+| **Databricks ガバナンス** | UC Volume + Tags +  OpenSharing | 全 Option 共通、ストレージ選択に依存しない |
 
 ---
 
@@ -346,7 +346,7 @@ GROUP BY checksum HAVING COUNT(*) > 1;
 | パス / 観点 | 要点 |
 |------------|------|
 | **Snowflake パス** | Horizon Catalog で外部エンジンにガバナンスを適用可能。非構造化データの AI 活用は Cortex Search + Data Sharing。Managed Iceberg Table → Horizon REST Catalog で Databricks/Spark も同じデータを読める。 |
-| **Databricks パス** | UC Volumes + Delta Sharing。非構造化データの自動タグ付けは Mosaic AI。S3 コスト削減に FSx for ONTAP。将来: Lakehouse Federation で FSx for ONTAP S3 AP データへの仮想アクセスが可能になる可能性。 |
+| **Databricks パス** | UC Volumes + OpenSharing。非構造化データの自動タグ付けは Mosaic AI。S3 コスト削減に FSx for ONTAP。将来: Lakehouse Federation で FSx for ONTAP S3 AP データへの仮想アクセスが可能になる可能性。 |
 | **AWS ネイティブパス** | FSx for ONTAP S3 AP + Lake Formation で S3 コピー削減と全エンジンガバナンスを両立。Bedrock KB が FSx for ONTAP S3 AP を直接読み取り。Glue Catalog + Iceberg 形式も別の Open Table Format 選択肢。 |
 | **ストレージ最適化** | ONTAP dedup は同一ファイルコピー（版・部門コピー）に有効。類似の画像/動画は同一ブロックが存在する範囲でのみ有効。 |
 | **移行 / ハイブリッド** | DataSync → FSx for ONTAP は確立されたパス（10TB / Direct Connect 1Gbps ≈ 22 時間）。FlexCache + FSx for ONTAP S3 AP はハイブリッド環境で有効。 |
@@ -362,7 +362,7 @@ GROUP BY checksum HAVING COUNT(*) > 1;
 | レンズ(役割) | 主要推奨 |
 |---------|---------|
 | **Snowflake PMM レンズ** | Databricks 決定事項でも、Snowflake Horizon で同じデータに対して外部エンジンへのガバナンス強制が可能。他のコンシューマー向けに Horizon を併用する選択肢あり。 |
-| **Databricks SA レンズ** | UC Volumes + Delta Sharing が有効。S3 コスト削減には即時対応として S3 Intelligent-Tiering、戦略的には FSx for ONTAP を推奨。 |
+| **Databricks SA レンズ** | UC Volumes +  OpenSharing が有効。S3 コスト削減には即時対応として S3 Intelligent-Tiering、戦略的には FSx for ONTAP を推奨。 |
 | **AWS Iceberg SA レンズ** | FSx for ONTAP S3 AP で S3 コピーの必要性を排除。FlexCache S3 AP(ロードマップ)でさらにコスト削減。 |
 | **Storage Specialist レンズ** | ONTAP 重複排除がストレージ効率に有効(S3 にはネイティブ dedup なし)。FSx for ONTAP への移行が根本原因の解決に寄与。 |
 | **Partner SA レンズ** | Amazon CloudWatch と ONTAP REST API で運用を統合管理。DataSync による FSx for ONTAP への移行はサポートされたパス。FlexCache S3 AP(ロードマップ)はハイブリッド構成で有効な選択肢。 |

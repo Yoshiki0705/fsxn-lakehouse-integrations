@@ -192,6 +192,7 @@ See [AWS docs: S3 AP aliases](https://docs.aws.amazon.com/AmazonS3/latest/usergu
 | GET | `/api/v1/shares/{share}/schemas/{schema}/volumes` | List volumes in a schema |
 | GET | `/api/v1/shares/{share}/schemas/{schema}/volumes/{volume}` | Get volume details |
 | POST | `/api/v1/shares/{share}/schemas/{schema}/volumes/{volume}/temporary-volume-credentials` | Generate scoped STS credentials |
+| GET | `/api/v1/profile/{recipient}` | Generate credential profile for Databricks `CREATE PROVIDER` |
 | GET | `/health` | Health check |
 
 ## Configuration
@@ -280,6 +281,87 @@ Assumptions: 10,000 credential-vend requests/month, 256 MB, ~0.4 s average durat
 - CloudWatch Logs: small; depends on log volume and retention
 
 At this volume the server's marginal cost is a fraction of a US dollar per month; it becomes meaningful only at very high request rates or with verbose logging. Validate with the AWS Pricing Calculator and your region's current rates before quoting.
+
+## Unity Catalog Consumption (CREATE PROVIDER)
+
+The ultimate goal is for Unity Catalog to consume this server's shares as governed
+Foreign Volumes — with lineage, tags, ABAC, and audit. This section documents how to
+attempt that path.
+
+### Generate a Credential Profile
+
+The OpenSharing credential profile (`.share` file) is the standard mechanism for
+Databricks to connect to an external provider:
+
+```bash
+# Generate a profile for a specific recipient
+python3 scripts/generate-profile.py \
+  --endpoint https://<your-function-url>/api/v1 \
+  --recipient quality-team \
+  --output ./profiles/quality-team.share
+
+# Or via the server API (requires OPENSHARING_ENDPOINT_URL env var set on server)
+curl -H "Authorization: Bearer <token>" \
+  https://<your-function-url>/api/v1/profile/quality-team \
+  -o quality-team.share
+```
+
+The profile file contains:
+```json
+{
+  "shareCredentialsVersion": 1,
+  "endpoint": "https://<function-url>/api/v1",
+  "bearerToken": "<recipient-token>"
+}
+```
+
+### Attempt CREATE PROVIDER in Databricks
+
+```sql
+-- 1. Create a provider (upload the .share file via Catalog Explorer)
+CREATE PROVIDER fsxontap_provider;
+
+-- 2. List available shares
+SHOW SHARES IN PROVIDER fsxontap_provider;
+
+-- 3. Create a catalog from the share (if accepted)
+CREATE CATALOG fsxontap_data USING SHARE fsxontap_provider.factory;
+
+-- 4. Access the data with full UC governance
+USE CATALOG fsxontap_data;
+SHOW VOLUMES IN quality;
+```
+
+### Expected outcome (as of July 2026)
+
+> **This path has not been validated yet.** MinIO's GA in the Storage Ecosystem proves
+> the UC recipient-side code exists, but whether it is open to any protocol-compliant
+> server or restricted to certified partners is unknown.
+
+Run the verification script to test:
+
+```bash
+python3 scripts/verify-uc-provider.py \
+  --server-url https://<your-function-url> \
+  --token <bearer-token> \
+  --provider-name fsxontap_test
+```
+
+**If it succeeds**: UC native consumption with governance is available.
+**If it fails**: the specific error message becomes evidence for a Databricks feature
+request ("UC recipient for non-Databricks Volume providers").
+
+### Current status of UC recipient support
+
+| Provider type | Tables | Volumes | Status |
+|--------------|:------:|:-------:|--------|
+| Databricks-to-Databricks | ✅ | ✅ | GA |
+| Databricks-to-Open (Databricks as provider) | ✅ | ❌ | Tables GA, Volumes not available for open recipients |
+| Storage Ecosystem (MinIO) | ✅ | ❓ | GA, Volume support unclear |
+| Storage Ecosystem (NetApp) | — | — | Committed end of 2026 |
+| Any OpenSharing-compliant server (this repo) | ❓ | ❓ | **To be validated** |
+
+For detailed analysis, see [OpenSharing and Unity Catalog: Concepts](../../docs/en/opensharing-and-unity-catalog-explained.md#uc-recipient-current-availability-and-responsibility-map).
 
 ## Partner / SA Q&A
 
