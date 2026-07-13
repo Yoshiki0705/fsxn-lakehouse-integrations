@@ -22,6 +22,7 @@ from opentelemetry.sdk.resources import Resource
 
 from .config import AppConfig, load_config
 from .credentials import generate_temporary_credentials
+from .profile import generate_profile
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,53 @@ FastAPIInstrumentor.instrument_app(app)
 @app.get("/health")
 async def health():
     return {"status": "healthy", "version": "0.1.0", "protocol": "OpenSharing Volumes"}
+
+
+# --- Profile generation (for Databricks CREATE PROVIDER) ---
+@app.get("/api/v1/profile/{recipient_name}")
+async def get_profile(
+    recipient_name: str,
+    authorization: str | None = Header(default=None),
+):
+    """Generate an OpenSharing credential profile for a recipient.
+
+    This profile file can be used with Databricks `CREATE PROVIDER` to register
+    this server as a sharing provider in Unity Catalog.
+
+    Usage:
+        1. GET /api/v1/profile/{recipient_name} (with admin bearer token)
+        2. Save the response JSON as a .share file
+        3. In Databricks: CREATE PROVIDER ... (upload the .share file)
+    """
+    # Require authentication (any valid token can request profiles)
+    _authenticate(authorization)
+    config = get_config()
+
+    # Derive the endpoint from the request URL (or use configured base URL)
+    # The profile endpoint is the base API URL
+    base_url = os.environ.get("OPENSHARING_ENDPOINT_URL", "")
+    if not base_url:
+        # Fallback: cannot determine endpoint without explicit config
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "errorCode": "SERVER_ERROR",
+                "message": "OPENSHARING_ENDPOINT_URL environment variable not set. "
+                "Set it to the public URL of this server (e.g., https://abc.lambda-url.region.on.aws/api/v1)",
+            },
+        )
+
+    profile = generate_profile(
+        config=config,
+        endpoint=base_url.rstrip("/"),
+        recipient_name=recipient_name,
+    )
+
+    return JSONResponse(
+        content=profile,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{recipient_name}.share"'},
+    )
 
 
 # --- Shares ---

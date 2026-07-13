@@ -19,7 +19,7 @@
 | ✅ Usable | Multiple paths exist to bring FSx for ONTAP data under UC governance |
 | ❌ Zero-copy direct connection not supported | UC External Location does **not support** S3 AP / ONTAP S3 / NFS mount |
 | ✅ Recommended paths available | DataSync → S3 → UC tables, Kafka → Structured Streaming → UC Delta |
-| ⚠️ DAIS 2026 features do not directly resolve this | OpenSharing / Delta Sharing are sharing protocols, not storage connectors |
+| ⚠️ DAIS 2026 features do not directly resolve this | OpenSharing is a sharing protocol, not a storage connector |
 
 ### Why FSx for ONTAP (Multi-Protocol Value)
 
@@ -58,25 +58,32 @@ However, OpenSharing:
 
 What OpenSharing can do (FSx for ONTAP related):
 - ✅ After FSx for ONTAP data is ingested to S3 and converted to Delta tables, share those tables via OpenSharing to other organizations
+- ✅ A self-managed OpenSharing server can vend scoped STS credentials for zero-copy reads from FSx for ONTAP S3 AP (validated in this repository)
+- ✅ Databricks Storage Ecosystem (DAIS 2026): NetApp committed to native OpenSharing integration by end of 2026 — this may enable direct connectivity in the future
 
 ```
 FSx for ONTAP → [DataSync/ETL] → S3 → UC Delta table → OpenSharing → recipient
                                                           ↑ OpenSharing scope is here
+
+FSx for ONTAP → OpenSharing Server (credential vending) → recipient (zero-copy, no UC governance)
+                  ↑ This repository's reference implementation
 ```
 
-### Q2: Can Delta Sharing directly share FSx for ONTAP files?
+### Q2: Can OpenSharing directly share FSx for ONTAP files?
 
-**A: No. Delta Sharing is a "table sharing protocol", not a mechanism for sharing arbitrary files without transformation.**
+**A: No. OpenSharing is a "sharing protocol", not a mechanism for sharing arbitrary files without transformation.**
 
-Delta Sharing prerequisites:
-- Shared assets must be **Delta tables** (or Iceberg tables)
+OpenSharing prerequisites:
+- Shared assets must be **Tables** (Delta or Iceberg), **Volumes**, **Models**, or **AgentSkills**
 - Table data must reside on **UC-recognized storage** (standard S3 / ADLS / GCS)
-- There is **no capability** to share files on FSx for ONTAP (CSV, images, PDFs) directly via Delta Sharing without prior conversion
+- There is **no capability** to share files on FSx for ONTAP (CSV, images, PDFs) directly via OpenSharing without prior conversion or a provider-side credential vending server
 
-To share FSx for ONTAP data via Delta Sharing:
+To share FSx for ONTAP data via OpenSharing:
 1. Ingest from FSx for ONTAP → S3
-2. Register as a Delta table on S3
-3. Share via Delta Sharing
+2. Register as a Delta/Iceberg table on S3
+3. Share via OpenSharing
+
+Alternatively, an independent OpenSharing provider server (such as the reference implementation in this repository) can vend scoped STS credentials to recipients, enabling zero-copy reads — but this bypasses UC governance unless consumed via a native UC recipient.
 
 ### Q3: Can't Databricks NFS-mount FSx for ONTAP?
 
@@ -945,7 +952,7 @@ Paths for using FSx for ONTAP data with Databricks AI/ML features (AI/GenAI Spec
 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | Detailed DataSync procedures and schedule design |
 | [Kafka-ClickHouse-UC Connectivity Guide](./kafka-clickhouse-unity-catalog-connectivity.md) | Streaming + catalog connectivity technical details |
 | [Databricks Integration README](../../integrations/databricks/README.md) | S3 AP verification results, error evidence, recommended patterns |
-| [Delta Sharing & Volume Guide](../../integrations/databricks/docs/en/delta-sharing-volume-guide.md) | Detailed design for 3 Delta Sharing patterns |
+| [OpenSharing & Volume Guide](../../integrations/databricks/docs/en/delta-sharing-volume-guide.md) | Detailed design for 3 OpenSharing patterns |
 | [AI Demo Guide](../../integrations/databricks/docs/en/ai-demo-guide.md) | Evidence of working and blocked demos |
 | [Foreign Iceberg Validation Plan](../../integrations/iceberg-metadata-catalog/databricks/uc-foreign-iceberg-validation.md) | UC Foreign Catalog validation SQL via Glue REST |
 | [OpenSharing Integration Analysis](./opensharing-integration-analysis.md) | OpenSharing × FSx for ONTAP touchpoint evaluation |

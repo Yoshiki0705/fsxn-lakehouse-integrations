@@ -19,7 +19,7 @@
 | ✅ 利用可能 | 複数の経路で FSx for ONTAP データを UC ガバナンス下に取り込み可能 |
 | ❌ ゼロコピー直接接続は非対応 | UC External Location は S3 AP / ONTAP S3 / NFS マウントを**非サポート** |
 | ✅ 推奨パスあり | DataSync → S3 → UC テーブル、Kafka → Structured Streaming → UC Delta |
-| ⚠️ DAIS 2026 新機能は直接解決しない | OpenSharing / Delta Sharing は共有プロトコルであり、ストレージ接続ではない |
+| ⚠️ DAIS 2026 新機能は直接解決しない | OpenSharing は共有プロトコルであり、ストレージ接続ではない |
 
 ### なぜ FSx for ONTAP を使うのか（マルチプロトコルの価値）
 
@@ -58,25 +58,32 @@ OpenSharing（Delta Sharing の後継、DAIS 2026 発表）は以下を提供:
 
 OpenSharing でできること（FSx for ONTAP 関連）:
 - ✅ FSx for ONTAP のデータを S3 に取り込み、Delta テーブル化した**後**に、OpenSharing で他組織に共有
+- ✅ 自己管理の OpenSharing サーバーが FSx for ONTAP S3 AP に対してスコープ限定 STS 認証情報を vend し、ゼロコピー読み取りを実現（本リポジトリで検証済み）
+- ✅ Databricks Storage Ecosystem（DAIS 2026）: NetApp が 2026 年末までにネイティブ OpenSharing 統合をコミット — 将来的に直接接続が可能になる可能性あり
 
 ```
 FSx for ONTAP → [DataSync/ETL] → S3 → UC Delta テーブル → OpenSharing → 受信者
                                                               ↑ ここが OpenSharing の範囲
+
+FSx for ONTAP → OpenSharing Server (credential vending) → 受信者 (ゼロコピー、UC ガバナンスなし)
+                  ↑ 本リポジトリのリファレンス実装
 ```
 
-### Q2: Delta Sharing で FSx for ONTAP のファイルを直接共有できるのでは？
+### Q2: OpenSharing で FSx for ONTAP のファイルを直接共有できるのでは？
 
-**A: いいえ。Delta Sharing は「テーブル共有プロトコル」であり、任意のファイルを変換せずに共有する機能ではありません。**
+**A: いいえ。OpenSharing は「共有プロトコル」であり、任意のファイルを変換せずに共有する機能ではありません。**
 
-Delta Sharing の前提:
-- 共有対象は **Delta テーブル**（または Iceberg テーブル）
-- テーブルのデータは **UC が認識するストレージ**（標準 S3 / ADLS / GCS）に存在する必要がある
-- FSx for ONTAP 上のファイル（CSV、画像、PDF）をそのまま Delta Sharing 経由で共有する機能は**存在しない**
+OpenSharing の前提:
+- 共有対象は **Tables**（Delta または Iceberg）、**Volumes**、**Models**、**AgentSkills**
+- テーブルデータは **UC が認識するストレージ**（標準 S3 / ADLS / GCS）に存在する必要がある
+- FSx for ONTAP 上のファイル（CSV、画像、PDF）をそのまま OpenSharing 経由で共有する機能は、provider 側の credential vending サーバーなしには**利用不可**
 
-FSx for ONTAP データを Delta Sharing で共有するには:
+FSx for ONTAP データを OpenSharing で共有するには:
 1. FSx for ONTAP → S3 に取り込み
-2. S3 上で Delta テーブルとして登録
-3. Delta Sharing で共有
+2. S3 上で Delta/Iceberg テーブルとして登録
+3. OpenSharing で共有
+
+あるいは、独立した OpenSharing provider サーバー（本リポジトリのリファレンス実装）がスコープ限定 STS 認証情報を recipient に vend し、ゼロコピー読み取りを可能にします。ただし、ネイティブ UC recipient 経由で取り込まない限り UC ガバナンスは適用されません。
 
 ### Q3: Databricks から FSx for ONTAP に NFS マウントできないの？
 
@@ -943,7 +950,7 @@ FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路（
 | [DataSync → S3 ガイド](./datasync-to-s3-guide.md) | DataSync の詳細手順とスケジュール設計 |
 | [Kafka-ClickHouse-UC 接続ガイド](./kafka-clickhouse-unity-catalog-connectivity.md) | ストリーミング + カタログ接続の技術詳細 |
 | [Databricks 統合 README](../../integrations/databricks/README.md) | S3 AP 検証結果、エラーエビデンス、推奨パターン |
-| [Delta Sharing & Volume ガイド](../../integrations/databricks/docs/ja/delta-sharing-volume-guide.md) | Delta Sharing 3 パターンの詳細設計 |
+| [OpenSharing & Volume ガイド](../../integrations/databricks/docs/ja/delta-sharing-volume-guide.md) | OpenSharing 3 パターンの詳細設計 |
 | [AI デモガイド](../../integrations/databricks/docs/ja/ai-demo-guide.md) | 動作するデモと動作しないデモのエビデンス |
 | [Foreign Iceberg 検証計画](../../integrations/iceberg-metadata-catalog/databricks/uc-foreign-iceberg-validation.md) | Glue REST 経由の UC Foreign Catalog 検証 SQL |
 | [OpenSharing 統合分析](./opensharing-integration-analysis.md) | OpenSharing の FSx for ONTAP との接点評価 |
