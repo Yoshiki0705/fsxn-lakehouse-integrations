@@ -15,7 +15,7 @@ On 2026-06-10, Databricks announced **OpenSharing** — the evolution of the Del
 | Fact | Source |
 |------|--------|
 | OpenSharing is the first open protocol covering AI assets (agent skills, AI models, unstructured data) in addition to structured data | [Databricks Press Release](https://www.databricks.com/company/newsroom/press-releases/databricks-announces-opensharing) |
-| Adds support for Apache Iceberg IRC clients, extending reach beyond Delta Sharing recipients | Same |
+| Adds support for Apache Iceberg IRC clients, extending reach beyond prior Delta Sharing recipients | Same |
 | Storage Ecosystem connects hybrid/on-prem storage via OpenSharing using a zero-copy architecture into Unity Catalog | [Databricks Blog](https://www.databricks.com/blog/announcing-databricks-storage-ecosystem-governing-enterprise-data-estate-wherever-it-lives) |
 | GA / preview launch partners include object-storage and hybrid-storage vendors; additional enterprise storage partners are listed as "coming soon" by end of year | Same |
 | Volumes APIs for unstructured data are explicitly previewed as the next step | Same |
@@ -36,7 +36,7 @@ The current compatibility matrix lists the Databricks + FSx for ONTAP S3 Access 
 
 ## Technical Note: Presigned URL Behavior on FSx for ONTAP
 
-Because the Delta Sharing / OpenSharing model relies on short-lived presigned URLs, the presigned-URL behavior of FSx for ONTAP is central to this analysis. Two questions must be kept separate:
+Because the OpenSharing model relies on short-lived presigned URLs or STS credentials, the presigned-URL behavior of FSx for ONTAP is central to this analysis. Two questions must be kept separate:
 
 1. **Whether the documentation lists Presign as supported** (the documented stance), and
 2. **Whether a client-generated presigned URL actually works** against the endpoint (empirical behavior).
@@ -163,7 +163,7 @@ In addition to the STS mode (primary), presigned URLs also work empirically:
 - **Source of truth stays on enterprise storage**: The authoritative data remains the Iceberg/Parquet on FSx for ONTAP. Presigned-URL references and any bridged metadata are derived artifacts.
 - **Share a curated subset, not everything**: The goal is to expose curated, AI-ready data products, not to share entire volumes indiscriminately. Deny-by-default for data with unknown permissions.
 - **Single governance boundary**: Designate one catalog as the governance boundary; avoid distributing policy across multiple catalogs.
-- **Interim until native**: Independent validation in this repository uses the open-source Delta Sharing reference implementation (same protocol lineage) ahead of any native vendor implementation.
+- **Interim until native**: Independent validation in this repository uses the open-source OpenSharing reference implementation (protocol-compliant, same lineage as Delta Sharing) ahead of any native vendor implementation.
 
 ## Design Considerations
 
@@ -181,9 +181,9 @@ In addition to the STS mode (primary), presigned URLs also work empirically:
 
 ## Consensus
 
-1. OpenSharing is a strong candidate path to **bypass the current Databricks blocker** (to be validated).
+1. OpenSharing is a strong candidate path to **bypass the current UC External Location limitation** (to be validated).
 2. A **multi-surface strategy with Iceberg as the common data plane** — rather than betting on a single sharing protocol — best serves vendor neutrality and cross-engine coexistence.
-3. There is value in **validating with an OSS Delta Sharing server backed by FSx for ONTAP first**, ahead of any native vendor implementation.
+3. There is value in **validating with an OSS OpenSharing server backed by FSx for ONTAP first**, ahead of any native vendor implementation.
 4. **Governance should be consolidated to a single boundary**; avoid distributing policy across multiple catalogs.
 5. The existing unstructured-data metadata catalog work connects strongly to the previewed **Volumes APIs** direction.
 
@@ -191,7 +191,7 @@ In addition to the STS mode (primary), presigned URLs also work empirically:
 
 | ID | Decision | Rationale |
 |----|----------|-----------|
-| D-1 | Two-track parallel PoC: (1) OpenSharing path via OSS Delta Sharing server backed by FSx for ONTAP; (2) Iceberg IRC path via a neutral catalog | Covers both Databricks-optimized and engine-neutral consumption |
+| D-1 | Two-track parallel PoC: (1) OpenSharing path via OSS server backed by FSx for ONTAP; (2) Iceberg IRC path via a neutral catalog | Covers both Databricks-optimized and engine-neutral consumption |
 | D-2 | Single catalog as governance boundary; evaluate both a platform-native catalog and a neutral catalog for cross-engine ABAC travel | Policy portability across catalogs is unsolved industry-wide |
 | D-3 | Publish as a forward-looking analysis and a future blog installment, connected to the unstructured-data catalog work | Maintains series continuity; AWS Community perspective |
 | D-4 | Track native vendor implementation; do not wait for it; do not predict GA timing beyond public statements | Evidence discipline |
@@ -220,7 +220,7 @@ FSx for ONTAP → OpenSharing Server (sharing + access control)
 ## Open Questions
 
 Resolved from the public specification (still pending validation against FSx for ONTAP):
-- **Iceberg vs Delta delivery** — both are specified; Iceberg uses a standard REST Catalog endpoint, Delta uses the Delta Sharing endpoint.
+- **Iceberg vs Delta delivery** — both are specified; Iceberg uses a standard REST Catalog endpoint, Delta uses the OpenSharing endpoint.
 - **Access mechanism** — tables support `url` (presigned) and/or `dir` (STS credentials); volumes use STS credentials only.
 - **Read vs write** — the specified APIs are read-oriented (list / get / loadTable / temporary-credentials); no explicit write-back endpoint is defined, so write-back remains to be tested empirically.
 
@@ -228,6 +228,7 @@ Still open:
 - Does a native implementation sit on ONTAP S3, S3 Access Points, or an independent path?
 - Relative timing of AWS-managed vs on-premises availability?
 - Do column/row governance policies travel to shared tables (depends on Iceberg REST scan planning)?
+- How will NetApp's committed native integration (end of 2026) interact with FSx for ONTAP vs on-premises ONTAP?
 
 ## Next Activity
 
@@ -243,4 +244,62 @@ A lightweight OSS reference server implementing the OpenSharing Volumes API has 
 - **Key finding**: S3 AP ARN format requires specific IAM policy patterns (`arn:aws:s3:*:*:accesspoint/*/object/<prefix>*`) — standard bucket ARN patterns fail
 
 This implementation documents the S3 Access Point-specific IAM policy patterns discovered during validation and may be useful as a reference for other implementors targeting S3-compatible backends.
+
+## Path to UC Native Consumption
+
+The ultimate goal is **zero-copy, governed access**: FSx for ONTAP data consumed directly in Unity Catalog with full governance (lineage, tags, ABAC, column masks, row filters) — without staging to a separate S3 bucket.
+
+### Current state (July 2026)
+
+| Layer | Status | Evidence |
+|-------|--------|----------|
+| Protocol specification (Volumes) | ✅ Complete | [OpenSharing-IO/OpenSharing](https://github.com/OpenSharing-IO/OpenSharing) `spec/protocols/VOLUMES.md` |
+| Provider server (FSx for ONTAP S3 AP) | ✅ Validated | This repository: 11 formats, prefix isolation, credential expiry |
+| UC Recipient — Tables (D2D) | ✅ GA | Databricks documentation |
+| UC Recipient — Volumes (D2D) | ✅ GA | `ALTER SHARE ADD VOLUME` supported |
+| UC Recipient — non-Databricks provider (Tables) | ⚠️ Partial | Storage Ecosystem MinIO GA; open-provider Tables via profile file |
+| UC Recipient — non-Databricks provider (Volumes) | ❌ Not available | No documentation; not validated for any partner |
+
+### Why notebook access is not sufficient
+
+UC governance applies exclusively to UC-registered objects. Reading data via `boto3` in a notebook with vended credentials is **outside UC governance scope** — no ABAC, no tag-based access control, no audit lineage. For any workload requiring governance, data must be consumed as a UC-registered asset.
+
+### The critical gap
+
+```
+What exists:                               What's missing:
+┌─────────────────────────┐               ┌────────────────────────────────────┐
+│ CREATE PROVIDER p1;     │               │ UC accepts credential profile from │
+│ SHOW SHARES IN PROVIDER │  ← gap →      │ a non-Databricks OpenSharing       │
+│   p1;                   │               │ server for Volumes                 │
+│ CREATE CATALOG c1 USING │               │                                    │
+│   SHARE p1.factory;     │               │ UC surfaces shared Volumes as      │
+│ SELECT * FROM c1...;    │               │ governed Foreign Volumes            │
+└─────────────────────────┘               └────────────────────────────────────┘
+  SQL exists in Databricks                   Platform behavior not available
+```
+
+### Validation plan
+
+| Step | Action | Expected outcome |
+|------|--------|-----------------|
+| 1 | Generate OpenSharing credential profile (`config.share` JSON) from reference server | Profile file with endpoint + bearer token |
+| 2 | Attempt `CREATE PROVIDER` in Databricks workspace using the profile | Either success (path is open) or specific error (path is restricted) |
+| 3a | If success: `SHOW SHARES IN PROVIDER` → `CREATE CATALOG USING SHARE` | Volumes visible as UC objects with governance |
+| 3b | If error: document the error, file feature request with Databricks | Evidence for product prioritization |
+
+### Acceleration levers
+
+| Lever | Rationale |
+|-------|-----------|
+| **Technical proof** (this repo) | Protocol-compliant server works E2E. "Only UC recipient is missing" is a clear, scoped ask. |
+| **NetApp partner channel** | Storage Ecosystem commitment means NetApp has a direct line to Databricks product. FSx for ONTAP should be included. |
+| **AWS SA feedback** | FSx for ONTAP + Databricks is a common customer pattern on AWS. Feature request via AWS channels adds signal. |
+| **Public blog series** | Demonstrating the protocol-compliant implementation publicly (with working code) creates community visibility and discoverability. |
+
+### Decision: proceed with credential profile generation
+
+Based on this analysis, the next concrete action is to implement credential profile generation in the reference server and attempt `CREATE PROVIDER` in a Databricks workspace. This will either:
+- Unlock UC native consumption immediately (if the path is open), or
+- Produce a specific, documented dependency for the feature request
 

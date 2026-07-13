@@ -96,7 +96,7 @@ Problems:
 
 **Context**: Leverage existing Databricks environment assets — UC, Delta Lake, MLflow pipelines, team skills.
 
-### Governance: UC Volume + Tag-based Row Filter + Delta Sharing
+### Governance: UC Volume + Tag-based Row Filter + OpenSharing
 
 ### AI Path: Mosaic AI (Vision), Vector Search (RAG), Model Serving (Whisper)
 
@@ -154,7 +154,7 @@ Problems:
 | **FSx for ONTAP S3 AP direct access** | ❌ (UC session policy) | ⚠️ (LIST only) | ✅ (Athena, Bedrock) |
 | **Governance model** | UC Tags + Row Filter | Row Access Policy + Masking | Lake Formation LF-Tags |
 | **Governance on external engines** | ❌ | ✅ (Horizon Catalog) | ✅ (Lake Formation) |
-| **Cross-org sharing** | Delta Sharing (open protocol) | Secure Data Sharing (zero-copy) | LF Cross-account + RAM |
+| **Cross-org sharing** | OpenSharing (open protocol) | Secure Data Sharing (zero-copy) | LF Cross-account + RAM |
 | **Unstructured AI** | Mosaic AI, Vector Search | Cortex AI, Cortex Search | Bedrock, Textract, Transcribe |
 | **Deduplication** | None (S3-dependent) | None (S3-dependent) | None (S3-dependent) |
 | **With FSx for ONTAP** | ✅ (Option B/C/D) | ✅ (Option B/C/D) | ✅ (Option B/C/D) |
@@ -169,7 +169,7 @@ Problems:
 | **Maximum bandwidth efficiency** | Option C (SnapMirror) | Block-level diff = 2,500x DataSync |
 | **Future-optimal (lowest cost)** | Option D (FlexCache S3 AP) | Cache-only = 80% reduction |
 | **Multi-engine governance** | Snowflake Horizon or Lake Formation | Enforce governance on external engines |
-| **Cross-org sharing** | Delta Sharing (broad compatibility) or Snowflake Sharing (zero-copy) | Choose based on requirements |
+| **Cross-org sharing** | OpenSharing (broad compatibility) or Snowflake Sharing (zero-copy) | Choose based on requirements |
 
 ---
 
@@ -178,7 +178,7 @@ Problems:
 | Path / Aspect | Key points |
 |---------------|-----------|
 | **Snowflake path** | Horizon Catalog can apply governance to external engines. Cortex Search + Data Sharing for AI use of unstructured data. Managed Iceberg Table → Horizon REST Catalog enables Databricks/Spark to read the same data. |
-| **Databricks path** | UC Volumes + Delta Sharing. Mosaic AI for automated tagging of unstructured data. Use FSx for ONTAP for S3 cost reduction. Future: Lakehouse Federation may enable virtual access to FSx for ONTAP S3 AP data. |
+| **Databricks path** | UC Volumes + OpenSharing. Mosaic AI for automated tagging of unstructured data. Use FSx for ONTAP for S3 cost reduction. Future: Lakehouse Federation may enable virtual access to FSx for ONTAP S3 AP data. |
 | **AWS-native path** | FSx for ONTAP S3 AP + Lake Formation reduces S3 copies + provides all-engine governance. Bedrock KB can read FSx for ONTAP S3 AP directly. Glue Catalog + Iceberg format is another Open Table Format option. |
 | **Storage optimization** | ONTAP dedup is effective for identical file copies (versions, department copies). For similar image/video files, effective only where identical blocks exist. |
 | **Migration / hybrid** | DataSync → FSx for ONTAP is an established path (10TB / Direct Connect 1Gbps ≈ 22 hours). FlexCache + FSx for ONTAP S3 AP is effective for hybrid environments. |
@@ -194,7 +194,7 @@ Problems:
 | Lens (role) | Primary recommendation |
 |---|---|
 | **Snowflake PMM lens** | Even on a Databricks decision, Snowflake Horizon can enforce governance on the same data for external engines; consider using Horizon alongside for other consumers. |
-| **Databricks SA lens** | UC Volumes + Delta Sharing works well. For S3 cost, use S3 Intelligent-Tiering short-term and FSx for ONTAP strategically. |
+| **Databricks SA lens** | UC Volumes + OpenSharing works well. For S3 cost, use S3 Intelligent-Tiering short-term and FSx for ONTAP strategically. |
 | **AWS Iceberg SA lens** | FSx for ONTAP S3 AP removes the need to copy to S3. FlexCache S3 AP (roadmap) reduces cost further. |
 | **Storage Specialist lens** | ONTAP dedup is effective for storage efficiency (S3 has no native dedup). Migrating to FSx for ONTAP addresses the root cause. |
 | **Partner SA lens** | Operate and monitor via Amazon CloudWatch and the ONTAP REST API. DataSync migration to FSx for ONTAP is a supported path. FlexCache S3 AP (roadmap) is a viable option for hybrid architectures. |

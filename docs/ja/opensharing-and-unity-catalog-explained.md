@@ -24,16 +24,45 @@ NAS/オブジェクトストレージにファイルを置き、Databricks の�
 - **notebook での「自作」recipient** — 自分のコードで共有データを読む方式（「任意の
   ツールで読む」モデル）。
 
-## 背景: Delta Sharing と OpenSharing
+## 背景: OpenSharing（旧 Delta Sharing）
 
-**Delta Sharing** は組織・ツール間でデータを共有するためのオープンプロトコルです。
-**OpenSharing** はその後継で、2026 年に Databricks が発表し Linux Foundation が
-ホストします。非構造化の **Volumes**（短命の credential vending 経由）、**Tables**、
-ML モデル、エージェントスキルへと共有対象を拡張しています。
+**OpenSharing** は、組織・クラウド・プラットフォームを超えてデータと AI アセットを
+安全に共有するためのオープンプロトコルです。Data+AI Summit 2026（2026年6月10日）で
+Delta Sharing の後継として発表され、**Linux Foundation** 傘下の独立 OSS プロジェクト
+（Apache 2.0）として運営されています。
+
+プロトコルは **3 層のアセット階層**（`Share → Schema → Asset`）を定義し、以下の
+アセットタイプをサポートします。
+
+| アセットタイプ | ステータス | 説明 |
+|---------------|-----------|------|
+| **Table** | 仕様確定 | Delta Lake、Apache Iceberg、Parquet 形式の構造化データ |
+| **Volume** | 仕様確定 | ファイルディレクトリ（ドキュメント、メディア、embedding）をスコープ限定認証情報で配信 |
+| **AgentSkill** | 仕様確定 | 再利用可能な AI エージェント機能（スコープ限定ストレージアクセス付き） |
+| **Model** | 仕様確定 | ML モデルアーティファクト（バージョンメタデータ・来歴情報付き） |
+| **Agent** | コミュニティ提案 | ライブで呼び出し可能なエージェントサービス |
+| **Page** | コミュニティ提案 | ビジネスエンティティ、メトリクス、用語定義 |
+
+主要な特性: **ベンダー中立**（準拠するサーバー/クライアントはすべて有効）、
+**AI ネイティブ**（共有対象をデータから AI アセット全般に拡張）、**ゼロコピー**
+（アセットは provider のストレージに残る）、**データの所在を問わない**
+（S3、ADLS、GCS、R2、オンプレミス対応）。
+
+テーブルには2つのアクセスモードが定義されています。
+- **`url` モード** — サーバーが presigned URL を返し、クライアントが直接取得
+- **`dir` モード** — サーバーが一時 STS 認証情報を vend し、クライアントが標準 `GetObject` で読み取り
+
+Volumes には `dir`（STS 認証情報）モードのみが使用されます。
 
 - OpenSharing の発表: <https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era>
-- プロトコル仕様: <https://github.com/OpenSharing-IO/OpenSharing>
+- プロトコル仕様（GitHub）: <https://github.com/OpenSharing-IO/OpenSharing>
 - Linux Foundation プレスリリース: <https://www.linuxfoundation.org/press/linux-foundation-announces-opensharing-project-to-standardize-ai-asset-and-data-exchange>
+- Databricks OpenSharing 製品ページ: <https://www.databricks.com/product/opensharing>
+
+> **歴史的な経緯**: Delta Sharing は 2021 年に Databricks が Delta Lake のサブプロジェクト
+> として発表しました。OpenSharing は Delta Sharing プロトコルとの完全な後方互換性を
+> 保ちつつ、AI アセット、Iceberg 相互運用、`dir` モード credential vending へとスコープを
+> 拡張しています。既存の Delta Sharing 統合は OpenSharing の下で引き続き動作します。
 
 「credential vending」とは、共有サーバーが**短命でスコープ限定のクラウド認証情報**
 （例: AWS STS）を発行し、消費側が**オブジェクトストレージから直接**データを読む
@@ -52,11 +81,11 @@ Databricks は2つの共有モデルを文書化しています。
 
 - **Databricks-to-Databricks** — 両側が Unity Catalog を使用。recipient のメタストアに
   provider オブジェクトが自動生成され、両側にガバナンスが適用されます。
-  [recipient 向け provider 管理](https://docs.databricks.com/aws/en/delta-sharing/manage-provider)を参照。
+  [recipient 向け provider 管理](https://docs.databricks.com/aws/en/opensharing/manage-provider)を参照。
 - **Databricks-to-Open** — provider は Databricks/UC で、recipient は**任意のツール**
   （非 Databricks を含む）。credential file や activation URL を使います。
-  [共有データへのアクセス（recipient 向け）](https://docs.databricks.com/gcp/en/delta-sharing/recipient)
-  と[共有データの読み取り（open sharing）](https://docs.databricks.com/en/data-sharing/read-data-open.html)を参照。
+  [共有データへのアクセス（recipient 向け）](https://docs.databricks.com/aws/en/opensharing/recipient)
+  と[共有データの読み取り（OpenSharing）](https://docs.databricks.com/aws/en/opensharing/share-data-open)を参照。
 
 中核の流れ（credential vending）は次のとおりです。
 
@@ -108,6 +137,17 @@ provider の非構造化 Volumes**（FSx for ONTAP S3 Access Point のケース�
 ガバナンス付きオブジェクトとして取り込むのは新しい領域です。Databricks は
 ハイブリッド/オンプレストレージを OpenSharing で接続する **Storage Ecosystem** を発表して
 います（[Storage Ecosystem の発表](https://www.databricks.com/blog/announcing-databricks-storage-ecosystem-governing-enterprise-data-estate-wherever-it-lives)）。
+
+Storage Ecosystem パートナー状況（DAIS 2026, 2026年6月）:
+
+| パートナー | ステータス |
+|-----------|-----------|
+| MinIO | GA |
+| Everpure（旧 Pure Storage） | Private Preview |
+| Qumulo | Private Preview（2026年7月） |
+| VAST Data | Private Preview（2026年8月） |
+| NetApp, Cohesity, Commvault, HPE, Nutanix, Rubrik | 2026年末までにネイティブ統合をコミット |
+
 対応スコープと可用性は Databricks に確認してください。
 
 **2. notebook での「自作」recipient（任意のツール）。** Databricks-to-Open モデルでは
@@ -199,6 +239,79 @@ FSx for ONTAP S3 Access Points で以下を観測しました。
 **ネイティブな Unity Catalog recipient**。再現可能なサーバーと手順は
 [integrations/opensharing-server](../../integrations/opensharing-server/)にあります。
 
+## UC Recipient: 現在の提供状況と責任マップ
+
+OpenSharing プロトコルには2つの側面があります。**Provider 側**（共有サーバー）はオープンで
+誰でも実装可能 — 本リポジトリが動作する実装を示しています。**Recipient 側** — Unity
+Catalog が Share を取り込みガバナンスを適用する部分 — は Databricks プラットフォームの
+機能であり、Storage Ecosystem プログラムを通じて展開が進んでいます。
+
+### 責任分界
+
+```
+Provider 側（オープン、誰でも実装可能）       Recipient 側（Databricks プラットフォーム）
+┌─────────────────────────────────────┐       ┌────────────────────────────────────┐
+│ • OpenSharing server                │       │ • CREATE PROVIDER                  │
+│ • Bearer token 発行                 │       │ • SHOW SHARES IN PROVIDER          │
+│ • Credential vending (STS)          │ ───── │ • CREATE CATALOG USING SHARE       │
+│ • アセット探索 (list/get)            │  API  │ • Foreign Volume / Table in UC     │
+│                                     │       │ • ガバナンス (tags, ABAC, lineage) │
+└─────────────────────────────────────┘       └────────────────────────────────────┘
+  本リポジトリ: ✅ 完了                         ステータス: ⏳ 非 Databricks の Volume
+  (FSx for ONTAP S3 AP で検証済み)              provider 向けは展開中
+                                                (Storage Ecosystem ロールアウト進行中)
+```
+
+### MinIO GA が証明すること
+
+MinIO は Storage Ecosystem パートナーとして GA（DAIS 2026）。これは:
+- UC の **Recipient 側コードが存在**し、非 Databricks provider の share を取り込める
+- Unity Catalog が外部 OpenSharing server から `CREATE CATALOG USING SHARE` できる
+- 少なくとも1つのパートナーで E2E が動作する
+
+**不明な点**: この Recipient 側パスが任意のプロトコル準拠サーバーに開放されているか、
+Databricks 認定パートナーのみに制限されているか。
+
+### Databricks 側で展開中のプラットフォーム機能
+
+| 機能 | 説明 | オーナー |
+|------|------|---------|
+| 未認定 provider の UC 受け入れ | 任意の OpenSharing 準拠エンドポイントへの credential profile で `CREATE PROVIDER` を許可 | Databricks |
+| 外部 share の Foreign Volume ガバナンス | OpenSharing 経由で取り込んだ Volume に tags, ABAC, lineage, column masks を適用 | Databricks |
+| Open recipient への Volume sharing 対応 | 現在 Volume は D2D のみ。Open recipient 向け Volume アクセスは未文書化 | Databricks |
+
+### Notebook アクセスだけでは不十分な理由
+
+UC ガバナンス（tags, ABAC / row filters / column masks, 監査 lineage）は **UC に登録された
+オブジェクトにのみ**適用されます。外部認証情報で `boto3` や Spark を使って notebook から
+読んだデータは **UC ガバナンスの対象外** — tags なし、ABAC なし、lineage なし、
+masking なし。
+
+規制対象やガバナンスが要件のワークロードでは、UC 登録は省略できません。非 Databricks
+provider からの share を UC にファーストクラスのガバナンス付きオブジェクトとして取り込む
+機能が必要です。
+
+### Storage Ecosystem: 誰が何をするか
+
+| 責任 | オーナー | ステータス |
+|------|---------|-----------|
+| ONTAP（オンプレ）向け OpenSharing provider server 実装 | NetApp | 2026年末までにコミット |
+| FSx for ONTAP（AWS）向け OpenSharing provider server 実装 | AWS / NetApp（パートナーシップ） | 不明 — オンプレに追随するか別途かは未定 |
+| UC で非 Databricks provider の share を受理（Recipient 側） | Databricks | MinIO で GA。他パートナーへの展開は未定 |
+| Storage Ecosystem 新規パートナー認定 | Databricks + パートナー共同 | Partner Well-Architected Framework |
+| OSS リファレンスサーバー（プロトコル準拠、実現可能性の検証） | 本リポジトリ | ✅ 完了 |
+
+### 加速の方法
+
+1. **技術検証** — リファレンスサーバーの credential profile で `CREATE PROVIDER` を試行。
+   結果（成功 or エラーメッセージ）を記録。
+2. **Feature request** — Databricks プロダクトチームへ: 「非 Databricks OpenSharing
+   Volumes provider の UC recipient 対応」をプロトコル準拠サーバーのエビデンスとともに提出。
+3. **パートナーレバー** — NetApp の Storage Ecosystem コミットメントはオンプレ ONTAP 対象。
+   FSx for ONTAP（AWS マネージド）も同タイムラインに含めるよう主張。
+4. **パブリックエビデンス** — Provider 側がプロトコル準拠で動作し、残りの依存は
+   プラットフォーム Recipient 機能にあることを公開し、コミュニティの関心と可視性を高める。
+
 ## 現時点の選び方
 
 - **今すぐガバナンス付き分析が必要** → 標準の S3 バケットへデータをステージング（例:
@@ -231,12 +344,14 @@ FSx for ONTAP S3 Access Points で以下を観測しました。
 ## 参考資料
 
 - OpenSharing の発表（Databricks）: <https://www.databricks.com/blog/introducing-opensharing-next-evolution-delta-sharing-agentic-era>
+- OpenSharing と Marketplace 機能（DAIS 2026）: <https://www.databricks.com/blog/announcing-new-opensharing-and-marketplace-capabilities-ai-era>
 - Storage Ecosystem の発表（Databricks）: <https://www.databricks.com/blog/announcing-databricks-storage-ecosystem-governing-enterprise-data-estate-wherever-it-lives>
-- OpenSharing 仕様: <https://github.com/OpenSharing-IO/OpenSharing>
+- OpenSharing 仕様（GitHub）: <https://github.com/OpenSharing-IO/OpenSharing>
 - Linux Foundation プレスリリース: <https://www.linuxfoundation.org/press/linux-foundation-announces-opensharing-project-to-standardize-ai-asset-and-data-exchange>
-- 共有データへのアクセス（recipient 向け）: <https://docs.databricks.com/gcp/en/delta-sharing/recipient>
-- recipient 向け provider 管理: <https://docs.databricks.com/aws/en/delta-sharing/manage-provider>
-- 共有データの読み取り（open sharing）: <https://docs.databricks.com/en/data-sharing/read-data-open.html>
+- Databricks OpenSharing 製品ページ: <https://www.databricks.com/product/opensharing>
+- 共有データへのアクセス（recipient 向け）: <https://docs.databricks.com/aws/en/opensharing/recipient>
+- recipient 向け provider 管理: <https://docs.databricks.com/aws/en/opensharing/manage-provider>
+- 共有データの読み取り（OpenSharing）: <https://docs.databricks.com/aws/en/opensharing/share-data-open>
 - Unity Catalog credential vending: <https://docs.databricks.com/gcp/en/external-access/credential-vending>
 - Databricks notebooks: <https://docs.databricks.com/aws/en/notebooks/>
 - 本リポジトリ — リファレンスサーバー: [integrations/opensharing-server](../../integrations/opensharing-server/)
