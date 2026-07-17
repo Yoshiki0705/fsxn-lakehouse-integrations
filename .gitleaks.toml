@@ -100,6 +100,11 @@ paths = [
   '''\.md$''',
   '''docs/''',
   '''node_modules/''',
+  '''integrations/manufacturing-data-platform/poc/config/''',
+]
+regexTarget = "line"
+regexes = [
+  '''(?:PLACEHOLDER|placeholder|<.*>)''',
 ]
 
 [[rules]]
@@ -148,4 +153,16 @@ paths = [
   '''integrations/trino-starburst/config/''',
   '''cfn-params/''',
   '''shared/params/''',
+]
+commits = [
+  # curl -H 'Authorization: Bearer test-quality-team-token' in opensharing docs/scripts (example token)
+  '''0172891004841dd29b6ac646815a1d7e326821db''',
+]
+regexes = [
+  # Example/placeholder tokens used in documentation and deploy script output
+  '''test-quality-team-token''',
+  # ClickHouse ClickPipes public AWS account ID (not a secret)
+  '''072088201116''',
+  # PLACEHOLDER tags in config files (gitleaks:allow)
+  '''PLACEHOLDER''',
 ]
