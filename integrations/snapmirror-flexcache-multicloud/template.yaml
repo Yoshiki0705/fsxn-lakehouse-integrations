@@ -1,0 +1,334 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  FSx for ONTAP S3 AP + SnapMirror/FlexCache Inter-Cluster Validation.
+  Creates test volumes, IAM roles on existing clusters.
+  ONTAP-layer ops (Cluster/SVM Peering, SnapMirror, FlexCache) via companion script.
+
+Parameters:
+  # --- Source Cluster (FSx for ONTAP A) ---
+  SourceFileSystemId:
+    Type: String
+    Description: >
+      Source FSx for ONTAP File System ID (e.g., fs-0123456789abcdef0).
+      This cluster hosts the S3 AP-attached origin volume.
+    AllowedPattern: '^fs-[0-9a-f]{17}$'
+
+  SourceSvmId:
+    Type: String
+    Description: Source SVM ID (e.g., svm-0123456789abcdef0)
+    AllowedPattern: '^svm-[0-9a-f]{17}$'
+
+  SourceSvmName:
+    Type: String
+    Default: svm-source
+    Description: Source SVM name (for ONTAP REST API calls in companion script)
+
+  # --- Destination Cluster (FSx for ONTAP B) ---
+  DestFileSystemId:
+    Type: String
+    Description: >
+      Destination FSx for ONTAP File System ID.
+      This cluster receives SnapMirror replicas and hosts FlexCache Cache Volumes.
+    AllowedPattern: '^fs-[0-9a-f]{17}$'
+
+  DestSvmId:
+    Type: String
+    Description: Destination SVM ID
+    AllowedPattern: '^svm-[0-9a-f]{17}$'
+
+  DestSvmName:
+    Type: String
+    Default: svm-dest
+    Description: Destination SVM name (for ONTAP REST API calls in companion script)
+
+  # --- Source Volume Configuration ---
+  SourceVolumeName:
+    Type: String
+    Default: vol_s3ap_snapmirror_src
+    Description: >
+      Name for the test source volume (created by this stack).
+      S3 AP will be attached to this volume.
+
+  SourceVolumeSizeMB:
+    Type: Number
+    Default: 10240
+    MinValue: 1024
+    Description: Source volume size in MB (minimum 1 GB, default 10 GB)
+
+  SourceJunctionPath:
+    Type: String
+    Default: /s3ap_snapmirror_src
+    Description: Junction path for the source volume
+    AllowedPattern: '^/[a-zA-Z0-9_/]+$'
+
+  # --- Destination Volume Configuration ---
+  DestVolumeName:
+    Type: String
+    Default: vol_s3ap_snapmirror_dst
+    Description: >
+      Name for the SnapMirror destination volume (created as DP volume via ONTAP REST API).
+      Not created by this template — companion script handles DP volume creation.
+
+  # --- S3 Access Point ---
+  S3AccessPointName:
+    Type: String
+    Default: fsxn-snapmirror-val-src
+    Description: S3 Access Point name for source volume
+
+  S3APUnixUser:
+    Type: String
+    Default: fsxadmin
+    Description: >
+      UNIX user for S3 AP FileSystemIdentity.
+      Must exist on the source SVM (default: fsxadmin, UID 0).
+
+  # --- Secrets Manager ---
+  SourceSecretArn:
+    Type: String
+    Description: >
+      ARN of Secrets Manager secret containing source cluster fsxadmin credentials.
+      Expected JSON: {"username": "fsxadmin", "password": "<pass>"}
+    AllowedPattern: '^arn:aws:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:.+$'
+
+  DestSecretArn:
+    Type: String
+    Description: >
+      ARN of Secrets Manager secret containing destination cluster fsxadmin credentials.
+      Expected JSON: {"username": "fsxadmin", "password": "<pass>"}
+    AllowedPattern: '^arn:aws:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:.+$'
+
+  # --- Environment ---
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment tag
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Source Cluster (FSx for ONTAP A — S3 AP Origin)"
+        Parameters:
+          - SourceFileSystemId
+          - SourceSvmId
+          - SourceSvmName
+          - SourceSecretArn
+      - Label:
+          default: "Destination Cluster (FSx for ONTAP B — SnapMirror/FlexCache target)"
+        Parameters:
+          - DestFileSystemId
+          - DestSvmId
+          - DestSvmName
+          - DestSecretArn
+      - Label:
+          default: "Source Volume & S3 AP"
+        Parameters:
+          - SourceVolumeName
+          - SourceVolumeSizeMB
+          - SourceJunctionPath
+          - S3AccessPointName
+          - S3APUnixUser
+      - Label:
+          default: "Destination Volume"
+        Parameters:
+          - DestVolumeName
+      - Label:
+          default: "Environment"
+        Parameters:
+          - Environment
+
+Resources:
+  # ============================================================
+  # Source Volume (FlexVol on existing SVM)
+  # ============================================================
+  SourceVolume:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: !Ref SourceVolumeName
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: !Ref SourceJunctionPath
+        StorageVirtualMachineId: !Ref SourceSvmId
+        SizeInMegabytes: !Ref SourceVolumeSizeMB
+        StorageEfficiencyEnabled: true
+        TieringPolicy:
+          Name: AUTO
+          CoolingPeriod: 31
+        OntapVolumeType: RW
+        SecurityStyle: UNIX
+        SnapshotPolicy: default
+      Tags:
+        - Key: Name
+          Value: !Sub "${SourceVolumeName}-${Environment}"
+        - Key: Purpose
+          Value: SnapMirror-FlexCache-Validation-Source
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # ============================================================
+  # S3 Access Point on Source Volume
+  # ============================================================
+  SourceS3AccessPoint:
+    Type: AWS::FSx::DataRepositoryAssociation
+    DependsOn: SourceVolume
+    Metadata:
+      Comment: >
+        FSx for ONTAP S3 AP creation is not natively supported via CloudFormation
+        DataRepositoryAssociation. Use the AWS CLI post-deploy step below.
+        This placeholder documents the intent; actual creation is in the companion script.
+    Condition: NeverDeploy
+
+  # ============================================================
+  # IAM Role: Validation Lambda / Script Execution
+  # ============================================================
+  ValidationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "fsxn-snapmirror-val-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FSxDescribePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: FSxReadOnly
+                Effect: Allow
+                Action:
+                  - fsx:DescribeFileSystems
+                  - fsx:DescribeStorageVirtualMachines
+                  - fsx:DescribeVolumes
+                  - fsx:ListTagsForResource
+                Resource: "*"
+              - Sid: FSxS3APManagement
+                Effect: Allow
+                Action:
+                  - fsx:CreateDataRepositoryAssociation
+                  - fsx:DeleteDataRepositoryAssociation
+                  - fsx:DescribeDataRepositoryAssociations
+                Resource:
+                  - !Sub "arn:aws:fsx:${AWS::Region}:${AWS::AccountId}:file-system/${SourceFileSystemId}"
+                  - !Sub "arn:aws:fsx:${AWS::Region}:${AWS::AccountId}:file-system/${DestFileSystemId}"
+                  - !Sub "arn:aws:fsx:${AWS::Region}:${AWS::AccountId}:volume/*"
+        - PolicyName: S3APAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3APDataAccess
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                  - s3:HeadBucket
+                Resource:
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}"
+                  - !Sub "arn:aws:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/${S3AccessPointName}/object/*"
+        - PolicyName: SecretsManagerReadPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadONTAPCredentials
+                Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref SourceSecretArn
+                  - !Ref DestSecretArn
+        - PolicyName: CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+      Tags:
+        - Key: Purpose
+          Value: SnapMirror-FlexCache-Validation
+
+Conditions:
+  NeverDeploy:
+    !Equals ["true", "false"]
+
+Outputs:
+  # --- Source Cluster ---
+  SourceFileSystemId:
+    Description: Source FSx for ONTAP File System ID
+    Value: !Ref SourceFileSystemId
+
+  SourceVolumeId:
+    Description: Source Volume ID (S3 AP will be attached here)
+    Value: !Ref SourceVolume
+
+  SourceVolumeName:
+    Description: Source Volume Name
+    Value: !Ref SourceVolumeName
+
+  SourceSvmId:
+    Description: Source SVM ID
+    Value: !Ref SourceSvmId
+
+  # --- Destination Cluster ---
+  DestFileSystemId:
+    Description: Destination FSx for ONTAP File System ID
+    Value: !Ref DestFileSystemId
+
+  DestSvmId:
+    Description: Destination SVM ID
+    Value: !Ref DestSvmId
+
+  DestVolumeName:
+    Description: Destination Volume Name (created by companion script as DP type)
+    Value: !Ref DestVolumeName
+
+  # --- S3 AP ---
+  S3AccessPointName:
+    Description: S3 Access Point name (create via companion script post-deploy)
+    Value: !Ref S3AccessPointName
+
+  # --- IAM ---
+  ValidationRoleArn:
+    Description: IAM Role ARN for validation scripts
+    Value: !GetAtt ValidationRole.Arn
+
+  # --- Post-Deploy Instructions ---
+  PostDeployInstructions:
+    Description: Next steps after stack creation
+    Value: !Sub |
+      Stack deployed. Run the companion script to complete ONTAP-layer setup:
+
+      1. Create S3 Access Point:
+         aws fsx create-and-attach-s3-access-point \
+           --name ${S3AccessPointName} \
+           --type ONTAP \
+           --ontap-configuration \
+             'VolumeId=${SourceVolume},FileSystemIdentity={Type=UNIX,UnixUser={Name=${S3APUnixUser}}}'
+
+      2. Run inter-cluster setup:
+         ./integrations/snapmirror-flexcache-multicloud/scripts/validation/setup-intercluster.sh \
+           --source-fs ${SourceFileSystemId} \
+           --dest-fs ${DestFileSystemId} \
+           --source-secret ${SourceSecretArn} \
+           --dest-secret ${DestSecretArn}
+
+      3. Execute validation test cases (TC-06, TC-07, TC-08):
+         ./integrations/snapmirror-flexcache-multicloud/scripts/validation/run-intercluster-tests.sh
+
+      4. Teardown (after validation):
+         ./integrations/snapmirror-flexcache-multicloud/scripts/validation/teardown-intercluster.sh
+         aws cloudformation delete-stack --stack-name fsxn-snapmirror-flexcache-val
