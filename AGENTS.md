@@ -130,6 +130,15 @@ This is a structural conflict (not a timing issue). Use a different SVM or delet
 
 S3 APs with `FileSystemIdentity.Type=WINDOWS` require the SVM to be AD-joined (CIFS server configured). Template: `shared/templates/demo-ad-environment.yaml`. Script: `shared/scripts/demo-ad-join-svm.sh`.
 
+### AgentCore MCP Gateway — Data Access via S3 AP (verified 2026-07)
+
+When exposing lakehouse data operations (query, catalog browse) as MCP tools via AgentCore Gateway:
+
+- **Region**: AgentCore Gateway は **ap-northeast-1 で利用可能**（us-east-1 前提は Workshop の簡便性のため）
+- **同一リージョン必須**: Gateway と Lambda ターゲットは同一リージョンに配置。クロスリージョン Lambda 呼び出しは不可
+- **Lambda event format**: ツール名は `event.toolName` ではなく `context.client_context.custom['bedrockAgentCoreToolName']` で取得。event はフラットなパラメータ辞書
+- **E2E 検証済み構成**: Internet-origin S3 AP + VPC-external Lambda + AgentCore Gateway (ap-northeast-1) で list/read/search が動作確認済み
+
 ## Template Inventory (28 templates)
 
 | Category | Path Prefix | Count | Purpose |
