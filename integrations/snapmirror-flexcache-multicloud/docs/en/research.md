@@ -74,6 +74,19 @@ FSx for ONTAP S3 AP is based on ONTAP's "S3 NAS bucket (S3 multiprotocol)" mecha
 | FSx for ONTAP | GCNV | Yes | Yes (Cache only) | External Replication / FlexCache Cache |
 | FSx for ONTAP | ANF | No | No | Unsupported. Use CVO on Azure |
 
+### S3 NAS Bucket Compatibility with FlexCache / SnapMirror
+
+| Configuration | Supported | Min ONTAP | Official Source |
+|---------------|:---------:|:---------:|----------------|
+| S3 NAS bucket volume as **SnapMirror Async source** | ✅ | 9.12.1 | [S3 multiprotocol — Data protection](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/index.html) |
+| S3 NAS bucket volume as **SnapMirror Synchronous source** | ❌ | — | [S3 multiprotocol — Data protection](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/index.html) |
+| S3 NAS bucket volume in **SVM-DR** | ❌ | — | [S3 multiprotocol — Data protection](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/index.html), [KB: SVM DR + S3](https://kb.netapp.com/onprem/ontap/dp/SnapMirror/Is_SVM_Disaster_Recovery_(SVM_DR)_of_S3_buckets_supported%3F) |
+| S3 NAS bucket on **FlexCache Origin** volume | ✅ | 9.12.1 | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html) |
+| S3 NAS bucket on **FlexCache Cache** volume | ✅ | **9.18.1** | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html), [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html) |
+| FlexCache Cache S3 NAS bucket + **write-back mode** | ❌ | — | [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html) (write-around required) |
+| FlexCache Cache S3 — Origin/Cache **both must be 9.18.1+** | Required | 9.18.1 | [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html) |
+| FlexCache Origin with **SnapMirror Async relationship** | ✅ | 9.5+ | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html) |
+
 ---
 
 ## S3 AP + SnapMirror Interaction
