@@ -38,7 +38,7 @@ All 41 findings are reclassified into 4 action-oriented categories:
 | Finding ID | Topic | Final Classification | Routing | Public? |
 |:----------:|-------|:--------------------:|---------|:-------:|
 | FC-001 | S3 AP-attached volume as FlexCache Origin | works_as_expected | AWS Community | Yes |
-| FC-002 | Independent S3 AP attachment on Cache Volume | works_as_expected (9.18.1+) | AWS Community | Yes |
+| FC-002 | Independent S3 AP attachment on Cache Volume | works_as_expected (version_gated: 9.18.1+) | AWS Community | Yes |
 | FC-003 | FlexCache version compatibility | works_as_expected | AWS Community | Yes |
 | FC-004 | Write-back mode + S3 AP XLD behavior | works_with_caveats | NetApp BU (doc request) + Field | Yes |
 | FC-005 | NFS v4 Delegation / Lock Propagation | works_with_caveats | AWS Community + Field | Yes |

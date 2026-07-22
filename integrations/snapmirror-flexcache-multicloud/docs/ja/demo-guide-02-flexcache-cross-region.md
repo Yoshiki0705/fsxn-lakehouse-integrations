@@ -9,6 +9,10 @@
 
 ---
 
+> ✅ **検証ステータス**: E2E 検証済み (2026-07-22)。Cluster Peering + SVM Peering + FlexCache + NFS read 確認済み。
+> データ伝搬: 3 秒未満（ap-northeast-1 → us-west-2）。
+> スクリプト: `scripts/validation/cross-region-deploy.sh` + `cross-region-test.sh`
+
 ## このデモで検証すること
 
 ```

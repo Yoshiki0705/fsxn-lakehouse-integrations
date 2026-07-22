@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## このデモで検証すること
 
 ```
@@ -58,6 +63,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## 前提条件
 
 [共通前提条件](./demo-guide-00-prerequisites.md) に加え:
@@ -72,6 +82,11 @@ flowchart LR
 > **Cluster Peering の構成**: [Demo Guide 03 Step 2-3](./demo-guide-03-flexcache-on-premises.md#step-2-cluster-peeringオンプレミス-ontap-cli) を参照。
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 0: 環境変数の設定
 
@@ -95,11 +110,21 @@ export S3AP_NAME="fsxn-sm-onprem"
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 1: Source Volume + S3 AP + Lambda Writer（AWS 側）
 
 > [Demo Guide 01 Step 4-6](./demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) を参照。Volume 名を `$SOURCE_VOL` に置き換えてください。
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 2: Destination Volume 作成（オンプレミス ONTAP CLI）
 
@@ -115,6 +140,11 @@ cluster1::> volume create -vserver svm-onprem-dr -volume vol_sm_onprem_dest \
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 3: SnapMirror 関係の作成
 
@@ -139,6 +169,11 @@ cluster1::> snapmirror show -destination-path svm-onprem-dr:vol_sm_onprem_dest \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 4: DR フェイルオーバー — SnapMirror Break
 
 ```
@@ -161,6 +196,11 @@ cluster1::> volume show -volume vol_sm_onprem_dest -fields state,type,junction-p
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 5: NFS/SMB でデータアクセス（オンプレミス）
 
@@ -194,6 +234,11 @@ cat /mnt/sm_dest/demo-data/dr-written.json
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 6: 再同期（フェイルバック）— 任意
 
 DR テスト後に Region A に戻す場合:
@@ -207,6 +252,11 @@ cluster1::> snapmirror resync -destination-path svm-onprem-dr:vol_sm_onprem_dest
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## クリーンアップ
 
@@ -223,6 +273,11 @@ cluster1::> volume delete -vserver svm-onprem-dr -volume vol_sm_onprem_dest
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## トラブルシューティング
 
 | 症状 | 原因 | 対処 |
@@ -234,6 +289,11 @@ cluster1::> volume delete -vserver svm-onprem-dr -volume vol_sm_onprem_dest
 | データが空 | 初期転送未完了のまま break | `snapmirror show` で last-transfer-type 確認 |
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## 参考リンク
 

@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## このデモで検証すること
 
 ```
@@ -52,6 +57,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## 前提条件
 
 [共通前提条件](./demo-guide-00-prerequisites.md) に加え:
@@ -71,6 +81,11 @@ flowchart LR
 | Terraform（任意） | CVO + VPN の IaC デプロイ |
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 0: 環境変数の設定
 
@@ -100,6 +115,11 @@ export CACHE_VOL="vol_gcp_cache"
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 1: GCP HA VPN の作成
 
@@ -153,6 +173,11 @@ aws ec2 describe-route-tables --filters Name=vpc-id,Values="$AWS_VPC_ID" \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 2: CVO on GCP のデプロイ
 
 CVO は ONTAP REST API 経由で管理します。デプロイには Terraform または GCP Marketplace を使用します。
@@ -180,6 +205,11 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 3: Cluster Peering（AWS ↔ GCP）
 
@@ -222,6 +252,11 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 4: SVM Peering + FlexCache 作成
 
 ```bash
@@ -261,11 +296,21 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 5: Origin Volume + S3 AP + Lambda Writer
 
 > [Demo Guide 01 Step 4-6](./demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) を参照。AWS 側で Origin Volume を作成し S3 AP をアタッチ、Lambda でデータを書き込みます。
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 6: NFS 検証（GCE インスタンス）
 
@@ -297,6 +342,11 @@ aws s3api get-object --bucket "$S3AP_ALIAS" --key "demo-data/gcp-written.json" \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## クリーンアップ
 
 ```bash
@@ -318,6 +368,11 @@ aws ec2 delete-vpn-gateway --vpn-gateway-id "$AWS_VGW" --region "$AWS_REGION"
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## トラブルシューティング
 
 | 症状 | 原因 | 対処 |
@@ -329,6 +384,11 @@ aws ec2 delete-vpn-gateway --vpn-gateway-id "$AWS_VGW" --region "$AWS_REGION"
 | Write-back が遅い | クロスクラウド RTT > 50ms | 正常動作。バッチ flush のため体感影響は少ない |
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## 参考リンク
 

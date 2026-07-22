@@ -9,6 +9,10 @@
 
 ---
 
+> ✅ **Validation Status**: E2E validated (2026-07-22). Cluster Peering + SVM Peering + FlexCache + NFS read confirmed.
+> Data propagation: <3 seconds (ap-northeast-1 → us-west-2).
+> Script: `scripts/validation/cross-region-deploy.sh` + `cross-region-test.sh`
+
 ## What This Demo Validates
 
 ```

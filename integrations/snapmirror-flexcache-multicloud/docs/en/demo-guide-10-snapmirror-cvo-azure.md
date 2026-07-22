@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## What This Demo Validates
 
 ```
@@ -60,6 +65,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Prerequisites
 
 [Common Prerequisites](../en/demo-guide-00-prerequisites.md) plus the following:
@@ -74,6 +84,11 @@ flowchart LR
 > **重要制約 (XC-007)**: Azure NetApp Files (ANF) は FSx for ONTAP からの直接 SnapMirror をサポートしていません。AWS → Azure のデータレプリケーションには **CVO on Azure** を使用してください。
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 0: Set Environment Variables
 
@@ -96,11 +111,21 @@ export S3AP_NAME="fsxn-sm-azure"
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 1: Source Volume + S3 AP + Lambda Writer（AWS  side）
 
 > [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Refer to this guide.
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 2: VPN + Cluster Peering + SVM Peering
 
@@ -128,6 +153,11 @@ curl -sk -u "${ONTAP_USER}:${ONTAP_PASS}" \
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 3: Destination Volume 作成 + SnapMirror（Azure CVO）
 
@@ -184,6 +214,11 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 4: SnapMirror Break + NFS アクセス（Azure  side）
 
 ```bash
@@ -234,6 +269,11 @@ cat /mnt/sm_azure_dest/demo-data/sensor-001.json | jq .
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Cleanup
 
 ```bash
@@ -251,6 +291,11 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Troubleshooting
 
 | Symptom | Cause | Resolution |
@@ -263,6 +308,11 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Why ANF Cannot Be Used (Technical Background)
 
 Azure NetApp Files (ANF) は NetApp ONTAP ベースですが、Microsoft が管理するサービスであり、以下の制約があります:
@@ -274,6 +324,11 @@ Azure NetApp Files (ANF) は NetApp ONTAP ベースですが、Microsoft が管�
 ANF may support Cross-Cloud SnapMirror in the future, but it is not available as of 2026 Q3.
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## References
 

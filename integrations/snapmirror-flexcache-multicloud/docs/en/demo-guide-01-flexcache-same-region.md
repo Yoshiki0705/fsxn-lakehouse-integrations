@@ -9,6 +9,9 @@
 
 ---
 
+> ✅ **Validation Status**: E2E validated (2026-07-21, TC-09). All test cases PASS.
+> Script: `scripts/validation/tc09-deploy-validate-teardown.sh`
+
 ## What This Demo Validates
 
 ```

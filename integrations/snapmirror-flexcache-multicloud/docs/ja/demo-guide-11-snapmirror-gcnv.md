@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## このデモで検証すること
 
 ```
@@ -58,6 +63,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## 前提条件
 
 [共通前提条件](./demo-guide-00-prerequisites.md) に加え:
@@ -81,6 +91,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 0: 環境変数の設定
 
 ```bash
@@ -103,17 +118,32 @@ export S3AP_NAME="fsxn-sm-gcnv"
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 1: VPN 設定
 
 > [Demo Guide 04 Step 1](./demo-guide-04-flexcache-cvo-gcp.md#step-1-gcp-ha-vpn-の作成) の HA VPN 設定を参照。
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 2: Source Volume + S3 AP + Lambda Writer（AWS 側）
 
 > [Demo Guide 01 Step 4-6](./demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) を参照。
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 3: FSx for ONTAP Intercluster LIF 情報の取得
 
@@ -147,6 +177,11 @@ echo "SVM UUID: $SVM_UUID"
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 4: GCNV External Replication Volume の作成
 
@@ -183,6 +218,11 @@ gcloud netapp volumes create gcnv-repl-dest \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 5: Replication 状態の確認
 
 ```bash
@@ -203,6 +243,11 @@ dataProtection:
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 6: Replication Break + NFS アクセス
 
@@ -251,6 +296,11 @@ cat /mnt/gcnv_repl/demo-data/sensor-001.json | jq .
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## クリーンアップ
 
 ```bash
@@ -271,6 +321,11 @@ gcloud netapp storage-pools delete gcnv-repl-pool \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## トラブルシューティング
 
 | 症状 | 原因 | 対処 |
@@ -282,6 +337,11 @@ gcloud netapp storage-pools delete gcnv-repl-pool \
 | Break 後に書き込めない | GCNV の Volume 設定 | Break 後は RW Volume。export policy を確認 |
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## GCNV External Replication vs CVO SnapMirror の選び方
 
@@ -299,6 +359,11 @@ gcloud netapp storage-pools delete gcnv-repl-pool \
 - **Write-back / SMB / ONTAP フル機能が必要** → CVO on GCP
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## 参考リンク
 

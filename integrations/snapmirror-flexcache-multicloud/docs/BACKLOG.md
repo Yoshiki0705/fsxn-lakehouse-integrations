@@ -2,6 +2,32 @@
 
 > 残課題と今後のアクション。優先度順に整理。
 
+## Validation Status System
+
+All 12 demo guides now include a validation status banner:
+
+| Badge | Meaning | Script Available |
+|:-----:|---------|:----------------:|
+| ✅ **E2E validated** | Tested in live environment with evidence | Yes (executable) |
+| ⚠️ **Partially validated** | Some steps confirmed, E2E incomplete | Yes (executable for completed parts) |
+| ⚠️ **Procedure-level** | Commands based on documentation; not yet run E2E | Yes (template with TODOs) |
+
+### Current Status Matrix
+
+| Guide | Target | Status | Script |
+|:-----:|--------|:------:|--------|
+| 01 | FlexCache same-region (FSx→FSx) | ✅ Validated (TC-09, 2026-07-21) | `tc09-deploy-validate-teardown.sh` |
+| 02 | FlexCache cross-region (FSx→FSx) | ✅ Validated (2026-07-22) | `cross-region-deploy.sh` + `cross-region-test.sh` |
+| 03 | FlexCache on-premises | ⚠️ Procedure-level | `on-premises-test.sh` (template) |
+| 04 | FlexCache CVO GCP | ⚠️ Procedure-level | `cvo-gcp-test.sh` (template) |
+| 05 | FlexCache CVO Azure | ⚠️ Procedure-level | `cvo-azure-test.sh` (template) |
+| 06 | FlexCache GCNV | ⚠️ Procedure-level | `gcnv-test.sh` (template) |
+| 07 | SnapMirror cross-region | ⚠️ Partially validated | `cross-region-test.sh` (peering done) |
+| 08 | SnapMirror on-premises | ⚠️ Procedure-level | `on-premises-test.sh` (template) |
+| 09 | SnapMirror CVO GCP | ⚠️ Procedure-level | `cvo-gcp-test.sh` (template) |
+| 10 | SnapMirror CVO Azure | ⚠️ Procedure-level | `cvo-azure-test.sh` (template) |
+| 11 | SnapMirror GCNV | ⚠️ Procedure-level | `gcnv-test.sh` (template) |
+
 ## In Progress
 
 (なし — 現在進行中のタスクはありません)
@@ -12,21 +38,21 @@
 |:-:|------|:--------:|:------:|-------|
 | 1 | EN demo guide prose — remaining ~400 lines of Japanese in code comments | P2 | 2h | Shell コメント内の日本語。主要散文は翻訳済み |
 | 2 | Screenshot/recording capture during next execution | P2 | 1h | TC-09 再実行時に同時取得 |
-| 3 | FlexCache cross-region E2E test (data write → NFS read in Region B) | P1 | 2h | Cluster Peering は validated。SVM Peering + FlexCache + NFS read が未完了 |
+| 3 | ~~FlexCache cross-region E2E test (data write → NFS read in Region B)~~ | ~~P1~~ | ~~2h~~ | ✅ Completed 2026-07-22. Cluster Peering + SVM Peering + FlexCache + NFS read/write validated (ap-northeast-1 → us-west-2). Data propagation <3s. |
 | 4 | SnapMirror cross-region test (Guide 07: break → S3 AP re-attach in Region B) | P1 | 2h | FSx B 再作成が必要 (~$6) |
 | 5 | dev.to 記事化 (Part N: S3 AP + FlexCache マルチクラウド配信) | P1 | 4h | stakeholder-briefs/03 ベース |
 | 6 | git commit + PR | P1 | 30min | 全成果物を feat/ ブランチで push |
 
 ## Requires External Action
 
-| # | Task | Dependency | Notes |
-|:-:|------|-----------|-------|
-| 7 | CVO on GCP validation (Guide 04/09) | GCP account + CVO license | ~$20/test |
-| 8 | CVO on Azure validation (Guide 05/10) | Azure account + CVO license | ~$20/test |
-| 9 | GCNV validation (Guide 06/11) | GCNV access (GA) | Google Cloud |
-| 10 | On-premises validation (Guide 03/08) | Physical ONTAP or AFF-C190 | Lab access |
-| 11 | Windows EC2 SMB validation with screenshots | AD + Windows AMI | ~$5 |
-| 12 | ONTAP 9.18.1 upgrade → FC-002 validation (S3 AP on FlexCache Cache) | FSx for ONTAP 9.18.1 adoption | Future |
+| # | Task | Dependency | Script | Notes |
+|:-:|------|-----------|--------|-------|
+| 7 | CVO on GCP validation (Guide 04/09) | GCP account + CVO license | `cvo-gcp-test.sh` | ~$20/test |
+| 8 | CVO on Azure validation (Guide 05/10) | Azure account + CVO license | `cvo-azure-test.sh` | ~$20/test |
+| 9 | GCNV validation (Guide 06/11) | GCNV access (GA) | `gcnv-test.sh` | Google Cloud |
+| 10 | On-premises validation (Guide 03/08) | Physical ONTAP or AFF-C190 | `on-premises-test.sh` | Lab access |
+| 11 | Windows EC2 SMB validation with screenshots | AD + Windows AMI | — | ~$5 |
+| 12 | ONTAP 9.18.1 upgrade → FC-002 validation (S3 AP on FlexCache Cache) | FSx for ONTAP 9.18.1 adoption | — | Future |
 
 ## Completed (This Sprint)
 
@@ -47,6 +73,10 @@
 | **Cross-region Cluster Peering VALIDATED (ap-northeast-1 ↔ us-west-2)** | 2026-07-21 |
 | Old FlexCache Technical Debt cleaned (TC-03/TC-05 remnants) | 2026-07-21 |
 | VPC Peering + routing lesson learned (subnet-specific RT) | 2026-07-21 |
+| **Cross-region FlexCache E2E VALIDATED (Origin write → Cache read <3s)** | 2026-07-22 |
+| Cross-region teardown completed (FlexCache + peerings + FSx B deleted) | 2026-07-22 |
+| Validation Status banners added to all 12 demo guides (EN+JA) | 2026-07-22 |
+| Validation script templates created for all targets (on-prem, CVO GCP/Azure, GCNV) | 2026-07-22 |
 
 ## Technical Debt
 
@@ -73,3 +103,6 @@
 12. **Cross-region FSx deletion order**: Delete SVM first, wait for completion, then delete file system. Cannot delete FS with SVMs.
 13. **FlexCache write-back deletion**: Must disable `writeback.enabled` (PATCH to false) BEFORE deleting the FlexCache volume.
 14. **Cross-region Cluster Peering**: Works between FSx for ONTAP in different AWS regions via VPC Peering. Confirmed `available` status (ap-northeast-1 ↔ us-west-2).
+15. **FlexCache cross-region data propagation**: New files written to Origin via NFS appear in Cache Volume within 3 seconds (tested ap-northeast-1 → us-west-2, ~120ms RTT). No explicit cache refresh needed.
+16. **Teardown order for cross-region FlexCache**: (1) Unmount NFS clients, (2) Remove junction path on FlexCache, (3) DELETE `/api/storage/flexcache/flexcaches/{uuid}`, (4) Delete Origin volume (may need `force=true` if cluster peering already removed), (5) Delete SVM Peering, (6) Delete Cluster Peering, (7) Delete SVM via FSx API, (8) Delete File System via FSx API. Deleting cluster peering before FlexCache causes orphaned origin relationships requiring `force=true`.
+17. **Passphrase shell escaping in SSM**: Avoid `$` in Cluster Peering passphrases when executing via SSM send-command. Use alphanumeric-only passphrases (e.g., `CrossRegion2026Peer`) to prevent shell expansion issues.

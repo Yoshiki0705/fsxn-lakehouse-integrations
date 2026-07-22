@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## What This Demo Validates
 
 ```
@@ -52,6 +57,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Prerequisites
 
 [Common Prerequisites](../en/demo-guide-00-prerequisites.md) plus the following:
@@ -75,6 +85,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 0: Set Environment Variables
 
 ```bash
@@ -97,6 +112,11 @@ export CACHE_VOL="vol_hybrid_cache"
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 1: ネットワーク接続Verify
 
@@ -131,6 +151,11 @@ cluster1::> network ping -lif ic-lif1 -vserver svm-onprem-cache -destination 198
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 2: Cluster Peering (On-Premises ONTAP CLI)
 
@@ -176,6 +201,11 @@ curl -sk -u "${ONTAP_USER}:${ONTAP_PASS}" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 3: SVM Peering
 
 ```
@@ -205,17 +235,32 @@ curl -sk -u "${ONTAP_USER}:${ONTAP_PASS}" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 4: Origin Volume + S3 AP（AWS  side）
 
 > [Demo Guide 01 Step 4](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ)  — same procedure.
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 5-6: Lambda Writer & データ書き込み
 
 > [Demo Guide 01 Step 5-6](../en/demo-guide-01-flexcache-same-region.md#step-5-lambda-writer-関数のデプロイ) . Refer to this guide.
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 7: Create FlexCache (On-Premises ONTAP CLI)
 
@@ -243,6 +288,11 @@ svm-onprem-cache vol_hybrid_cache 100GB svm-origin vol_hybrid_origin online
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 8: NFS Verification（オンプレミスサーバー）
 
 ```bash
@@ -269,6 +319,11 @@ aws s3api get-object --bucket "$S3AP_ALIAS" --key "demo-data/onprem-written.json
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Cleanup
 
 ```bash
@@ -284,6 +339,11 @@ cluster1::> cluster peer delete -cluster <aws-cluster-name>
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Troubleshooting
 
 | Symptom | Cause | Resolution |
@@ -295,6 +355,11 @@ cluster1::> cluster peer delete -cluster <aws-cluster-name>
 | Cache miss が多い | Origin data is large, fetch takes time | `flexcache prepopulate`  to warm up |
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## References
 

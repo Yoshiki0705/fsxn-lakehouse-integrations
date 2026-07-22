@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## What This Demo Validates
 
 ```
@@ -52,6 +57,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Prerequisites
 
 [Common Prerequisites](../en/demo-guide-00-prerequisites.md) plus the following:
@@ -71,6 +81,11 @@ flowchart LR
 | Terraform(optional) | CVO + VPN の IaC デプロイ |
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 0: Set Environment Variables
 
@@ -100,6 +115,11 @@ export CACHE_VOL="vol_gcp_cache"
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 1: Create GCP HA VPN
 
@@ -153,6 +173,11 @@ aws ec2 describe-route-tables --filters Name=vpc-id,Values="$AWS_VPC_ID" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 2: Deploy CVO on GCP
 
 CVO は ONTAP REST API 経由で管理します。デプロイには Terraform または GCP Marketplace を使用します。
@@ -180,6 +205,11 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 3: Cluster Peering (AWS ↔ GCP)
 
@@ -222,6 +252,11 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 4: SVM Peering + FlexCache Creation
 
 ```bash
@@ -261,11 +296,21 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 5: Origin Volume + S3 AP + Lambda Writer
 
 > [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Refer to this guide.AWS  side:  Create Origin Volumeし Attach S3 AP、Lambda でデータを書き込みます。
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 6: NFS Verification（GCE インスタンス）
 
@@ -297,6 +342,11 @@ aws s3api get-object --bucket "$S3AP_ALIAS" --key "demo-data/gcp-written.json" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Cleanup
 
 ```bash
@@ -318,6 +368,11 @@ aws ec2 delete-vpn-gateway --vpn-gateway-id "$AWS_VGW" --region "$AWS_REGION"
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Troubleshooting
 
 | Symptom | Cause | Resolution |
@@ -329,6 +384,11 @@ aws ec2 delete-vpn-gateway --vpn-gateway-id "$AWS_VGW" --region "$AWS_REGION"
 | Write-back が遅い | Cross-cloud RTT > 50ms | Normal behavior. Batch flush minimizes perceived impact |
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## References
 

@@ -208,6 +208,7 @@ aws fsx create-and-attach-s3-access-point \
 - New AP gets a new ARN and alias (different from source)
 - Client applications must update to use the new S3 endpoint
 - Cross-region: S3 AP can only be attached to volumes in the same region
+- **Estimated RTO**: ~2 minutes (SnapMirror break ~instant + FSx API sync ~60s + S3 AP creation ~30s + DNS propagation ~30s)
 
 **Additional finding (SM-VAL-004/007):** FSx API `describe-volumes` shows `VolumeType: DP` for ~60s after ONTAP break. S3 AP attachment requires `RW`. Automation scripts need a polling loop.
 
@@ -413,14 +414,14 @@ All paths use standard Cluster Peering with TLS 1.2 encryption (default enabled 
 
 **Finding:** ANF supports only Cross-Volume Replication (CVR) — an ANF-to-ANF mechanism. External ONTAP systems (including FSx for ONTAP) cannot establish SnapMirror relationships with ANF because ANF does not expose Cluster Peering interfaces.
 
-**Technical reason:** ANF is built on Azure infrastructure with a proprietary implementation. It does not expose Intercluster LIF endpoints or Cluster Peering passphrase authentication to external systems.
+**Technical reason:** ANF is built on Azure infrastructure and does not currently expose Intercluster LIF endpoints or Cluster Peering passphrase authentication to external systems. Its replication model is limited to ANF-to-ANF (Cross-Volume Replication).
 
 **Alternatives:**
 1. FSx for ONTAP → CVO on Azure (SnapMirror) → NFS/SMB from CVO
 2. FSx for ONTAP → CVO on Azure (SnapMirror) → ANF (via AzCopy/DataSync for file-level sync)
 3. AWS DataSync / rsync for direct file-level sync to ANF
 
-**Comparison with GCNV:** GCNV supports External Replication from external ONTAP systems (GA 2024), demonstrating that managed ONTAP services can expose Cluster Peering. ANF currently lacks this capability.
+**Context:** GCNV supports External Replication from external ONTAP systems (GA 2024). ANF does not currently offer an equivalent external peering interface. Each managed service has its own architectural decisions regarding external connectivity.
 
 **Evidence:**
 - [Microsoft Docs: Understand ANF Replication](https://learn.microsoft.com/en-us/azure/azure-netapp-files/replication)
@@ -436,9 +437,9 @@ All paths use standard Cluster Peering with TLS 1.2 encryption (default enabled 
 | **Classification** | `supported` |
 | **Disclosure** | publicly verifiable |
 
-**Cluster Peering Encryption:** TLS 1.2 AES-256 GCM, default enabled since ONTAP 9.6 for new peer relationships. No performance impact per NetApp KB.
+**Cluster Peering Encryption:** TLS 1.2 AES-256 GCM, default enabled since ONTAP 9.6 for new peer relationships. No performance impact per NetApp KB. All data transferred between clusters is encrypted in transit.
 
-**Encryption at rest (NAE/NVE):** SnapMirror transfers data in unencrypted form (NVE/NAE operates at WAFL layer); destination re-encrypts with its own key. Source/destination can mix NVE, NAE, or plaintext independently.
+**Encryption at rest (NAE/NVE):** At the storage layer, SnapMirror decrypts data at the source WAFL layer before transfer (since encryption keys are cluster-local), transmits over TLS-encrypted link, and the destination re-encrypts with its own key. Source/destination can independently use NVE, NAE, or plaintext — the at-rest encryption configuration is independent on each side.
 
 **Snapshot + S3 AP write consistency:** ONTAP Snapshots are crash-consistent by default. Each completed S3 API PutObject is atomically committed to WAFL. SnapMirror transfers Snapshot-based content — always file-system consistent.
 
@@ -456,13 +457,17 @@ All paths use standard Cluster Peering with TLS 1.2 encryption (default enabled 
 
 **Key point for AUTH-003:** After SnapMirror break, the destination SVM must have CIFS service configured and AD-joined BEFORE SMB clients can access data. This is SVM-level configuration not transferred by volume-level SnapMirror (reinforces SM-004 impact).
 
+### Data Sovereignty Note
+
+Cross-region and cross-cloud SnapMirror transfers move data to different geographic locations. For regulated data (GDPR, HIPAA, data residency requirements), verify that replication destinations comply with your organization's data governance policies before configuring SnapMirror relationships. FlexCache (read-only mode) also caches data blocks at remote sites — consider whether cached data residency meets compliance requirements.
+
 ---
 
 ## FlexCache Cross-Region/Cross-Cloud
 
 | Finding ID | Topic | Classification | Key Detail |
 |:----------:|-------|:--------------:|-----------|
-| FCXC-001 | FSx for ONTAP inter-region FlexCache | supported | Same as intra-region; VPC Peering/TGW required |
+| FCXC-001 | FSx for ONTAP inter-region FlexCache | supported (validated) | Same as intra-region; VPC Peering/TGW required. Validated 2026-07-22: ap-northeast-1 → us-west-2, data propagation <3s |
 | FCXC-002 | FSx for ONTAP → On-premises (DX/VPN) | supported | Direct Connect or VPN; RTT impacts performance |
 | FCXC-003 | FSx for ONTAP → CVO (GCP/Azure) | supported | Cross-cloud VPN; write-around recommended for high RTT |
 | FCXC-004 | Intercluster LIF requirements | supported | TCP 11104/11105 + ICMP; auto-configured on FSx for ONTAP |

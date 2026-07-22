@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## What This Demo Validates
 
 ```
@@ -52,6 +57,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Prerequisites
 
 [Common Prerequisites](../en/demo-guide-00-prerequisites.md) plus the following:
@@ -71,6 +81,11 @@ flowchart LR
 | Terraform(optional) | CVO + VPN の IaC デプロイ |
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 0: Set Environment Variables
 
@@ -99,6 +114,11 @@ export CACHE_VOL="vol_azure_cache"
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 1: Create Azure VPN Gateway
 
@@ -185,6 +205,11 @@ az network vpn-connection create \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 2: Deploy CVO on Azure
 
 ```bash
@@ -206,6 +231,11 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 3: Cluster Peering + SVM Peering
 
@@ -258,6 +288,11 @@ curl -sk -u "${ONTAP_USER}:${ONTAP_PASS}" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 4: Create FlexCache (Azure CVO)
 
 ```bash
@@ -292,11 +327,21 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 5: Origin Volume + S3 AP + Lambda Writer
 
 > [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Refer to this guide.
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 6: NFS Verification（Azure VM）
 
@@ -318,6 +363,11 @@ echo '{"source": "azure-cvo", "ts": '$(date +%s)'}' > /mnt/azure_cache/demo-data
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Cleanup
 
@@ -341,6 +391,11 @@ az group delete --name "$AZ_RESOURCE_GROUP" --yes
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Troubleshooting
 
 | Symptom | Cause | Resolution |
@@ -353,6 +408,11 @@ az group delete --name "$AZ_RESOURCE_GROUP" --yes
 | Write-back 遅延が大きい | AWS ↔ Azure RTT (~70-150ms) | Normal behavior. Optimal for read-heavy workloads |
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## References
 

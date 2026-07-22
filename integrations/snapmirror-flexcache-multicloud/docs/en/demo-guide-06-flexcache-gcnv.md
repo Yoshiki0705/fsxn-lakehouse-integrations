@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## What This Demo Validates
 
 ```
@@ -61,6 +66,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Prerequisites
 
 [Common Prerequisites](../en/demo-guide-00-prerequisites.md) plus the following:
@@ -79,6 +89,11 @@ flowchart LR
 | `gcloud` CLI | GCP / GCNV リソース管理 |
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 0: Set Environment Variables
 
@@ -102,6 +117,11 @@ export ORIGIN_VOL="vol_gcnv_origin"
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 1: GCP HA VPN 設定
 
 > The VPN setup procedure follows [Demo Guide 04 Step 1](../en/demo-guide-04-flexcache-cvo-gcp.md#step-1-gcp-ha-vpn-の作成) . Configure HA VPN between AWS and GCP.
@@ -115,6 +135,11 @@ gcloud compute vpn-tunnels describe <tunnel-name> \
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 2: Create GCNV Storage Pool
 
@@ -148,6 +173,11 @@ Created storage pool [gcnv-demo-pool].
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 3: Create GCNV FlexCache Volume
 
@@ -191,11 +221,21 @@ gcloud netapp volumes create gcnv-cache-vol \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 4: Origin Volume + S3 AP + Lambda Writer（AWS  side）
 
 > [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Refer to this guide.
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Step 5: NFSv3 Verification（GCE インスタンス）
 
@@ -243,6 +283,11 @@ echo "test" > /mnt/gcnv_cache/demo-data/write-test.json
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Step 6: Origin 更新 → Cache 反映テスト
 
 ```bash
@@ -259,6 +304,11 @@ ls /mnt/gcnv_cache/demo-data/gcnv-test/
 ```
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## Cleanup
 
@@ -281,6 +331,11 @@ gcloud netapp storage-pools delete gcnv-demo-pool \
 
 ---
 
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
+
 ## Troubleshooting
 
 | Symptom | Cause | Resolution |
@@ -292,6 +347,11 @@ gcloud netapp storage-pools delete gcnv-demo-pool \
 | TTL 後もデータ反映されない | GCNV Cache is managed by Google | GCP Console で Volume  status verified |
 
 ---
+
+> ⚠️ **Validation Status**: Procedure-level guide (not yet E2E validated in a live environment).
+> Commands and architecture are based on official documentation and patterns validated in Guide 01/02 (same-region / cross-region FSx for ONTAP).
+> External environment required for full validation — see BACKLOG items 7–12.
+
 
 ## References
 

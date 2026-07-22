@@ -13,6 +13,11 @@ Amazon FSx for NetApp ONTAP の S3 Access Point（FSx for ONTAP S3 AP）を利�
 
 宛先では NFS/SMB プロトコルによるセキュアなファイルレベル認証アクセスを提供する。
 
+### FlexCache vs SnapMirror — When to use which
+
+- **FlexCache**: リモートサイトでの読み取り高速化。Origin データのキャッシュを配置し、ローカル速度で NFS/SMB read を提供。ストレージ効率が高い（アクセスされたデータのみキャッシュ）
+- **SnapMirror**: DR（災害復旧）/ データ移行。宛先にフルコピーを作成し、フェイルオーバー可能。RPO 5 分以上
+
 ## Status
 
 | Phase | Status | Description |
@@ -90,6 +95,29 @@ Legend: ✅ Confirmed/Validated | ❌ Unsupported | ⚠️ Works with caveats
 
 > 📖 Each guide is available in Japanese and English.
 > 各ガイドは日本語・英語の両方があります。
+>
+> ⏱️ Estimated times assume FSx for ONTAP is already deployed. Add ~30 minutes for initial FSx for ONTAP creation if starting from scratch.
+
+### Getting Started
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns.git
+cd FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns/integrations/snapmirror-flexcache-multicloud
+
+# 2. Copy and edit parameters
+cp scripts/validation/cross-region-params.env.example scripts/validation/cross-region-params.env
+# Edit: FS_ID_A, MGMT_IP_A, PASSWORD_A, REGION_A, etc.
+
+# 3. Deploy cross-region infrastructure (VPC B + Peering + FSx B)
+./scripts/validation/cross-region-deploy.sh
+
+# 4. Run cross-region FlexCache test
+./scripts/validation/cross-region-test.sh
+
+# 5. Teardown (stop ~$6/day cost)
+./scripts/validation/teardown-intercluster.sh
+```
 
 ### FlexCache Patterns / FlexCache パターン
 

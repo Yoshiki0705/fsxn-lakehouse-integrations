@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## このデモで検証すること
 
 ```
@@ -61,6 +66,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## 前提条件
 
 [共通前提条件](./demo-guide-00-prerequisites.md) に加え:
@@ -79,6 +89,11 @@ flowchart LR
 | `gcloud` CLI | GCP / GCNV リソース管理 |
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 0: 環境変数の設定
 
@@ -102,6 +117,11 @@ export ORIGIN_VOL="vol_gcnv_origin"
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 1: GCP HA VPN 設定
 
 > VPN の設定手順は [Demo Guide 04 Step 1](./demo-guide-04-flexcache-cvo-gcp.md#step-1-gcp-ha-vpn-の作成) と同一です。AWS ↔ GCP 間の HA VPN を構成してください。
@@ -115,6 +135,11 @@ gcloud compute vpn-tunnels describe <tunnel-name> \
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 2: GCNV Storage Pool の作成
 
@@ -148,6 +173,11 @@ Created storage pool [gcnv-demo-pool].
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 3: GCNV FlexCache Volume の作成
 
@@ -191,11 +221,21 @@ gcloud netapp volumes create gcnv-cache-vol \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 4: Origin Volume + S3 AP + Lambda Writer（AWS 側）
 
 > [Demo Guide 01 Step 4-6](./demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) を参照。
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 5: NFSv3 検証（GCE インスタンス）
 
@@ -243,6 +283,11 @@ echo "test" > /mnt/gcnv_cache/demo-data/write-test.json
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 6: Origin 更新 → Cache 反映テスト
 
 ```bash
@@ -259,6 +304,11 @@ ls /mnt/gcnv_cache/demo-data/gcnv-test/
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## クリーンアップ
 
@@ -281,6 +331,11 @@ gcloud netapp storage-pools delete gcnv-demo-pool \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## トラブルシューティング
 
 | 症状 | 原因 | 対処 |
@@ -292,6 +347,11 @@ gcloud netapp storage-pools delete gcnv-demo-pool \
 | TTL 後もデータ反映されない | GCNV Cache 管理はGoogle側 | GCP Console で Volume 状態を確認 |
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## 参考リンク
 

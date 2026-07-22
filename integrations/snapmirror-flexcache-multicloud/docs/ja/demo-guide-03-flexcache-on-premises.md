@@ -9,6 +9,11 @@
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## このデモで検証すること
 
 ```
@@ -52,6 +57,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## 前提条件
 
 [共通前提条件](./demo-guide-00-prerequisites.md) に加え:
@@ -75,6 +85,11 @@ flowchart LR
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 0: 環境変数の設定
 
 ```bash
@@ -97,6 +112,11 @@ export CACHE_VOL="vol_hybrid_cache"
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 1: ネットワーク接続確認
 
@@ -131,6 +151,11 @@ cluster1::> network ping -lif ic-lif1 -vserver svm-onprem-cache -destination 198
 ```
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 2: Cluster Peering（オンプレミス ONTAP CLI）
 
@@ -176,6 +201,11 @@ curl -sk -u "${ONTAP_USER}:${ONTAP_PASS}" \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 3: SVM Peering
 
 ```
@@ -205,17 +235,32 @@ curl -sk -u "${ONTAP_USER}:${ONTAP_PASS}" \
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 4: Origin Volume + S3 AP（AWS 側）
 
 > [Demo Guide 01 Step 4](./demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) と同一手順。
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 5-6: Lambda Writer & データ書き込み
 
 > [Demo Guide 01 Step 5-6](./demo-guide-01-flexcache-same-region.md#step-5-lambda-writer-関数のデプロイ) を参照。
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## Step 7: FlexCache 作成（オンプレミス ONTAP CLI）
 
@@ -243,6 +288,11 @@ svm-onprem-cache vol_hybrid_cache 100GB svm-origin vol_hybrid_origin online
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## Step 8: NFS 検証（オンプレミスサーバー）
 
 ```bash
@@ -269,6 +319,11 @@ aws s3api get-object --bucket "$S3AP_ALIAS" --key "demo-data/onprem-written.json
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## クリーンアップ
 
 ```bash
@@ -284,6 +339,11 @@ cluster1::> cluster peer delete -cluster <aws-cluster-name>
 
 ---
 
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
+
 ## トラブルシューティング
 
 | 症状 | 原因 | 対処 |
@@ -295,6 +355,11 @@ cluster1::> cluster peer delete -cluster <aws-cluster-name>
 | Cache miss が多い | Origin データが大きく fetch に時間がかかる | `flexcache prepopulate` でウォームアップ |
 
 ---
+
+> ⚠️ **検証ステータス**: 手順レベルのガイド（実環境での E2E 検証は未実施）。
+> コマンドとアーキテクチャは公式ドキュメントおよび Guide 01/02（同一リージョン / クロスリージョン FSx for ONTAP）で検証済みのパターンに基づいています。
+> 完全な検証には外部環境が必要です — BACKLOG items 7–12 を参照。
+
 
 ## 参考リンク
 

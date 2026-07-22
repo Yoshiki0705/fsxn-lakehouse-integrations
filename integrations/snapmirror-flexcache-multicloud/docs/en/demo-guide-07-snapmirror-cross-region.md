@@ -9,6 +9,9 @@
 
 ---
 
+> ⚠️ **Validation Status**: Partially validated. Cross-region Cluster Peering + SVM Peering confirmed (2026-07-22).
+> SnapMirror transfer + break + S3 AP re-attach E2E not yet executed (requires FSx B re-deployment, ~$6/day).
+
 ## What This Demo Validates
 
 ```

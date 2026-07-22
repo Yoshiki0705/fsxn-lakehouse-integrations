@@ -9,8 +9,9 @@
 
 ## Title Candidates
 
-- "FSx for ONTAP S3 Access Points + SnapMirror/FlexCache: Multi-Cloud Data Distribution Validated"
-- "S3 API で書き込み、NFS/SMB で読み出す — FSx for ONTAP マルチクラウドデータ配信の実現可能性"
+- "FSx for ONTAP S3 AP + SnapMirror/FlexCache: Multi-Cloud Data Distribution Validated"
+- "S3 API で書き込み、NFS/SMB で読み出す — マルチクラウドデータ配信の検証"
+- Short form (dev.to): "S3 AP × FlexCache: Cross-Cloud NFS Access Validated"
 
 ---
 
@@ -125,4 +126,4 @@ FSx for ONTAP S3 Access Points enable S3 API data ingestion into ONTAP volumes. 
 
 ## Article Series Context
 
-This research forms Part N of the "FSx for ONTAP S3 Access Points + Data Lakehouse" series on dev.to. Previous parts cover Athena, DuckDB, Databricks, Snowflake, and EMR integrations.
+This research is part of the "FSx for ONTAP S3 Access Points + Data Lakehouse" series on dev.to. Previous parts cover Athena, DuckDB, Databricks, Snowflake, and EMR integrations. This will be published as an upcoming part in the series.

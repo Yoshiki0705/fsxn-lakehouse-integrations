@@ -9,6 +9,9 @@
 
 ---
 
+> ✅ **検証ステータス**: E2E 検証済み (2026-07-21, TC-09)。全テストケース PASS。
+> スクリプト: `scripts/validation/tc09-deploy-validate-teardown.sh`
+
 ## このデモで検証すること
 
 ```
