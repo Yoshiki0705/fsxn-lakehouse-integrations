@@ -121,6 +121,27 @@ gitleaks detect --no-git --source .        # Secret scan
 
 </details>
 
+<details>
+<summary>🔀 S3 Access Points + SnapMirror / FlexCache — Multi-region data distribution</summary>
+
+S3 Access Points で収集したデータを SnapMirror（DR）や FlexCache（読み取り加速）で別リージョン/別クラウドに配信し、宛先で NFS/SMB/S3 API アクセスを実現する構成を検証済み。
+
+**S3 Access Points と FlexCache / SnapMirror の互換性（動作検証済み）:**
+
+| 構成 | サポート | 条件 |
+|------|:--------:|------|
+| S3 AP ボリュームを SnapMirror Async ソースに | ✅ 検証済み | ONTAP 9.12.1+ |
+| S3 AP ボリュームを FlexCache Origin に | ✅ 検証済み | ONTAP 9.12.1+ |
+| FlexCache Cache Volume に S3 AP アタッチ | ✅ (version-gated) | ONTAP 9.18.1+ |
+| SnapMirror Synchronous | ❌ | S3 NAS bucket では非サポート |
+| SVM-DR | ❌ | S3 NAS bucket を含む SVM では非サポート |
+
+> FSx for ONTAP S3 Access Points は ONTAP の S3 NAS bucket メカニズムに基づいている。上記は [NetApp 公式ドキュメント](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/index.html) で S3 NAS bucket として記載されている仕様に対し、FSx for ONTAP S3 Access Points で動作検証を実施した結果である。
+
+**詳細ドキュメント**: [SnapMirror + FlexCache 調査・検証](integrations/snapmirror-flexcache-multicloud/) (12 demo guides, validation scripts, 41 findings)
+
+</details>
+
 ---
 
 ## License
