@@ -65,7 +65,8 @@ integrations/snapmirror-flexcache-multicloud/
 | SnapMirror failover 後の S3 AP 再アタッチ | ✅ 検証済み | break → junction path → ~60s → S3 AP 作成。Cross-region RTO ~3 分 |
 | S3 AP 付き SVM の SVM-DR | ❌ 非サポート | Volume-level SnapMirror のみ。宛先 SVM 構成は手動 |
 | FSx for ONTAP → ANF（SnapMirror） | ❌ 非サポート | ANF は外部 Cluster Peering 不可。CVO on Azure 経由で代替 |
-| S3 AP ボリュームを FlexCache Origin に | ✅ 検証済み | ONTAP 9.17.1 で確認（同一クラスター + cross-region） |
+| S3 AP ボリュームを FlexCache Origin に | ✅ 検証済み | ONTAP 9.17.1 で確認（同一クラスター + cross-region）。[検証エビデンス](#flexcache-origin-検証エビデンス) |
+| FlexCache Cache Volume に S3 AP をアタッチ | 🔒 バージョン依存 | ONTAP 9.18.1 以降でサポート。現行 FSx for ONTAP (9.17.1) では不可。[FC-002 詳細](#fc-002-flexcache-cache-volume-への-s3-ap-アタッチ) |
 | FlexCache write-back + S3 AP | ⚠️ 注意事項あり | 動作するが、S3 AP Origin 書き込みが Cache XLD を revoke（同一ファイル同時書き込みにデータ損失リスク） |
 | クロスクラウド暗号化 | ✅ 確認済み | Cluster Peering Encryption（TLS 1.2）デフォルト有効 |
 | SnapMirror データ整合性 | ✅ 確認済み | WAFL 原子性 + crash-consistent Snapshot が全パスを保護 |
@@ -143,6 +144,82 @@ cp scripts/validation/cross-region-params.env.example scripts/validation/cross-r
     ├─ CVO 利用可能 → Guide 05 (FlexCache CVO) or Guide 10 (SnapMirror CVO)
     └─ ANF を使いたい → ❌ 直接 SnapMirror 未サポート (XC-007)。CVO 経由で代替。
 ```
+
+## FlexCache Origin 検証エビデンス
+
+S3 AP アタッチ済みボリュームを FlexCache Origin として使用可能であることを以下の 2 つのシナリオで検証済み:
+
+### 同一クラスター内（TC-03, 2026-07-21）
+
+| ステップ | 結果 | 詳細 |
+|---------|:----:|------|
+| S3 AP アタッチ済みボリューム作成 | ✅ | UNIX security style, 10GB |
+| S3 API でテストデータ書き込み | ✅ | sensor-001.json, sensor-002.json, metrics.csv |
+| FlexCache 作成（Origin = S3 AP ボリューム） | ✅ | 60GB FlexGroup, `use_tiered_aggregate: true` |
+| Cache Volume NFS マウント + データ読み取り | ✅ | 全ファイル読み取り可能、内容一致 |
+| S3 AP → Origin 書き込み → Cache 反映 | ✅ | ~30秒（TTL）で Cache に伝播 |
+
+**検証環境**: fs-09ffe72a3b2b7dbbd / ONTAP 9.17.1P7D1 / ap-northeast-1
+**エビデンス**: `.private/evidence/s3ap-multicloud/tc03-*.json` (16 ファイル)
+**結果サマリー**: `.private/evidence/s3ap-multicloud/tc03-tc05-results-summary.md`
+
+### Cross-region（2026-07-22）
+
+| ステップ | 結果 | 詳細 |
+|---------|:----:|------|
+| VPC Peering 確立（ap-northeast-1 ↔ us-west-2） | ✅ | pcx-0d37a17effc255948 |
+| Cluster Peering + SVM Peering | ✅ | `available` / `peered` |
+| FlexCache 作成（Region A Origin → Region B Cache） | ✅ | vol_xregion_cache |
+| Region A で NFS 書き込み | ✅ | テストファイル作成 |
+| Region B Cache Volume で NFS 読み取り | ✅ | **3 秒以内に伝播** (~120ms RTT) |
+
+**検証環境**: ap-northeast-1 (fs-09ffe72a3b2b7dbbd) → us-west-2 (fs-0135b69bdb9925f16)
+**検証スクリプト**: `scripts/validation/cross-region-test.sh` (Test 6)
+**関連デモガイド**: [Demo Guide 02: FlexCache クロスリージョン](docs/ja/demo-guide-02-flexcache-cross-region.md)
+
+---
+
+## FC-002: FlexCache Cache Volume への S3 AP アタッチ
+
+| 項目 | 内容 |
+|------|------|
+| **分類** | `version_gated` — ONTAP 9.18.1 以降でサポート |
+| **現行 FSx for ONTAP (9.17.1)** | ❌ 不可 |
+| **将来の FSx for ONTAP (9.18.1+)** | ✅ サポート予定 |
+
+### 何ができるようになるか
+
+ONTAP 9.18.1 以降では、FlexCache Cache Volume に独立した S3 AP をアタッチできるようになる。これにより:
+
+```
+Origin Volume (Region A)
+  ↓ FlexCache
+Cache Volume (Region B)
+  ↓ S3 AP アタッチ
+S3 API アクセス (Region B から直接)
+```
+
+現在（9.17.1）は Cache Volume へのアクセスは NFS/SMB のみ。S3 API でアクセスするには SnapMirror break + S3 AP 再アタッチ（Guide 07）が必要。
+
+### 根拠
+
+NetApp 公式ドキュメント「[Supported and unsupported features for FlexCache volumes](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html)」より:
+
+> ONTAP S3 NAS bucket: Cache — Supported beginning with ONTAP 9.18.1
+
+### 現行バージョンでの代替手段
+
+| 目的 | 推奨パターン | ガイド |
+|------|------------|--------|
+| Cache Volume のデータに S3 API でアクセスしたい | SnapMirror + break + S3 AP 再アタッチ | [Guide 07](docs/ja/demo-guide-07-snapmirror-cross-region.md) |
+| リモート拠点での読み取り高速化（NFS/SMB） | FlexCache（現行で動作） | [Guide 01](docs/ja/demo-guide-01-flexcache-same-region.md)–[06](docs/ja/demo-guide-06-flexcache-gcnv.md) |
+| Origin データに S3 API で直接アクセス | Origin Volume の S3 AP を使用 | 現行で動作 |
+
+### 詳細
+
+調査ドキュメント: [FC-002 詳細（EN）](docs/en/research.md) / [FC-002 詳細（JA）](docs/ja/research.md)
+
+---
 
 ## 関連リンク
 
