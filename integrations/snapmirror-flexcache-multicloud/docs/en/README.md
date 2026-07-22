@@ -217,8 +217,8 @@ Research document: [FC-002 in research.md](research.md)
 
 ## Related
 
-- [S3 AP Design Considerations (directory layout, performance, PoC checklist)](../../../../docs/ja/s3ap-design-considerations.md)
-- [FlexCache / SnapMirror Additional Considerations](../../../../docs/ja/s3ap-flexcache-snapmirror-considerations.md)
+- [S3 AP Design Considerations (directory layout, performance, PoC checklist)](../../../../docs/en/s3ap-design-considerations.md)
+- [FlexCache / SnapMirror Additional Considerations](../../../../docs/en/s3ap-flexcache-snapmirror-considerations.md)
 - [FSx for ONTAP S3 AP Networking](../../../../docs/en/fsx-ontap-s3ap-networking.md)
 - [Research Document (EN)](research.md)
 - [Spec Definition](../../../../.kiro/specs/s3ap-snapmirror-flexcache-multicloud/)
