@@ -1,9 +1,12 @@
 > 🌐 Language: [日本語](../ja/demo-guide-00-prerequisites.md) | **English**
 
-# Demo Guide: 共通Prerequisites / Common Prerequisites
+# Demo Guide: Common Prerequisites
 
-> 各デモガイドからrefer to this guideされる共通のPrerequisites・ツール・変数設定。
-> Each demo guide references this document for shared prerequisites.
+> Each demo guide references this document for shared prerequisites, tools, and variable configuration.
+
+> 📐 **Design Guides**: Review these before running demos:
+> - [S3 AP Design Considerations](../../docs/ja/s3ap-design-considerations.md) — Directory layout, performance characteristics, PoC checklist
+> - [FlexCache / SnapMirror Considerations](../../docs/ja/s3ap-flexcache-snapmirror-considerations.md) — Write mode selection, cache propagation, teardown ordering
 
 ---
 

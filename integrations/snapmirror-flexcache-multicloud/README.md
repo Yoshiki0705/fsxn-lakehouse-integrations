@@ -223,6 +223,8 @@ NetApp 公式ドキュメント「[Supported and unsupported features for FlexCa
 
 ## 関連リンク
 
+- [S3 AP 設計考慮事項（ディレクトリ設計、性能特性、PoC チェックリスト）](../../docs/ja/s3ap-design-considerations.md)
+- [FlexCache / SnapMirror 利用時の追加考慮事項](../../docs/ja/s3ap-flexcache-snapmirror-considerations.md)
 - [FSx for ONTAP S3 AP ネットワーキング](../../docs/ja/fsx-ontap-s3ap-networking.md)
 - [調査ドキュメント（日本語）](docs/ja/research.md)
 - [検証計画](docs/ja/validation-plan.md)

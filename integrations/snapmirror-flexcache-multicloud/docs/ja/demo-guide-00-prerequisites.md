@@ -5,6 +5,10 @@
 > 各デモガイドから参照される共通の前提条件・ツール・変数設定。
 > Each demo guide references this document for shared prerequisites.
 
+> 📐 **設計ガイド**: デモを実行する前に、以下の設計考慮事項を確認することを推奨します。
+> - [S3 AP 設計考慮事項](../../docs/ja/s3ap-design-considerations.md) — ディレクトリ設計、性能特性、PoC チェックリスト
+> - [FlexCache / SnapMirror 利用時の追加考慮事項](../../docs/ja/s3ap-flexcache-snapmirror-considerations.md) — 書き込みモード選択、キャッシュ伝搬、Teardown 順序
+
 ---
 
 ## Required Tools

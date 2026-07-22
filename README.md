@@ -16,8 +16,10 @@
 | Understand the value proposition (no jargon) | [Business Guide](docs/en/quickstart-business-guide.md) | 5 min |
 | Choose the right engine for your use case | [Engine Selection Guide](docs/en/engine-selection-guide.md) | 10 min |
 | Compare architecture options & trade-offs | [Architecture Comparison](docs/adoption-guide/architecture-comparison.md) | 15 min |
+| Understand S3 AP directory design & performance | [S3 AP Design Considerations](docs/ja/s3ap-design-considerations.md) | 15 min |
 | Run a PoC end-to-end | [PoC Execution Guide](docs/implementation-guide/poc-execution-guide.md) | 15 min |
 | Deploy base infrastructure | [Deployment Guide](docs/en/deployment-guide.md) | 30 min |
+| Distribute data with FlexCache / SnapMirror | [FlexCache/SnapMirror Considerations](docs/ja/s3ap-flexcache-snapmirror-considerations.md) | 15 min |
 | Connect FSx for ONTAP → Databricks Unity Catalog | [UC Connection Guide](docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) | 30 min |
 
 <details>
