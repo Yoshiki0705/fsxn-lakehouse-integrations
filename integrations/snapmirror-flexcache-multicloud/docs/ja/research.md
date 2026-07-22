@@ -1,8 +1,8 @@
 > 🌐 Language: **日本語** | [English](../en/research.md)
 # S3 AP + SnapMirror + FlexCache マルチクラウドデータ配信 — 調査結果
 
-> **ステータス**: Phase 3 検証完了
-> **最終更新**: 2026-07-21
+> **ステータス**: Phase 3 検証完了 | Cross-Region SnapMirror 検証済み (2026-07-22)
+> **最終更新**: 2026-07-22
 > **対象**: FSx for ONTAP S3 Access Point 経由で収集されたデータの SnapMirror/FlexCache によるマルチクラウド配信
 
 ---
@@ -17,7 +17,7 @@
 |------|:----:|------|
 | **supported**（サポート確認済み） | 32 | 公式ドキュメントまたは技術的根拠・検証エビデンスによりサポートが確認された項目 |
 | **partially_supported**（条件付きサポート） | 3 | 特定条件下でのみサポート、またはプラットフォーム依存の制約あり |
-| **works_with_caveats**（動作するが注意事項あり） | 2 | 動作確認済みだが重要な注意事項・リスクが存在する項目 |
+| **works_with_caveats**（動作するが注意事項あり） | 2+4 | 動作確認済みだが重要な注意事項・リスクが存在する項目（原 2 件 + cross-region 検証 4 件） |
 | **version_gated**（バージョン依存） | 1 | ONTAP 9.18.1 以降でサポート。検証環境（9.17.1）では非サポート |
 | **undocumented — validation required**（未文書化、検証必要） | 1 | 公式ドキュメントに記載なし、実機検証で確定が必要な項目 |
 | **unsupported**（非サポート） | 2 | 明示的に非サポートが確認された項目 |
@@ -2319,3 +2319,68 @@ Phase 3 では、Phase 1/2 で `undocumented — validation required` に分類�
 | 新規追加（works_with_caveats） | SM-VAL-004/007 | 1 |
 | **合計解決済み** | | **4 / 6** |
 | **残 undocumented** | FC-002（Cache Volume S3 AP アタッチ）| **2** |
+
+---
+
+### Cross-Region 検証結果（2026-07-22 追加）
+
+Cross-region SnapMirror + S3 AP re-attach を ap-northeast-1 → us-west-2 間で E2E 検証。以下の新規 Finding を追加。
+
+| Finding ID | 分類 | 概要 |
+|:----------:|:----:|------|
+| SM-VAL-008 | `works_with_caveats` | FSx API VolumeType:DP 表示ラグ（cross-region では >10 分）。S3 AP 作成は junction path 設定後即可能 |
+| SM-VAL-009 | `works_with_caveats` | DP ボリュームは FSx API 経由で作成必須。ONTAP REST API のみで作成したボリュームは S3 AP 不可 |
+| SM-VAL-010 | `supported (validated)` | Cross-region S3 AP re-attach RTO: ~3 分（break + junction 伝搬 + AP 作成 + 初回 API） |
+| SM-VAL-011 | `works_with_caveats` | Teardown 順序が重要。VPC Peering を SVM peer 削除前に削除すると永続的な zombie レコード発生 |
+
+#### SM-VAL-008: FSx API VolumeType:DP 表示ラグ（Cross-Region）
+
+**発見**: SnapMirror break 後、FSx API は `OntapVolumeType: DP` を cross-region シナリオで **10 分以上**表示し続ける（同一リージョンでは ~60秒）。ただし S3 AP アタッチは junction path 設定後すぐに成功する。
+
+**スコープ**: FSx 固有の動作（AWS コントロールプレーン同期遅延）。On-premises ONTAP では発生しない。ONTAP REST API は break 直後に正しく `type: rw` を返す。
+
+**自動化への影響**:
+- `describe-volumes → OntapVolumeType` を S3 AP アタッチのゲートにしないこと
+- 正しい手順: (1) SnapMirror break, (2) `update-volume` で junction path 設定, (3) FSx API に junction path が反映されるまで待機 (~2分), (4) S3 AP アタッチ
+
+#### SM-VAL-009: DP ボリュームは FSx API 経由で作成必須
+
+**発見**: ONTAP REST API (`POST /api/storage/volumes {type: dp}`) のみで作成されたボリュームは FSx API (`describe-volumes`) に表示されない。S3 AP アタッチには FSx volume ID (`fsvol-*`) が必要。
+
+**対処法**: `aws fsx create-volume --ontap-configuration '{"OntapVolumeType":"DP"}'` で作成する。既存の ONTAP のみ作成ボリュームについては、同名・同サイズで FSx API 経由で再作成し、データを再レプリケーションする必要がある。
+
+#### SM-VAL-010: Cross-Region S3 AP Re-Attach RTO
+
+| フェーズ | 所要時間 | 備考 |
+|---------|:--------:|------|
+| SnapMirror break | ~即座 | ONTAP REST API PATCH |
+| Junction path 設定 + FSx API 伝搬 | ~2 分 | `update-volume` + ポーリング |
+| S3 AP 作成 (CREATING → AVAILABLE) | ~30秒 | `create-and-attach-s3-access-point` |
+| 初回 S3 API コール成功 | ~30秒 | ListObjectsV2 / GetObject |
+| **合計** | **~3 分** | Cross-region (ap-northeast-1 → us-west-2) |
+
+**RPO に関する補足**: SnapMirror Async レプリケーションはスケジュール実行（FSx for ONTAP の最短間隔は5分）。RPO は最後に成功した SnapMirror 転送からの経過時間に等しい。最悪ケースでは、最終転送後にソースに書き込まれた最大5分間のデータが失われる可能性がある。
+
+**コストに関する補足**: リージョン間の SnapMirror 転送には AWS 標準のリージョン間データ転送料金（$0.01–$0.02/GB、リージョンペアにより異なる）が発生する。大容量ボリュームの初回ベースライン転送はコスト見積もりに含めること。以降の増分転送は変更ブロックのみのため通常小さい。
+
+#### SM-VAL-011: Teardown 順序 — 重要な依存関係
+
+**発見**: VPC Peering またはネットワークルートを SVM peer 削除完了前に削除すると、**永続的な zombie SVM peer レコード**が REST API で削除不能になる。FSx SVM は MISCONFIGURED 状態になりファイルシステム削除をブロックする。
+
+**必須 Teardown 順序**:
+1. SnapMirror 関係削除（両側）
+2. SVM peer 削除（両側）— **両クラスターで `num_records: 0` を確認するまで待機**
+3. Cluster peer 削除
+4. VPC Peering / ルート削除
+5. FSx API で SVM 削除
+6. FSx API でファイルシステム削除
+
+**復旧手順**: ONTAP CLI via SSH を使用（SSH アクセスは FSx コンソールで有効化が必要）。本番環境では SSH キー認証または AWS Systems Manager Session Manager を推奨。
+
+1. SOURCE クラスター: `snapmirror release -destination-path <dest> -source-path <src> -force true`
+2. SOURCE クラスター: `vserver peer delete -vserver <local-svm> -peer-vserver <remote-svm>`
+3. `aws fsx delete-storage-virtual-machine` を再試行
+
+AWS Support による解決が必要な場合の所要日数: 通常 1-3 営業日。
+
+**参考**: [AWS re:Post — FSx for ONTAP SVM 削除](https://repost.aws/knowledge-center/fsx-ontap-delete-svm), [FSx ユーザーガイド — SVM 削除不可](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/cannot-delete-svm.html)

@@ -442,16 +442,89 @@ aws ec2 delete-vpc-peering-connection \
 
 ## トラブルシューティング
 
-| 症状 | 原因 | 対処 |
-|------|------|------|
-| SnapMirror 初期転送が進まない | Intercluster ポート (11104-11105) 未許可 | SG / Route 確認 |
-| Break 後に Volume が "offline" | Junction Path 未設定 | `nas.path` を PATCH で設定、または `aws fsx update-volume` |
-| FSx API で VolumeType が "DP" のまま | コントロールプレーン同期遅延（クロスリージョンで >10 分） | **待機不要**。junction path 設定済みなら S3 AP アタッチ可能 |
-| S3 AP: "volume is not mounted" | Junction path が FSx API に未伝搬 | ~2 分待機して再試行 |
-| S3 AP: "object storage server exists" | 同一 SVM に native S3 server あり | 別 SVM を使用 |
-| SVM が MISCONFIGURED | オーファン SVM ピアレコード | SVM ピアを先に削除。解消不可の場合は AWS サポート |
-| SnapMirror 状態が "unhealthy" | ネットワーク断 or Peer 切れ | cluster/peers status 確認 |
-| SVM peer DELETE が 202 返却後もレコード残存 | リモートクラスターに到達不可 | ネットワーク接続を復元し両側から再試行 |
+| 症状 | 原因 | 対処 | 解決目安 |
+|------|------|------|:--------:|
+| SnapMirror 初期転送が進まない | Intercluster ポート (11104-11105) 未許可 | SG / Route 確認 | 10-30 分 |
+| Break 後に Volume が "offline" | Junction Path 未設定 | `nas.path` を PATCH で設定、または `aws fsx update-volume` | 2-5 分 |
+| FSx API で VolumeType が "DP" のまま | コントロールプレーン同期遅延（クロスリージョンで >10 分） | **待機不要**。junction path 設定済みなら S3 AP アタッチ可能 | N/A（表面的） |
+| S3 AP: "volume is not mounted" | Junction path が FSx API に未伝搬 | ~2 分待機して再試行。または `aws fsx update-volume` で設定 | 2-3 分 |
+| S3 AP: "object storage server exists" | 同一 SVM に native S3 server あり | 別 SVM を使用 | 5-10 分 |
+| SVM が MISCONFIGURED | オーファン SVM ピアレコード | SVM ピアを先に削除。解消不可の場合は AWS サポート | 1-3 営業日（Support） |
+| SnapMirror 状態が "unhealthy" | ネットワーク断 or Peer 切れ | cluster/peers status 確認 | 10-30 分 |
+| SVM peer DELETE が 202 返却後もレコード残存 | リモートクラスターに到達不可 | ネットワーク接続を復元し両側から再試行 | 5-15 分 |
+
+### デモ途中での中断（Mid-Demo Rollback）
+
+デモの途中で中断が必要になった場合は、[cross-region-teardown.sh](../../scripts/validation/cross-region-teardown.sh) の安全な削除順序に従ってください。最重要ルール: **SVM peer 削除完了前に VPC Peering を削除しないこと**。判断に迷う場合は VPC Peering をそのまま残し、他のリソースを先に削除してください。
+
+---
+
+## Cross-Region SnapMirror ヘルスモニタリング（CloudWatch）
+
+本番環境で cross-region SnapMirror を運用する場合、レプリケーションの問題を DR 準備状況に影響する前に検知するためのモニタリングを設定する。
+
+### 主要 CloudWatch メトリクス（FSx for ONTAP）
+
+| メトリクス | ネームスペース | 意味 | アラーム閾値 |
+|-----------|-------------|------|:----------:|
+| `SnapMirrorLagTime` | `AWS/FSx` | 最後に成功した転送からの経過秒数 | > 900秒（15分） |
+| `SnapMirrorTransferDuration` | `AWS/FSx` | 転送の所要時間 | > 600秒（データ量により調整） |
+| `SnapMirrorHealthy` | `AWS/FSx` | 関係の健全性（1=正常, 0=異常） | < 1 |
+| `ThroughputUtilization` | `AWS/FSx` | スループット容量の使用率（%） | > 80% 持続 |
+| `NetworkThroughputUtilization` | `AWS/FSx` | ネットワーク帯域使用率（%） | > 80% 持続 |
+
+> **補足**: `SnapMirrorLagTime` が DR 準備状況の主要指標。ラグが RPO 目標（例: 5分スケジュールなら5分）を超える場合、レプリケーションが追いついていない。
+
+### 推奨アラーム設定
+
+```bash
+# アラーム: SnapMirror ラグが RPO を超過（閾値 15 分）
+aws cloudwatch put-metric-alarm \
+  --alarm-name "FSxONTAP-SnapMirror-LagExceedsRPO" \
+  --namespace "AWS/FSx" \
+  --metric-name "SnapMirrorLagTime" \
+  --dimensions Name=FileSystemId,Value="${FS_ID_A}" \
+  --statistic Maximum \
+  --period 300 \
+  --evaluation-periods 2 \
+  --threshold 900 \
+  --comparison-operator GreaterThanThreshold \
+  --alarm-actions "arn:aws:sns:${REGION_A}:${ACCOUNT_ID}:ops-alerts" \
+  --alarm-description "SnapMirror replication lag exceeds 15 minutes (RPO breach risk)"
+
+# アラーム: SnapMirror 関係が異常
+aws cloudwatch put-metric-alarm \
+  --alarm-name "FSxONTAP-SnapMirror-Unhealthy" \
+  --namespace "AWS/FSx" \
+  --metric-name "SnapMirrorHealthy" \
+  --dimensions Name=FileSystemId,Value="${FS_ID_A}" \
+  --statistic Minimum \
+  --period 300 \
+  --evaluation-periods 1 \
+  --threshold 1 \
+  --comparison-operator LessThanThreshold \
+  --alarm-actions "arn:aws:sns:${REGION_A}:${ACCOUNT_ID}:ops-alerts" \
+  --alarm-description "SnapMirror relationship is unhealthy — investigate immediately"
+```
+
+### ONTAP REST API モニタリング（補完）
+
+CloudWatch はサービスレベルの健全性を提供する。ボリュームレベルの詳細には ONTAP REST API をポーリング:
+
+```bash
+# SnapMirror 関係ステータス（ボリューム単位の詳細）
+curl -sk -u "${USER}:${PASS}" \
+  "https://${MGMT_IP}/api/snapmirror/relationships?fields=state,healthy,transfer.state,lag_time" \
+  | jq '.records[] | {source: .source.path, dest: .destination.path, state, healthy, lag: .lag_time}'
+```
+
+### ランブック: SnapMirror ラグアラート対応
+
+1. `SnapMirrorHealthy` 確認 — 異常なら VPC Peering / ルート / SG のネットワーク接続性を確認
+2. `ThroughputUtilization` 確認 — 80% 超ならプロビジョンドスループットでスロットルされている可能性
+3. ONTAP REST API `transfer.state` 確認 — `failed` なら `transfer.end_error` でエラー詳細を取得
+4. Intercluster LIF 接続確認: CLI で `cluster peer health show`
+5. ラグが線形に増加している場合、データ変更レートがスループット容量を超えている — スループット増加またはスケジュール調整を検討
 
 ---
 

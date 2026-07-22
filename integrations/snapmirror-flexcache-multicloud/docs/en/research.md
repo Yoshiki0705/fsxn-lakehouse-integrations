@@ -533,6 +533,8 @@ FSx for ONTAP S3 AP returns `501 Not Implemented` for requests with `If-None-Mat
 
 **Finding:** After SnapMirror break, FSx API continues to report `OntapVolumeType: DP` for the destination volume for **>10 minutes** in cross-region scenarios (previous same-region testing showed ~60s). However, S3 AP attachment succeeds immediately once junction path is set — the check is at the ONTAP level, not the FSx API level.
 
+**Scope clarification:** This lag is FSx-specific (AWS control-plane synchronization delay). On-premises ONTAP does not have this issue as there is no separate control plane layer. The ONTAP REST API correctly reports `type: rw` immediately after break in both scenarios.
+
 **Impact on automation:**
 - Do NOT poll `describe-volumes → OntapVolumeType` as the gate for S3 AP attachment
 - Instead: (1) Break SnapMirror, (2) Set junction path via `update-volume`, (3) Wait for junction path to appear in FSx API (~2 min), (4) Attach S3 AP immediately
@@ -547,7 +549,7 @@ FSx for ONTAP S3 AP returns `501 Not Implemented` for requests with `If-None-Mat
 
 **Finding:** Volumes created exclusively via ONTAP REST API (`POST /api/storage/volumes {type: dp}`) do NOT appear in the FSx API (`describe-volumes`). S3 AP attachment requires a FSx volume ID (`fsvol-*`). Volumes must be created using `aws fsx create-volume --ontap-configuration '{"OntapVolumeType":"DP"}'` to be visible in both control planes.
 
-**Workaround for existing ONTAP-created volumes:** Not available — volume must be recreated via FSx API.
+**Workaround for existing ONTAP-created volumes:** Delete and recreate the volume via `aws fsx create-volume` with the same name and size. Data must be re-replicated via SnapMirror after recreation. There is no in-place "adoption" of ONTAP-created volumes into the FSx control plane.
 
 ### SM-VAL-010: Cross-Region S3 AP Re-Attach RTO
 
@@ -566,6 +568,10 @@ FSx for ONTAP S3 AP returns `501 Not Implemented` for requests with `If-None-Mat
 | S3 AP creation (CREATING → AVAILABLE) | ~30s | `create-and-attach-s3-access-point` |
 | First successful S3 API call | ~30s | ListObjectsV2 / GetObject |
 | **Total** | **~3 min** | Cross-region. Same-region estimated ~2 min |
+
+**RPO context**: SnapMirror Async replication runs on a schedule (minimum 5-minute intervals for FSx for ONTAP). The RPO is equal to the time since the last successful SnapMirror transfer. In a worst-case scenario, up to 5 minutes of data written to the source after the last transfer could be lost.
+
+**Cross-region data transfer cost note**: SnapMirror transfers between regions incur standard AWS inter-region data transfer charges ($0.01–$0.02/GB depending on regions). Initial baseline transfer of large volumes should be factored into cost estimates. Subsequent incremental transfers are typically much smaller (only changed blocks).
 
 ### SM-VAL-011: Teardown Order — Critical Dependency
 
@@ -587,7 +593,10 @@ FSx for ONTAP S3 AP returns `501 Not Implemented` for requests with `If-None-Mat
 
 **Never:** Delete VPC Peering before step 2 is confirmed. The two-phase SVM peer deletion protocol requires bidirectional connectivity.
 
-**Recovery if orphaned:** Use ONTAP CLI via SSH (`sshpass -p <pass> ssh fsxadmin@<mgmt-ip>`):
+**Recovery if orphaned:** Use ONTAP CLI via SSH (`sshpass -p <pass> ssh fsxadmin@<mgmt-ip>`).
+
+> **Note**: SSH access to `fsxadmin` must be enabled on the FSx file system (Settings → Administrative Endpoints). For production automation, prefer SSH key-based auth or AWS Systems Manager Session Manager over `sshpass`. Resolution time with AWS Support (if self-recovery fails): typically 1-3 business days.
+
 1. From the **source** cluster: `snapmirror release -destination-path <dest> -source-path <src> -force true` (for each stale destination)
 2. From the **source** cluster: `vserver peer delete -vserver <local-svm> -peer-vserver <remote-svm>` (triggers two-phase cleanup on both sides)
 3. Retry `aws fsx delete-storage-virtual-machine` — should now succeed

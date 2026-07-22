@@ -469,16 +469,89 @@ If VPC Peering is deleted before SVM peer deletion completes (Step 4):
 
 ## Troubleshooting
 
-| Symptom | Cause | Resolution |
-|------|------|------|
-| SnapMirror initial transfer stalls | Intercluster ports (11104-11105) blocked | Check SG rules and route tables |
-| Volume "offline" after break | Junction path not set | PATCH `nas.path` via ONTAP API or `update-volume` via FSx API |
-| FSx API shows VolumeType "DP" after break | Control-plane sync lag (>10 min cross-region) | **Don't wait for this.** S3 AP attachment works once junction path is set |
-| S3 AP: "volume is not mounted" | Junction path not propagated to FSx API yet | Wait ~2 min, retry. Or set via `aws fsx update-volume` |
-| S3 AP: "object storage server exists" | Native S3 server on same SVM | Use a different SVM |
-| SVM stuck in MISCONFIGURED | Orphaned SVM peer records | Delete SVM peers first. If stuck, requires AWS Support (see above) |
-| SnapMirror "unhealthy" | Network partition or peer gone | Check cluster/peers status and VPC Peering state |
-| SVM peer DELETE returns 202 but record persists | Remote cluster unreachable | Restore network connectivity, retry from both sides |
+| Symptom | Cause | Resolution | Est. Time |
+|------|------|------|:--------:|
+| SnapMirror initial transfer stalls | Intercluster ports (11104-11105) blocked | Check SG rules and route tables | 10-30 min |
+| Volume "offline" after break | Junction path not set | PATCH `nas.path` via ONTAP API or `update-volume` via FSx API | 2-5 min |
+| FSx API shows VolumeType "DP" after break | Control-plane sync lag (>10 min cross-region) | **Don't wait for this.** S3 AP attachment works once junction path is set | N/A (cosmetic) |
+| S3 AP: "volume is not mounted" | Junction path not propagated to FSx API yet | Wait ~2 min, retry. Or set via `aws fsx update-volume` | 2-3 min |
+| S3 AP: "object storage server exists" | Native S3 server on same SVM | Use a different SVM | 5-10 min |
+| SVM stuck in MISCONFIGURED | Orphaned SVM peer records | Delete SVM peers first. If stuck, requires AWS Support (see above) | 1-3 days (Support) |
+| SnapMirror "unhealthy" | Network partition or peer gone | Check cluster/peers status and VPC Peering state | 10-30 min |
+| SVM peer DELETE returns 202 but record persists | Remote cluster unreachable | Restore network connectivity, retry from both sides | 5-15 min |
+
+### Mid-Demo Rollback
+
+If you need to abort partway through the demo, follow the safe teardown order documented in [cross-region-teardown.sh](../../scripts/validation/cross-region-teardown.sh). The critical rule: **never delete VPC Peering before SVM peer deletion completes**. If in doubt, leave VPC Peering intact and clean up other resources first.
+
+---
+
+## Monitoring Cross-Region SnapMirror Health (CloudWatch)
+
+For production use of cross-region SnapMirror, set up the following monitoring to detect replication issues before they impact DR readiness.
+
+### Key CloudWatch Metrics (FSx for ONTAP)
+
+| Metric | Namespace | What It Tells You | Alarm Threshold |
+|--------|-----------|-------------------|:---------------:|
+| `SnapMirrorLagTime` | `AWS/FSx` | Seconds since last successful transfer | > 900s (15 min) |
+| `SnapMirrorTransferDuration` | `AWS/FSx` | How long transfers take | > 600s (10 min, depends on data volume) |
+| `SnapMirrorHealthy` | `AWS/FSx` | Relationship health (1=healthy, 0=unhealthy) | < 1 |
+| `ThroughputUtilization` | `AWS/FSx` | Throughput capacity usage (%) | > 80% sustained |
+| `NetworkThroughputUtilization` | `AWS/FSx` | Network bandwidth usage (%) | > 80% sustained |
+
+> **Note**: `SnapMirrorLagTime` is the primary DR readiness indicator. If lag exceeds your RPO target (e.g., 5 minutes for a 5-min schedule), replication is falling behind.
+
+### Recommended Alarms
+
+```bash
+# Alarm: SnapMirror lag exceeds RPO (15 min threshold)
+aws cloudwatch put-metric-alarm \
+  --alarm-name "FSxONTAP-SnapMirror-LagExceedsRPO" \
+  --namespace "AWS/FSx" \
+  --metric-name "SnapMirrorLagTime" \
+  --dimensions Name=FileSystemId,Value="${FS_ID_A}" \
+  --statistic Maximum \
+  --period 300 \
+  --evaluation-periods 2 \
+  --threshold 900 \
+  --comparison-operator GreaterThanThreshold \
+  --alarm-actions "arn:aws:sns:${REGION_A}:${ACCOUNT_ID}:ops-alerts" \
+  --alarm-description "SnapMirror replication lag exceeds 15 minutes (RPO breach risk)"
+
+# Alarm: SnapMirror relationship unhealthy
+aws cloudwatch put-metric-alarm \
+  --alarm-name "FSxONTAP-SnapMirror-Unhealthy" \
+  --namespace "AWS/FSx" \
+  --metric-name "SnapMirrorHealthy" \
+  --dimensions Name=FileSystemId,Value="${FS_ID_A}" \
+  --statistic Minimum \
+  --period 300 \
+  --evaluation-periods 1 \
+  --threshold 1 \
+  --comparison-operator LessThanThreshold \
+  --alarm-actions "arn:aws:sns:${REGION_A}:${ACCOUNT_ID}:ops-alerts" \
+  --alarm-description "SnapMirror relationship is unhealthy — investigate immediately"
+```
+
+### ONTAP REST API Monitoring (Complementary)
+
+CloudWatch metrics provide service-level health. For volume-level detail, poll ONTAP REST API:
+
+```bash
+# Get SnapMirror relationship status (per-volume detail)
+curl -sk -u "${USER}:${PASS}" \
+  "https://${MGMT_IP}/api/snapmirror/relationships?fields=state,healthy,transfer.state,lag_time" \
+  | jq '.records[] | {source: .source.path, dest: .destination.path, state, healthy, lag: .lag_time}'
+```
+
+### Runbook: SnapMirror Lag Alert
+
+1. Check `SnapMirrorHealthy` — if unhealthy, check network connectivity (VPC Peering, routes, SG)
+2. Check `ThroughputUtilization` — if >80%, SnapMirror may be throttled by provisioned throughput
+3. Check ONTAP REST API `transfer.state` — if `failed`, check `transfer.end_error` for details
+4. Verify Intercluster LIF connectivity: `cluster peer health show` via CLI
+5. If lag is growing linearly, data change rate may exceed throughput capacity — consider increasing provisioned throughput or adjusting schedule
 
 ---
 

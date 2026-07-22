@@ -32,6 +32,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/cross-region-params.env"
 source "${SCRIPT_DIR}/.cross-region-state.env"
 
+# --- Logging & Audit Trail ---
+LOG_FILE="${SCRIPT_DIR}/teardown-$(date +%Y%m%dT%H%M%S).log"
+# Write colored output to terminal, strip ANSI codes for log file readability
+exec > >(tee >(sed 's/\x1b\[[0-9;]*m//g' >> "$LOG_FILE")) 2>&1
+echo "Teardown started: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$LOG_FILE" > /dev/null
+
+# --- Trap: Graceful interrupt handling ---
+cleanup_on_interrupt() {
+  echo ""
+  echo -e "${YELLOW}[INTERRUPTED]${NC} Teardown interrupted at $(date -u +%H:%M:%S)."
+  echo "  Log file: $LOG_FILE"
+  echo "  ⚠️  Resources may be in partial state. Review log and resume manually."
+  echo "  ⚠️  CRITICAL: Do NOT delete VPC Peering if SVM peer deletion was in progress (Step 6)."
+  exit 130
+}
+trap cleanup_on_interrupt INT TERM
+
+# --- Cost Warning ---
+# ⚠️ Running cross-region resources cost approximately:
+#   - FSx for ONTAP (Single-AZ, 1TB): ~$6.40/day ($0.267/hr)
+#   - VPC Peering: Free (data transfer: $0.01-0.02/GB)
+#   - If teardown fails midway, monitor costs and retry within 24h.
+
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 info() { echo -e "${BLUE}[INFO]${NC} $1"; }
 pass() { echo -e "${GREEN}[PASS]${NC} $1"; }
@@ -50,8 +73,12 @@ PASS_A=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN_A" \
 PASS_B="${FSX_PASSWORD_B}"
 
 # Helper: ONTAP CLI via SSH (preferred over REST for peer operations)
-ontap_cli_a() { sshpass -p "$PASS_A" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "fsxadmin@${MGMT_A}" "$1" 2>/dev/null; }
-ontap_cli_b() { sshpass -p "$PASS_B" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "fsxadmin@${MGMT_B}" "$1" 2>/dev/null; }
+# ⚠️ Security note: sshpass with -p exposes password in process table.
+#    This is acceptable for demo/test teardown. For production automation,
+#    use SSH key-based auth or AWS Systems Manager Session Manager.
+#    SSH access must be enabled on the FSx file system (not enabled by default on all deployments).
+ontap_cli_a() { sshpass -p "$PASS_A" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "fsxadmin@${MGMT_A}" "$1"; }
+ontap_cli_b() { sshpass -p "$PASS_B" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "fsxadmin@${MGMT_B}" "$1"; }
 
 # ============================================================================
 header "SAFE TEARDOWN: Cross-Region Resources"
