@@ -37,7 +37,8 @@ Destinations provide secure file-level authenticated access via NFS/SMB protocol
 | S3 AP re-attach after SnapMirror failover | ✅ Validated | break → junction path → ~60s → create S3 AP. Cross-region RTO ~3 min |
 | SVM-DR with S3 AP | ❌ Unsupported | Volume-level SnapMirror only. Destination SVM config is manual |
 | FSx for ONTAP → ANF (SnapMirror) | ❌ Unsupported | ANF has no external Cluster Peering. Use CVO on Azure instead |
-| S3 AP volume as FlexCache Origin | ✅ Validated | Confirmed on ONTAP 9.17.1 (intra-cluster + cross-region) |
+| S3 AP volume as FlexCache Origin | ✅ Validated | Confirmed on ONTAP 9.17.1 (intra-cluster + cross-region). [Evidence](#flexcache-origin-validation-evidence) |
+| S3 AP on FlexCache Cache Volume | 🔒 Version-gated | Supported from ONTAP 9.18.1. Not available on current FSx for ONTAP (9.17.1). [FC-002 details](#fc-002-s3-ap-on-flexcache-cache-volume) |
 | FlexCache write-back + S3 AP | ⚠️ Caveats | Works, but S3 AP Origin write revokes Cache XLD (data loss risk on same file) |
 | Cross-cloud encryption | ✅ Confirmed | Cluster Peering Encryption (TLS 1.2) enabled by default |
 | SnapMirror data integrity | ✅ Confirmed | WAFL atomicity + crash-consistent Snapshot protects all paths |
@@ -137,6 +138,82 @@ integrations/snapmirror-flexcache-multicloud/
 ├── feature-requests/                   # Feature Request templates
 └── stakeholder-briefs/                 # Stakeholder communication artifacts
 ```
+
+## FlexCache Origin Validation Evidence
+
+S3 AP-attached volumes work as FlexCache Origin, validated in two scenarios:
+
+### Intra-cluster (TC-03, 2026-07-21)
+
+| Step | Result | Details |
+|------|:------:|---------|
+| Create volume with S3 AP attached | ✅ | UNIX security style, 10GB |
+| Write test data via S3 API | ✅ | sensor-001.json, sensor-002.json, metrics.csv |
+| Create FlexCache (Origin = S3 AP volume) | ✅ | 60GB FlexGroup, `use_tiered_aggregate: true` |
+| NFS mount Cache Volume + read data | ✅ | All files readable, content matches |
+| S3 AP → Origin write → Cache propagation | ✅ | ~30s (TTL) for Cache to reflect new data |
+
+**Environment**: fs-09ffe72a3b2b7dbbd / ONTAP 9.17.1P7D1 / ap-northeast-1
+**Evidence**: `.private/evidence/s3ap-multicloud/tc03-*.json` (16 files)
+**Summary**: `.private/evidence/s3ap-multicloud/tc03-tc05-results-summary.md`
+
+### Cross-region (2026-07-22)
+
+| Step | Result | Details |
+|------|:------:|---------|
+| VPC Peering (ap-northeast-1 ↔ us-west-2) | ✅ | pcx-0d37a17effc255948 |
+| Cluster Peering + SVM Peering | ✅ | `available` / `peered` |
+| Create FlexCache (Region A Origin → Region B Cache) | ✅ | vol_xregion_cache |
+| Write via NFS in Region A | ✅ | Test files created |
+| Read from Cache Volume NFS in Region B | ✅ | **Propagation <3 seconds** (~120ms RTT) |
+
+**Environment**: ap-northeast-1 (fs-09ffe72a3b2b7dbbd) → us-west-2 (fs-0135b69bdb9925f16)
+**Script**: `scripts/validation/cross-region-test.sh` (Test 6)
+**Demo Guide**: [Guide 02: FlexCache Cross-Region](demo-guide-02-flexcache-cross-region.md)
+
+---
+
+## FC-002: S3 AP on FlexCache Cache Volume
+
+| Item | Details |
+|------|---------|
+| **Classification** | `version_gated` — supported from ONTAP 9.18.1 |
+| **Current FSx for ONTAP (9.17.1)** | ❌ Not available |
+| **Future FSx for ONTAP (9.18.1+)** | ✅ Expected to be supported |
+
+### What this enables
+
+From ONTAP 9.18.1, FlexCache Cache Volumes can have an independent S3 AP attached:
+
+```
+Origin Volume (Region A)
+  ↓ FlexCache
+Cache Volume (Region B)
+  ↓ S3 AP attached
+S3 API access (directly from Region B)
+```
+
+Currently (9.17.1), Cache Volume access is NFS/SMB only. For S3 API access, use SnapMirror break + S3 AP re-attach (Guide 07).
+
+### Source
+
+NetApp official documentation: [Supported and unsupported features for FlexCache volumes](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html)
+
+> ONTAP S3 NAS bucket: Cache — Supported beginning with ONTAP 9.18.1
+
+### Current workarounds
+
+| Goal | Pattern | Guide |
+|------|---------|-------|
+| S3 API access to Cache Volume data | SnapMirror + break + S3 AP re-attach | [Guide 07](demo-guide-07-snapmirror-cross-region.md) |
+| Remote read acceleration (NFS/SMB) | FlexCache (works today) | [Guide 01](demo-guide-01-flexcache-same-region.md)–[06](demo-guide-06-flexcache-gcnv.md) |
+| S3 API access to Origin data | Use S3 AP on Origin Volume directly | Works today |
+
+### Full details
+
+Research document: [FC-002 in research.md](research.md)
+
+---
 
 ## Related
 
