@@ -1,0 +1,17 @@
+[
+  {"ParameterKey": "SourceFileSystemId", "ParameterValue": "fs-0EXAMPLE1234source"},
+  {"ParameterKey": "SourceSvmId", "ParameterValue": "svm-0EXAMPLE1234source"},
+  {"ParameterKey": "SourceSvmName", "ParameterValue": "svm-source"},
+  {"ParameterKey": "DestFileSystemId", "ParameterValue": "fs-0EXAMPLE1234destn"},
+  {"ParameterKey": "DestSvmId", "ParameterValue": "svm-0EXAMPLE1234destn"},
+  {"ParameterKey": "DestSvmName", "ParameterValue": "svm-dest"},
+  {"ParameterKey": "SourceVolumeName", "ParameterValue": "vol_s3ap_snapmirror_src"},
+  {"ParameterKey": "SourceVolumeSizeMB", "ParameterValue": "10240"},
+  {"ParameterKey": "SourceJunctionPath", "ParameterValue": "/s3ap_snapmirror_src"},
+  {"ParameterKey": "DestVolumeName", "ParameterValue": "vol_s3ap_snapmirror_dst"},
+  {"ParameterKey": "S3AccessPointName", "ParameterValue": "fsxn-snapmirror-val-src"},
+  {"ParameterKey": "S3APUnixUser", "ParameterValue": "fsxadmin"},
+  {"ParameterKey": "SourceSecretArn", "ParameterValue": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:fsxn-source-admin-XXXXXX"},
+  {"ParameterKey": "DestSecretArn", "ParameterValue": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:fsxn-dest-admin-XXXXXX"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"}
+]
