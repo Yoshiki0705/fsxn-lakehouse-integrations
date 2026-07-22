@@ -76,6 +76,19 @@ FlexCache についても、ONTAP 9.12.1 以降で S3 NAS bucket が Origin Volu
 | FSx for ONTAP | GCNV | ✅ | ✅（Cache のみ） | External Replication / FlexCache Cache |
 | FSx for ONTAP | ANF | ❌ | ❌ | 非サポート。CVO on Azure 経由で代替 |
 
+### S3 NAS Bucket と FlexCache / SnapMirror の互換性
+
+| 構成 | サポート | 最低バージョン | 公式ドキュメント |
+|------|:--------:|:-------------:|----------------|
+| S3 NAS bucket ボリュームを **SnapMirror Async ソース**に | ✅ | 9.12.1 | [S3 multiprotocol — Data protection](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/index.html) |
+| S3 NAS bucket ボリュームを **SnapMirror Synchronous ソース**に | ❌ | — | [S3 multiprotocol — Data protection](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/index.html) |
+| S3 NAS bucket を含む SVM で **SVM-DR** | ❌ | — | [S3 multiprotocol — Data protection](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/index.html), [KB: SVM DR + S3](https://kb.netapp.com/onprem/ontap/dp/SnapMirror/Is_SVM_Disaster_Recovery_(SVM_DR)_of_S3_buckets_supported%3F) |
+| S3 NAS bucket を **FlexCache Origin** ボリュームに | ✅ | 9.12.1 | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html) |
+| S3 NAS bucket を **FlexCache Cache** ボリュームに | ✅ | **9.18.1** | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html), [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html) |
+| FlexCache Cache S3 NAS bucket + **write-back mode** | ❌ | — | [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html)（write-around 必須） |
+| FlexCache Cache S3 — Origin/Cache **双方 9.18.1+ 必須** | 必須 | 9.18.1 | [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html) |
+| FlexCache Origin が **SnapMirror Async 関係を持つ**構成 | ✅ | 9.5+ | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html) |
+
 ---
 
 ## S3 AP + SnapMirror 相互作用
