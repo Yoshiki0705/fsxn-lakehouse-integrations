@@ -9,8 +9,10 @@
 
 ---
 
-> ⚠️ **検証ステータス**: 部分検証済み。クロスリージョン Cluster Peering + SVM Peering 確認済み (2026-07-22)。
-> SnapMirror 転送 + break + S3 AP 再アタッチの E2E は未実行（FSx B の再デプロイが必要、~$6/日）。
+> ✅ **検証ステータス**: E2E 検証済み (2026-07-22)。SnapMirror 転送 + break + S3 AP 再アタッチ確認済み。
+> S3 AP 再アタッチ RTO: 約3分（クロスリージョン）。ListObjectsV2 + GetObject でデータ整合性確認済み。
+> スクリプト: `scripts/validation/cross-region-deploy.sh` + `cross-region-test.sh`
+> エビデンス: `.private/evidence/s3ap-multicloud/sm-cross-region-2026-07-22.md`
 
 ## このデモで検証すること
 
@@ -367,19 +369,74 @@ cat /tmp/dr-sensor.json | jq .
 
 ## クリーンアップ
 
-```bash
-# 1. Region B: S3 AP 削除
-# 2. Region B: Volume 削除（先に SnapMirror 関係を削除）
-curl -sk -u "${USER_B}:${PASS_B}" \
-  -X DELETE "https://${MGMT_IP_B}/api/snapmirror/relationships/${SM_UUID}" \
-  -H "Content-Type: application/json" \
-  -d '{"destination_only": true}'
-sleep 10
+> ⚠️ **重要: この順序を厳守してください。** SVM ピア削除の完了前に VPC Peering を削除すると、恒久的なオーファンレコードが発生し AWS サポートへの問い合わせが必要になります（SM-VAL-011 参照）。
 
-# 3. Region A: S3 AP 削除 + Source Volume 削除
-# 4. VPC Peering 削除（Demo Guide 02 参照）
-# 5. Lambda 削除（Demo Guide 01 参照）
+```bash
+# ============================================================================
+# 削除順序 — クロスリージョン SnapMirror + S3 AP
+# 順序を入れ替えないでください。各ステップは前のステップの完了に依存します。
+# ============================================================================
+
+# --- Step 1: 両リージョンの S3 AP 削除 ---
+aws fsx detach-and-delete-s3-access-point --name "${AP_NAME_B}" --region "${REGION_B}"
+aws fsx detach-and-delete-s3-access-point --name "${AP_NAME_A}" --region "${REGION_A}"
+
+# --- Step 2: SnapMirror 関係削除（宛先側から） ---
+curl -sk -u "${USER_B}:${PASS_B}" \
+  -X DELETE "https://${MGMT_IP_B}/api/snapmirror/relationships/${SM_UUID}?destination_only=true"
+sleep 15
+
+# --- Step 3: ボリューム削除 ---
+aws fsx delete-volume --volume-id "${FSVOL_B}" \
+  --ontap-configuration '{"SkipFinalBackup":true}' --region "${REGION_B}"
+aws fsx delete-volume --volume-id "${FSVOL_A}" \
+  --ontap-configuration '{"SkipFinalBackup":true}' --region "${REGION_A}"
+
+# --- Step 4: SVM ピア削除（両側）--- ⚠️ 必ず両クラスターで num_records: 0 を確認
+curl -sk -u "${USER_B}:${PASS_B}" \
+  -X DELETE "https://${MGMT_IP_B}/api/svm/peers/${SVM_PEER_UUID_B}"
+curl -sk -u "${USER_A}:${PASS_A}" \
+  -X DELETE "https://${MGMT_IP_A}/api/svm/peers/${SVM_PEER_UUID_A}"
+
+# ⚠️ 両クラスターで SVM peers = 0 になるまでポーリング
+echo "SVM ピア削除完了を両側で待機中..."
+while true; do
+  COUNT_A=$(curl -sk -u "${USER_A}:${PASS_A}" "https://${MGMT_IP_A}/api/svm/peers" | \
+    python3 -c "import sys,json; print(json.loads(sys.stdin.read())['num_records'])")
+  COUNT_B=$(curl -sk -u "${USER_B}:${PASS_B}" "https://${MGMT_IP_B}/api/svm/peers" | \
+    python3 -c "import sys,json; print(json.loads(sys.stdin.read())['num_records'])")
+  echo "  残 — A: ${COUNT_A}, B: ${COUNT_B}"
+  [[ "$COUNT_A" == "0" && "$COUNT_B" == "0" ]] && break
+  sleep 10
+done
+
+# --- Step 5: Cluster ピア削除 ---
+curl -sk -u "${USER_A}:${PASS_A}" \
+  -X DELETE "https://${MGMT_IP_A}/api/cluster/peers/${CLUSTER_PEER_UUID_A}"
+
+# --- Step 6: SVM 削除（FSx API） ---
+aws fsx delete-storage-virtual-machine \
+  --storage-virtual-machine-id "${SVM_ID_B}" --region "${REGION_B}"
+sleep 120  # ~2 分待機
+
+# --- Step 7: FSx ファイルシステム削除 ---
+aws fsx delete-file-system --file-system-id "${FS_ID_B}" --region "${REGION_B}"
+
+# --- Step 8: VPC Peering 削除（Step 5 完了後のみ） ---
+aws ec2 delete-vpc-peering-connection \
+  --vpc-peering-connection-id "${PEERING_ID}" --region "${REGION_A}"
+
+# --- Step 9: Region B VPC リソース削除（FSx ENI 解放後） ---
+# Subnet, Security Group, VPC
 ```
+
+### VPC Peering を早期に削除した場合の影響
+
+1. SVM ピアレコードが両クラスターでゾンビ化（DELETE は 202 を返すが消えない）
+2. FSx SVM が `MISCONFIGURED` 状態に遷移
+3. SVM 削除不可 → ファイルシステム削除不可
+4. **復旧方法**: AWS サポートによる `vserver peer delete -force`（ONTAP CLI、`fsxadmin` REST API では実行不可）
+5. **コスト影響**: 解決まで ~$6/日が継続
 
 ---
 
@@ -388,11 +445,13 @@ sleep 10
 | 症状 | 原因 | 対処 |
 |------|------|------|
 | SnapMirror 初期転送が進まない | Intercluster ポート (11104-11105) 未許可 | SG / Route 確認 |
-| Break 後に Volume が "offline" | Junction Path 未設定 | `nas.path` を PATCH で設定 |
-| FSx API で VolumeType が "DP" のまま | 同期遅延（通常 60 秒） | さらに 60 秒待機して再確認 |
-| S3 AP 作成: "volume is DP type" | FSx API 同期前に作成試行 | VolumeType="RW" になるまで待機 |
-| S3 AP 作成: "object storage server exists" | 同一 SVM に native S3 server あり | 別 SVM を使用 |
+| Break 後に Volume が "offline" | Junction Path 未設定 | `nas.path` を PATCH で設定、または `aws fsx update-volume` |
+| FSx API で VolumeType が "DP" のまま | コントロールプレーン同期遅延（クロスリージョンで >10 分） | **待機不要**。junction path 設定済みなら S3 AP アタッチ可能 |
+| S3 AP: "volume is not mounted" | Junction path が FSx API に未伝搬 | ~2 分待機して再試行 |
+| S3 AP: "object storage server exists" | 同一 SVM に native S3 server あり | 別 SVM を使用 |
+| SVM が MISCONFIGURED | オーファン SVM ピアレコード | SVM ピアを先に削除。解消不可の場合は AWS サポート |
 | SnapMirror 状態が "unhealthy" | ネットワーク断 or Peer 切れ | cluster/peers status 確認 |
+| SVM peer DELETE が 202 返却後もレコード残存 | リモートクラスターに到達不可 | ネットワーク接続を復元し両側から再試行 |
 
 ---
 

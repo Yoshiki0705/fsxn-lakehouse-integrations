@@ -9,8 +9,10 @@
 
 ---
 
-> ⚠️ **Validation Status**: Partially validated. Cross-region Cluster Peering + SVM Peering confirmed (2026-07-22).
-> SnapMirror transfer + break + S3 AP re-attach E2E not yet executed (requires FSx B re-deployment, ~$6/day).
+> ✅ **Validation Status**: E2E validated (2026-07-22). SnapMirror transfer + break + S3 AP re-attach confirmed.
+> S3 AP re-attach RTO: ~3 min (cross-region). Data integrity verified via ListObjectsV2 + GetObject.
+> Script: `scripts/validation/cross-region-deploy.sh` + `cross-region-test.sh`
+> Evidence: `.private/evidence/s3ap-multicloud/sm-cross-region-2026-07-22.md`
 
 ## What This Demo Validates
 
@@ -367,19 +369,101 @@ cat /tmp/dr-sensor.json | jq .
 
 ## Cleanup
 
-```bash
-# 1. Region B: S3 AP 削除
-# 2. Region B: Volume 削除（先に SnapMirror 関係を削除）
-curl -sk -u "${USER_B}:${PASS_B}" \
-  -X DELETE "https://${MGMT_IP_B}/api/snapmirror/relationships/${SM_UUID}" \
-  -H "Content-Type: application/json" \
-  -d '{"destination_only": true}'
-sleep 10
+> ⚠️ **Critical: Follow this order exactly.** Deleting VPC Peering before SVM peer deletion completes causes permanent orphaned records that require AWS Support intervention. See SM-VAL-011.
 
-# 3. Region A: S3 AP 削除 + Source Volume 削除
-# 4. Delete VPC Peering（Demo Guide 02 refer to this guide）
-# 5. Lambda 削除（Demo Guide 01 refer to this guide）
+```bash
+# ============================================================================
+# TEARDOWN ORDER — Cross-Region SnapMirror + S3 AP
+# DO NOT skip steps or reorder. Each step depends on the previous completing.
+# ============================================================================
+
+# --- Step 1: Detach and delete S3 AP on BOTH regions ---
+aws fsx detach-and-delete-s3-access-point --name "${AP_NAME_B}" --region "${REGION_B}"
+aws fsx detach-and-delete-s3-access-point --name "${AP_NAME_A}" --region "${REGION_A}"
+# Wait until both show DELETED (poll describe-s3-access-point-attachments)
+
+# --- Step 2: Delete SnapMirror relationship (from destination side) ---
+curl -sk -u "${USER_B}:${PASS_B}" \
+  -X DELETE "https://${MGMT_IP_B}/api/snapmirror/relationships/${SM_UUID}?destination_only=true"
+# Wait for job completion (poll /api/cluster/jobs/{uuid})
+sleep 15
+
+# --- Step 3: Delete volumes ---
+# Region B: destination volume
+aws fsx delete-volume --volume-id "${FSVOL_B}" \
+  --ontap-configuration '{"SkipFinalBackup":true}' --region "${REGION_B}"
+# Region A: source volume
+aws fsx delete-volume --volume-id "${FSVOL_A}" \
+  --ontap-configuration '{"SkipFinalBackup":true}' --region "${REGION_A}"
+# Wait for DELETING → gone
+
+# --- Step 4: Delete SVM peers (BOTH sides) ---
+# Get SVM peer UUID on Region B
+SVM_PEER_UUID_B=$(curl -sk -u "${USER_B}:${PASS_B}" \
+  "https://${MGMT_IP_B}/api/svm/peers" | python3 -c \
+  "import sys,json; r=json.loads(sys.stdin.read())['records']; print(r[0]['uuid'] if r else '')")
+curl -sk -u "${USER_B}:${PASS_B}" \
+  -X DELETE "https://${MGMT_IP_B}/api/svm/peers/${SVM_PEER_UUID_B}"
+
+# Get SVM peer UUID on Region A
+SVM_PEER_UUID_A=$(curl -sk -u "${USER_A}:${PASS_A}" \
+  "https://${MGMT_IP_A}/api/svm/peers" | python3 -c \
+  "import sys,json; r=json.loads(sys.stdin.read())['records']; print(r[0]['uuid'] if r else '')")
+curl -sk -u "${USER_A}:${PASS_A}" \
+  -X DELETE "https://${MGMT_IP_A}/api/svm/peers/${SVM_PEER_UUID_A}"
+
+# ⚠️ CRITICAL: Poll BOTH clusters until num_records = 0
+echo "Waiting for SVM peer deletion to complete on both sides..."
+while true; do
+  COUNT_A=$(curl -sk -u "${USER_A}:${PASS_A}" \
+    "https://${MGMT_IP_A}/api/svm/peers" | python3 -c \
+    "import sys,json; print(json.loads(sys.stdin.read())['num_records'])")
+  COUNT_B=$(curl -sk -u "${USER_B}:${PASS_B}" \
+    "https://${MGMT_IP_B}/api/svm/peers" | python3 -c \
+    "import sys,json; print(json.loads(sys.stdin.read())['num_records'])")
+  echo "  SVM peers remaining — A: ${COUNT_A}, B: ${COUNT_B}"
+  [[ "$COUNT_A" == "0" && "$COUNT_B" == "0" ]] && break
+  sleep 10
+done
+echo "✅ All SVM peers deleted"
+
+# --- Step 5: Delete Cluster peers ---
+CLUSTER_PEER_UUID_A=$(curl -sk -u "${USER_A}:${PASS_A}" \
+  "https://${MGMT_IP_A}/api/cluster/peers" | python3 -c \
+  "import sys,json; r=json.loads(sys.stdin.read())['records']; print(r[0]['uuid'] if r else '')")
+curl -sk -u "${USER_A}:${PASS_A}" \
+  -X DELETE "https://${MGMT_IP_A}/api/cluster/peers/${CLUSTER_PEER_UUID_A}"
+echo "✅ Cluster peer deleted"
+
+# --- Step 6: Delete SVM via FSx API ---
+aws fsx delete-storage-virtual-machine \
+  --storage-virtual-machine-id "${SVM_ID_B}" --region "${REGION_B}"
+# Wait for SVM to be fully deleted (poll until 404 or empty list)
+echo "Waiting for SVM deletion (~2 min)..."
+sleep 120
+
+# --- Step 7: Delete FSx File System ---
+aws fsx delete-file-system \
+  --file-system-id "${FS_ID_B}" --region "${REGION_B}"
+echo "FSx B deletion initiated (~30 min)"
+
+# --- Step 8: Delete VPC Peering + Routes (ONLY after Step 5) ---
+aws ec2 delete-vpc-peering-connection \
+  --vpc-peering-connection-id "${PEERING_ID}" --region "${REGION_A}"
+
+# --- Step 9: Delete VPC B resources (after FSx deletion completes) ---
+# Subnet, Security Group, VPC (must wait for FSx ENIs to release)
 ```
+
+### What happens if you delete VPC Peering too early
+
+If VPC Peering is deleted before SVM peer deletion completes (Step 4):
+1. SVM peer records become "zombie" entries on both clusters
+2. DELETE API calls return 202 but records never disappear (two-phase protocol broken)
+3. FSx SVM enters `MISCONFIGURED` state
+4. Cannot delete SVM → Cannot delete File System
+5. **Recovery**: AWS Support must run `vserver peer delete -force` via ONTAP CLI (not available to `fsxadmin` via REST API)
+6. **Cost impact**: ~$6/day until resolved
 
 ---
 
@@ -387,12 +471,14 @@ sleep 10
 
 | Symptom | Cause | Resolution |
 |------|------|------|
-| SnapMirror 初期転送が進まない | Intercluster ポート (11104-11105) 未許可 | SG / Route Verify |
-| After breakに Volume が "offline" | Junction Path not set | `nas.path` を PATCH で設定 |
-| FSx API で VolumeType が "DP" のまま | 同期遅延（通常 60 秒） | Wait another 60 seconds and retry |
-| S3 AP 作成: "volume is DP type" | FSx API 同期前に作成試行 | VolumeType="RW" になるまで待機 |
-| S3 AP 作成: "object storage server exists" | 同一 SVM に native S3 server あり | 別 SVM を使用 |
-| SnapMirror 状態が "unhealthy" | ネットワーク断 or Peer 切れ | cluster/peers status Verify |
+| SnapMirror initial transfer stalls | Intercluster ports (11104-11105) blocked | Check SG rules and route tables |
+| Volume "offline" after break | Junction path not set | PATCH `nas.path` via ONTAP API or `update-volume` via FSx API |
+| FSx API shows VolumeType "DP" after break | Control-plane sync lag (>10 min cross-region) | **Don't wait for this.** S3 AP attachment works once junction path is set |
+| S3 AP: "volume is not mounted" | Junction path not propagated to FSx API yet | Wait ~2 min, retry. Or set via `aws fsx update-volume` |
+| S3 AP: "object storage server exists" | Native S3 server on same SVM | Use a different SVM |
+| SVM stuck in MISCONFIGURED | Orphaned SVM peer records | Delete SVM peers first. If stuck, requires AWS Support (see above) |
+| SnapMirror "unhealthy" | Network partition or peer gone | Check cluster/peers status and VPC Peering state |
+| SVM peer DELETE returns 202 but record persists | Remote cluster unreachable | Restore network connectivity, retry from both sides |
 
 ---
 

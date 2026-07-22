@@ -22,7 +22,7 @@ All 12 demo guides now include a validation status banner:
 | 04 | FlexCache CVO GCP | ⚠️ Procedure-level | `cvo-gcp-test.sh` (template) |
 | 05 | FlexCache CVO Azure | ⚠️ Procedure-level | `cvo-azure-test.sh` (template) |
 | 06 | FlexCache GCNV | ⚠️ Procedure-level | `gcnv-test.sh` (template) |
-| 07 | SnapMirror cross-region | ⚠️ Partially validated | `cross-region-test.sh` (peering done) |
+| 07 | SnapMirror cross-region | ✅ Validated (2026-07-22) | `cross-region-deploy.sh` + `cross-region-test.sh` |
 | 08 | SnapMirror on-premises | ⚠️ Procedure-level | `on-premises-test.sh` (template) |
 | 09 | SnapMirror CVO GCP | ⚠️ Procedure-level | `cvo-gcp-test.sh` (template) |
 | 10 | SnapMirror CVO Azure | ⚠️ Procedure-level | `cvo-azure-test.sh` (template) |
@@ -39,7 +39,7 @@ All 12 demo guides now include a validation status banner:
 | 1 | EN demo guide prose — remaining ~400 lines of Japanese in code comments | P2 | 2h | Shell コメント内の日本語。主要散文は翻訳済み |
 | 2 | Screenshot/recording capture during next execution | P2 | 1h | TC-09 再実行時に同時取得 |
 | 3 | ~~FlexCache cross-region E2E test (data write → NFS read in Region B)~~ | ~~P1~~ | ~~2h~~ | ✅ Completed 2026-07-22. Cluster Peering + SVM Peering + FlexCache + NFS read/write validated (ap-northeast-1 → us-west-2). Data propagation <3s. |
-| 4 | SnapMirror cross-region test (Guide 07: break → S3 AP re-attach in Region B) | P1 | 2h | FSx B 再作成が必要 (~$6) |
+| 4 | ~~SnapMirror cross-region test (Guide 07: break → S3 AP re-attach in Region B)~~ | ~~P1~~ | ~~2h~~ | ✅ Completed 2026-07-22. SnapMirror transfer + break + S3 AP re-attach ALL PASS. RTO ~3 min. New findings: SM-VAL-008/009/010/011. |
 | 5 | dev.to 記事化 (Part N: S3 AP + FlexCache マルチクラウド配信) | P1 | 4h | stakeholder-briefs/03 ベース |
 | 6 | git commit + PR | P1 | 30min | 全成果物を feat/ ブランチで push |
 
@@ -77,6 +77,8 @@ All 12 demo guides now include a validation status banner:
 | Cross-region teardown completed (FlexCache + peerings + FSx B deleted) | 2026-07-22 |
 | Validation Status banners added to all 12 demo guides (EN+JA) | 2026-07-22 |
 | Validation script templates created for all targets (on-prem, CVO GCP/Azure, GCNV) | 2026-07-22 |
+| **SnapMirror cross-region E2E VALIDATED (transfer + break + S3 AP re-attach in us-west-2)** | 2026-07-22 |
+| SM-VAL-008/009/010/011 findings documented in research.md | 2026-07-22 |
 
 ## Technical Debt
 
@@ -86,6 +88,8 @@ All 12 demo guides now include a validation status banner:
 | ~~FSx B (us-west-2) deletion~~ | ~~fs-0c841c930edca14fd~~ | — | ✅ Deleted |
 | ~~VPC B resources (VPC, Subnet, SG) in us-west-2~~ | ~~vpc-0287c0a9aa5f59cdd~~ | — | ✅ Deleted |
 | Old SnapMirror relationship (s3ap_snapmirror_tc01) not fully released | fs-09ffe72a3b2b7dbbd / svm_dest | Minor (metadata only) | Low priority |
+| **FSx B (us-west-2) SVM MISCONFIGURED — blocks FS deletion** | fs-0135b69bdb9925f16 / svm-0ca553dc39cd50963 | **~$6/day** | ⚠️ Requires AWS Support (`vserver peer delete -force`). VPC Peering restored: pcx-0b8c07b44447bf2ac |
+| Orphaned SVM peer records on Region A (3 zombie entries) | fs-09ffe72a3b2b7dbbd | None (metadata noise) | Low priority — will resolve when FSx B is deleted |
 
 ## Key Learnings (For Future Reference)
 
@@ -106,3 +110,7 @@ All 12 demo guides now include a validation status banner:
 15. **FlexCache cross-region data propagation**: New files written to Origin via NFS appear in Cache Volume within 3 seconds (tested ap-northeast-1 → us-west-2, ~120ms RTT). No explicit cache refresh needed.
 16. **Teardown order for cross-region FlexCache**: (1) Unmount NFS clients, (2) Remove junction path on FlexCache, (3) DELETE `/api/storage/flexcache/flexcaches/{uuid}`, (4) Delete Origin volume (may need `force=true` if cluster peering already removed), (5) Delete SVM Peering, (6) Delete Cluster Peering, (7) Delete SVM via FSx API, (8) Delete File System via FSx API. Deleting cluster peering before FlexCache causes orphaned origin relationships requiring `force=true`.
 17. **Passphrase shell escaping in SSM**: Avoid `$` in Cluster Peering passphrases when executing via SSM send-command. Use alphanumeric-only passphrases (e.g., `CrossRegion2026Peer`) to prevent shell expansion issues.
+18. **Critical teardown order (cross-region)**: NEVER delete VPC Peering/routes before confirming SVM peer deletion (`num_records: 0` on BOTH clusters). The SVM peer deletion protocol is two-phase and requires bidirectional connectivity. Violating this creates permanent zombie SVM peer records that block SVM/FS deletion and require AWS Support intervention (`vserver peer delete -force` via CLI, not exposed to fsxadmin REST API).
+19. **FSx API VolumeType:DP lag (cross-region)**: After SnapMirror break, FSx API shows `OntapVolumeType: DP` for >10 minutes. S3 AP attachment succeeds regardless — the check is at ONTAP level. Don't use FSx API VolumeType as a gate.
+20. **DP volumes for S3 AP re-attach**: Must create via `aws fsx create-volume --ontap-configuration '{"OntapVolumeType":"DP"}'`. ONTAP REST API-created volumes don't appear in FSx API and can't have S3 AP attached.
+21. **S3 AP re-attach RTO (cross-region)**: ~3 minutes total (break instant + junction path propagation ~2min + S3 AP creation ~30s + first API call ~30s). Same-region expected ~2 minutes.

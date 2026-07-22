@@ -435,11 +435,13 @@ rtt min/avg/max/mdev = 105.2/108.4/112.1/2.3 ms
 
 ## Cleanup
 
+> ⚠️ **Important**: Delete FlexCache and SVM peers BEFORE removing VPC Peering. See [Demo Guide 07 Cleanup](./demo-guide-07-snapmirror-cross-region.md#cleanup) for the full safe teardown order and consequences of premature VPC Peering deletion.
+
 ```bash
 # 1. NFS unmount（Region B EC2）
 sudo umount /mnt/cross_cache
 
-# 2. Delete FlexCache (Region B)
+# 2. Delete FlexCache (Region B) — must remove junction path first
 CACHE_UUID=$(curl -sk -u "${USER_B}:${PASS_B}" \
   "https://${MGMT_IP_B}/api/storage/volumes?name=${CACHE_VOL}&svm.name=${SVM_NAME_B}" \
   | jq -r '.records[0].uuid')

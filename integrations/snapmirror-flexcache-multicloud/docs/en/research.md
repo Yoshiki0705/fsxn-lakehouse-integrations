@@ -2,8 +2,8 @@
 
 # S3 AP + SnapMirror + FlexCache Multi-Cloud Data Distribution — Research Findings
 
-> **Status**: Phase 3 Validation Complete | Phase 4 Communication Complete
-> **Last Updated**: 2026-07-21
+> **Status**: Phase 3 Validation Complete | Phase 4 Communication Complete | Cross-Region SnapMirror Validated (2026-07-22)
+> **Last Updated**: 2026-07-22
 > **ONTAP Version Tested**: 9.17.1P7D1
 > **Scope**: Multi-cloud data distribution of data collected via FSx for ONTAP S3 Access Points using SnapMirror/FlexCache
 > **JA Primary**: Full research detail in `docs/ja/research.md` — this EN version provides equivalent technical depth for architecture-impacting findings
@@ -20,7 +20,7 @@ This research systematically evaluates the feasibility of distributing data coll
 |---------------|:-----:|-------------|
 | **supported** | 32 | Confirmed via official documentation or Phase 3 validation |
 | **partially_supported** | 3 | Supported under specific conditions or platform-dependent |
-| **works_with_caveats** | 2 | Validated as working but with important operational constraints |
+| **works_with_caveats** | 2+4 | Validated as working but with important operational constraints (original 2 + 4 cross-region validation findings) |
 | **version_gated** | 1 | Supported from ONTAP 9.18.1; not supported on tested version (9.17.1) |
 | **undocumented** | 1 | Not documented; requires hands-on validation to confirm |
 | **unsupported** | 2 | Explicitly confirmed as unsupported |
@@ -516,6 +516,78 @@ FSx for ONTAP S3 AP returns `501 Not Implemented` for requests with `If-None-Mat
 4. Last-writer-wins semantics at the S3 layer do not affect ONTAP-level file system consistency
 
 **Conclusion:** No SnapMirror integrity risk from conditional writes absence.
+
+---
+
+## Cross-Region SnapMirror Validation Findings (2026-07-22)
+
+> Validated: ap-northeast-1 → us-west-2, ONTAP 9.17.1P7D1 both clusters
+
+### SM-VAL-008: FSx API VolumeType:DP Display Lag (Cross-Region)
+
+| Item | Details |
+|------|---------|
+| **Finding ID** | SM-VAL-008 |
+| **Classification** | `works_with_caveats` |
+| **Disclosure** | validation evidence |
+
+**Finding:** After SnapMirror break, FSx API continues to report `OntapVolumeType: DP` for the destination volume for **>10 minutes** in cross-region scenarios (previous same-region testing showed ~60s). However, S3 AP attachment succeeds immediately once junction path is set — the check is at the ONTAP level, not the FSx API level.
+
+**Impact on automation:**
+- Do NOT poll `describe-volumes → OntapVolumeType` as the gate for S3 AP attachment
+- Instead: (1) Break SnapMirror, (2) Set junction path via `update-volume`, (3) Wait for junction path to appear in FSx API (~2 min), (4) Attach S3 AP immediately
+
+### SM-VAL-009: DP Volume Must Be Created via FSx API for S3 AP Attachment
+
+| Item | Details |
+|------|---------|
+| **Finding ID** | SM-VAL-009 |
+| **Classification** | `works_with_caveats` |
+| **Disclosure** | validation evidence |
+
+**Finding:** Volumes created exclusively via ONTAP REST API (`POST /api/storage/volumes {type: dp}`) do NOT appear in the FSx API (`describe-volumes`). S3 AP attachment requires a FSx volume ID (`fsvol-*`). Volumes must be created using `aws fsx create-volume --ontap-configuration '{"OntapVolumeType":"DP"}'` to be visible in both control planes.
+
+**Workaround for existing ONTAP-created volumes:** Not available — volume must be recreated via FSx API.
+
+### SM-VAL-010: Cross-Region S3 AP Re-Attach RTO
+
+| Item | Details |
+|------|---------|
+| **Finding ID** | SM-VAL-010 |
+| **Classification** | `supported (validated)` |
+| **Disclosure** | validation evidence |
+
+**Measured RTO (ap-northeast-1 → us-west-2):**
+
+| Phase | Duration | Notes |
+|-------|:--------:|-------|
+| SnapMirror break | ~instant | ONTAP REST API PATCH |
+| Junction path set + FSx API propagation | ~2 min | `update-volume` + polling |
+| S3 AP creation (CREATING → AVAILABLE) | ~30s | `create-and-attach-s3-access-point` |
+| First successful S3 API call | ~30s | ListObjectsV2 / GetObject |
+| **Total** | **~3 min** | Cross-region. Same-region estimated ~2 min |
+
+### SM-VAL-011: Teardown Order — Critical Dependency
+
+| Item | Details |
+|------|---------|
+| **Finding ID** | SM-VAL-011 |
+| **Classification** | `works_with_caveats` |
+| **Disclosure** | validation evidence |
+
+**Finding:** Deleting VPC Peering or network routes before SVM peer deletion completes causes **permanent orphaned SVM peer records** that cannot be deleted via REST API. The FSx SVM enters MISCONFIGURED state and blocks file system deletion.
+
+**Required teardown order:**
+1. Delete SnapMirror relationships (both sides: `destination_only=true` on dest)
+2. Delete SVM peers (both sides) — **wait until `num_records: 0` on BOTH clusters**
+3. Delete Cluster peers
+4. Delete VPC Peering / routes
+5. Delete SVM via FSx API
+6. Delete File System via FSx API
+
+**Never:** Delete VPC Peering before step 2 is confirmed. The two-phase SVM peer deletion protocol requires bidirectional connectivity.
+
+**Recovery if orphaned:** Requires AWS Support (`vserver peer delete -force` via ONTAP CLI, not exposed to `fsxadmin` via REST API).
 
 ---
 
