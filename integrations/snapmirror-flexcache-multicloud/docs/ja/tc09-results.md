@@ -5,7 +5,7 @@
 > **Status**: PASS (All Tests Completed)
 > **Test Date**: 2026-07-21
 > **ONTAP Version**: 9.17.1P7D1
-> **Environment**: FSx for ONTAP (fs-09ffe72a3b2b7dbbd), intra-cluster FlexCache, AD-joined SVM
+> **Environment**: FSx for ONTAP (Single-AZ, ap-northeast-1), intra-cluster FlexCache, AD-joined SVM
 > **Test Plan**: [tc09-lambda-s3ap-flexcache-smb-nfs.md](../ja/tc09-lambda-s3ap-flexcache-smb-nfs.md)
 
 ---
@@ -28,11 +28,11 @@
 
 | Component | Value |
 |-----------|-------|
-| FSx for ONTAP File System | fs-09ffe72a3b2b7dbbd |
+| FSx for ONTAP File System | Single-AZ, ap-northeast-1 |
 | ONTAP Version | 9.17.1P7D1 |
 | Source SVM | verification-svm (Origin Volume) |
-| Destination SVM | svm_dest (AD-joined to tc09.flexcache.local, CIFS: SVMDEST) |
-| AD Domain | tc09.flexcache.local (AWS Managed AD: d-956797f56e) |
+| Destination SVM | svm_dest (AD-joined, CIFS enabled) |
+| AD Domain | AWS Managed AD (private domain) |
 | Origin Volume | vol_tc09_origin (UNIX style, 10GB) |
 | Cache Volume | vol_tc09_cache (FlexGroup, 100GB, write-back enabled) |
 | Lambda Runtime | Python 3.12 (arm64) |

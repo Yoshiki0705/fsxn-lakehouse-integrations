@@ -22,11 +22,11 @@ ENV="${ENVIRONMENT:-poc}"
 STACK_PREFIX="manufacturing-${ENV}"
 
 # Existing infrastructure (from iceberg-metadata-catalog / verification project)
-EXISTING_VPC_ID="${EXISTING_VPC_ID:-vpc-0ae01826f906191af}"
-EXISTING_SUBNET_1="${EXISTING_SUBNET_1:-subnet-0307ebbd55b35c842}"  # ap-northeast-1a private
-EXISTING_SUBNET_2="${EXISTING_SUBNET_2:-subnet-0af86ebd3c65481b8}"  # ap-northeast-1c private
-EXISTING_FSX_ID="${EXISTING_FSX_ID:-fs-09ffe72a3b2b7dbbd}"
-EXISTING_SVM_ID="${EXISTING_SVM_ID:-svm-0e5ef72d9b4470f19}"
+EXISTING_VPC_ID="${EXISTING_VPC_ID:-vpc-0EXAMPLE1111aaaaa}"
+EXISTING_SUBNET_1="${EXISTING_SUBNET_1:-subnet-0EXAMPLE2222bbbbb}"  # ap-northeast-1a private
+EXISTING_SUBNET_2="${EXISTING_SUBNET_2:-subnet-0EXAMPLE3333ccccc}"  # ap-northeast-1c private
+EXISTING_FSX_ID="${EXISTING_FSX_ID:-fs-0EXAMPLE4444ddddd}"
+EXISTING_SVM_ID="${EXISTING_SVM_ID:-svm-0EXAMPLE5555eeeee}"
 USE_EXISTING_INFRA=true  # Default: use existing VPC + FSx
 
 # Stack names (deployment order)
