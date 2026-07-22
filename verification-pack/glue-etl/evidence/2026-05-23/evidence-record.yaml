@@ -7,9 +7,9 @@ tester: "Yoshiki Fujiwara"
 
 # Infrastructure
 region: "ap-northeast-1"
-fsxn_file_system_id: "fs-09ffe72a3b2b7dbbd"
+fsxn_file_system_id: "fs-0EXAMPLE1111aaaaa"
 fsxn_throughput_capacity_mbps: 128
-svm_id: "svm-0e5ef72d9b4470f19"
+svm_id: "svm-0EXAMPLE4444ddddd"
 ap_alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
 ap_network_origin: "INTERNET"
 
@@ -41,7 +41,7 @@ operations:
     result: "PASS"
 
 # Results
-job_run_id: "jr_de3dd9eb6617a32d82c52a267949e592a36f29f02b3c445f8078727957214d41"
+job_run_id: "jr_de3dd9eb6617a32d82c52a267949e592a36f29f02b3c445f1234567890124d41"
 job_state: "SUCCEEDED"
 execution_time_seconds: 64
 output_path: "s3://verification-tes-.../glue-test/output/"

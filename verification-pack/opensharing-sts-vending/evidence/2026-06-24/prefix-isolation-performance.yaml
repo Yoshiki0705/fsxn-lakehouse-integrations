@@ -1,6 +1,6 @@
 verification_date: "2026-06-24T00:23:00Z"
 environment:
-  fsx_filesystem: fs-09ffe72a3b2b7dbbd
+  fsx_filesystem: fs-0EXAMPLE1111aaaaa
   svm: verification-svm
   ap_alias: verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias
   region: ap-northeast-1

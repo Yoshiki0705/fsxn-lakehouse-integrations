@@ -26,9 +26,9 @@ source_access_point:
   alias: "verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias"
   name: "verification-test-ap"
   network_origin: "INTERNET"
-  file_system: "fs-09ffe72a3b2b7dbbd"
-  svm: "svm-0e5ef72d9b4470f19"
-  volume: "fsvol-0e1fe85769794a92e (verification_vol)"
+  file_system: "fs-0EXAMPLE1111aaaaa"
+  svm: "svm-0EXAMPLE4444ddddd"
+  volume: "fsvol-0EXAMPLE2345bcdef (verification_vol)"
 
 # Initial Scan Results
 initial_scan:

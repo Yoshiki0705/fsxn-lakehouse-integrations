@@ -7,14 +7,14 @@ tester: "Yoshiki Fujiwara"
 
 # Infrastructure
 region: "ap-northeast-1"
-fsxn_file_system_id: "fs-09ffe72a3b2b7dbbd"
+fsxn_file_system_id: "fs-0EXAMPLE1111aaaaa"
 fsxn_deployment_type: "SINGLE_AZ_1"
 fsxn_throughput_capacity_mbps: 128
 ontap_version: "9.17.1+"
-svm_id: "svm-0e5ef72d9b4470f19"
+svm_id: "svm-0EXAMPLE4444ddddd"
 svm_name: "verification-svm"
 svm_security_style: "UNIX"
-volume_id: "fsvol-0e1fe85769794a92e"
+volume_id: "fsvol-0EXAMPLE2345bcdef"
 volume_name: "verification_vol"
 volume_junction_path: "/verification"
 

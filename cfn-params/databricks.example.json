@@ -3,7 +3,7 @@
   {"ParameterKey": "S3BucketName", "ParameterValue": "YOUR-SVM-S3-BUCKET-NAME"},
   {"ParameterKey": "VpcId", "ParameterValue": "vpc-0EXAMPLE1234abcde"},
   {"ParameterKey": "SubnetIds", "ParameterValue": "subnet-0EXAMPLEaaa,subnet-0EXAMPLEbbb"},
-  {"ParameterKey": "DatabricksAccountId", "ParameterValue": "414351767826"},
+  {"ParameterKey": "DatabricksAccountId", "ParameterValue": "123456789012"},
   {"ParameterKey": "DatabricksWorkspaceId", "ParameterValue": "YOUR-WORKSPACE-ID"},
   {"ParameterKey": "ExternalId", "ParameterValue": "YOUR-EXTERNAL-ID-FROM-DATABRICKS"},
   {"ParameterKey": "S3AccessPointName", "ParameterValue": "fsxn-databricks-ap"},

@@ -29,7 +29,7 @@ Parameters:
     Description: >
       Databricks AWS Account ID for cross-account trust.
       Default is Databricks' standard AWS account for Unity Catalog.
-    Default: '414351767826'
+    Default: '123456789012'
 
   DatabricksWorkspaceId:
     Type: String
