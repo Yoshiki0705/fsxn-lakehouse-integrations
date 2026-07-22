@@ -16,8 +16,10 @@
 | 価値を理解する（専門用語なし） | [ビジネスガイド](docs/ja/quickstart-business-guide.md) | 5分 |
 | ユースケースに合うエンジンを選ぶ | [エンジン選定ガイド](docs/ja/engine-selection-guide.md) | 10分 |
 | アーキテクチャの選択肢とトレードオフを比較する | [アーキテクチャ比較](docs/adoption-guide/architecture-comparison-ja.md) | 15分 |
+| S3 AP のディレクトリ設計・性能特性を理解する | [S3 AP 設計考慮事項](docs/ja/s3ap-design-considerations.md) | 15分 |
 | PoC をエンドツーエンドで実行する | [PoC 実行ガイド](docs/implementation-guide/poc-execution-guide-ja.md) | 15分 |
 | ベースインフラをデプロイする | [デプロイガイド](docs/ja/deployment-guide.md) | 30分 |
+| FlexCache / SnapMirror でマルチリージョン配信する | [FlexCache/SnapMirror 考慮事項](docs/ja/s3ap-flexcache-snapmirror-considerations.md) | 15分 |
 | FSx for ONTAP → Databricks Unity Catalog を接続する | [UC 接続ガイド](docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) | 30分 |
 
 <details>
