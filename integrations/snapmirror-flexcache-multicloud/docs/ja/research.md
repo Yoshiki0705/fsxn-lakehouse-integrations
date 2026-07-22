@@ -2180,6 +2180,56 @@ SnapMirror と FlexCache は**競合する技術ではなく、異なるユー�
 
 ---
 
+## 業種別ユースケース
+
+以下は検証で確認した FlexCache/SnapMirror + S3 Access Points のアーキテクチャパターンを業種別に整理した想定ユースケースである。個々の業種での本番適用にはワークロード固有の検証が必要。
+
+### データ収集 + 分析バースト（FlexCache 向き）
+
+| 業種 | ワークロード | FlexCache の役割 |
+|------|------------|----------------|
+| 自動車 (AV/ADAS) | HiL テスト — クラウド収集走行データのオンプレ再生 | テストリグへのデータ配信。Origin 更新が自動反映 |
+| メディア / VFX | レンダリングバースト — NAS 上のシーンファイル + テクスチャをクラウドレンダーファームに配信 | レンダーノードがローカル速度でアセットを読み取り |
+| 半導体 (EDA) | DRC/LVS 回路検証 — 設計データをクラウドに配信してバッチ検証 | 計算リソースの近くにキャッシュ配置。転送待ちなしにジョブ開始 |
+| ヘルスケア | 医用画像 (DICOM) — 院内 NAS の画像を研究用 AI 基盤に配信 | 複数研究拠点からの並行読み取りを分散 |
+| IoT / 製造 | センサーデータ収集 → 分析環境への配信 | NFS バッチ処理のスループットを活用（アクセスパターンにより S3 API より有利な場面がある） |
+| エネルギー | 地震探査 / シミュレーションデータ — HPC クラスターへの配信 | PB 規模のデータセットを一度だけ転送し、FlexCache で再利用 |
+| 建設 / 建築 | BIM モデル — 複数拠点の設計チームが同一 3D モデルを参照 | 各拠点にキャッシュ配置。write-around で変更を Origin に即時反映 |
+
+### DR + コンプライアンス保存（SnapMirror 向き）
+
+| 業種 | ワークロード | SnapMirror の役割 |
+|------|------------|-----------------|
+| 金融 (FSI) | 規制対応データの DR — 取引記録・監査ログの別リージョン複製 | RPO 5 分以内の非同期レプリケーション。監査証跡の geo-redundancy 確保 |
+| 公共 (Public Sector) | 行政データの BC/DR — 災害時のサービス継続 | 別リージョンに完全コピー。フェイルオーバー後 S3 AP 再アタッチで ~3 分で復旧 |
+| ヘルスケア | HIPAA 対応 — 患者データの別リージョンバックアップ | 転送中暗号化（TLS 1.2）+ 保存時暗号化が標準。増分転送でネットワーク負荷最小化 |
+| 通信 (Telco) | ネットワークログ / CDR の長期保存 + DR | 大容量ログを日次でレプリケーション。宛先で NFS マウントして分析ツール投入 |
+| 小売 / EC | POS / 行動データの分析環境配信 | 日次バッチでデータウェアハウス環境に同期。S3 API のコール課金を考慮 |
+
+### 両方併用（FlexCache + SnapMirror）
+
+| 業種 | ワークロード | 併用パターン |
+|------|------------|------------|
+| 製造 | 品質画像 + IoT → AI 推論 + DR | FlexCache: 推論環境への読み取り加速 / SnapMirror: 生データの DR 保護 |
+| メディア | 素材 NAS → 複数ポストプロダクション拠点 + 本社 DR | FlexCache: 各拠点での編集アクセス / SnapMirror: マスターの DR |
+| 物流 | 配送画像認識データ → 分析 + アーカイブ | FlexCache: リアルタイム分析拠点 / SnapMirror: コンプライアンス保存 |
+| 広告 / AdTech | ログ収集 → リアルタイム分析 + DR | FlexCache: 分析クラスターへの低レイテンシ配信 / SnapMirror: 監査用 DR |
+| 農業 / 食品 | ドローン撮影画像 → AI 解析 + 長期保存 | FlexCache: GPU クラスターへの画像配信 / SnapMirror: 原本保存 |
+| 不動産 | 3D スキャン / 点群データ → VR 内覧 + アーカイブ | FlexCache: 各営業拠点のビューワーに配信 / SnapMirror: 資産としての保全 |
+
+### 設計の要点
+
+- **S3 API コールの課金**: 多数の小ファイルを参照する分析ワークロードでは、FlexCache 経由の NFS マウントの方がコスト効率が良い場面がある（S3 API は GET/LIST ごとに課金。アクセスパターンとファイルサイズによる）
+- **レイテンシ**: S3 API はオブジェクト単位のメタデータ操作で NFS と比較してレイテンシが大きい傾向がある。ファイル単位のランダムアクセスが頻繁な場合は NFS が有利。逆に大容量オブジェクトの並列ダウンロードでは S3 の方が適する場面もある
+- **SnapMirror の増分転送**: 初回以降は変更ブロックのみ転送。TB 規模のデータセットでも日次同期のネットワーク負荷は小さい
+
+参考:
+- [AWS Blog — Accelerating HiL Testing for AV/ADAS with a Hybrid Cloud Approach](https://aws.amazon.com/jp/blogs/industries/accelerating-hil-testing-for-av-adas-with-a-hybrid-cloud-approach-aws-and-netapp/)
+- [NetApp Blog — Transform Your EDA Workflows with FlexCache](https://www.netapp.com/ja/blog/transform-eda-workflows-flexcache/)
+- [NetApp Blog — Global data consistency made simple with FlexCache](https://www.netapp.com/blog/flexcache-global-data-gigaom-radar/)
+
+---
+
 ## Open Questions
 
 以下は本調査で解決に至らなかった項目であり、追加検証またはベンダー確認で解決予定:
