@@ -676,6 +676,56 @@ SnapMirror and FlexCache are **complementary technologies suited to different us
 
 ---
 
+## Industry Use Cases
+
+The following table organizes expected application patterns by industry. These are architecture patterns based on validated FlexCache/SnapMirror behavior with S3 Access Points — individual industry deployments require workload-specific validation.
+
+### Data Collection + Analytics Burst (FlexCache)
+
+| Industry | Workload | FlexCache Role |
+|----------|----------|----------------|
+| Automotive (AV/ADAS) | HiL testing — replay cloud-collected driving data on-prem | Distribute golden dataset to test rigs; Origin updates auto-reflect |
+| Media / VFX | Render burst — deliver scene files + textures to cloud render farm | Render nodes read assets at local speed |
+| Semiconductor (EDA) | DRC/LVS circuit verification — burst design data to cloud | Cache placement near compute; jobs start without transfer wait |
+| Healthcare | Medical imaging (DICOM) — distribute hospital NAS images to research AI | Parallel reads from multiple research sites |
+| IoT / Manufacturing | Sensor data collection → analytics environment | NFS batch throughput (advantageous over S3 API in some access patterns) |
+| Energy | Seismic / simulation data — HPC cluster delivery | Transfer PB-scale dataset once, reuse via FlexCache |
+| Construction | BIM models — multi-site design teams reference same 3D model | Cache per site; write-around syncs changes to Origin immediately |
+
+### DR + Compliance Retention (SnapMirror)
+
+| Industry | Workload | SnapMirror Role |
+|----------|----------|-----------------|
+| Financial Services | Regulatory DR — trade records and audit logs to alternate region | Async replication (RPO ≤ 5 min); geo-redundancy for audit trails |
+| Public Sector | Government BC/DR — service continuity during disaster | Full copy to alternate region; S3 AP re-attach ~3 min for failover |
+| Healthcare | HIPAA compliance — patient data backup to alternate region | In-transit encryption (TLS 1.2) + at-rest encryption standard; incremental transfer |
+| Telco | Network logs / CDR long-term retention + DR | Daily replication of large logs; NFS mount at dest for analytics |
+| Retail / E-commerce | POS / behavioral data delivery to analytics environment | Daily batch sync; avoid per-API-call S3 charges |
+
+### Hybrid (FlexCache + SnapMirror)
+
+| Industry | Workload | Combined Pattern |
+|----------|----------|-----------------|
+| Manufacturing | Quality images + IoT → AI inference + DR | FlexCache: read acceleration for inference / SnapMirror: raw data DR |
+| Media | Source NAS → multi-site post-production + HQ DR | FlexCache: editing access per site / SnapMirror: master DR |
+| Logistics | Delivery image recognition → analytics + archive | FlexCache: real-time analytics / SnapMirror: compliance archive |
+| Advertising / AdTech | Log collection → real-time analytics + DR | FlexCache: low-latency to analytics cluster / SnapMirror: audit DR |
+| Agriculture / Food | Drone imagery → AI analysis + long-term retention | FlexCache: GPU cluster delivery / SnapMirror: original preservation |
+| Real Estate | 3D scan / point cloud → VR viewing + archive | FlexCache: branch office viewer delivery / SnapMirror: asset preservation |
+
+### Design Considerations
+
+- **S3 API call costs**: For workloads that reference many small files, NFS mount via FlexCache may be more cost-effective (S3 charges per GET/LIST call). This depends on access pattern and file size.
+- **Latency**: S3 API has higher per-operation latency for metadata operations compared to NFS. NFS is advantageous for frequent random file access. Conversely, S3 parallel large-object download may be better suited for certain patterns.
+- **SnapMirror incremental transfer**: After the initial baseline, only changed blocks are transferred. Even TB-scale datasets have minimal daily sync network overhead.
+
+References:
+- [AWS Blog — Accelerating HiL Testing for AV/ADAS with a Hybrid Cloud Approach](https://aws.amazon.com/jp/blogs/industries/accelerating-hil-testing-for-av-adas-with-a-hybrid-cloud-approach-aws-and-netapp/)
+- [NetApp Blog — Transform Your EDA Workflows with FlexCache](https://www.netapp.com/ja/blog/transform-eda-workflows-flexcache/)
+- [NetApp Blog — Global data consistency made simple with FlexCache](https://www.netapp.com/blog/flexcache-global-data-gigaom-radar/)
+
+---
+
 ## Open Questions
 
 | # | Question | Finding ID | Priority | Resolution Path |
