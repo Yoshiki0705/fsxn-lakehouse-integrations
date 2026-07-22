@@ -1,27 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: |
-  Demo Active Directory Environment for FSx for ONTAP S3 AP WINDOWS User Type Testing.
-
-  This template provisions an AD environment required to test S3 Access Points with
-  FileSystemIdentity Type=WINDOWS. The SVM must be domain-joined (CIFS server configured)
-  before creating WINDOWS-type S3 APs.
-
-  Three patterns (select via ADPattern parameter):
-    A) AWS Managed Microsoft AD (Enterprise) — production-ready, multi-AZ, ~$100/mo
-    B) Simple AD (Samba 4) — lightweight dev/test, single-region, ~$50/mo
-    C) Self-Managed AD on EC2 — bring your own domain controller, maximum control
-
-  Post-deploy: Run shared/scripts/demo-ad-join-svm.sh to join the SVM to the domain.
-
-  IMPORTANT — SSM Domain Join for Windows Clients:
-    If you need to join additional Windows EC2 instances to the domain created here,
-    use AWS::SSM::Association with the AWS-managed document "AWS-JoinDirectoryServiceDomain"
-    as a SEPARATE resource. Do NOT use EC2 SsmAssociations property with custom SSM Documents
-    containing aws:domainJoin — this causes "Document schema version 2.2 is not supported
-    by association that is created with instance id" deployment failures.
-    See: https://docs.aws.amazon.com/systems-manager/latest/userguide/sysman-state-assoc.html
-
-  Reference: https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/self-managed-AD.html
+Description: >-
+  Demo AD Environment for FSx for ONTAP S3 AP WINDOWS User Type.
+  Deploys AWS Managed AD, Simple AD, or Self-Managed AD on EC2.
+  Post-deploy: Run shared/scripts/demo-ad-join-svm.sh to join SVM.
 
 Parameters:
   # --- Pattern Selection ---
@@ -256,11 +237,6 @@ Resources:
         SubnetIds:
           - !Ref PrivateSubnetId1
           - !Ref PrivateSubnetId2
-      Tags:
-        - Key: Name
-          Value: !Sub '${Environment}-managed-ad'
-        - Key: Project
-          Value: fsxn-lakehouse-integrations
 
   # ============================================================
   # Pattern B: Simple AD

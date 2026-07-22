@@ -192,3 +192,9 @@ ehthumbs.db
 Desktop.ini
 .private-evidence-record.yaml
 integrations/iceberg-metadata-catalog/snowflake/screenshots/raw/
+
+# Validation parameter files (contain real credentials)
+**/params.env
+**/.cross-region-state.env
+**/.s3ap_alias
+**/.vol_id

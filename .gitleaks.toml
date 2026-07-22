@@ -165,4 +165,7 @@ regexes = [
   '''072088201116''',
   # PLACEHOLDER tags in config files (gitleaks:allow)
   '''PLACEHOLDER''',
+  # False positive: 100GB in bytes
+  '''107374182400''',
 ]
+
