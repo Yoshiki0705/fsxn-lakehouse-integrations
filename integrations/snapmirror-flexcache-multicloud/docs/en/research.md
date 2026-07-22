@@ -656,7 +656,8 @@ SnapMirror and FlexCache are **complementary technologies suited to different us
 | Disaster Recovery | SnapMirror | Full copy at destination, immediate failover capability |
 | Remote read acceleration | FlexCache | Local-speed cache hits, minimal storage consumption |
 | Data migration (one-time) | SnapMirror | Full copy then release relationship |
-| Real-time collaborative editing | FlexCache (write-back) | Low-latency write at multiple sites (RTT <= 200ms) |
+| Remote write (synchronous) | FlexCache (write-around) | Writes forwarded to Origin synchronously. Default mode |
+| Remote write (asynchronous) | FlexCache (write-back) | Writes cached locally, flushed to Origin asynchronously (RTT <= 200ms required) |
 | DR + daily read acceleration | SnapMirror + FlexCache hybrid | SnapMirror for DR, FlexCache for daily performance |
 | Multi-cloud distribution | SnapMirror | More reliable than FlexCache write-back across clouds |
 
