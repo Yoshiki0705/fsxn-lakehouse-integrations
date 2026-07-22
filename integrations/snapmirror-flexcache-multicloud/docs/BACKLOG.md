@@ -53,6 +53,7 @@ All 12 demo guides now include a validation status banner:
 | 10 | On-premises validation (Guide 03/08) | Physical ONTAP or AFF-C190 | `on-premises-test.sh` | Lab access |
 | 11 | Windows EC2 SMB validation with screenshots | AD + Windows AMI | — | ~$5 |
 | 12 | ONTAP 9.18.1 upgrade → FC-002 validation (S3 AP on FlexCache Cache) | FSx for ONTAP 9.18.1 adoption | — | Future |
+| 13 | ONTAP 9.18.1 検証完了後 → FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns の互換性テーブル更新を依頼 | FC-002 検証完了 | — | あちらの Kiro から更新依頼待ちの合意あり |
 
 ## Completed (This Sprint)
 

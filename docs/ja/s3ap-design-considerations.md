@@ -238,6 +238,7 @@ S3 Access Points は**二層認可**を実装する。
 
 - [FlexCache / SnapMirror 利用時の追加考慮事項](s3ap-flexcache-snapmirror-considerations.md)
 - [S3 AP + SnapMirror + FlexCache 調査・検証](../../integrations/snapmirror-flexcache-multicloud/docs/ja/research.md)
+- [S3 AP データ収集 CloudFormation テンプレート（設計 TIPS 付き）](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns/tree/main/infrastructure/s3ap-data-collection) — パラメータ Description に設計ガイダンスを埋め込んだデプロイテンプレート
 - [AWS Docs: S3 Access Points for FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)
 - [AWS Docs: Best practices — Optimizing S3 performance](https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html)
 - [NetApp KB: How to avoid maxdir-size issues](https://kb.netapp.com/on-prem/ontap/Ontap_OS/OS-KBs/How_do_I_avoid_maxdir-size_issues)

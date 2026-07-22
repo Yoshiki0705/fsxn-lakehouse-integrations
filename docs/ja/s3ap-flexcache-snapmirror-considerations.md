@@ -181,6 +181,7 @@ S3 AP 単体 + FlexCache + SnapMirror を全て考慮した推奨ディレクト
 ## 関連ドキュメント
 
 - [S3 AP 全般の設計考慮事項](s3ap-design-considerations.md)
+- [S3 AP データ収集 CloudFormation テンプレート（設計 TIPS 付き）](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns/tree/main/infrastructure/s3ap-data-collection) — Mermaid 設計判断フローにデータ配信パターン分岐を含む
 - [S3 AP + SnapMirror + FlexCache 調査・検証](../../integrations/snapmirror-flexcache-multicloud/docs/ja/research.md)
 - [Demo Guide 07: SnapMirror Cross-Region + S3 AP Re-Attach](../../integrations/snapmirror-flexcache-multicloud/docs/ja/demo-guide-07-snapmirror-cross-region.md)
 - [Demo Guide 01: FlexCache Same-Region](../../integrations/snapmirror-flexcache-multicloud/docs/ja/demo-guide-01-flexcache-same-region.md)
