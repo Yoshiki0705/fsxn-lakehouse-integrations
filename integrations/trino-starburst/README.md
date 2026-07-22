@@ -11,7 +11,7 @@ Query FSx for ONTAP data via S3 Access Points using Trino — an open-source dis
 - **Read**: All queries succeed on FSx for ONTAP S3 AP (10K and 5M row Parquet)
 - **Write-back (CTAS)**: Failed due to file-based metastore limitation (not FSx for ONTAP S3 AP issue). Requires Glue Catalog or Hive Metastore for write operations.
 - **No session policy issues**: Direct IAM credentials, no intermediary governance layer
-- Tested on separate SVM (svm-0e5ef72d9b4470f19) while original SVM has a service issue
+- Tested on separate SVM while original SVM has a service issue
 
 **Benchmark (Trino 438, single-node Docker arm64, ap-northeast-1):**
 

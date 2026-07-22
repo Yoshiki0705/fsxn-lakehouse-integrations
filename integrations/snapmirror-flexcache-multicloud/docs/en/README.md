@@ -153,7 +153,7 @@ S3 AP-attached volumes work as FlexCache Origin, validated in two scenarios:
 | NFS mount Cache Volume + read data | ✅ | All files readable, content matches |
 | S3 AP → Origin write → Cache propagation | ✅ | ~30s (TTL) for Cache to reflect new data |
 
-**Environment**: fs-09ffe72a3b2b7dbbd / ONTAP 9.17.1P7D1 / ap-northeast-1
+**Environment**: FSx for ONTAP Single-AZ / ONTAP 9.17.1P7D1 / ap-northeast-1
 **Evidence**: `.private/evidence/s3ap-multicloud/tc03-*.json` (16 files)
 **Summary**: `.private/evidence/s3ap-multicloud/tc03-tc05-results-summary.md`
 
@@ -161,13 +161,13 @@ S3 AP-attached volumes work as FlexCache Origin, validated in two scenarios:
 
 | Step | Result | Details |
 |------|:------:|---------|
-| VPC Peering (ap-northeast-1 ↔ us-west-2) | ✅ | pcx-0d37a17effc255948 |
+| VPC Peering (ap-northeast-1 ↔ us-west-2) | ✅ | Established |
 | Cluster Peering + SVM Peering | ✅ | `available` / `peered` |
-| Create FlexCache (Region A Origin → Region B Cache) | ✅ | vol_xregion_cache |
+| Create FlexCache (Region A Origin → Region B Cache) | ✅ | Created successfully |
 | Write via NFS in Region A | ✅ | Test files created |
 | Read from Cache Volume NFS in Region B | ✅ | **Propagation <3 seconds** (~120ms RTT) |
 
-**Environment**: ap-northeast-1 (fs-09ffe72a3b2b7dbbd) → us-west-2 (fs-0135b69bdb9925f16)
+**Environment**: FSx for ONTAP Single-AZ (ap-northeast-1) → FSx for ONTAP Single-AZ (us-west-2)
 **Script**: `scripts/validation/cross-region-test.sh` (Test 6)
 **Demo Guide**: [Guide 02: FlexCache Cross-Region](demo-guide-02-flexcache-cross-region.md)
 

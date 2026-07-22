@@ -159,7 +159,7 @@ S3 AP アタッチ済みボリュームを FlexCache Origin として使用可�
 | Cache Volume NFS マウント + データ読み取り | ✅ | 全ファイル読み取り可能、内容一致 |
 | S3 AP → Origin 書き込み → Cache 反映 | ✅ | ~30秒（TTL）で Cache に伝播 |
 
-**検証環境**: fs-09ffe72a3b2b7dbbd / ONTAP 9.17.1P7D1 / ap-northeast-1
+**検証環境**: FSx for ONTAP Single-AZ / ONTAP 9.17.1P7D1 / ap-northeast-1
 **エビデンス**: `.private/evidence/s3ap-multicloud/tc03-*.json` (16 ファイル)
 **結果サマリー**: `.private/evidence/s3ap-multicloud/tc03-tc05-results-summary.md`
 
@@ -167,13 +167,13 @@ S3 AP アタッチ済みボリュームを FlexCache Origin として使用可�
 
 | ステップ | 結果 | 詳細 |
 |---------|:----:|------|
-| VPC Peering 確立（ap-northeast-1 ↔ us-west-2） | ✅ | pcx-0d37a17effc255948 |
+| VPC Peering 確立（ap-northeast-1 ↔ us-west-2） | ✅ | 正常確立 |
 | Cluster Peering + SVM Peering | ✅ | `available` / `peered` |
-| FlexCache 作成（Region A Origin → Region B Cache） | ✅ | vol_xregion_cache |
+| FlexCache 作成（Region A Origin → Region B Cache） | ✅ | 正常作成 |
 | Region A で NFS 書き込み | ✅ | テストファイル作成 |
 | Region B Cache Volume で NFS 読み取り | ✅ | **3 秒以内に伝播** (~120ms RTT) |
 
-**検証環境**: ap-northeast-1 (fs-09ffe72a3b2b7dbbd) → us-west-2 (fs-0135b69bdb9925f16)
+**検証環境**: FSx for ONTAP Single-AZ (ap-northeast-1) → FSx for ONTAP Single-AZ (us-west-2)
 **検証スクリプト**: `scripts/validation/cross-region-test.sh` (Test 6)
 **関連デモガイド**: [Demo Guide 02: FlexCache クロスリージョン](docs/ja/demo-guide-02-flexcache-cross-region.md)
 

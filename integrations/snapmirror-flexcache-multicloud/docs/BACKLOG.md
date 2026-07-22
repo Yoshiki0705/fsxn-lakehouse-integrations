@@ -86,12 +86,12 @@ All 12 demo guides now include a validation status banner:
 
 | Item | Location | Impact | Status |
 |------|----------|--------|:------:|
-| ~~Old TC-03/TC-05 FlexCache volumes on svm_dest~~ | ~~fs-09ffe72a3b2b7dbbd~~ | ~~Storage cost~~ | ✅ Cleaned |
-| ~~FSx B (us-west-2) deletion~~ | ~~fs-0c841c930edca14fd~~ | — | ✅ Deleted |
-| ~~VPC B resources (VPC, Subnet, SG) in us-west-2~~ | ~~vpc-0287c0a9aa5f59cdd~~ | — | ✅ Deleted |
-| Old SnapMirror relationship (s3ap_snapmirror_tc01) not fully released | fs-09ffe72a3b2b7dbbd / svm_dest | Minor (metadata only) | Low priority |
-| **FSx B (us-west-2) SVM MISCONFIGURED — blocks FS deletion** | fs-0135b69bdb9925f16 / svm-0ca553dc39cd50963 | — | ✅ Resolved via ONTAP CLI: `snapmirror release -force` + `vserver peer delete` from source side |
-| Orphaned SVM peer records on Region A (3 zombie entries) | fs-09ffe72a3b2b7dbbd | None (metadata noise) | Low priority — will resolve when FSx B is deleted |
+| ~~Old TC-03/TC-05 FlexCache volumes on svm_dest~~ | ~~Region A cluster~~ | ~~Storage cost~~ | ✅ Cleaned |
+| ~~FSx B (us-west-2) deletion~~ | ~~us-west-2~~ | — | ✅ Deleted |
+| ~~VPC B resources (VPC, Subnet, SG) in us-west-2~~ | ~~us-west-2~~ | — | ✅ Deleted |
+| Old SnapMirror relationship (s3ap_snapmirror_tc01) not fully released | Region A cluster / svm_dest | Minor (metadata only) | Low priority |
+| **FSx B (us-west-2) SVM MISCONFIGURED — blocks FS deletion** | Region B cluster | — | ✅ Resolved via ONTAP CLI: `snapmirror release -force` + `vserver peer delete` from source side |
+| Orphaned SVM peer records on Region A (3 zombie entries) | Region A cluster | None (metadata noise) | Low priority — will resolve when FSx B is deleted |
 
 ## Key Learnings (For Future Reference)
 
