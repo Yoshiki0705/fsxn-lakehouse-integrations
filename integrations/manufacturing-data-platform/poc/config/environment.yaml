@@ -136,9 +136,9 @@ ontap:
   # --- Phase A: FSx for ONTAP (AWS) — both origin and consumer ---
   phase_a:
     type: fsx-for-ontap
-    file_system_id: "fs-09ffe72a3b2b7dbbd"  # Existing from iceberg-metadata-catalog project
-    svm_name: svm-factory-poc  # New SVM or use existing (svm-0e5ef72d9b4470f19)
-    svm_id: "svm-0e5ef72d9b4470f19"  # Existing SVM from verification project
+    file_system_id: "fs-0EXAMPLE1111aaaaa"  # Existing from iceberg-metadata-catalog project
+    svm_name: svm-factory-poc  # New SVM or use existing (svm-0EXAMPLE4444ddddd)
+    svm_id: "svm-0EXAMPLE4444ddddd"  # Existing SVM from verification project
     svm_management_endpoint: "<SVM_MGMT_LIF>"  # Get from: aws fsx describe-storage-virtual-machines
     nfs_endpoint: "<SVM_NFS_LIF>"  # Get from SVM endpoints
     s3_endpoint: "https://<SVM_S3_LIF>"  # Configure ONTAP S3 on existing SVM

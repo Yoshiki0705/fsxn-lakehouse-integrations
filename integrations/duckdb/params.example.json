@@ -4,7 +4,7 @@
   "SecurityGroupId": "sg-0XXXXXXXXXXXXXXXXX",
   "S3AccessPointName": "fsxn-duckdb-ap",
   "S3AccessPointAlias": "fsxn-duckdb-ap-XXXXXXXXXXXX-ext-s3alias",
-  "FileSystemId": "fs-09ffe72a3b2b7dbbd",
+  "FileSystemId": "fs-0EXAMPLE1111aaaaa",
   "LambdaMemorySize": 1024,
   "LambdaTimeout": 300,
   "Region": "ap-northeast-1",

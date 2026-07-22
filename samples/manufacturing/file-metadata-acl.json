@@ -188,7 +188,7 @@
     "security_style": "ntfs",
     "owner": "svc_analytics",
     "group": "grp_factory_a",
-    "acl_hash": "322958137556a27b",
+    "acl_hash": "123456789012a27b",
     "classification": "internal",
     "retention_days": 90,
     "last_modified": "2026-06-14T00:00:00+00:00",

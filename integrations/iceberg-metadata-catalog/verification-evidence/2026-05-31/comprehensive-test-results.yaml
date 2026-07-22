@@ -248,7 +248,7 @@ test_D1_databricks_external_catalog:
     - "Databricks workspace fsxn-lakehouse-verification accessible (dbc-fca81837-d98c)"
     - "SQL Editor connected to Serverless Starter Warehouse"
     - "SHOW CONNECTIONS: 0 rows (no External Connection configured yet)"
-    - "Catalog Explorer shows: fsxn_lakehouse_verification_7474653227149050, system, samples"
+    - "Catalog Explorer shows: fsxn_lakehouse_verification_1234567890129050, system, samples"
   remaining_steps:
     - "Create IAM role for Databricks → S3 Tables access (SigV4 auth)"
     - "CREATE CONNECTION TYPE iceberg_rest with S3 Tables endpoint"

@@ -5,12 +5,12 @@ tester: "Yoshiki Fujiwara"
 
 # Environment
 region: "ap-northeast-1"
-file_system_id: "fs-09ffe72a3b2b7dbbd"
+file_system_id: "fs-0EXAMPLE1111aaaaa"
 file_system_status: "AVAILABLE"
 throughput_mbps: 128
 storage_gb: 1024
-svm: "verification-svm (svm-0e5ef72d9b4470f19)"
-volume: "verification_vol (fsvol-0e1fe85769794a92e)"
+svm: "verification-svm (svm-0EXAMPLE4444ddddd)"
+volume: "verification_vol (fsvol-0EXAMPLE2345bcdef)"
 
 # Storage Efficiency
 storage_efficiency:

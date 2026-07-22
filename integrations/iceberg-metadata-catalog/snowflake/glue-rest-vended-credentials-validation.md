@@ -125,7 +125,7 @@ The IAM role's trust policy must allow Snowflake's IAM user to assume it:
     {
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::465774455528:user/<snowflake-user-id>"
+        "AWS": "arn:aws:iam::123456789012:user/<snowflake-user-id>"
       },
       "Action": "sts:AssumeRole",
       "Condition": {
@@ -138,7 +138,7 @@ The IAM role's trust policy must allow Snowflake's IAM user to assume it:
 }
 ```
 
-> Get `<snowflake-user-id>` from `API_AWS_IAM_USER_ARN` and `<external-id>` from `API_AWS_EXTERNAL_ID` in `DESCRIBE CATALOG INTEGRATION` output. `465774455528` is Snowflake's shared infrastructure account (same for all customers).
+> Get `<snowflake-user-id>` from `API_AWS_IAM_USER_ARN` and `<external-id>` from `API_AWS_EXTERNAL_ID` in `DESCRIBE CATALOG INTEGRATION` output. `123456789012` is Snowflake's shared infrastructure account (same for all customers).
 
 ## Historical Configuration (Before Fix)
 
@@ -169,7 +169,7 @@ CREATE OR REPLACE CATALOG INTEGRATION s3tables_glue_rest_int
 ```sql
 DESCRIBE CATALOG INTEGRATION s3tables_glue_rest_int;
 -- Returns:
--- API_AWS_IAM_USER_ARN: arn:aws:iam::465774455528:user/3u4g1000-s
+-- API_AWS_IAM_USER_ARN: arn:aws:iam::123456789012:user/3u4g1000-s
 -- API_AWS_EXTERNAL_ID: VP28055_SFCRole=4_XED90KG9gprirTrHg2DGl26RvB0=
 ```
 

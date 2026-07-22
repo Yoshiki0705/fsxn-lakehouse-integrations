@@ -18,7 +18,7 @@ ap_file_system_user_name: "root"
 # Redshift Configuration
 redshift_type: "Serverless"
 redshift_rpu: 8
-redshift_vpc: "vpc-0ae01826f906191af"
+redshift_vpc: "vpc-0EXAMPLE7777aaaaa"
 iam_role: "arn:aws:iam::<ACCOUNT_ID>:role/fsxn-redshift-spectrum-role"
 external_schema: "fsxn_spectrum"
 glue_database: "fsxn_athena_verification"

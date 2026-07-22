@@ -28,8 +28,8 @@ STACK_NAME="databricks-fsxn-customer-vpc"
 ACTION="${1:-status}"
 
 # Default parameters (override via environment variables)
-VPC_ID="${DATABRICKS_VPC_ID:-vpc-0ae01826f906191af}"
-PUBLIC_SUBNET="${DATABRICKS_PUBLIC_SUBNET:-subnet-0e36804c7fbc819a6}"
+VPC_ID="${DATABRICKS_VPC_ID:-vpc-0EXAMPLE7777aaaaa}"
+PUBLIC_SUBNET="${DATABRICKS_PUBLIC_SUBNET:-subnet-0EXAMPLEccccdddd}"
 SUBNET1_CIDR="${DATABRICKS_SUBNET1_CIDR:-10.0.32.0/19}"
 SUBNET2_CIDR="${DATABRICKS_SUBNET2_CIDR:-10.0.64.0/19}"
 AZ1="${DATABRICKS_AZ1:-ap-northeast-1a}"
