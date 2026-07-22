@@ -59,8 +59,17 @@ integrations/snapmirror-flexcache-multicloud/
 │       ├── tc09-deploy-validate-teardown.sh  # TC-09 one-command E2E script
 │       ├── params.env.example                # TC-09 parameters template
 │       ├── cross-region-deploy.sh            # Cross-region infra creation
-│       ├── cross-region-test.sh              # Cross-region FlexCache/SnapMirror test
+│       ├── cross-region-test.sh              # Cross-region FlexCache + SnapMirror test
+│       ├── cross-region-teardown.sh          # ⚠️ Safe teardown (SM-VAL-011 order)
 │       ├── cross-region-params.env.example   # Cross-region parameters template
+│       ├── on-premises-test.sh               # On-premises validation (template)
+│       ├── on-premises-params.env.example    # On-premises parameters
+│       ├── cvo-gcp-test.sh                   # CVO on GCP validation (template)
+│       ├── cvo-gcp-params.env.example        # CVO GCP parameters
+│       ├── cvo-azure-test.sh                 # CVO on Azure validation (template)
+│       ├── cvo-azure-params.env.example      # CVO Azure parameters
+│       ├── gcnv-test.sh                      # GCNV validation (template)
+│       ├── gcnv-params.env.example           # GCNV parameters
 │       ├── setup-intercluster.sh             # Inter-cluster ONTAP setup
 │       └── teardown-intercluster.sh          # Inter-cluster cleanup
 ├── feature-requests/                   # Phase 4: Feature Request templates
@@ -107,17 +116,19 @@ cd FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns/integrations/snapmirror-flex
 
 # 2. Copy and edit parameters
 cp scripts/validation/cross-region-params.env.example scripts/validation/cross-region-params.env
-# Edit: FS_ID_A, MGMT_IP_A, PASSWORD_A, REGION_A, etc.
+# Edit: FS_ID_A, VPC_ID_A, SECRET_ARN_A, SVM_NAME_A, REGION_B, FSX_PASSWORD_B
 
 # 3. Deploy cross-region infrastructure (VPC B + Peering + FSx B)
-./scripts/validation/cross-region-deploy.sh
+./scripts/validation/cross-region-deploy.sh deploy    # ~50 min (FSx creation)
 
-# 4. Run cross-region FlexCache test
-./scripts/validation/cross-region-test.sh
+# 4. Run cross-region FlexCache + SnapMirror test
+./scripts/validation/cross-region-test.sh             # ~15 min
 
-# 5. Teardown (stop ~$6/day cost)
-./scripts/validation/teardown-intercluster.sh
+# 5. Safe teardown (CRITICAL: follows SM-VAL-011 order)
+./scripts/validation/cross-region-teardown.sh         # ~35 min
 ```
+
+> ⚠️ **Prerequisites**: `sshpass` must be installed (`brew install sshpass` or `apt install sshpass`) for ONTAP CLI access during teardown. The safe teardown script uses SSH to execute `vserver peer delete` and `snapmirror release` — operations that require CLI access rather than REST API for reliable two-phase cleanup.
 
 ### FlexCache Patterns / FlexCache パターン
 

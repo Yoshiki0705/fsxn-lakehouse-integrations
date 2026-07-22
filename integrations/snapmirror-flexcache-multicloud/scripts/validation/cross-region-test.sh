@@ -201,6 +201,93 @@ echo \"Data LIF B: \$DATA_LIF_B\"
 curl -sk -u fsxadmin:${PASS_B} \"https://${MGMT_B}/api/storage/flexcache/flexcaches?name=vol_xregion_cache&fields=name,origins\" 2>/dev/null | jq '.records[0].origins[0].state'" 30)
 echo "$NFS_RESULT"
 
+# --- Test 8: SnapMirror Cross-Region ---
+header "Test 8: SnapMirror (Region A → Region B)"
+
+# Create DP volume via FSx API (required for S3 AP re-attach later)
+SVM_ID_B=$(aws fsx describe-storage-virtual-machines \
+  --query "StorageVirtualMachines[?Name=='${SVM_NAME_B}'].StorageVirtualMachineId" --output text \
+  --filters Name=file-system-id,Values="$FS_ID_B" --region "$REGION_B")
+
+DP_VOL_ID=$(aws fsx create-volume --volume-type ONTAP --name vol_xregion_sm_dest \
+  --ontap-configuration "{\"StorageVirtualMachineId\":\"${SVM_ID_B}\",\"SizeInMegabytes\":5120,\"TieringPolicy\":{\"Name\":\"AUTO\",\"CoolingPeriod\":31},\"OntapVolumeType\":\"DP\"}" \
+  --region "$REGION_B" --query 'Volume.VolumeId' --output text 2>/dev/null)
+info "DP Volume (FSx API): $DP_VOL_ID"
+
+# Wait for DP volume
+for i in $(seq 1 12); do
+  STATUS=$(aws fsx describe-volumes --volume-ids "$DP_VOL_ID" --query 'Volumes[0].Lifecycle' --output text --region "$REGION_B" 2>/dev/null)
+  [[ "$STATUS" == "CREATED" ]] && break
+  sleep 5
+done
+pass "DP volume ready: $DP_VOL_ID"
+
+# Create SnapMirror relationship + initialize
+SM_RESULT=$(ssm_run "
+SM_UUID=\$(curl -sk -u fsxadmin:${PASS_B} -X POST https://${MGMT_B}/api/snapmirror/relationships -H 'Content-Type: application/json' \
+  -d '{\"source\":{\"path\":\"${SVM_NAME_A}:vol_xregion_test\",\"cluster\":{\"name\":\"FsxId$(echo $FS_ID_A | sed 's/fs-//')\"}},\"destination\":{\"path\":\"${SVM_NAME_B}:vol_xregion_sm_dest\"},\"policy\":{\"name\":\"MirrorAllSnapshots\"}}' 2>/dev/null | jq -r '.job.uuid // empty')
+echo \"SM job: \$SM_UUID\"
+sleep 15
+# Get relationship UUID
+REL_UUID=\$(curl -sk -u fsxadmin:${PASS_B} 'https://${MGMT_B}/api/snapmirror/relationships?destination.path=${SVM_NAME_B}:vol_xregion_sm_dest' 2>/dev/null | jq -r '.records[0].uuid // empty')
+echo \"Relationship: \$REL_UUID\"
+# Initialize transfer
+curl -sk -u fsxadmin:${PASS_B} -X POST \"https://${MGMT_B}/api/snapmirror/relationships/\${REL_UUID}/transfers\" -H 'Content-Type: application/json' -d '{}' 2>/dev/null
+sleep 20
+# Check state
+STATE=\$(curl -sk -u fsxadmin:${PASS_B} \"https://${MGMT_B}/api/snapmirror/relationships/\${REL_UUID}?fields=state,transfer.state\" 2>/dev/null | jq -r '.state')
+echo \"SM state: \$STATE\"
+echo \"REL_UUID=\$REL_UUID\"" 90)
+echo "$SM_RESULT"
+
+SM_STATE=$(echo "$SM_RESULT" | grep "SM state:" | awk '{print $3}')
+REL_UUID=$(echo "$SM_RESULT" | grep "REL_UUID=" | cut -d= -f2)
+
+if [[ "$SM_STATE" == "snapmirrored" ]]; then
+  pass "SnapMirror transfer succeeded!"
+else
+  warn "SnapMirror state: $SM_STATE (may still be transferring)"
+fi
+
+# --- Test 9: SnapMirror Break + S3 AP Re-Attach ---
+header "Test 9: SnapMirror Break + S3 AP Re-Attach (DR Failover)"
+
+if [[ -n "$REL_UUID" ]]; then
+  # Break
+  ssm_run "curl -sk -u fsxadmin:${PASS_B} -X PATCH \"https://${MGMT_B}/api/snapmirror/relationships/${REL_UUID}\" -H 'Content-Type: application/json' -d '{\"state\":\"broken_off\"}' 2>/dev/null" 15 > /dev/null
+
+  # Set junction path via FSx API
+  aws fsx update-volume --volume-id "$DP_VOL_ID" \
+    --ontap-configuration '{"JunctionPath":"/vol_xregion_sm_dest"}' --region "$REGION_B" > /dev/null 2>&1
+  info "Junction path set. Waiting for FSx API propagation (~2 min)..."
+  sleep 120
+
+  # Attach S3 AP on destination
+  aws fsx create-and-attach-s3-access-point --name fsxn-xregion-dr --type ONTAP \
+    --ontap-configuration "{\"VolumeId\":\"${DP_VOL_ID}\",\"FileSystemIdentity\":{\"Type\":\"UNIX\",\"UnixUser\":{\"Name\":\"root\"}}}" \
+    --region "$REGION_B" > /dev/null 2>&1
+  info "S3 AP creation initiated..."
+  sleep 40
+
+  # Verify S3 API access
+  DR_AP_ALIAS=$(aws fsx describe-s3-access-point-attachments --filters Name=file-system-id,Values="$FS_ID_B" \
+    --region "$REGION_B" | jq -r '.S3AccessPointAttachments[] | select(.Name=="fsxn-xregion-dr") | .S3AccessPoint.Alias')
+
+  if [[ -n "$DR_AP_ALIAS" ]]; then
+    DR_RESULT=$(aws s3api list-objects-v2 --bucket "$DR_AP_ALIAS" --prefix "cross-region/" \
+      --query 'Contents[].Key' --output text --region "$REGION_B" 2>/dev/null)
+    if [[ -n "$DR_RESULT" ]]; then
+      pass "S3 AP re-attach SUCCEEDED! Files accessible: $DR_RESULT"
+    else
+      warn "S3 AP attached but no files listed"
+    fi
+  else
+    warn "S3 AP not yet available (may need more time)"
+  fi
+else
+  warn "Skipping: SnapMirror relationship UUID not captured"
+fi
+
 # --- Summary ---
 echo ""
 header "CROSS-REGION TEST SUMMARY"

@@ -79,6 +79,8 @@ All 12 demo guides now include a validation status banner:
 | Validation script templates created for all targets (on-prem, CVO GCP/Azure, GCNV) | 2026-07-22 |
 | **SnapMirror cross-region E2E VALIDATED (transfer + break + S3 AP re-attach in us-west-2)** | 2026-07-22 |
 | SM-VAL-008/009/010/011 findings documented in research.md | 2026-07-22 |
+| Safe teardown script (`cross-region-teardown.sh`) with SM-VAL-011 order | 2026-07-22 |
+| FSx B MISCONFIGURED resolved via ONTAP CLI (snapmirror release + vserver peer delete) | 2026-07-22 |
 
 ## Technical Debt
 
@@ -88,7 +90,7 @@ All 12 demo guides now include a validation status banner:
 | ~~FSx B (us-west-2) deletion~~ | ~~fs-0c841c930edca14fd~~ | — | ✅ Deleted |
 | ~~VPC B resources (VPC, Subnet, SG) in us-west-2~~ | ~~vpc-0287c0a9aa5f59cdd~~ | — | ✅ Deleted |
 | Old SnapMirror relationship (s3ap_snapmirror_tc01) not fully released | fs-09ffe72a3b2b7dbbd / svm_dest | Minor (metadata only) | Low priority |
-| **FSx B (us-west-2) SVM MISCONFIGURED — blocks FS deletion** | fs-0135b69bdb9925f16 / svm-0ca553dc39cd50963 | **~$6/day** | ⚠️ Requires AWS Support (`vserver peer delete -force`). VPC Peering restored: pcx-0b8c07b44447bf2ac |
+| **FSx B (us-west-2) SVM MISCONFIGURED — blocks FS deletion** | fs-0135b69bdb9925f16 / svm-0ca553dc39cd50963 | — | ✅ Resolved via ONTAP CLI: `snapmirror release -force` + `vserver peer delete` from source side |
 | Orphaned SVM peer records on Region A (3 zombie entries) | fs-09ffe72a3b2b7dbbd | None (metadata noise) | Low priority — will resolve when FSx B is deleted |
 
 ## Key Learnings (For Future Reference)
@@ -114,3 +116,5 @@ All 12 demo guides now include a validation status banner:
 19. **FSx API VolumeType:DP lag (cross-region)**: After SnapMirror break, FSx API shows `OntapVolumeType: DP` for >10 minutes. S3 AP attachment succeeds regardless — the check is at ONTAP level. Don't use FSx API VolumeType as a gate.
 20. **DP volumes for S3 AP re-attach**: Must create via `aws fsx create-volume --ontap-configuration '{"OntapVolumeType":"DP"}'`. ONTAP REST API-created volumes don't appear in FSx API and can't have S3 AP attached.
 21. **S3 AP re-attach RTO (cross-region)**: ~3 minutes total (break instant + junction path propagation ~2min + S3 AP creation ~30s + first API call ~30s). Same-region expected ~2 minutes.
+22. **ONTAP CLI (SSH) for peer deletion**: When REST API `DELETE /api/svm/peers` returns 202 but records persist, use ONTAP CLI via SSH: `sshpass -p <pass> ssh fsxadmin@<mgmt-ip> "vserver peer delete -vserver <local> -peer-vserver <remote>"`. The CLI triggers the two-phase protocol correctly from either side. Always run from the SOURCE side first.
+23. **SnapMirror release required before SVM peer delete**: If SnapMirror destination references exist, `vserver peer delete` fails with "Relationship is in use by SnapMirror". Run `snapmirror release -destination-path <dest> -source-path <src> -force true` from the SOURCE cluster first.

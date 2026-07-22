@@ -587,7 +587,11 @@ FSx for ONTAP S3 AP returns `501 Not Implemented` for requests with `If-None-Mat
 
 **Never:** Delete VPC Peering before step 2 is confirmed. The two-phase SVM peer deletion protocol requires bidirectional connectivity.
 
-**Recovery if orphaned:** Requires AWS Support (`vserver peer delete -force` via ONTAP CLI, not exposed to `fsxadmin` via REST API).
+**Recovery if orphaned:** Use ONTAP CLI via SSH (`sshpass -p <pass> ssh fsxadmin@<mgmt-ip>`):
+1. From the **source** cluster: `snapmirror release -destination-path <dest> -source-path <src> -force true` (for each stale destination)
+2. From the **source** cluster: `vserver peer delete -vserver <local-svm> -peer-vserver <remote-svm>` (triggers two-phase cleanup on both sides)
+3. Retry `aws fsx delete-storage-virtual-machine` — should now succeed
+4. Reference: [AWS re:Post — Delete SVM from FSx for ONTAP](https://repost.aws/knowledge-center/fsx-ontap-delete-svm), [FSx User Guide — Can't delete SVM](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/cannot-delete-svm.html)
 
 ---
 
