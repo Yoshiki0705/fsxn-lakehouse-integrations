@@ -2159,7 +2159,8 @@ SnapMirror と FlexCache は**競合する技術ではなく、異なるユー�
 | 災害復旧（DR） | SnapMirror | デスティネーションに完全コピーを保持し、failover で即時利用可能 |
 | リモート拠点の read 高速化 | FlexCache | キャッシュヒット時にローカル速度を提供。ストレージ消費を最小化 |
 | データ移行（一方向、一度きり） | SnapMirror | 完全コピー後に関係を解除 |
-| リアルタイム共同編集 | FlexCache (write-back) | 複数拠点での低レイテンシ write。ただし RTT ≤ 200ms 必要 |
+| リモート拠点での書き込み（同期） | FlexCache (write-around) | 書き込みは Origin に同期的に転送される。デフォルト動作 |
+| リモート拠点での書き込み（非同期） | FlexCache (write-back) | Cache にローカル書き込み後、非同期で Origin に flush。RTT ≤ 200ms 必要 |
 | コンプライアンス要件のデータ保持 | SnapMirror | 完全コピーにより監査要件を満たす |
 | DR + 日常 read 高速化 | SnapMirror + FlexCache 併用 | SnapMirror で DR 確保、FlexCache で日常パフォーマンス向上 |
 | マルチクラウド配信（GCP/Azure） | SnapMirror | クロスクラウドでは FlexCache write-back が不安定な可能性。SnapMirror による完全コピーが確実 |
