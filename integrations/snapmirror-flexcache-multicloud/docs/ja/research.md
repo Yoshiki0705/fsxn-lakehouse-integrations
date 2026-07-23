@@ -2180,6 +2180,63 @@ SnapMirror と FlexCache は**競合する技術ではなく、異なるユー�
 
 ---
 
+## ハイブリッド / オンプレミスパターン: データグラビティとデータローカリティ
+
+本プロジェクトの cross-region 検証は AWS リージョン間（FSx for ONTAP 同士）で実施した。しかし SnapMirror と FlexCache は ONTAP 共通機能であり、オンプレミス ONTAP（AFF/FAS/ONTAP Select）やエッジ環境にも同じアーキテクチャが適用できる。
+
+### データグラビティの問題
+
+データセットが大きくなるほど、別の場所への移動コスト（時間・帯域・エグレス課金）が比例して増大する。この「データグラビティ」により、データを移動するよりも計算をデータの近くに持っていく方が効率的な場面が多い。
+
+2 つの方向でこの問題に対応できる。
+
+| 方向 | パターン | 例 |
+|------|---------|-----|
+| **データをオンプレ計算に近づける** | S3 AP でクラウドに収集 → SnapMirror でオンプレ ONTAP へ複製 → NFS 経由でローカル GPU/HPC/ライセンス済みツールで処理 | EDA 検証、CAE シミュレーション、MATLAB 解析、オンプレ GPU での AI モデル学習 |
+| **クラウド計算をオンプレデータに近づける** | オンプレ ONTAP (Origin) → FlexCache で FSx for ONTAP (Cache) → EMR/SageMaker/Spark でキャッシュデータを処理 | クラウドバーストレンダリング、大規模バッチ分析、クラウド GPU でのモデル学習 |
+
+```
+パターン A: クラウドで収集、オンプレで処理
+  AWS (S3 AP 収集) ──SnapMirror──▶ オンプレ ONTAP ──NFS──▶ 既存分析基盤
+                                                            GPU クラスター
+                                                            ライセンス済みツール
+
+パターン B: オンプレのデータ、クラウドでバースト処理
+  オンプレ ONTAP (Origin) ──FlexCache──▶ FSx for ONTAP (Cache) ──▶ EMR / SageMaker
+```
+
+### このパターンが有効な場面
+
+| 場面 | 理由 |
+|------|------|
+| 規制やポリシーでデータを外部に出せない | SnapMirror は閉域ネットワーク内で複製可能（VPN/Direct Connect、転送中暗号化） |
+| オンプレに高価なライセンス済みツール（EDA、CAE、MATLAB、SAS 等）がある | ツールをクラウドに移行するよりデータをツールに持っていく方が現実的 |
+| 工場フロアでリアルタイム推論に低レイテンシが必要 | FlexCache をエッジ/工場に配置。Origin の更新が自動反映 |
+| クラウドのエグレス費用を最小化したい | SnapMirror: 初回後は増分のみ。FlexCache: アクセスしたデータだけキャッシュ |
+| 複数拠点のデータを一箇所に集約して分析したい | 各拠点 → AWS に SnapMirror で集約 → Athena/EMR で横断クエリ |
+| 閉域ネットワーク内の分析（air-gapped） | SnapMirror で片方向転送。転送後はアウトバウンド接続不要 |
+
+### データ主権とコンプライアンスの考慮
+
+データレジデンシー要件がある組織向け:
+
+- SnapMirror 転送は特定のネットワーク経路に限定可能（Direct Connect、サイト間 VPN）
+- 保存時暗号化: NAE/NVE（ONTAP）、AWS マネージド暗号化（FSx）
+- 転送中暗号化: Cluster Peering Encryption（TLS 1.2、ONTAP 9.6 以降デフォルト有効）
+- Direct Connect / VPN があればパブリックインターネットを経由する必要なし
+- 監査証跡: ONTAP FPolicy + S3 AP アクセスログによる二層アクセスログ
+
+### オンプレミスパターンのデモガイド
+
+| ガイド | パターン | ネットワーク |
+|--------|---------|:----------:|
+| [Guide 03: FlexCache オンプレミス](docs/ja/demo-guide-03-flexcache-on-premises.md) | FSx for ONTAP → オンプレ ONTAP（FlexCache） | Direct Connect / VPN |
+| [Guide 08: SnapMirror オンプレミス](docs/ja/demo-guide-08-snapmirror-on-premises.md) | FSx for ONTAP → オンプレ ONTAP（SnapMirror DR） | Direct Connect / VPN |
+
+> これらのガイドは現在手順レベル（コマンド文書化済み、物理ハードウェアでの E2E 検証は未実施）。オンプレミスラボ環境が利用可能になり次第検証を実施予定。
+
+---
+
 ## 業種別ユースケース
 
 以下は検証で確認した FlexCache/SnapMirror + S3 Access Points のアーキテクチャパターンを業種別に整理した想定ユースケースである。個々の業種での本番適用にはワークロード固有の検証が必要。

@@ -175,6 +175,7 @@ S3 AP 単体 + FlexCache + SnapMirror を全て考慮した推奨ディレクト
 | ONTAP REST API のみで DP ボリューム作成 | FSx API に登録されず S3 AP 不可 | `aws fsx create-volume` を使用 |
 | VPC Peering を SVM peer 削除前に削除 | zombie SVM peer → MISCONFIGURED → 復旧困難 | SM-VAL-011 の順序を遵守 |
 | ListObjectsV2 を全件走査で定期実行 | ディレクトリサイズに比例してレイテンシ増大 | prefix 限定 or 外部カタログ |
+| データグラビティを無視してクラウドのみで設計 | 不要なエグレス費用。レイテンシ要件を満たせない | オンプレ処理が有利な場面では SnapMirror でオンプレに複製して活用 |
 
 ---
 

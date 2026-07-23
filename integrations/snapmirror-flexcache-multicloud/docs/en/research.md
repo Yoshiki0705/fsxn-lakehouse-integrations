@@ -676,6 +676,63 @@ SnapMirror and FlexCache are **complementary technologies suited to different us
 
 ---
 
+## Hybrid and On-Premises Patterns: Data Gravity and Locality
+
+The cross-region validation in this project was performed between AWS regions (FSx for ONTAP to FSx for ONTAP). However, SnapMirror and FlexCache are ONTAP-universal features — the same architecture applies to on-premises ONTAP (AFF/FAS/ONTAP Select) and edge deployments.
+
+### The Data Gravity Problem
+
+As datasets grow, the cost of moving them (time, bandwidth, egress charges) increases proportionally. This "data gravity" creates a practical constraint: it is often more efficient to bring compute to where data already resides, rather than moving data to where compute is available.
+
+Two complementary directions address this:
+
+| Direction | Pattern | Example |
+|-----------|---------|---------|
+| **Bring data to on-prem compute** | S3 AP collects data in AWS → SnapMirror replicates to on-prem ONTAP → NFS access from local GPU/HPC/licensed tools | EDA verification, CAE simulation, MATLAB analysis, AI model training on on-prem GPU |
+| **Bring cloud compute to on-prem data** | On-prem ONTAP (Origin) → FlexCache to FSx for ONTAP (Cache) → EMR/SageMaker/Spark process cached data | Cloud-burst rendering, large-scale batch analytics, model training on cloud GPU |
+
+```
+Pattern A: Collect in cloud, process on-premises
+  AWS (S3 AP ingest) ──SnapMirror──▶ On-prem ONTAP ──NFS──▶ Local analytics
+                                                              GPU cluster
+                                                              Licensed tools
+
+Pattern B: On-prem data, cloud-burst compute
+  On-prem ONTAP (Origin) ──FlexCache──▶ FSx for ONTAP (Cache) ──▶ EMR / SageMaker
+```
+
+### When This Pattern Is Effective
+
+| Scenario | Rationale |
+|----------|-----------|
+| Regulatory or policy constraints prevent data from leaving premises | SnapMirror replicates within private network (VPN/Direct Connect, encrypted in transit) |
+| Expensive on-prem licensed tools (EDA, CAE, MATLAB, SAS) | Moving data to tools is more practical than migrating licenses to cloud |
+| Factory-floor real-time inference requires low latency | FlexCache at edge/factory; Origin updates auto-reflect |
+| Minimize cloud egress costs | SnapMirror: incremental only after baseline. FlexCache: only accessed data is cached |
+| Consolidate multi-site data for centralized analysis | SnapMirror from each site to AWS → Athena/EMR cross-query |
+| Air-gapped or isolated network analytics | SnapMirror one-way to isolated ONTAP; no outbound connectivity required after transfer |
+
+### Data Sovereignty and Compliance Considerations
+
+For organizations with data residency requirements:
+
+- SnapMirror transfers can be confined to specific network paths (Direct Connect, site-to-site VPN)
+- Data at rest is encrypted (NAE/NVE on ONTAP, AWS-managed encryption on FSx)
+- Data in transit is encrypted (Cluster Peering Encryption: TLS 1.2, enabled by default since ONTAP 9.6)
+- No data needs to traverse public internet if Direct Connect or VPN is in place
+- Audit trail: ONTAP FPolicy + S3 AP access logs provide dual-layer access logging
+
+### Demo Guides for On-Premises Patterns
+
+| Guide | Pattern | Network |
+|-------|---------|---------|
+| [Guide 03: FlexCache On-Premises](docs/en/demo-guide-03-flexcache-on-premises.md) | FSx for ONTAP → On-prem ONTAP (FlexCache) | Direct Connect / VPN |
+| [Guide 08: SnapMirror On-Premises](docs/en/demo-guide-08-snapmirror-on-premises.md) | FSx for ONTAP → On-prem ONTAP (SnapMirror DR) | Direct Connect / VPN |
+
+> These guides are currently at procedure-level (commands documented, not yet E2E validated on physical hardware). Validation will be performed when on-premises lab access is available.
+
+---
+
 ## Industry Use Cases
 
 The following table organizes expected application patterns by industry. These are architecture patterns based on validated FlexCache/SnapMirror behavior with S3 Access Points — individual industry deployments require workload-specific validation.
