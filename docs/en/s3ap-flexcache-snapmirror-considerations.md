@@ -173,6 +173,7 @@ Recommended directory structure considering S3 AP + FlexCache + SnapMirror toget
 | Create DP volume via ONTAP REST API only | Not registered in FSx API; S3 AP impossible | Use `aws fsx create-volume` |
 | Delete VPC Peering before SVM peer deletion | Zombie SVM peer → MISCONFIGURED → difficult recovery | Follow SM-VAL-011 order |
 | Periodic full LIST at root | Latency grows with directory size | Prefix-limited or external catalog |
+| Assume cloud-only architecture when data gravity favors on-prem processing | Unnecessary egress costs; latency for time-sensitive workloads | Evaluate SnapMirror to on-prem for licensed tool / low-latency scenarios |
 
 ---
 
