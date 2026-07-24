@@ -34,11 +34,11 @@ jobs:
         run: |
           echo "🔍 Scanning for hardcoded AWS Account IDs..."
           HITS=$(git ls-files -- '*.md' '*.yaml' '*.yml' '*.py' '*.sql' '*.sh' '*.json' | \
-            xargs grep -Pn '\b178625946981\b' 2>/dev/null | \
+            xargs grep -Pn '\b123456789012\b' 2>/dev/null | \
             grep -v '<ACCOUNT_ID>' | \
             grep -v '# Contains account ID for reference' || true)
           if [[ -n "$HITS" ]]; then
-            echo "::error::Hardcoded AWS Account ID (178625946981) found in tracked files. Use <ACCOUNT_ID> placeholder."
+            echo "::error::Hardcoded AWS Account ID (123456789012) found in tracked files. Use <ACCOUNT_ID> placeholder."
             echo "$HITS"
             exit 1
           fi
