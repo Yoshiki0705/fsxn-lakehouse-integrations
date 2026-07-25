@@ -144,7 +144,43 @@ S3 AP 単体 + FlexCache + SnapMirror を全て考慮した推奨ディレクト
 
 ---
 
-## 5. 監視と運用
+## 5. FlexCache 削除手順
+
+FlexCache の削除は FSx API (`delete-volume`) ではなく **ONTAP REST API** で行う。
+
+### 正しい手順
+
+```bash
+# 1. FlexCache UUID を取得
+ONTAP_API: GET /api/storage/flexcache/flexcaches?name={cache_name}
+
+# 2. FlexCache 削除（ONTAP REST API）
+ONTAP_API: DELETE /api/storage/flexcache/flexcaches/{uuid}
+# → 202 Accepted（非同期ジョブ）。ジョブ完了を待つ
+
+# 3. FSx API にゴーストエントリが残った場合（SVM 削除時にブロックされる場合）
+aws fsx delete-volume --volume-id fsvol-XXXXX --ontap-configuration '{"SkipFinalBackup":true}'
+
+# 4. SVM 削除（全ボリュームが FSx API から消えた後）
+aws fsx delete-storage-virtual-machine --storage-virtual-machine-id svm-XXXXX
+```
+
+### なぜ FSx API の `delete-volume` ではなく ONTAP REST API を使うのか
+
+- FlexCache は ONTAP 内部で特殊な FlexGroup として管理され、Origin との関係メタデータを持つ
+- ONTAP REST API の `DELETE /api/storage/flexcache/flexcaches/{uuid}` はこの関係を正しくクリーンアップする
+- FSx API の `delete-volume` は通常のボリューム削除パスを使い、FlexCache 固有のクリーンアップを行わない場合がある
+- 404 レスポンスは成功扱い（冪等）。409 Conflict は待機後リトライ
+
+### FSx API のコントロールプレーン反映遅延
+
+- ONTAP REST API で削除完了後も、FSx API (`describe-volumes`) に fsvol-* エントリが残る場合がある
+- SVM 削除時に「Cannot delete storage virtual machine while it has non-root volumes」エラーが出る場合は、FSx API 経由で `delete-volume` を実行してゴーストを解消する
+- この反映遅延は作成時と同様に ~30 分程度
+
+---
+
+## 6. 監視と運用
 
 ### FlexCache 監視
 
@@ -164,7 +200,7 @@ S3 AP 単体 + FlexCache + SnapMirror を全て考慮した推奨ディレクト
 
 ---
 
-## 6. アンチパターンまとめ
+## 7. アンチパターンまとめ
 
 | パターン | 問題 | 対策 |
 |---------|------|------|
