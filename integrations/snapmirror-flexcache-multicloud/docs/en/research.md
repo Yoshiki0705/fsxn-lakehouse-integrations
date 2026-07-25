@@ -82,7 +82,7 @@ FSx for ONTAP S3 AP is based on ONTAP's "S3 NAS bucket (S3 multiprotocol)" mecha
 | S3 NAS bucket volume as **SnapMirror Synchronous source** | ❌ | — | [S3 multiprotocol — Data protection](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/index.html) |
 | S3 NAS bucket volume in **SVM-DR** | ❌ | — | [S3 multiprotocol — Data protection](https://docs.netapp.com/us-en/ontap/s3-multiprotocol/index.html), [KB: SVM DR + S3](https://kb.netapp.com/onprem/ontap/dp/SnapMirror/Is_SVM_Disaster_Recovery_(SVM_DR)_of_S3_buckets_supported%3F) |
 | S3 NAS bucket on **FlexCache Origin** volume | ✅ | 9.12.1 | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html) |
-| S3 NAS bucket on **FlexCache Cache** volume | ✅ | **9.18.1** | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html), [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html) |
+| S3 NAS bucket on **FlexCache Cache** volume | ⚠️ ONTAP ✅ / FSx AP ❌ | **9.18.1** | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html), [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html). ONTAP native S3 NAS bucket supported on 9.18.1, but FSx for ONTAP S3 AP explicitly blocks FlexCache (validated 2026-07-24) |
 | FlexCache Cache S3 NAS bucket + **write-back mode** | ❌ | — | [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html) (write-around required) |
 | FlexCache Cache S3 — Origin/Cache **both must be 9.18.1+** | Required | 9.18.1 | [FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html) |
 | FlexCache Origin with **SnapMirror Async relationship** | ✅ | 9.5+ | [FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html) |
@@ -280,23 +280,37 @@ aws fsx create-and-attach-s3-access-point \
 | Item | Details |
 |------|---------|
 | **Finding ID** | FC-002 |
-| **Classification** | `version_gated` — unsupported on 9.17.1 (tested), supported from ONTAP 9.18.1 |
-| **Disclosure** | publicly verifiable |
+| **Classification** | `not_supported_on_fsx` — ONTAP 9.18.1 supports S3 NAS bucket on Cache, but FSx for ONTAP S3 Access Points explicitly blocks attachment to FlexCache volumes |
+| **Disclosure** | validation evidence (2026-07-24) |
 
-**Finding:** FlexCache Cache Volumes support ONTAP S3 NAS bucket (the mechanism underlying FSx for ONTAP S3 AP) **starting from ONTAP 9.18.1**. On ONTAP 9.17.1 (our validated environment), attempting to create an S3 AP on a FlexCache Cache Volume will fail with an error.
+**Finding:** NetApp ONTAP documentation states that FlexCache Cache Volumes support S3 NAS bucket starting from ONTAP 9.18.1. However, FSx for ONTAP S3 Access Points — which operate at the AWS managed layer — **explicitly reject** attachment to FlexCache volumes regardless of ONTAP version.
 
-This is documented in NetApp's FlexCache supported/unsupported features table:
-- **Origin Volume**: S3 NAS bucket supported since ONTAP 9.12.1
-- **Cache Volume**: S3 NAS bucket supported since **ONTAP 9.18.1**
+**Validation (2026-07-24):**
 
-**Implication for FSx for ONTAP:**
-- FSx for ONTAP running ONTAP 9.17.1 or earlier: S3 AP on Cache Volume is NOT possible
-- FSx for ONTAP running ONTAP 9.18.1+: S3 AP on Cache Volume should be supported (pending FSx service adoption of 9.18.1)
-- NFS/SMB access to Cache Volumes remains the primary access method on current FSx for ONTAP versions
+| Step | Result | Details |
+|------|:------:|---------|
+| FSx for ONTAP deployment (us-west-2) | ✅ | SINGLE_AZ_2, ONTAP 9.18.1P3D1 |
+| FlexGroup Origin volume creation (FSx API) | ✅ | 800 GiB, VolumeStyle: FLEXGROUP |
+| S3 AP attachment to FlexGroup Origin | ✅ | AVAILABLE, S3 PutObject + ListObjectsV2 confirmed |
+| FlexCache Cache volume creation (ONTAP REST API) | ✅ | 400 GiB, write-around mode |
+| FlexCache → FSx API propagation | ✅ | ~30 min, fsvol-* ID obtained |
+| **S3 AP attachment to FlexCache Cache volume** | **❌ Blocked** | Error: `Amazon FSx is unable to attach S3access point because the volume is a FlexCache.` |
+
+**Interpretation:** FSx for ONTAP S3 Access Points and ONTAP native S3 NAS buckets are **different mechanisms** at different layers:
+
+- **ONTAP S3 NAS bucket** (`-is-s3-enabled`, `vserver object-store-server`): ONTAP-native feature. Cache Volume support added in 9.18.1.
+- **FSx for ONTAP S3 Access Points** (`aws fsx create-and-attach-s3-access-point`): AWS managed-layer feature. FlexCache volume attachment is explicitly blocked by the FSx API.
+
+**Implication for FSx for ONTAP users:**
+- S3 AP on FlexCache Cache Volume is **not available** on FSx for ONTAP as of 2026-07-24
+- This may require FSx service-side enablement in a future update (separate from ONTAP version)
+- NFS/SMB access to FlexCache Cache Volumes remains the primary remote read acceleration path
+- For S3 API access at the destination, use SnapMirror break + S3 AP re-attach (Guide 07)
 
 **Evidence:**
-- [NetApp Docs: Supported and unsupported features for FlexCache volumes](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html) — "ONTAP S3 NAS bucket: Cache — Supported beginning with ONTAP 9.18.1"
-- [AWS Docs: Accessing data via S3 Access Points](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)
+- [NetApp Docs: FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html) — "ONTAP S3 NAS bucket: Cache — Supported beginning with ONTAP 9.18.1"
+- [NetApp Docs: FlexCache duality FAQ](https://docs.netapp.com/us-en/ontap/flexcache/flexcache-duality-faq.html) — write-around required, both clusters 9.18.1+
+- FSx for ONTAP validation error (2026-07-24): `Amazon FSx is unable to attach S3access point because the volume is a FlexCache.`
 
 ---
 
