@@ -2450,7 +2450,7 @@ Cross-region SnapMirror + S3 AP re-attach を ap-northeast-1 → us-west-2 間�
 | Finding ID | 分類 | 概要 |
 |:----------:|:----:|------|
 | SM-VAL-008 | `works_with_caveats` | FSx API VolumeType:DP 表示ラグ（cross-region では >10 分）。S3 AP 作成は junction path 設定後即可能 |
-| SM-VAL-009 | `works_with_caveats` | DP ボリュームは FSx API 経由で作成必須。ONTAP REST API のみで作成したボリュームは S3 AP 不可 |
+| SM-VAL-009 | `works_with_caveats` | ONTAP REST API で作成したボリュームは FSx API への反映に ~30 分かかる。即時 S3 AP アタッチが必要なら FSx API で作成 |
 | SM-VAL-010 | `supported (validated)` | Cross-region S3 AP re-attach RTO: ~3 分（break + junction 伝搬 + AP 作成 + 初回 API） |
 | SM-VAL-011 | `works_with_caveats` | Teardown 順序が重要。VPC Peering を SVM peer 削除前に削除すると永続的な zombie レコード発生 |
 
@@ -2464,11 +2464,13 @@ Cross-region SnapMirror + S3 AP re-attach を ap-northeast-1 → us-west-2 間�
 - `describe-volumes → OntapVolumeType` を S3 AP アタッチのゲートにしないこと
 - 正しい手順: (1) SnapMirror break, (2) `update-volume` で junction path 設定, (3) FSx API に junction path が反映されるまで待機 (~2分), (4) S3 AP アタッチ
 
-#### SM-VAL-009: DP ボリュームは FSx API 経由で作成必須
+#### SM-VAL-009: ONTAP REST API で作成したボリュームの FSx API 反映遅延（~30 分）
 
-**発見**: ONTAP REST API (`POST /api/storage/volumes {type: dp}`) のみで作成されたボリュームは FSx API (`describe-volumes`) に表示されない。S3 AP アタッチには FSx volume ID (`fsvol-*`) が必要。
+**発見**: ONTAP REST API (`POST /api/storage/volumes {type: dp}`) のみで作成されたボリュームは FSx API (`describe-volumes`) に**即座には表示されない**。FSx コントロールプレーンへの同期に約 **30 分**かかる。S3 AP アタッチには FSx volume ID (`fsvol-*`) が必要。
 
-**対処法**: `aws fsx create-volume --ontap-configuration '{"OntapVolumeType":"DP"}'` で作成する。既存の ONTAP のみ作成ボリュームについては、同名・同サイズで FSx API 経由で再作成し、データを再レプリケーションする必要がある。
+**推奨**: DP ボリュームは `aws fsx create-volume --ontap-configuration '{"OntapVolumeType":"DP"}'` で作成すれば即座に FSx API に表示される。FlexCache のように FSx API に作成 API がない場合は ONTAP REST API で作成し、~30 分の FSx コントロールプレーン同期を待ってから S3 AP をアタッチする。
+
+**対処法**: ONTAP REST API で作成したボリュームを削除・再作成する必要はない。待てば FSx API に反映される。
 
 #### SM-VAL-010: Cross-Region S3 AP Re-Attach RTO
 
