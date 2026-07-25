@@ -142,7 +142,43 @@ Recommended directory structure considering S3 AP + FlexCache + SnapMirror toget
 
 ---
 
-## 5. Monitoring
+## 5. FlexCache Deletion Procedure
+
+FlexCache deletion must use the **ONTAP REST API**, not FSx API `delete-volume`.
+
+### Correct Procedure
+
+```bash
+# 1. Get FlexCache UUID
+ONTAP_API: GET /api/storage/flexcache/flexcaches?name={cache_name}
+
+# 2. Delete FlexCache (ONTAP REST API)
+ONTAP_API: DELETE /api/storage/flexcache/flexcaches/{uuid}
+# → 202 Accepted (async job). Wait for job completion.
+
+# 3. If ghost entry remains in FSx API (blocks SVM deletion)
+aws fsx delete-volume --volume-id fsvol-XXXXX --ontap-configuration '{"SkipFinalBackup":true}'
+
+# 4. Delete SVM (after all volumes gone from FSx API)
+aws fsx delete-storage-virtual-machine --storage-virtual-machine-id svm-XXXXX
+```
+
+### Why ONTAP REST API Instead of FSx API `delete-volume`
+
+- FlexCache is managed internally as a special FlexGroup with Origin relationship metadata
+- ONTAP REST API `DELETE /api/storage/flexcache/flexcaches/{uuid}` properly cleans up this relationship
+- FSx API `delete-volume` uses a standard volume deletion path that may not perform FlexCache-specific cleanup
+- 404 response = success (idempotent). 409 Conflict = wait and retry (volume busy)
+
+### FSx Control Plane Propagation Delay (Deletion)
+
+- After ONTAP REST API deletion completes, FSx API (`describe-volumes`) may still show the fsvol-* entry
+- If SVM deletion fails with "Cannot delete storage virtual machine while it has non-root volumes", run `delete-volume` via FSx API to clear the ghost entry
+- This propagation delay is similar to creation (~30 minutes)
+
+---
+
+## 6. Monitoring
 
 ### FlexCache
 
@@ -162,7 +198,7 @@ Recommended directory structure considering S3 AP + FlexCache + SnapMirror toget
 
 ---
 
-## 6. Anti-Patterns
+## 7. Anti-Patterns
 
 | Pattern | Problem | Mitigation |
 |---------|---------|-----------|
