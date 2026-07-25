@@ -560,9 +560,11 @@ FSx for ONTAP S3 AP returns `501 Not Implemented` for requests with `If-None-Mat
 | **Classification** | `works_with_caveats` |
 | **Disclosure** | validation evidence |
 
-**Finding:** Volumes created exclusively via ONTAP REST API (`POST /api/storage/volumes {type: dp}`) do NOT appear in the FSx API (`describe-volumes`). S3 AP attachment requires a FSx volume ID (`fsvol-*`). Volumes must be created using `aws fsx create-volume --ontap-configuration '{"OntapVolumeType":"DP"}'` to be visible in both control planes.
+**Finding:** Volumes created exclusively via ONTAP REST API (`POST /api/storage/volumes {type: dp}`) do NOT immediately appear in the FSx API (`describe-volumes`). FSx control plane synchronization takes approximately **30 minutes** for ONTAP-created volumes to become visible. S3 AP attachment requires a FSx volume ID (`fsvol-*`).
 
-**Workaround for existing ONTAP-created volumes:** Delete and recreate the volume via `aws fsx create-volume` with the same name and size. Data must be re-replicated via SnapMirror after recreation. There is no in-place "adoption" of ONTAP-created volumes into the FSx control plane.
+**Recommended approach:** Create DP volumes using `aws fsx create-volume --ontap-configuration '{"OntapVolumeType":"DP"}'` for immediate visibility. If ONTAP REST API is used (e.g., for FlexCache which has no FSx API equivalent), wait ~30 minutes for FSx API propagation before attempting S3 AP attachment.
+
+**Workaround for ONTAP-created volumes:** Wait for FSx control plane sync (~30 min), then use the propagated `fsvol-*` ID. Do NOT recreate — the volume will eventually appear.
 
 ### SM-VAL-010: Cross-Region S3 AP Re-Attach RTO
 

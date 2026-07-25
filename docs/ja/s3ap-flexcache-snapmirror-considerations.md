@@ -172,7 +172,7 @@ S3 AP 単体 + FlexCache + SnapMirror を全て考慮した推奨ディレクト
 | 1 つの巨大ファイルに追記 | SnapMirror 増分転送が毎回大きい | 小ファイル分割 |
 | S3 AP + FlexCache write-back で同一ファイル書き込み | XLD revoke → dirty data 消失 | write-around 使用 or ファイル分離 |
 | DP ボリュームに S3 AP アタッチ試行 | 失敗する（junction path 設定不可） | break 後にアタッチ |
-| ONTAP REST API のみで DP ボリューム作成 | FSx API に登録されず S3 AP 不可 | `aws fsx create-volume` を使用 |
+| ONTAP REST API のみで DP ボリューム作成 | FSx API への反映に ~30 分かかる。即時 S3 AP アタッチ不可 | 即時性が必要なら `aws fsx create-volume` を使用。FlexCache 等は ONTAP API で作成後 ~30 分待機 |
 | VPC Peering を SVM peer 削除前に削除 | zombie SVM peer → MISCONFIGURED → 復旧困難 | SM-VAL-011 の順序を遵守 |
 | ListObjectsV2 を全件走査で定期実行 | ディレクトリサイズに比例してレイテンシ増大 | prefix 限定 or 外部カタログ |
 | データグラビティを無視してクラウドのみで設計 | 不要なエグレス費用。レイテンシ要件を満たせない | オンプレ処理が有利な場面では SnapMirror でオンプレに複製して活用 |
