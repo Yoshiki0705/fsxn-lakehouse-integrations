@@ -3,7 +3,7 @@
 Snowpark Environment Validation Script
 =======================================
 Validates Snowpark Python availability, warehouse sizing, and consumer account
-locator for the FSxN × Snowflake integration verification.
+locator for the FSx for ONTAP × Snowflake integration verification.
 
 Requirements:
   - REQ-7: Snowpark UDF processing for media files

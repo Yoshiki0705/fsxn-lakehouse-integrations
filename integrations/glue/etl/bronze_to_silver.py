@@ -1,5 +1,5 @@
 """
-FSxN Glue Integration — Bronze to Silver ETL Job
+FSx for ONTAP Glue Integration — Bronze to Silver ETL Job
 
 Reads raw data from the bronze layer (Parquet/CSV/JSON via S3 Access Point),
 applies transformations (schema normalization, null handling, type casting,

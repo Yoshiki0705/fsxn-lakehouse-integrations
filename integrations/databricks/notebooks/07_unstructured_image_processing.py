@@ -5,20 +5,20 @@
 
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 07 - Unstructured Data: Image Processing on FSxN
+# MAGIC # 07 - Unstructured Data: Image Processing on FSx for ONTAP
 # MAGIC
 # MAGIC Read, process, and write back image files stored on FSx for NetApp ONTAP
 # MAGIC via S3 Access Point using Databricks `binaryFile` format.
 # MAGIC
 # MAGIC ## Use Cases
 # MAGIC - Image metadata extraction (EXIF, dimensions, format)
-# MAGIC - Thumbnail generation (resize and write back to FSxN)
+# MAGIC - Thumbnail generation (resize and write back to FSx for ONTAP)
 # MAGIC - Image classification preparation (for ML pipelines)
 # MAGIC
 # MAGIC ## Prerequisites
 # MAGIC - ML Runtime cluster (includes PIL/Pillow)
 # MAGIC - External Location configured (from notebook 01)
-# MAGIC - Sample images uploaded to FSxN via NFS/SMB
+# MAGIC - Sample images uploaded to FSx for ONTAP via NFS/SMB
 
 # COMMAND ----------
 
@@ -39,7 +39,7 @@ METADATA_OUTPUT_PATH = f"s3://{S3_ACCESS_POINT_ALIAS}/silver/image_metadata/"
 
 # COMMAND ----------
 
-# Read all image files from FSxN via S3 AP
+# Read all image files from FSx for ONTAP via S3 AP
 images_df = spark.read.format("binaryFile") \
     .option("pathGlobFilter", "*.{jpg,jpeg,png,tiff,bmp}") \
     .option("recursiveFileLookup", "true") \
@@ -107,7 +107,7 @@ metadata_df.show(10)
 
 # COMMAND ----------
 
-# Write image metadata as Delta table on FSxN
+# Write image metadata as Delta table on FSx for ONTAP
 metadata_df.write \
     .format("delta") \
     .mode("overwrite") \
@@ -118,7 +118,7 @@ spark.sql(f"""
 CREATE TABLE IF NOT EXISTS fsxn_lakehouse.silver.image_metadata
 USING DELTA
 LOCATION '{METADATA_OUTPUT_PATH}'
-COMMENT 'Image metadata extracted from FSxN unstructured files'
+COMMENT 'Image metadata extracted from FSx for ONTAP unstructured files'
 """)
 
 print(f"✅ Image metadata saved to: {METADATA_OUTPUT_PATH}")
@@ -137,7 +137,7 @@ print(f"✅ Image metadata saved to: {METADATA_OUTPUT_PATH}")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 4: Generate Thumbnails (Write Back to FSxN)
+# MAGIC ## Step 4: Generate Thumbnails (Write Back to FSx for ONTAP)
 
 # COMMAND ----------
 
@@ -180,7 +180,7 @@ from pyspark.sql import Row
 import boto3
 
 def write_thumbnails_partition(partition):
-    """Write thumbnails back to FSxN via S3 AP."""
+    """Write thumbnails back to FSx for ONTAP via S3 AP."""
     import boto3
     from PIL import Image
     from io import BytesIO
@@ -220,7 +220,7 @@ print(f"✅ Thumbnails written to: {THUMBNAIL_OUTPUT_PATH}")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 5: Verify Thumbnails on FSxN
+# MAGIC ## Step 5: Verify Thumbnails on FSx for ONTAP
 
 # COMMAND ----------
 

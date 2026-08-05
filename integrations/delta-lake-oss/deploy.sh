@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =============================================================================
-# FSxN Delta Lake OSS — Deployment Script
+# FSx for ONTAP Delta Lake OSS — Deployment Script
 # =============================================================================
 # Deploys CloudFormation stack, creates S3 AP (VPC-scoped), and prepares
 # EMR cluster configuration for Delta Lake verification.
@@ -36,7 +36,7 @@ VPC_ID=$(jq -r '.VpcId' "${PARAMS_FILE}")
 S3_AP_NAME=$(jq -r '.S3AccessPointName // "fsxn-delta-oss-ap"' "${PARAMS_FILE}")
 
 echo "============================================"
-echo "FSxN Delta Lake OSS Deployment"
+echo "FSx for ONTAP Delta Lake OSS Deployment"
 echo "============================================"
 echo "Region:    ${REGION}"
 echo "VPC:       ${VPC_ID}"

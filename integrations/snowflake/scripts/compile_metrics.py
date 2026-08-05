@@ -480,7 +480,7 @@ def generate_report(results, metrics, results_dir):
     sections = []
 
     # Header
-    sections.append("# FSxN × Snowflake Integration — Verification Report")
+    sections.append("# FSx for ONTAP × Snowflake Integration — Verification Report")
     sections.append("")
     sections.append(f"**Generated**: {now}  ")
     sections.append(f"**Results Directory**: `{results_dir}`  ")
@@ -590,7 +590,7 @@ def main():
     output_path = Path(args.output) if args.output else results_dir / REPORT_FILENAME
 
     print(f"\n{'='*60}")
-    print("FSxN × Snowflake — Metrics Compilation")
+    print("FSx for ONTAP × Snowflake — Metrics Compilation")
     print(f"{'='*60}")
     print(f"  Results dir:  {results_dir}")
     print(f"  Output:       {output_path}")

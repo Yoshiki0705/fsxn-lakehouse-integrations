@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FSxN Athena Integration — Sample Data Generator
+FSx for ONTAP Athena Integration — Sample Data Generator
 
 Generates sample datasets for Athena verification:
   - transactions: 500k rows, Parquet, partitioned by year/month
@@ -8,7 +8,7 @@ Generates sample datasets for Athena verification:
   - events: 100k rows, JSON
   - iot_sensors: 1M rows, Parquet (for benchmark)
 
-Output: Local directory structure ready for upload to FSxN via NFS.
+Output: Local directory structure ready for upload to FSx for ONTAP via NFS.
 
 Usage:
     python generate_sample_data.py [--output-dir ./sample_data] [--scale 1.0]
@@ -161,7 +161,7 @@ def main():
     scale = args.scale
 
     print("=" * 60)
-    print("FSxN Athena Integration — Sample Data Generator")
+    print("FSx for ONTAP Athena Integration — Sample Data Generator")
     print("=" * 60)
     print(f"Output directory: {output_dir.absolute()}")
     print(f"Scale factor: {scale}")
@@ -177,7 +177,7 @@ def main():
     print(f"📊 Total data generated: {total_size / (1024*1024):.1f} MB")
     print(f"📁 Output directory: {output_dir.absolute()}")
     print()
-    print("Next step: Upload to FSxN via NFS mount")
+    print("Next step: Upload to FSx for ONTAP via NFS mount")
     print("  ./scripts/upload_sample_data.sh")
 
 

@@ -1,8 +1,48 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Snowpipe Lambda Polling Function for FSxN S3 Access Point.
+  Snowpipe Lambda Polling Function for FSx for ONTAP S3 Access Point.
   Detects new files and publishes to SNS for Snowpipe auto-ingest.
+  REFERENCE ONLY - NOT PRODUCTION READY. See the warning block below.
+
+# =============================================================================
+# !! DO NOT DEPLOY AS-IS
+# =============================================================================
+# Verified 2026-08-05. The AWS-side mechanics work (file write -> ListObjectsV2
+# detection -> SNS delivery in ~2 s), but this template has two blocking defects
+# and the Snowflake leg has never been verified.
+#
+# DEFECT-1 (High) - the PollerFunction below carries a PLACEHOLDER Code.ZipFile
+#   that returns a static string and never lists anything. handler.py in this
+#   directory is the real implementation and exceeds the inline ZipFile size
+#   limit, so it cannot be pasted in. Package it properly before deploying.
+#   Note also that the Transform above declares SAM but no SAM resources are
+#   used, so the transform is currently inert.
+#
+# DEFECT-2 (High, data loss) - handler.py falls back to a cutoff of
+#   "now - POLLING_INTERVAL_MINUTES" when STATE_TABLE is unset, and this
+#   template never sets STATE_TABLE. Any object that ages past the window is
+#   never notified, permanently. Reproduced: an object written at 05:07:52Z was
+#   invisible to an invocation at 05:09:33Z. Wire the DynamoDB checkpoint
+#   through this template before relying on it.
+#
+# DEFECT-6 (Low) - no DeadLetterConfig and no CloudWatch alarm, so a failing
+#   poller is silent. Combined with DEFECT-2, a silent outage longer than the
+#   polling interval loses every object written during it.
+#
+# DEFECT-7 (Low) - the VpcId / SubnetIds parameters and the HasVpc condition are
+#   declared but never referenced, so the function always deploys outside a VPC
+#   regardless of what is passed (cfn-lint W8001 flags the unused condition).
+#   Outside-VPC is in fact the correct placement for reading an Internet-origin
+#   Access Point, so the default behaviour is sound — but the parameters imply a
+#   choice that does not exist. Either wire up VpcConfig or drop them.
+#
+# For scheduled ingestion today, prefer a Snowflake Task running COPY INTO:
+# it needs no synthesized notification and Snowflake's load history provides
+# exactly-once behaviour that this time window does not.
+#
+# Full findings: integrations/snowflake/docs/en/snowpipe-verification-results.md
+# =============================================================================
 
 Parameters:
   EnvironmentName:
@@ -11,7 +51,7 @@ Parameters:
 
   S3AccessPointAlias:
     Type: String
-    Description: S3 Access Point alias for FSxN
+    Description: S3 Access Point alias for FSx for ONTAP
 
   S3AccessPointArn:
     Type: String
@@ -87,7 +127,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub '${EnvironmentName}-snowpipe-poller'
-      Description: Polls FSxN S3 AP for new files and notifies Snowpipe via SNS
+      Description: Polls FSx for ONTAP S3 AP for new files and notifies Snowpipe via SNS
       Runtime: python3.12
       Handler: handler.handler
       Role: !GetAtt PollerRole.Arn
@@ -99,12 +139,20 @@ Resources:
           SNS_TOPIC_ARN: !Ref SNSTopicArn
           PREFIX: !Ref Prefix
           POLLING_INTERVAL_MINUTES: !Ref PollingIntervalMinutes
+      # !! PLACEHOLDER (DEFECT-1) — this is NOT the working poller.
+      # handler.py in this directory is the real implementation. It exceeds the
+      # inline ZipFile limit, so package and upload it (sam build / aws
+      # cloudformation package) and replace this Code block with an S3Bucket /
+      # S3Key reference before deploying. Deployed as-is, the poller returns a
+      # static string and never detects or notifies anything.
       Code:
         ZipFile: |
-          # Inline placeholder — deploy actual handler.py via SAM/CDK
-          # See handler.py in this directory for full implementation
           def handler(event, context):
-              return {"statusCode": 200, "body": "Deploy handler.py"}
+              raise RuntimeError(
+                  "Placeholder function. Package handler.py and replace the "
+                  "Code block in template.yaml. See "
+                  "integrations/snowflake/docs/en/snowpipe-verification-results.md (DEFECT-1)."
+              )
       Tags:
         - Key: Project
           Value: fsxn-lakehouse-integrations

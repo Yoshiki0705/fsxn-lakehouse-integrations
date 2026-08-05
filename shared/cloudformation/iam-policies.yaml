@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Common IAM policies for FSxN Lakehouse Integrations.
+  Common IAM policies for FSx for ONTAP Lakehouse Integrations.
   Provides reusable IAM roles and policies for S3 Access Point access.
 
 Parameters:
@@ -29,7 +29,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: !Sub '${EnvironmentName}-s3ap-readonly'
-      Description: Read-only access to FSxN via S3 Access Point
+      Description: Read-only access to FSx for ONTAP via S3 Access Point
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -54,7 +54,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: !Sub '${EnvironmentName}-s3ap-readwrite'
-      Description: Read-write access to FSxN via S3 Access Point
+      Description: Read-write access to FSx for ONTAP via S3 Access Point
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -89,7 +89,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub '${EnvironmentName}-platform-role'
-      Description: Generic role for lakehouse platform access to FSxN via S3 AP
+      Description: Generic role for lakehouse platform access to FSx for ONTAP via S3 AP
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -115,7 +115,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub '${EnvironmentName}-etl-role'
-      Description: Role for ETL pipelines (Glue, EMR, Lambda) accessing FSxN
+      Description: Role for ETL pipelines (Glue, EMR, Lambda) accessing FSx for ONTAP
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:

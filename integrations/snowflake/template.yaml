@@ -3,9 +3,9 @@ Description: >
   Snowflake Storage Integration — IAM Role for FSx for ONTAP S3 Access Point.
   
   Creates an IAM Role that Snowflake assumes via Storage Integration to access
-  FSxN volumes through S3 Access Points.
+  FSx for ONTAP volumes through S3 Access Points.
   
-  IMPORTANT: FSxN S3 Access Points are NOT created by this template.
+  IMPORTANT: FSx for ONTAP S3 Access Points are NOT created by this template.
   They are created separately using:
     aws fsx create-and-attach-s3-access-point --name <name> --type ONTAP \
       --ontap-configuration VolumeId=<vol-id>,FileSystemIdentity='{...}'
@@ -26,7 +26,7 @@ Parameters:
   S3AccessPointArn:
     Type: String
     Description: >
-      ARN of the existing FSxN S3 Access Point.
+      ARN of the existing FSx for ONTAP S3 Access Point.
       Created via: aws fsx create-and-attach-s3-access-point
       Example: arn:aws:s3:ap-northeast-1:123456789012:accesspoint/snowflake-test
 
@@ -34,7 +34,7 @@ Parameters:
     Type: String
     Default: ''
     Description: >
-      Alias of the FSxN S3 Access Point (for documentation/outputs only).
+      Alias of the FSx for ONTAP S3 Access Point (for documentation/outputs only).
       Example: snowflake-test-3xzg4g6nsqexwwm1xtbt1bt637f7napn1a-ext-s3alias
 
   SnowflakeAccountId:
@@ -79,14 +79,14 @@ Resources:
   #   Phase 1: Own-account trust (placeholder) — allows initial deployment
   #   Phase 2: Snowflake account trust + External ID — after DESCRIBE INTEGRATION
   #
-  # Snowflake assumes this role via STS to access FSxN S3 Access Point.
+  # Snowflake assumes this role via STS to access FSx for ONTAP S3 Access Point.
   # The S3 AP itself is created separately via aws fsx CLI/API.
   SnowflakeS3AccessRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub '${EnvironmentName}-snowflake-s3-role'
       Description: >
-        IAM Role assumed by Snowflake Storage Integration to access FSxN via S3 AP.
+        IAM Role assumed by Snowflake Storage Integration to access FSx for ONTAP via S3 AP.
         Trust policy updated after DESCRIBE INTEGRATION provides Snowflake account info.
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -115,8 +115,8 @@ Resources:
   # ============================================================
   # IAM Policy for S3 AP Access
   # ============================================================
-  # Grants read/write access to the FSxN S3 Access Point.
-  # FSxN S3 APs use standard S3 API operations.
+  # Grants read/write access to the FSx for ONTAP S3 Access Point.
+  # FSx for ONTAP S3 APs use standard S3 API operations.
   SnowflakeS3AccessPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -208,7 +208,7 @@ Outputs:
   StorageAllowedLocations:
     Description: >
       STORAGE_ALLOWED_LOCATIONS for Snowflake Storage Integration.
-      Since FSxN S3 AP maps to a single volume root, use the AP alias directly.
+      Since FSx for ONTAP S3 AP maps to a single volume root, use the AP alias directly.
     Value: !Sub 's3://${S3AccessPointAlias}/'
 
   TrustPolicyPhase:

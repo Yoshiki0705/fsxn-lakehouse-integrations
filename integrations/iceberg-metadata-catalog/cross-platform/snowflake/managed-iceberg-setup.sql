@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Snowflake Managed Iceberg Table + Horizon Catalog Setup
 -- =============================================================================
--- Creates a Managed Iceberg Table from FSx S3 AP metadata and configures
+-- Creates a Managed Iceberg Table from FSx for ONTAP S3 AP metadata and configures
 -- Horizon Catalog for external engine access with governance enforcement.
 --
 -- Architecture:
@@ -14,7 +14,7 @@
 --
 -- Prerequisites:
 --   - Snowflake account with Iceberg Tables enabled
---   - Storage Integration for FSx S3 AP (existing)
+--   - Storage Integration for FSx for ONTAP S3 AP (existing)
 --   - External volume for Managed Iceberg Table output
 --   - Snowflake account: MH89262 (CVDRQJT, ap-northeast-1)
 -- =============================================================================

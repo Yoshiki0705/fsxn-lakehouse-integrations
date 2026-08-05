@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-FSxN DuckDB Integration — Predicate Pushdown Verification
+FSx for ONTAP DuckDB Integration — Predicate Pushdown Verification
 
 Verifies that DuckDB pushes predicates down to Parquet row groups,
-reducing data scanned from FSxN S3 AP.
+reducing data scanned from FSx for ONTAP S3 AP.
 
 Usage:
     python 02_pushdown_verification.py [--ap-alias <alias>]

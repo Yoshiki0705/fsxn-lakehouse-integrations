@@ -1,7 +1,7 @@
 """
-FSxN DuckDB Integration — Lambda Handler
+FSx for ONTAP DuckDB Integration — Lambda Handler
 
-Executes DuckDB SQL queries on FSxN data via S3 Access Point (VPC-scoped).
+Executes DuckDB SQL queries on FSx for ONTAP data via S3 Access Point (VPC-scoped).
 DuckDB runs in-process within Lambda — no external database server required.
 
 Features:

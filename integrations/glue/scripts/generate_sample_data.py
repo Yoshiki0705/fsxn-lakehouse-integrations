@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-FSxN Glue Integration — Sample Data Generator
+FSx for ONTAP Glue Integration — Sample Data Generator
 
 Generates sample datasets for Glue ETL verification in medallion architecture:
   - bronze/transactions: 500k rows, Parquet, partitioned by year/month
   - bronze/customers: 50k rows, CSV
   - bronze/events: 100k rows, JSON Lines
 
-Output: Local directory structure ready for upload to FSxN via NFS.
+Output: Local directory structure ready for upload to FSx for ONTAP via NFS.
 
 Usage:
     python generate_sample_data.py [--output-dir ./sample_data] [--scale 1.0]
@@ -160,7 +160,7 @@ def main():
     scale = args.scale
 
     print("=" * 60)
-    print("FSxN Glue Integration — Sample Data Generator")
+    print("FSx for ONTAP Glue Integration — Sample Data Generator")
     print("=" * 60)
     print(f"Output directory: {output_dir.absolute()}")
     print(f"Scale factor: {scale}")
@@ -177,7 +177,7 @@ def main():
     print(f"📊 Total data generated: {total_size / (1024*1024):.1f} MB")
     print(f"📁 Output directory: {output_dir.absolute()}")
     print()
-    print("Next step: Upload to FSxN via NFS mount")
+    print("Next step: Upload to FSx for ONTAP via NFS mount")
     print("  rsync -avz ./sample_data/bronze/ /mnt/fsxn/bronze/")
 
 

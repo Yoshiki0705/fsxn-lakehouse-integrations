@@ -1,5 +1,5 @@
 """
-FSxN Glue Integration — Silver to Gold ETL Job
+FSx for ONTAP Glue Integration — Silver to Gold ETL Job
 
 Reads cleaned data from the silver layer, performs aggregations
 (daily summaries, category rollups, customer metrics), and writes

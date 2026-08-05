@@ -50,7 +50,7 @@ results_bucket: "fsxn-athena-verification-results-ap-northeast-1"
 
 # Functional Test Results
 functional_tests:
-  - test: "PutObject (upload Parquet to FSx S3 AP)"
+  - test: "PutObject (upload Parquet to FSx for ONTAP S3 AP)"
     result: "PASS"
     details: "250KB file uploaded successfully"
   - test: "ListObjectsV2"

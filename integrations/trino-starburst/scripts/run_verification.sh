@@ -5,7 +5,7 @@ set -euo pipefail
 # Prerequisites:
 #   - Docker installed
 #   - AWS credentials available (env vars or instance profile)
-#   - FSx S3 AP alias known
+#   - FSx for ONTAP S3 AP alias known
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -17,7 +17,7 @@ if [ -z "$AP_ALIAS" ]; then
     exit 1
 fi
 
-echo "=== Trino + FSx S3 AP Verification ==="
+echo "=== Trino + FSx for ONTAP S3 AP Verification ==="
 echo "AP Alias: $AP_ALIAS"
 echo ""
 

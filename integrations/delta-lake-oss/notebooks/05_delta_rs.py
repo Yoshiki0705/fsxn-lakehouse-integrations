@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-FSxN Delta Lake OSS — delta-rs (Python Native) Verification
+FSx for ONTAP Delta Lake OSS — delta-rs (Python Native) Verification
 
-Reads/writes Delta tables on FSxN using the Python `deltalake` package
+Reads/writes Delta tables on FSx for ONTAP using the Python `deltalake` package
 (delta-rs) WITHOUT requiring a Spark cluster.
 
 Prerequisites:
@@ -56,7 +56,7 @@ def main():
     results = []
 
     print("=" * 60)
-    print("FSxN Delta Lake OSS — delta-rs Verification")
+    print("FSx for ONTAP Delta Lake OSS — delta-rs Verification")
     print("=" * 60)
     print(f"Path: {base_path}")
 

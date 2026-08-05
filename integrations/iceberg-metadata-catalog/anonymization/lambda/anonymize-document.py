@@ -1,7 +1,7 @@
 """
 anonymize-document.py — Document PII Redaction Lambda
 
-Reads a document from FSx S3 AP, detects PII entities, redacts them,
+Reads a document from FSx for ONTAP S3 AP, detects PII entities, redacts them,
 and writes the anonymized version to a designated output location.
 
 Supported formats:
@@ -72,7 +72,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     logger.info(f"Anonymizing document: {file_name} (PII types: {pii_types})")
 
-    # Read file from FSx S3 AP
+    # Read file from FSx for ONTAP S3 AP
     s3_client = boto3.client("s3", region_name=REGION)
     s3_key = "/".join(file_path.split("/")[4:])
 

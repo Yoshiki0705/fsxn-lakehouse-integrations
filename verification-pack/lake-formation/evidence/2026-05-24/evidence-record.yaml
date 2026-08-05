@@ -35,7 +35,7 @@ tests:
 
 # Key Findings
 key_findings:
-  - "Lake Formation permissions layer works on top of FSxN S3 AP data"
+  - "Lake Formation permissions layer works on top of FSx for ONTAP S3 AP data"
   - "Fine-grained table-level access control verified (SELECT only)"
   - "Athena queries succeed under Lake Formation governance"
   - "Three-layer authorization: IAM + Lake Formation + S3 AP file system user"

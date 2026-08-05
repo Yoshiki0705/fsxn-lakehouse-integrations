@@ -1,5 +1,5 @@
 variable "aws_region" {
-  description = "AWS region where FSxN and S3 AP are deployed"
+  description = "AWS region where FSx for ONTAP and S3 AP are deployed"
   type        = string
   default     = "ap-northeast-1"
 }
@@ -36,7 +36,7 @@ variable "iam_role_arn" {
 }
 
 variable "catalog_name" {
-  description = "Unity Catalog name for FSxN external data"
+  description = "Unity Catalog name for FSx for ONTAP external data"
   type        = string
   default     = "fsxn_lakehouse"
 }

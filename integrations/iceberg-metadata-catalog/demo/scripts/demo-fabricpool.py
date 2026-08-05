@@ -9,7 +9,7 @@ Key Message:
     "Cold data automatically moves to cheaper storage, hot metadata stays fast"
 
 Architecture:
-    FSx ONTAP Performance Tier (SSD)  ←→  Capacity Tier (S3)
+    FSx for ONTAP Performance Tier (SSD)  ←→  Capacity Tier (S3)
          ↑ Hot data (recent files)          ↑ Cold data (old files)
          ↑ Metadata always here             ↑ Auto-tiered by policy
 
@@ -66,7 +66,7 @@ def demo_tiering_concept(total_tb: float, cold_ratio: float, policy: str, coolin
 
     # Storage tier diagram
     print("  ┌─────────────────────────────────────────────────────────┐")
-    print("  │  FSx ONTAP Storage Architecture with FabricPool         │")
+    print("  │  FSx for ONTAP Storage Architecture with FabricPool         │")
     print("  ├─────────────────────────────────────────────────────────┤")
     print("  │                                                         │")
     print(f"  │  ┌─────────────────────┐  Performance Tier (SSD)       │")
@@ -92,7 +92,7 @@ def demo_cost_savings(total_tb: float, cold_ratio: float):
     cold_tb = total_tb * cold_ratio
 
     # Pricing (approximate, per TB/month)
-    ssd_cost_per_tb = 230.0   # FSx ONTAP SSD tier
+    ssd_cost_per_tb = 230.0   # FSx for ONTAP SSD tier
     s3_cost_per_tb = 23.0     # S3 Standard (capacity tier)
 
     # Without FabricPool: all on SSD

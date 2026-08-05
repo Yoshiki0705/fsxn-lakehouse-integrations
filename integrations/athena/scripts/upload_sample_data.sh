@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # =============================================================================
-# FSxN Athena Integration — Upload Sample Data to FSxN via NFS
+# FSx for ONTAP Athena Integration — Upload Sample Data to FSx for ONTAP via NFS
 # =============================================================================
-# Mounts FSxN volume via NFS and copies generated sample data.
+# Mounts FSx for ONTAP volume via NFS and copies generated sample data.
 # Data is organized in Hive-style partition structure for Glue Crawler.
 #
 # Prerequisites:
-#   - FSxN NFS endpoint accessible from this machine
+#   - FSx for ONTAP NFS endpoint accessible from this machine
 #   - Sample data generated via generate_sample_data.py
 #   - NFS client installed (nfs-common / nfs-utils)
 #
@@ -42,7 +42,7 @@ if [[ -f "${PARAMS_FILE}" ]]; then
 fi
 
 echo "============================================"
-echo "FSxN Sample Data Upload"
+echo "FSx for ONTAP Sample Data Upload"
 echo "============================================"
 echo "Data source:  ${DATA_DIR}"
 echo "Mount point:  ${MOUNT_POINT}"
@@ -64,7 +64,7 @@ if ! mountpoint -q "${MOUNT_POINT}" 2>/dev/null; then
     echo "  sudo mkdir -p ${MOUNT_POINT}"
     echo "  sudo mount -t nfs -o vers=4.1 ${SVM_NFS_ENDPOINT}:/ ${MOUNT_POINT}"
   else
-    echo "Please mount FSxN volume first:"
+    echo "Please mount FSx for ONTAP volume first:"
     echo "  sudo mount -t nfs -o vers=4.1 <SVM_NFS_ENDPOINT>:/<volume_junction> ${MOUNT_POINT}"
   fi
   echo ""
@@ -76,7 +76,7 @@ if ! mountpoint -q "${MOUNT_POINT}" 2>/dev/null; then
 fi
 
 # Upload data
-echo "📤 Uploading sample data to FSxN..."
+echo "📤 Uploading sample data to FSx for ONTAP..."
 echo ""
 
 # Transactions (partitioned Parquet)
@@ -108,7 +108,7 @@ echo "✅ Upload complete!"
 echo "============================================"
 echo "  Files uploaded: ~${TOTAL_FILES} files"
 echo ""
-echo "Directory structure on FSxN:"
+echo "Directory structure on FSx for ONTAP:"
 echo "  ${MOUNT_POINT}/"
 echo "  ├── transactions/year=2024/month=01/*.parquet"
 echo "  ├── transactions/year=2024/month=02/*.parquet"

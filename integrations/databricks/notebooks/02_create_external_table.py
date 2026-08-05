@@ -5,7 +5,7 @@
 
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 02 - Create External Tables on FSxN
+# MAGIC # 02 - Create External Tables on FSx for ONTAP
 # MAGIC
 # MAGIC Create External Tables in Unity Catalog pointing to Parquet, CSV, and JSON
 # MAGIC files stored on FSx for NetApp ONTAP via S3 Access Point.
@@ -40,7 +40,7 @@ SCHEMA_SILVER = "silver"
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC -- External table pointing to Parquet files on FSxN
+# MAGIC -- External table pointing to Parquet files on FSx for ONTAP
 # MAGIC CREATE TABLE IF NOT EXISTS fsxn_lakehouse.bronze.transactions
 # MAGIC USING PARQUET
 # MAGIC LOCATION 's3://${S3_ACCESS_POINT_ALIAS}/bronze/transactions/'
@@ -81,7 +81,7 @@ SCHEMA_SILVER = "silver"
 # MAGIC   delimiter = ','
 # MAGIC )
 # MAGIC LOCATION 's3://${S3_ACCESS_POINT_ALIAS}/bronze/customers/'
-# MAGIC COMMENT 'Customer data (CSV) on FSxN';
+# MAGIC COMMENT 'Customer data (CSV) on FSx for ONTAP';
 
 # COMMAND ----------
 
@@ -94,7 +94,7 @@ SCHEMA_SILVER = "silver"
 # MAGIC CREATE TABLE IF NOT EXISTS fsxn_lakehouse.bronze.events_json
 # MAGIC USING JSON
 # MAGIC LOCATION 's3://${S3_ACCESS_POINT_ALIAS}/bronze/events/'
-# MAGIC COMMENT 'Event stream data (JSON) on FSxN';
+# MAGIC COMMENT 'Event stream data (JSON) on FSx for ONTAP';
 
 # COMMAND ----------
 
@@ -109,7 +109,7 @@ SCHEMA_SILVER = "silver"
 # MAGIC USING PARQUET
 # MAGIC PARTITIONED BY (date STRING)
 # MAGIC LOCATION 's3://${S3_ACCESS_POINT_ALIAS}/bronze/iot-sensors/'
-# MAGIC COMMENT 'IoT sensor data partitioned by date on FSxN';
+# MAGIC COMMENT 'IoT sensor data partitioned by date on FSx for ONTAP';
 
 # COMMAND ----------
 

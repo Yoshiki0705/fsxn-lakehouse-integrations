@@ -18,7 +18,7 @@ S3 Metadata + Annotations apply only to Amazon S3 general-purpose buckets
 (AWS docs: metadata-tables-restrictions.html). FSx for ONTAP S3 (ONTAP S3
 server exposed via S3 Access Points) is NOT an Amazon S3 bucket and cannot
 be configured for S3 Metadata. This script therefore runs against a native
-S3 bucket — representing the staged-to-S3 pattern, not direct FSx S3 AP.
+S3 bucket — representing the staged-to-S3 pattern, not direct FSx for ONTAP S3 AP.
 
 Safety
 ------

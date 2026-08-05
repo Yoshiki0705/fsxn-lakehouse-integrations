@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FSxN Athena Integration — Glue Crawler Execution and Verification
+FSx for ONTAP Athena Integration — Glue Crawler Execution and Verification
 
 Starts Glue Crawler, waits for completion, and verifies discovered tables
 match expected schemas.
@@ -171,7 +171,7 @@ def main():
     region = params.get("Region", args.region)
 
     print("=" * 60)
-    print("FSxN Athena Integration — Glue Crawler Execution")
+    print("FSx for ONTAP Athena Integration — Glue Crawler Execution")
     print("=" * 60)
     print(f"Crawler:  {crawler_name}")
     print(f"Database: {database_name}")

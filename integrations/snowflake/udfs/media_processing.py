@@ -186,7 +186,7 @@ if __name__ == '__main__':
     print("Snowpark UDF Reference Implementation — Media File Processing")
     print("=" * 70)
 
-    # Sample file paths simulating FSxN media/ directory structure
+    # Sample file paths simulating FSx for ONTAP media/ directory structure
     sample_files = [
         ('media/images/product_photo_001.jpg', 3_200_000),       # 3.2 MB JPEG
         ('media/images/banner_hero.png', 850_000),               # 850 KB PNG

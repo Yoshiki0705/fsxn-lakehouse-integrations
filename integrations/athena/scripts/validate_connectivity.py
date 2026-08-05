@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FSxN Athena Integration — Connectivity Validation
+FSx for ONTAP Athena Integration — Connectivity Validation
 
 Verifies:
   1. S3 AP has internet network origin
@@ -127,7 +127,7 @@ def check_crawler_status(glue_client, crawler_name: str) -> bool:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Validate Athena + FSxN connectivity")
+    parser = argparse.ArgumentParser(description="Validate Athena + FSx for ONTAP connectivity")
     parser.add_argument("--region", default="ap-northeast-1")
     args = parser.parse_args()
 
@@ -135,7 +135,7 @@ def main():
     region = params.get("Region", args.region)
 
     print("=" * 60)
-    print("FSxN Athena Integration — Connectivity Validation")
+    print("FSx for ONTAP Athena Integration — Connectivity Validation")
     print("=" * 60)
     print(f"Region: {region}")
 

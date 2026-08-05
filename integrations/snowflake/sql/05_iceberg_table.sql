@@ -1,10 +1,10 @@
 -- =============================================================================
--- 05 - Iceberg Table on FSxN (Snowflake-Managed Catalog)
+-- 05 - Iceberg Table on FSx for ONTAP (Snowflake-Managed Catalog)
 -- =============================================================================
 --
 -- Purpose:
 --   Creates an Iceberg Table (PRODUCTS_ICEBERG) using Snowflake-managed catalog
---   with FSxN as the underlying storage via S3 Access Point. Demonstrates full
+--   with FSx for ONTAP as the underlying storage via S3 Access Point. Demonstrates full
 --   DML support (INSERT, UPDATE, DELETE) and Time Travel capabilities.
 --
 -- Prerequisites:
@@ -58,7 +58,7 @@ CREATE OR REPLACE EXTERNAL VOLUME fsxn_iceberg_volume
       STORAGE_AWS_ROLE_ARN = '<IAM_ROLE_ARN>'
     )
   )
-  COMMENT = 'External Volume for Iceberg Tables on FSxN silver layer via S3 Access Point';
+  COMMENT = 'External Volume for Iceberg Tables on FSx for ONTAP silver layer via S3 Access Point';
 
 -- Grant USAGE to SYSADMIN so it can create Iceberg Tables referencing this volume
 GRANT USAGE ON EXTERNAL VOLUME fsxn_iceberg_volume TO ROLE SYSADMIN;
@@ -74,7 +74,7 @@ USE SCHEMA SILVER;
 -- =============================================================================
 -- 3. Create Iceberg Table: PRODUCTS_ICEBERG
 -- =============================================================================
--- Snowflake-managed catalog: Snowflake manages Iceberg metadata files on FSxN.
+-- Snowflake-managed catalog: Snowflake manages Iceberg metadata files on FSx for ONTAP.
 -- Other engines (Spark, Trino, etc.) can read via the metadata location.
 --
 -- Columns:
@@ -100,7 +100,7 @@ CREATE OR REPLACE ICEBERG TABLE PRODUCTS_ICEBERG (
   CATALOG = 'SNOWFLAKE'
   EXTERNAL_VOLUME = 'fsxn_iceberg_volume'
   BASE_LOCATION = 'products_iceberg/'
-  COMMENT = 'Product catalog as Iceberg table on FSxN — Snowflake-managed catalog, full DML support';
+  COMMENT = 'Product catalog as Iceberg table on FSx for ONTAP — Snowflake-managed catalog, full DML support';
 
 -- =============================================================================
 -- 4. INSERT — Populate with 5000 rows of sample product data
@@ -268,12 +268,12 @@ FROM PRODUCTS_ICEBERG;
 -- SYSTEM$GET_ICEBERG_TABLE_INFORMATION() returns metadata about the Iceberg
 -- table including:
 --   - Current snapshot ID
---   - Metadata file location on FSxN
+--   - Metadata file location on FSx for ONTAP
 --   - Schema information
 --   - Table properties
 --
 -- This is useful for:
---   - Verifying metadata files are stored on FSxN (via S3 AP)
+--   - Verifying metadata files are stored on FSx for ONTAP (via S3 AP)
 --   - Cross-engine access (other engines can read from metadata location)
 --   - Debugging Iceberg table state
 

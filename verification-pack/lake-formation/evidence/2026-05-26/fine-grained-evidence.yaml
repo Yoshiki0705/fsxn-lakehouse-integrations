@@ -68,11 +68,11 @@ lf_tag_test:
 
 # Key Findings
 key_findings:
-  - "Column-level permissions work correctly on FSx S3 AP data via Lake Formation"
+  - "Column-level permissions work correctly on FSx for ONTAP S3 AP data via Lake Formation"
   - "Non-permitted columns return 'cannot be resolved or requester is not authorized'"
   - "SELECT * returns only permitted columns (LF filters automatically)"
-  - "Data cells filters (row + column) can be created on FSx S3 AP tables"
-  - "LF-Tags can be assigned to FSx S3 AP tables for scalable governance"
+  - "Data cells filters (row + column) can be created on FSx for ONTAP S3 AP tables"
+  - "LF-Tags can be assigned to FSx for ONTAP S3 AP tables for scalable governance"
   - "Tag-based permissions enable automatic access control based on data classification"
   - "4-layer authorization confirmed: Lake Formation → IAM → S3 AP → File System"
 

@@ -7,7 +7,7 @@
 CREATE DATABASE IF NOT EXISTS fsxn_poc;
 
 -- ============================================================
--- Step 2: Create External Table on FSx S3 AP
+-- Step 2: Create External Table on FSx for ONTAP S3 AP
 -- ============================================================
 CREATE EXTERNAL TABLE IF NOT EXISTS fsxn_poc.sensor_data (
   timestamp TIMESTAMP,
@@ -71,7 +71,7 @@ ORDER BY hour
 LIMIT 24;
 
 -- ============================================================
--- Step 7: CTAS — Write results back to FSx S3 AP (optional)
+-- Step 7: CTAS — Write results back to FSx for ONTAP S3 AP (optional)
 -- ============================================================
 CREATE TABLE fsxn_poc.sensor_summary
 WITH (

@@ -2,7 +2,7 @@
 # =============================================================================
 # Databricks Integration - Deployment Script
 # =============================================================================
-# Orchestrates the full deployment of FSxN × S3 AP × Databricks integration.
+# Orchestrates the full deployment of FSx for ONTAP × S3 AP × Databricks integration.
 # Run this script after configuring parameters in params.example.json.
 #
 # Usage:
@@ -12,7 +12,7 @@
 #   - AWS CLI v2 configured
 #   - Terraform 1.5+ installed
 #   - Databricks CLI configured
-#   - FSxN base infrastructure deployed (shared/cloudformation/)
+#   - FSx for ONTAP base infrastructure deployed (shared/cloudformation/)
 # =============================================================================
 
 set -euo pipefail

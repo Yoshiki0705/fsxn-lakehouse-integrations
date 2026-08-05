@@ -2,7 +2,7 @@
 """
 FSx for ONTAP S3 Access Point Connectivity Verification Script.
 
-Verifies basic S3 API operations against an FSx S3 AP:
+Verifies basic S3 API operations against an FSx for ONTAP S3 AP:
 - ListObjectsV2
 - PutObject (optional)
 - GetObject
@@ -149,7 +149,7 @@ def test_delete_object(s3, bucket, key):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Verify FSx S3 AP connectivity")
+    parser = argparse.ArgumentParser(description="Verify FSx for ONTAP S3 AP connectivity")
     parser.add_argument("--ap-alias", required=True, help="S3 Access Point alias (ext-s3alias)")
     parser.add_argument("--region", required=True, help="AWS region")
     parser.add_argument("--prefix", default="", help="Object prefix to list")
@@ -163,7 +163,7 @@ def main():
     s3 = session.client("s3")
     bucket = args.ap_alias
 
-    print(f"=== FSx S3 AP Connectivity Verification ===")
+    print(f"=== FSx for ONTAP S3 AP Connectivity Verification ===")
     print(f"AP Alias: {bucket}")
     print(f"Region: {args.region}")
     print(f"Time: {datetime.now(timezone.utc).isoformat()}")

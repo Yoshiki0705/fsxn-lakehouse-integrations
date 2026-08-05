@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-generate-sample-data.py - Generate sample structured data for FSxN Lakehouse integrations.
+generate-sample-data.py - Generate sample structured data for FSx for ONTAP Lakehouse integrations.
 
 Creates datasets for testing Snowflake External Tables and Iceberg Tables:
 - bronze/transactions/  — Parquet (50k rows): transaction_id, timestamp, amount, category, merchant, customer_id
@@ -279,11 +279,11 @@ def write_products(df: pd.DataFrame, output_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def upload_to_s3(output_dir: Path, s3_ap_alias: str, region: str) -> None:
-    """Print aws s3 sync commands for uploading to FSxN via S3 Access Point."""
+    """Print aws s3 sync commands for uploading to FSx for ONTAP via S3 Access Point."""
     print(f"\n{'─' * 60}")
     print("S3 Access Point Upload Commands")
     print(f"{'─' * 60}")
-    print(f"\n# Sync all data to FSxN via S3 Access Point:")
+    print(f"\n# Sync all data to FSx for ONTAP via S3 Access Point:")
     print(f"aws s3 sync {output_dir}/bronze s3://{s3_ap_alias}/bronze/ --region {region}")
     print(f"aws s3 sync {output_dir}/silver s3://{s3_ap_alias}/silver/ --region {region}")
     print(f"\n# Or upload individual datasets:")
@@ -305,7 +305,7 @@ def upload_to_s3(output_dir: Path, s3_ap_alias: str, region: str) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate sample structured data for FSxN Lakehouse integrations",
+        description="Generate sample structured data for FSx for ONTAP Lakehouse integrations",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -347,7 +347,7 @@ Examples:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("FSxN Lakehouse — Sample Data Generator")
+    print("FSx for ONTAP Lakehouse — Sample Data Generator")
     print("=" * 60)
     print(f"  Rows per dataset : {args.rows:,}")
     print(f"  Output directory : {output_dir.resolve()}")
@@ -397,7 +397,7 @@ Examples:
         print(f"  ├── silver/customers/customers.csv")
     if fmt in ("all", "json"):
         print(f"  └── bronze/events/events.ndjson")
-    print(f"\nTo upload to FSxN via NFS mount:")
+    print(f"\nTo upload to FSx for ONTAP via NFS mount:")
     print(f"  cp -r {output_dir}/* /mnt/fsxn/<volume>/")
     print(f"\nTo upload via S3 Access Point:")
     print(f"  aws s3 sync {output_dir} s3://<s3ap-alias>/ --region {args.region}")

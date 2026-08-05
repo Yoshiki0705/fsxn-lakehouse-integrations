@@ -4,7 +4,7 @@
 # =============================================================================
 # Deploys CloudFormation stack (IAM Role for Snowflake Storage Integration).
 #
-# IMPORTANT: FSxN S3 Access Points are created SEPARATELY via:
+# IMPORTANT: FSx for ONTAP S3 Access Points are created SEPARATELY via:
 #   aws fsx create-and-attach-s3-access-point --name <name> --type ONTAP \
 #     --ontap-configuration VolumeId=<vol-id>,FileSystemIdentity='{...}'
 #
@@ -25,7 +25,7 @@
 # Prerequisites:
 #   - AWS CLI v2 configured with appropriate permissions
 #   - params.json with S3AccessPointArn filled in (copy from params.example.json)
-#   - FSxN S3 Access Point already created via aws fsx CLI
+#   - FSx for ONTAP S3 Access Point already created via aws fsx CLI
 # =============================================================================
 
 set -euo pipefail
@@ -75,7 +75,7 @@ Examples:
   ./deploy.sh --profile my-aws-profile
 
 Prerequisites:
-  1. Create FSxN S3 Access Point first:
+  1. Create FSx for ONTAP S3 Access Point first:
      aws fsx create-and-attach-s3-access-point --name snowflake-test --type ONTAP \
        --ontap-configuration 'VolumeId=fsvol-xxx,FileSystemIdentity={Type=UNIX,UnixUser={Name=root}}'
 
@@ -167,7 +167,7 @@ SNOWFLAKE_SQS_ARN=$(jq -r '.SnowflakeSqsArn // ""' "${PARAMS_FILE}")
 
 # Validate required parameters
 [[ -n "${S3_AP_ARN}" && "${S3_AP_ARN}" != "<"* ]] || \
-    error "S3AccessPointArn not configured in params.json.\n  Set the ARN of your existing FSxN S3 Access Point.\n  Example: arn:aws:s3:ap-northeast-1:123456789012:accesspoint/snowflake-test\n\n  Create one first with:\n    aws fsx create-and-attach-s3-access-point --name <name> --type ONTAP \\\\\n      --ontap-configuration VolumeId=<vol-id>,FileSystemIdentity='{Type=UNIX,UnixUser={Name=root}}'"
+    error "S3AccessPointArn not configured in params.json.\n  Set the ARN of your existing FSx for ONTAP S3 Access Point.\n  Example: arn:aws:s3:ap-northeast-1:123456789012:accesspoint/snowflake-test\n\n  Create one first with:\n    aws fsx create-and-attach-s3-access-point --name <name> --type ONTAP \\\\\n      --ontap-configuration VolumeId=<vol-id>,FileSystemIdentity='{Type=UNIX,UnixUser={Name=root}}'"
 
 log "Parameters loaded from params.json"
 info "  EnvironmentName:     ${ENVIRONMENT_NAME}"

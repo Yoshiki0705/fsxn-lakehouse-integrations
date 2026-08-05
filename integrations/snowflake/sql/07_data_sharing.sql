@@ -1,5 +1,5 @@
 -- =============================================================================
--- 07 - Secure Data Sharing with FSxN
+-- 07 - Secure Data Sharing with FSx for ONTAP
 -- =============================================================================
 -- Demonstrates Snowflake Secure Data Sharing using data stored on FSx for
 -- NetApp ONTAP via S3 Access Point. Implements multi-layer security:
@@ -23,7 +23,7 @@
 --   │ - PII redacted   │                      │ - Copy to own    │
 --   └─────────────────┘                      └─────────────────┘
 --
--- Key Principle: Data remains on FSxN. Snowflake reads via S3 AP at query time.
+-- Key Principle: Data remains on FSx for ONTAP. Snowflake reads via S3 AP at query time.
 -- Consumers query the Share — no data duplication occurs.
 --
 -- Prerequisites:
@@ -43,7 +43,7 @@ USE SCHEMA GOLD;
 -- =============================================================================
 -- Aggregates raw transaction data by date and category.
 -- This serves as the source for the secure shared view.
--- Data is read from FSxN via S3 AP at query time (no materialization).
+-- Data is read from FSx for ONTAP via S3 AP at query time (no materialization).
 -- =============================================================================
 
 CREATE OR REPLACE VIEW DAILY_REVENUE AS
@@ -103,7 +103,7 @@ WHERE
 -- =============================================================================
 -- 3. Product Catalog Secure View (Filtered for Sharing)
 -- =============================================================================
--- Shares active product information from Iceberg Table on FSxN.
+-- Shares active product information from Iceberg Table on FSx for ONTAP.
 -- Excludes internal pricing tiers and inactive products.
 -- =============================================================================
 
@@ -124,7 +124,7 @@ WHERE is_active = TRUE;
 -- =============================================================================
 -- The Share is a named object that packages views for external consumption.
 -- No data is copied — consumers query the producer's compute or their own
--- warehouse against the same underlying FSxN data via S3 AP.
+-- warehouse against the same underlying FSx for ONTAP data via S3 AP.
 --
 -- Architecture:
 --   Consumer Query → Snowflake Share → Secure View → External Table
@@ -132,7 +132,7 @@ WHERE is_active = TRUE;
 -- =============================================================================
 
 CREATE OR REPLACE SHARE FSXN_LAKEHOUSE_SHARE
-    COMMENT = 'FSxN Lakehouse data products for partner access — REQ-5';
+    COMMENT = 'FSx for ONTAP Lakehouse data products for partner access — REQ-5';
 
 -- =============================================================================
 -- 5. Grant Privileges to Share
@@ -288,7 +288,7 @@ FROM DAILY_REVENUE_SHARED;
 -- =============================================================================
 -- 10. Security Model Summary (Design §3.2)
 -- =============================================================================
--- Combined access control layers for FSxN + Snowflake Data Sharing:
+-- Combined access control layers for FSx for ONTAP + Snowflake Data Sharing:
 --
 -- ┌─────────────────────────────────────────────────────────────────────────┐
 -- │ Layer │ Mechanism                │ What It Controls                      │
@@ -313,7 +313,7 @@ FROM DAILY_REVENUE_SHARED;
 --                 → FSx for ONTAP Volume (Layer 1 — export policy)
 --
 -- Benefits of this architecture:
---   - Zero data duplication: consumers read from FSxN at query time
+--   - Zero data duplication: consumers read from FSx for ONTAP at query time
 --   - Instant revocation: remove account from share = immediate cutoff
 --   - Audit trail at every layer (CloudTrail, Snowflake ACCESS_HISTORY)
 --   - ONTAP FlexClone available for consumer-specific data copies if needed

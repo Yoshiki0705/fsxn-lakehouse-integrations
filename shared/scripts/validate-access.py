@@ -70,7 +70,7 @@ def color_skip(text):
 
 def create_parser():
     parser = argparse.ArgumentParser(
-        description="Validate S3 Access Point connectivity and permissions for FSxN + Snowflake"
+        description="Validate S3 Access Point connectivity and permissions for FSx for ONTAP + Snowflake"
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--access-point-alias", help="S3 Access Point alias")
@@ -293,7 +293,7 @@ def main():
 
     # Header
     print(f"\n{Colors.BOLD}{'='*64}{Colors.RESET}")
-    print(f"{Colors.BOLD}  FSxN S3 Access Point Validation (Snowflake Integration){Colors.RESET}")
+    print(f"{Colors.BOLD}  FSx for ONTAP S3 Access Point Validation (Snowflake Integration){Colors.RESET}")
     print(f"{Colors.BOLD}{'='*64}{Colors.RESET}")
     print(f"  {Colors.CYAN}Target:{Colors.RESET}  {bucket}")
     print(f"  {Colors.CYAN}Region:{Colors.RESET}  {args.region}")

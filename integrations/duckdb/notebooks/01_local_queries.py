@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-FSxN DuckDB Integration — Local Query Verification
+FSx for ONTAP DuckDB Integration — Local Query Verification
 
 Configures DuckDB httpfs for S3 Access Point and executes analytical queries
-on FSxN data. Records execution time and memory usage.
+on FSx for ONTAP data. Records execution time and memory usage.
 
 Prerequisites:
     pip install duckdb boto3
@@ -76,7 +76,7 @@ def run_query(conn: duckdb.DuckDBPyConnection, label: str, query: str) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="DuckDB local queries on FSxN S3 AP")
+    parser = argparse.ArgumentParser(description="DuckDB local queries on FSx for ONTAP S3 AP")
     parser.add_argument("--ap-alias", default=None, help="S3 AP alias")
     parser.add_argument("--region", default="ap-northeast-1")
     parser.add_argument("--output", default="tests/results/local_query_results.json")
@@ -96,7 +96,7 @@ def main():
         return
 
     print("=" * 60)
-    print("FSxN DuckDB Integration — Local Query Verification")
+    print("FSx for ONTAP DuckDB Integration — Local Query Verification")
     print("=" * 60)
     print(f"S3 AP Alias: {ap_alias}")
     print(f"Region:      {args.region}")

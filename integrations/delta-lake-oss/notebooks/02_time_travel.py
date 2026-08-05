@@ -1,7 +1,7 @@
 """
-FSxN Delta Lake OSS — Time Travel Verification
+FSx for ONTAP Delta Lake OSS — Time Travel Verification
 
-Queries historical versions of Delta tables on FSxN.
+Queries historical versions of Delta tables on FSx for ONTAP.
 Demonstrates versionAsOf, timestampAsOf, and RESTORE TABLE.
 
 Usage:
@@ -29,7 +29,7 @@ def main():
     results = []
 
     print("=" * 60)
-    print("FSxN Delta Lake OSS — Time Travel Verification")
+    print("FSx for ONTAP Delta Lake OSS — Time Travel Verification")
     print("=" * 60)
 
     # Get current version info

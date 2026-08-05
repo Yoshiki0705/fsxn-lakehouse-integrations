@@ -29,6 +29,6 @@ output "catalog_name" {
 }
 
 output "cluster_policy_id" {
-  description = "Cluster Policy ID for FSxN access"
+  description = "Cluster Policy ID for FSx for ONTAP access"
   value       = databricks_cluster_policy.fsxn_access.id
 }

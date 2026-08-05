@@ -1,13 +1,13 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  FSxN Lakehouse Integration — Delta Lake OSS Verification Stack.
+  FSx for ONTAP Lakehouse Integration — Delta Lake OSS Verification Stack.
   Creates S3 Access Point (VPC-scoped), IAM Role for EMR Instance Profile,
   and supporting infrastructure for delta-spark + delta-rs verification.
 
 Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
-    Description: VPC ID (same VPC as FSxN)
+    Description: VPC ID (same VPC as FSx for ONTAP)
 
   FileSystemId:
     Type: String

@@ -4,10 +4,10 @@ Pre-signed URL Accessibility Test Script
 ==========================================
 
 Tests that GET_PRESIGNED_URL() generates valid, accessible URLs from
-Snowflake Directory Tables backed by FSxN S3 Access Points.
+Snowflake Directory Tables backed by FSx for ONTAP S3 Access Points.
 
-NOTE: AWS documentation states that Presign is "Not supported" for FSxN S3
-Access Points. However, testing confirms it works in practice with FSxN S3 AP.
+NOTE: AWS documentation states that Presign is "Not supported" for FSx for ONTAP S3
+Access Points. However, testing confirms it works in practice with FSx for ONTAP S3 AP.
 
 Checks:
   - GET_PRESIGNED_URL generates valid URLs from Directory Table

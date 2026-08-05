@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # =============================================================================
-# FSxN Athena Integration — Resource Cleanup
+# FSx for ONTAP Athena Integration — Resource Cleanup
 # =============================================================================
 # Deletes all resources created during verification:
 #   - Athena workgroup (and saved queries)
 #   - Glue database, tables, crawler
 #   - CloudFormation stack
-#   - Test data on FSxN (optional)
+#   - Test data on FSx for ONTAP (optional)
 #
 # Usage:
 #   ./cleanup.sh [--region ap-northeast-1] [--env dev] [--delete-data]
@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "============================================"
-echo "FSxN Athena Integration — Cleanup"
+echo "FSx for ONTAP Athena Integration — Cleanup"
 echo "============================================"
 echo "Region:      ${REGION}"
 echo "Environment: ${ENVIRONMENT}"
@@ -96,7 +96,7 @@ aws cloudformation wait stack-delete-complete \
 # Step 5: Delete test data (optional)
 if [[ "${DELETE_DATA}" == "true" ]]; then
   MOUNT_POINT=$(jq -r '.NfsMountPoint // "/mnt/fsxn"' "${PARAMS_FILE}" 2>/dev/null || echo "/mnt/fsxn")
-  echo "🗑️  Deleting test data from FSxN (${MOUNT_POINT})..."
+  echo "🗑️  Deleting test data from FSx for ONTAP (${MOUNT_POINT})..."
   if mountpoint -q "${MOUNT_POINT}" 2>/dev/null; then
     rm -rf "${MOUNT_POINT}/transactions" "${MOUNT_POINT}/customers" "${MOUNT_POINT}/events" "${MOUNT_POINT}/gold"
     echo "  ✅ Test data deleted"
