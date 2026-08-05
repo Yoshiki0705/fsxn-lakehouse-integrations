@@ -62,7 +62,7 @@
 3. DataSync を FlexClone ボリュームから実行
 4. 本番ワークロードは無影響
 
-> **本番影響回避** (FSx for ONTAP Architect lens): 製造現場では、本番ファイルシステムへの I/O 影響を回避するため、Snapshot ベースのステージングが必須です。DataSync クローリングが OT システムのレイテンシ要件に影響を与えないようにします。
+> **本番影響回避**: 製造現場では、本番ファイルシステムへの I/O 影響を回避するため、Snapshot ベースのステージングが必須です。DataSync クローリングが OT システムのレイテンシ要件に影響を与えないようにします。
 
 ### Q6: Snowflake で DataSync を使うべきか、FSx for ONTAP S3 AP 直接を使うべきか？
 
@@ -120,7 +120,7 @@ graph TD
 | OT/IT 分離 | DataSync は FSx for ONTAP NFS への VPC アクセスが必要 | FSx for ONTAP を IT ネットワークに配置、OT → IT はエッジバッファリング経由 |
 | 帯域幅制限 | 大規模初回同期が帯域を消費 | 夜間バッチ同期、または Snapshot 輸送 → DataSync（段階的） |
 
-> **OT/IT 分離パターン** (OT Network Security Specialist lens): 多くの工場では、DataSync を IT ネットワーク内の FSx for ONTAP に対して実行し、OT システムは FPolicy または edge gateway 経由でデータを IT FSx for ONTAP に送信します。直接 OT-to-DataSync は一般的ではありません。
+> **OT/IT 分離パターン**: 多くの工場では、DataSync を IT ネットワーク内の FSx for ONTAP に対して実行し、OT システムは FPolicy または edge gateway 経由でデータを IT FSx for ONTAP に送信します。直接 OT-to-DataSync は一般的ではありません。
 
 ### エッジバッファリングパターン
 
@@ -206,7 +206,7 @@ DataSync 操作を CloudTrail で記録:
 | 自動車 OEM 要件 | サプライヤーデータを OEM 指定リージョンに配置 | DataSync 宛先 S3 バケットを OEM の Databricks/分析基盤と同一リージョンに作成 |
 | ITAR/EAR（防衛関連） | 技術データの米国外アクセス制限 | GovCloud リージョン使用。S3 バケットポリシーでリージョン制限 |
 
-> **データ主権** (Data Sovereignty / Compliance Specialist lens): グローバル自動車サプライチェーンでは、同一部品のデータが複数リージョンに存在します。DataSync タスクはリージョン内同期（同一リージョン FSx for ONTAP → S3）に限定し、クロスリージョン分析が必要な場合は S3 Cross-Region Replication で同期後のデータを転送してください。DataSync 自体のクロスリージョン転送も技術的に可能ですが、データ主権の観点からリージョン内完結を推奨します。
+> **データ主権**: グローバル自動車サプライチェーンでは、同一部品のデータが複数リージョンに存在します。DataSync タスクはリージョン内同期（同一リージョン FSx for ONTAP → S3）に限定し、クロスリージョン分析が必要な場合は S3 Cross-Region Replication で同期後のデータを転送してください。DataSync 自体のクロスリージョン転送も技術的に可能ですが、データ主権の観点からリージョン内完結を推奨します。
 
 ### データ品質検証
 
@@ -226,7 +226,7 @@ FSx for ONTAP → DataSync → S3（raw zone）
 - NULL 比率の閾値超過検知
 - タイムスタンプの範囲検証（未来日付・古すぎるデータの排除）
 
-> **品質ゲート** (Data Reliability Engineer lens): DataSync は転送の整合性（バイトレベル一貫性）を保証しますが、**ビジネスレベルの品質**は保証しません。ソース側のファイル破損、不完全な書き込み（NFS 側で書き込み途中のファイル）、スキーマドリフトは DataSync を通過します。S3 到達後に Glue Data Quality ルールまたは dbt source freshness テストで品質ゲートを設けてください。Snapshot ステージングパターン（Phase 2）を使えば「書き込み途中」の問題は回避できますが、スキーマドリフトと NULL 異常は別途検出が必要です。
+> **品質ゲート**: DataSync は転送の整合性（バイトレベル一貫性）を保証しますが、**ビジネスレベルの品質**は保証しません。ソース側のファイル破損、不完全な書き込み（NFS 側で書き込み途中のファイル）、スキーマドリフトは DataSync を通過します。S3 到達後に Glue Data Quality ルールまたは dbt source freshness テストで品質ゲートを設けてください。Snapshot ステージングパターン（Phase 2）を使えば「書き込み途中」の問題は回避できますが、スキーマドリフトと NULL 異常は別途検出が必要です。
 
 ## このガイドが必要な場面
 
@@ -334,13 +334,13 @@ aws datasync describe-task-execution --task-execution-arn <EXECUTION_ARN>
 | **Phase 4**: モニタリング/コスト最適化 | 運用品質向上 | S3 Lifecycle ルール、includes/excludes フィルタ最適化、コストダッシュボード | 月次コスト目標達成、不要データ自動階層化 | 1週間 |
 | **Phase 5**: マルチボリューム/DR | 本番拡張 | 複数ボリューム並列同期、クロスリージョン DR、障害復旧テスト | マルチボリューム安定稼働、RPO/RTO 達成確認 | 2-4週間 |
 
-> **パイロットライン導入** (Manufacturing DX Specialist lens): 自動車製造環境では Phase 1 を**パイロットライン**（単一生産ライン）で実施してください。全工場展開は Phase 5 以降です。パイロットラインの選定基準: データ量が代表的、品質検査画像を含む、MES/SCADA 連携あり。IATF 16949 の変更管理プロセスに従い、パイロット結果を品質会議でレビュー後に横展開を承認します。
+> **パイロットライン導入**: 自動車製造環境では Phase 1 を**パイロットライン**（単一生産ライン）で実施してください。全工場展開は Phase 5 以降です。パイロットラインの選定基準: データ量が代表的、品質検査画像を含む、MES/SCADA 連携あり。IATF 16949 の変更管理プロセスに従い、パイロット結果を品質会議でレビュー後に横展開を承認します。
 
-> **可観測性** (SRE / Observability Engineer lens): Phase 3 → Phase 4 の移行では、CloudWatch ダッシュボードに `BytesTransferred`、`FilesTransferred`、`TaskExecutionStatus`、`Duration` の 4 メトリクスを必ず含めてください。Phase 5 でのマルチボリューム展開前に、単一ボリュームでの安定稼働を最低 2 週間確認することを推奨します。
+> **可観測性**: Phase 3 → Phase 4 の移行では、CloudWatch ダッシュボードに `BytesTransferred`、`FilesTransferred`、`TaskExecutionStatus`、`Duration` の 4 メトリクスを必ず含めてください。Phase 5 でのマルチボリューム展開前に、単一ボリュームでの安定稼働を最低 2 週間確認することを推奨します。
 
-> **Infrastructure as Code** (Platform Engineering / IaC lens): DataSync タスクの includes/excludes パターンは CloudFormation / CDK でバージョン管理してください。「キュレート済みサブセット」の定義がコードとして管理されることで、運用チームの属人化を防ぎ、変更履歴を追跡できます。
+> **Infrastructure as Code**: DataSync タスクの includes/excludes パターンは CloudFormation / CDK でバージョン管理してください。「キュレート済みサブセット」の定義がコードとして管理されることで、運用チームの属人化を防ぎ、変更履歴を追跡できます。
 
-> **コスト最適化** (Cost Optimization Specialist lens): Phase 4 では S3 Intelligent-Tiering を検討してください。DataSync 同期先のデータは書き込み後にアクセス頻度が急速に低下する傾向があり、30 日未経過データを Standard、30 日超を IA に自動階層化することで月額 30-40% のストレージコスト削減が可能です。
+> **コスト最適化**: Phase 4 では S3 Intelligent-Tiering を検討してください。DataSync 同期先のデータは書き込み後にアクセス頻度が急速に低下する傾向があり、30 日未経過データを Standard、30 日超を IA に自動階層化することで月額 30-40% のストレージコスト削減が可能です。
 
 ## 検証ステータスサマリ
 
@@ -406,9 +406,9 @@ aws datasync describe-task-execution --task-execution-arn <EXECUTION_ARN>
 7. **IAM ポリシーを最小権限で設計** — DataSync サービスロールには対象 S3 プレフィックスのみの書き込み権限を付与
 8. **タスク実行ログを保持** — CloudTrail + S3 アクセスログで監査証跡を確保
 
-> **最小権限 IAM** (IAM Security Architect lens): DataSync サービスロールの IAM ポリシーでは、`s3:PutObject` の Resource を `arn:aws:s3:::<bucket>/fsxn-sync/*` のように対象プレフィックスに限定してください。`s3:*` やバケット全体への書き込み権限は過剰です。また、S3 バケットポリシーで DataSync サービスロール以外からの書き込みを明示的に Deny することで、データ改ざんリスクを低減できます。
+> **最小権限 IAM**: DataSync サービスロールの IAM ポリシーでは、`s3:PutObject` の Resource を `arn:aws:s3:::<bucket>/fsxn-sync/*` のように対象プレフィックスに限定してください。`s3:*` やバケット全体への書き込み権限は過剰です。また、S3 バケットポリシーで DataSync サービスロール以外からの書き込みを明示的に Deny することで、データ改ざんリスクを低減できます。
 
-> **データ系統追跡** (Data Governance / Lineage Engineer lens): DataSync で同期されたデータの系統（lineage）追跡には、S3 オブジェクトタグに `source_volume`、`sync_timestamp`、`datasync_task_arn` を付与することを推奨します。これにより、下流の Databricks UC や Lake Formation でデータの出自を追跡でき、規制要件（データ保持、削除権）への対応が容易になります。
+> **データ系統追跡**: DataSync で同期されたデータの系統（lineage）追跡には、S3 オブジェクトタグに `source_volume`、`sync_timestamp`、`datasync_task_arn` を付与することを推奨します。これにより、下流の Databricks UC や Lake Formation でデータの出自を追跡でき、規制要件（データ保持、削除権）への対応が容易になります。
 
 ## Databricks UC との統合
 
@@ -432,7 +432,7 @@ CREATE EXTERNAL VOLUME catalog.schema.fsxn_files
 -- Volumes 経由: /Volumes/catalog/schema/fsxn_files/sensor-data/*.parquet
 ```
 
-> **二重認可設計** (Databricks Governance Architect lens): External Location 登録時には、UC の Storage Credential を IAM Role ベースで構成し、S3 バケットポリシーと合わせて二重認可を実装してください。DataSync が書き込むプレフィックスと Databricks が読み取るプレフィックスを同一にする場合、Databricks 側の IAM Role には `s3:GetObject` / `s3:ListBucket` のみを付与し、書き込み権限は付与しないでください。
+> **二重認可設計**: External Location 登録時には、UC の Storage Credential を IAM Role ベースで構成し、S3 バケットポリシーと合わせて二重認可を実装してください。DataSync が書き込むプレフィックスと Databricks が読み取るプレフィックスを同一にする場合、Databricks 側の IAM Role には `s3:GetObject` / `s3:ListBucket` のみを付与し、書き込み権限は付与しないでください。
 
 > UC Volumes（2024年導入）は External Tables より軽量なファイルアクセスを提供し、`/Volumes/` パス経由でファイルを直接参照できます。ETL パイプラインでファイルを段階的に処理する場合、Volumes は External Location より管理が簡単です。
 
@@ -454,7 +454,7 @@ df = spark.readStream.format("cloudFiles") \
     .load("s3://<BUCKET>/fsxn-sync/sensor-data/")
 ```
 
-> **Auto Loader 通知モード** (Data Engineering SA lens): `cloudFiles.useNotifications = true`（通知モード）は S3 Event Notifications に依存するため、FSx for ONTAP S3 AP 直接では動作しません。DataSync → 標準 S3 パスの主要なメリットの一つは、この通知モードが利用可能になることです。リスティングモードは FSx for ONTAP S3 AP でも動作しますが、ListObjectsV2 の高レイテンシ（30-80x）により大規模ディレクトリで性能問題が発生します。
+> **Auto Loader 通知モードに関する補足**: `cloudFiles.useNotifications = true`（通知モード）は S3 Event Notifications に依存するため、FSx for ONTAP S3 AP 直接では動作しません。DataSync → 標準 S3 パスの主要なメリットの一つは、この通知モードが利用可能になることです。リスティングモードは FSx for ONTAP S3 AP でも動作し、リスティングのレイテンシは 5,000 オブジェクトまでネイティブ S3 比 1.3〜1.4 倍と実測されています（[BLK-006](./blocker-tracker.md)）。それより大規模なディレクトリでの挙動は未測定のため、規模の大きい環境でリスティングモードに依存する場合は事前に検証してください。
 
 ## Delta Lake / Iceberg との統合
 

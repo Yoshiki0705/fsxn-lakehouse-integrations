@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FSxN Glue Integration — ETL Pipeline Orchestrator
+FSx for ONTAP Glue Integration — ETL Pipeline Orchestrator
 
 Orchestrates the full ETL pipeline:
   1. Run Glue Crawler (schema discovery)
@@ -162,7 +162,7 @@ def run_quality_check(glue_client, database_name: str, tables: list) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Orchestrate FSxN Glue ETL pipeline")
+    parser = argparse.ArgumentParser(description="Orchestrate FSx for ONTAP Glue ETL pipeline")
     parser.add_argument("--skip-crawler", action="store_true", help="Skip crawler phase")
     parser.add_argument("--skip-quality", action="store_true", help="Skip quality check phase")
     parser.add_argument("--region", default="ap-northeast-1")
@@ -178,7 +178,7 @@ def main():
     silver_to_gold_job = params.get("SilverToGoldJob", "fsxn-silver-to-gold-dev")
 
     print("=" * 60)
-    print("FSxN Glue Integration — ETL Pipeline Orchestrator")
+    print("FSx for ONTAP Glue Integration — ETL Pipeline Orchestrator")
     print("=" * 60)
     print(f"Region:             {region}")
     print(f"Crawler:            {crawler_name}")

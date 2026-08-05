@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-FSxN DuckDB Integration — Connectivity Validation
+FSx for ONTAP DuckDB Integration — Connectivity Validation
 
-Verifies DuckDB httpfs can connect to FSxN S3 AP and Lambda is deployed.
+Verifies DuckDB httpfs can connect to FSx for ONTAP S3 AP and Lambda is deployed.
 
 Usage:
     python validate_connectivity.py [--region ap-northeast-1]
@@ -115,7 +115,7 @@ def main():
     ap_alias = params.get("S3AccessPointAlias", "")
 
     print("=" * 60)
-    print("FSxN DuckDB Integration — Connectivity Validation")
+    print("FSx for ONTAP DuckDB Integration — Connectivity Validation")
     print("=" * 60)
     print(f"Region:   {region}")
     print(f"Lambda:   {function_name}")

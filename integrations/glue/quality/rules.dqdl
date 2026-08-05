@@ -1,5 +1,5 @@
 # =============================================================================
-# FSxN Glue Integration — Data Quality Rules (DQDL)
+# FSx for ONTAP Glue Integration — Data Quality Rules (DQDL)
 # =============================================================================
 # AWS Glue Data Quality Definition Language (DQDL) rules for validating
 # data across the medallion architecture layers.

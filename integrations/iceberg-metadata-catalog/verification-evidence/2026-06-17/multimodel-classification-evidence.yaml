@@ -6,7 +6,7 @@
 
 verification_metadata:
   date: "2026-06-17"
-  environment: "Local (boto3) → Bedrock + FSx S3 AP"
+  environment: "Local (boto3) → Bedrock + FSx for ONTAP S3 AP"
   region: "ap-northeast-1"
   s3_access_point: "<YOUR-AP-ALIAS-ext-s3alias>"
   models_tested:

@@ -356,12 +356,12 @@ FSx for ONTAP S3 AP は S3 Event Notifications をサポートしないため、
 |---|---|---|---|---|
 | **FPolicy → Lambda → SNS → Snowpipe** | FPolicy がファイル変更を検知 → Lambda が SNS 通知送信 → Snowpipe REST API がロードをトリガー | 秒（<30秒） | 中 | [FPolicy ドキュメント](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
 | **Snowflake Task + COPY INTO** | スケジュール Task が定期的にステージから COPY INTO を実行 | 分（設定可能） | 低 | [Tasks ドキュメント](https://docs.snowflake.com/en/user-guide/tasks-intro) |
-
-> **FPolicy スループットに関する注意**: FPolicy は NFS/SMB I/O パスに最小限のレイテンシを追加します（パススルーモードで通常 1 操作あたり <1ms）。ただし、高頻度ファイル書き込みワークロード（毎秒数千ファイル）では、本番デプロイ前に FSx for ONTAP ファイルシステムへのスループット影響を検証してください。
 | **Snowflake Task + ALTER STAGE REFRESH** | スケジュール Task が Directory Table メタデータを更新 | 分 | 低 | [Tasks ドキュメント](https://docs.snowflake.com/en/user-guide/tasks-intro) |
 | **External function + Lambda** | Snowflake が Lambda を呼び出して新規ファイルを確認 | オンデマンド | 中 | [External functions](https://docs.snowflake.com/en/sql-reference/external-functions) |
 | **AWS Glue → Snowflake** | Glue が FSx for ONTAP S3 AP から読み取り → コネクタ経由で Snowflake に書き込み | 分 | 中 | [Glue + FSx チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
 | **Snowpipe REST API（手動トリガー）** | アプリケーションがファイルリスト付きで Snowpipe REST API を呼び出し | 秒 | 低 | [Snowpipe REST](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-rest-overview) |
+
+> **FPolicy スループットに関する注意**: FPolicy は NFS/SMB I/O パスに最小限のレイテンシを追加します（パススルーモードで通常 1 操作あたり <1ms）。ただし、高頻度ファイル書き込みワークロード（毎秒数千ファイル）では、本番デプロイ前に FSx for ONTAP ファイルシステムへのスループット影響を検証してください。
 
 **推奨本番パターン:**
 ```

@@ -71,12 +71,12 @@ comparison_with_athena:
 known_limitations:
   - "Requires internet-origin S3 AP (same as Athena)"
   - "Redshift Serverless has cold start overhead (~2-3s for first query)"
-  - "Query results stay in Redshift (not written back to FSxN)"
+  - "Query results stay in Redshift (not written back to FSx for ONTAP)"
   - "Federated JOIN with local tables not tested in this run"
 
 # Notes
 notes: |
-  Redshift Spectrum successfully queries FSxN data via S3 AP using the same
+  Redshift Spectrum successfully queries FSx for ONTAP data via S3 AP using the same
   Glue Catalog tables as Athena. No session policy issues (AWS-native service).
   Pattern is identical to Athena: internet-origin AP + Glue Catalog + IAM role.
   Cleanup: Redshift Serverless deleted after verification to avoid costs.

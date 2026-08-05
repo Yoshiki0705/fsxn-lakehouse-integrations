@@ -169,7 +169,7 @@ sequenceDiagram
 | Failure Recovery | DataSync re-execution | DLQ reprocessing + checkpoint resume |
 | Recommended Use Case | Batch analytics, ML training data | Real-time quality inspection, alerts |
 
-> **Selection guidance** (Principal Cloud Data Architect lens): Most enterprise environments **use both paths together**. DataSync for bulk data (daily/hourly) sync, FPolicy for critical events only (quality defect detection, etc.) in real-time. Not all data needs to stream.
+> **Selection guidance**: Most enterprise environments **use both paths together**. DataSync for bulk data (daily/hourly) sync, FPolicy for critical events only (quality defect detection, etc.) in real-time. Not all data needs to stream.
 
 ---
 

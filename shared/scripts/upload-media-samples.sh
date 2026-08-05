@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# upload-media-samples.sh - Upload unstructured sample data to FSxN
+# upload-media-samples.sh - Upload unstructured sample data to FSx for ONTAP
 #
 # Generates and uploads sample media files for Snowflake Directory Table and
 # Snowpark UDF verification:
@@ -23,7 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMP_DIR="${SCRIPT_DIR}/../../.tmp/media-samples"
 REGION="${AWS_DEFAULT_REGION:-ap-northeast-1}"
 
-# Media paths on FSxN
+# Media paths on FSx for ONTAP
 MEDIA_PREFIX="media"
 IMAGES_PATH="${MEDIA_PREFIX}/images"
 DOCUMENTS_PATH="${MEDIA_PREFIX}/documents"
@@ -46,7 +46,7 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Upload sample unstructured media files to FSxN for Snowflake verification.
+Upload sample unstructured media files to FSx for ONTAP for Snowflake verification.
 
 Options:
   --access-point-alias ALIAS   S3 Access Point alias for upload
@@ -293,7 +293,7 @@ def create_pdf(filepath, title, pages=3):
             f"BT /F1 16 Tf 72 720 Td ({title}) Tj ET\n"
             f"BT /F1 12 Tf 72 680 Td (Page {page_num} of {pages}) Tj ET\n"
             f"BT /F1 10 Tf 72 640 Td "
-            f"(Generated for FSxN Lakehouse Integration Testing) Tj ET\n"
+            f"(Generated for FSx for ONTAP Lakehouse Integration Testing) Tj ET\n"
             f"BT /F1 10 Tf 72 600 Td "
             f"(Date: {datetime.now().strftime('%Y-%m-%d')}) Tj ET\n"
         )
@@ -394,7 +394,7 @@ def create_docx(filepath, title, paragraphs=5):
 
     for i in range(paragraphs):
         body_paragraphs += f'''
-    <w:p><w:r><w:t>Paragraph {i+1}: Sample content for FSxN Lakehouse Integration testing. '''
+    <w:p><w:r><w:t>Paragraph {i+1}: Sample content for FSx for ONTAP Lakehouse Integration testing. '''
         body_paragraphs += f'''Generated on {datetime.now().strftime("%Y-%m-%d")}.</w:t></w:r></w:p>'''
 
     document_xml = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -684,7 +684,7 @@ verify_local_output() {
 # =============================================================================
 main() {
     echo "============================================================"
-    echo " FSxN Lakehouse - Unstructured Media Sample Upload"
+    echo " FSx for ONTAP Lakehouse - Unstructured Media Sample Upload"
     echo "============================================================"
     echo ""
     echo "  Target paths:"

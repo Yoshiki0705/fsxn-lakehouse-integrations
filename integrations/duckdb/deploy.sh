@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =============================================================================
-# FSxN DuckDB Integration — Deployment Script
+# FSx for ONTAP DuckDB Integration — Deployment Script
 # =============================================================================
 # Builds DuckDB Lambda Layer, deploys CloudFormation stack, captures outputs,
 # and tests Lambda invocation.
@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "============================================"
-echo "FSxN DuckDB Integration Deployment"
+echo "FSx for ONTAP DuckDB Integration Deployment"
 echo "============================================"
 echo "Region:      ${REGION}"
 echo "Environment: ${ENVIRONMENT}"

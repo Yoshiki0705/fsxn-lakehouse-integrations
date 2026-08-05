@@ -16,13 +16,13 @@
 # Optional:
 #   --stack-name <name>       CloudFormation stack name (default: from params.json)
 #   --region <region>         AWS region (default: from params.json or ap-northeast-1)
-#   --nfs-mount <path>        NFS mount path for FSxN (default: /mnt/fsxn)
+#   --nfs-mount <path>        NFS mount path for FSx for ONTAP (default: /mnt/fsxn)
 #   --snowflake-account <id>  Snowflake account identifier (for snowsql)
 #   --profile <profile>       AWS CLI profile
 #   --dry-run                 Show what would be done without executing
 #   --skip-snowflake          Skip Snowflake cleanup
 #   --skip-aws                Skip AWS cleanup
-#   --skip-fsxn               Skip FSxN file cleanup
+#   --skip-fsxn               Skip FSx for ONTAP file cleanup
 #   --help                    Show this help message
 #
 # Examples:
@@ -98,25 +98,25 @@ Required:
 Optional:
   --stack-name <name>       CloudFormation stack name (default: from params.json)
   --region <region>         AWS region (default: from params.json or ap-northeast-1)
-  --nfs-mount <path>        NFS mount path for FSxN (default: /mnt/fsxn)
+  --nfs-mount <path>        NFS mount path for FSx for ONTAP (default: /mnt/fsxn)
   --snowflake-account <id>  Snowflake account identifier (for snowsql connection)
   --profile <profile>       AWS CLI profile
   --dry-run                 Show what would be done without executing
   --skip-snowflake          Skip Snowflake resource cleanup
   --skip-aws                Skip AWS resource cleanup
-  --skip-fsxn               Skip FSxN file cleanup
+  --skip-fsxn               Skip FSx for ONTAP file cleanup
   --help                    Show this help message
 
 Modes:
   soft (reversible):
     - Snowflake: Pause Snowpipe (PIPE_EXECUTION_PAUSED = TRUE)
     - AWS: Disable EventBridge rules
-    - FSxN: No action (files preserved)
+    - FSx for ONTAP: No action (files preserved)
 
   hard (irreversible):
     - Snowflake: Drop pipes, external tables, Iceberg tables, shares
     - AWS: Delete CloudFormation stacks (fpolicy-server, fpolicy-ingestion, fpolicy-routing)
-    - FSxN: Remove temp/test files (_validation_test/, test_event_*.json)
+    - FSx for ONTAP: Remove temp/test files (_validation_test/, test_event_*.json)
 
 Examples:
   # Preview cleanup actions
@@ -241,7 +241,7 @@ run_cmd() {
 # =============================================================================
 echo ""
 log "═══════════════════════════════════════════════════════════════"
-log " FSxN × Snowflake Integration — Resource Cleanup"
+log " FSx for ONTAP × Snowflake Integration — Resource Cleanup"
 log "═══════════════════════════════════════════════════════════════"
 echo ""
 info "  Mode:        ${MODE}"
@@ -628,16 +628,16 @@ _aws_hard_cleanup() {
 }
 
 # =============================================================================
-# Phase 3: FSxN File Cleanup
+# Phase 3: FSx for ONTAP File Cleanup
 # =============================================================================
 cleanup_fsxn() {
     echo ""
     log "───────────────────────────────────────────────────────────────"
-    log "Phase 3: FSxN File Cleanup"
+    log "Phase 3: FSx for ONTAP File Cleanup"
     log "───────────────────────────────────────────────────────────────"
 
     if [[ "${MODE}" == "soft" ]]; then
-        info "  Soft mode — no FSxN files removed."
+        info "  Soft mode — no FSx for ONTAP files removed."
         info "  Files are preserved for re-use."
         inc SKIPPED
         return
@@ -646,7 +646,7 @@ cleanup_fsxn() {
     # Hard mode: remove temp/test files
     if [[ ! -d "${NFS_MOUNT}" ]]; then
         warn "NFS mount not found: ${NFS_MOUNT}"
-        warn "Skipping FSxN file cleanup. Verify --nfs-mount path."
+        warn "Skipping FSx for ONTAP file cleanup. Verify --nfs-mount path."
         inc SKIPPED
         return
     fi
@@ -746,7 +746,7 @@ fi
 if [[ "${SKIP_FSXN}" != true ]]; then
     cleanup_fsxn
 else
-    info "Skipping FSxN cleanup (--skip-fsxn)"
+    info "Skipping FSx for ONTAP cleanup (--skip-fsxn)"
 fi
 
 # =============================================================================
@@ -762,7 +762,7 @@ info "  Dry Run:             ${DRY_RUN}"
 echo ""
 info "  Snowflake cleaned:   ${CLEANED_SNOWFLAKE} resource(s)"
 info "  AWS cleaned:         ${CLEANED_AWS} resource(s)"
-info "  FSxN cleaned:        ${CLEANED_FSXN} file(s)/dir(s)"
+info "  FSx for ONTAP cleaned:        ${CLEANED_FSXN} file(s)/dir(s)"
 info "  Skipped:             ${SKIPPED}"
 info "  Errors:              ${ERRORS}"
 echo ""

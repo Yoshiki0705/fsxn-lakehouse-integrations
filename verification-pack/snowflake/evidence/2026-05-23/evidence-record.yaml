@@ -42,7 +42,7 @@ results:
 root_cause: |
   Snowflake applies a session policy during AssumeRole that restricts
   s3:GetObject to standard S3 bucket ARN format (arn:aws:s3:::*/*).
-  FSx S3 AP uses regional ARN format (arn:aws:s3:region:account:accesspoint/name/object/*).
+  FSx for ONTAP S3 AP uses regional ARN format (arn:aws:s3:region:account:accesspoint/name/object/*).
   The session policy does not match the AP ARN for object-level operations.
   
   LIST succeeds because ListBucket uses bucket-level ARN (arn:aws:s3:::*)
@@ -57,11 +57,11 @@ comparison_with_databricks: |
 support_cases:
   - platform: "Snowflake"
     case_id: "REDACTED"
-    subject: "Storage Integration GetObject denied on FSx S3 AP"
+    subject: "Storage Integration GetObject denied on FSx for ONTAP S3 AP"
     status: "Open"
   - platform: "AWS"
     case_id: "REDACTED"
-    subject: "FSx S3 AP - Snowflake GetObject denied (session policy)"
+    subject: "FSx for ONTAP S3 AP - Snowflake GetObject denied (session policy)"
     status: "Open — AWS confirmed denial is from Snowflake session policy"
 
 workaround: "None available for Snowflake. Must wait for platform session policy update."

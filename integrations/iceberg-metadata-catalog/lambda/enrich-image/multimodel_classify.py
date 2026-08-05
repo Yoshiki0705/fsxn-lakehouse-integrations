@@ -328,7 +328,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     file_type = event.get("file_type", "image/jpeg")
     access_point_arn = event["access_point_arn"]
 
-    # Read image from FSx S3 AP
+    # Read image from FSx for ONTAP S3 AP
     s3_key = "/".join(file_path.split("/")[4:])
     s3_client = boto3.client("s3", region_name=REGION)
 

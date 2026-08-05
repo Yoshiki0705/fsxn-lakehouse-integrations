@@ -1,0 +1,195 @@
+# ListObjectsV2 Latency: FSx for ONTAP S3 Access Point vs Native S3
+#
+# Purpose: substantiate (or correct) the claim repeated across this repository
+# that ListObjectsV2 against an FSx for ONTAP S3 Access Point is "30-80x slower
+# than native S3 for small directories".
+#
+# Outcome: the 30-80x figure was NOT reproducible. See `conclusion` below.
+
+benchmark_id: "BENCH-S3AP-LIST-001"
+date_tested: "2026-08-05"
+region: "ap-northeast-1"
+harness: "shared/scripts/benchmark_list_objects.py"
+raw_data:
+  - "raw-flat.json"
+  - "raw-nested.json"
+
+environment:
+  aws_region: "ap-northeast-1"
+  fsx_file_system: "<FILE_SYSTEM_ID>"
+  fsx_deployment_type: "SINGLE_AZ_1"
+  fsx_storage_gb: 1024
+  fsx_storage_type: "SSD"
+  fsx_throughput_mbps: 128
+  fsx_disk_iops: 3072
+  svm: "<SVM_ID>"
+  volume: "<VOLUME_ID>"
+  volume_name: "verification_vol"
+  volume_security_style: "UNIX"
+  volume_size_gb: 1
+  ap_name: "snowflake-verification-ap"
+  ap_file_system_identity: "UNIX (root)"
+  native_s3_bucket: "<BENCHMARK_BUCKET>"
+  native_s3_class: "STANDARD"
+  client_location: "Local workstation over public internet (not in-VPC)"
+  client_sdk: "boto3 / botocore"
+
+methodology:
+  timed_region: |
+    Only the fully-paginated ListObjectsV2 loop is timed, using
+    time.perf_counter(). Client construction, credential resolution, and object
+    seeding are all outside the timed region.
+  warm_up: "One discarded list call per (target, object_count) before recorded trials."
+  trials_per_count: 5
+  statistic_reported: "median (also captured: mean, min, max, stdev)"
+  fairness_controls:
+    - "Identical object counts and identical key layout on both targets."
+    - "Same client process, same SDK, same region, same network path."
+    - "Both targets measured in the same run, minutes apart."
+    - "Retries disabled (max_attempts=1) so a slow call is measured, not retried."
+  object_body_size_bytes: 9
+  object_body_rationale: |
+    ListObjectsV2 returns metadata only, so object size does not affect listing
+    cost. Tiny bodies keep seeding fast and storage cost negligible.
+
+# ---------------------------------------------------------------------------
+# Result 1: flat layout (all objects in a single prefix)
+# ---------------------------------------------------------------------------
+results_flat_layout:
+  layout: "flat — all objects directly under one prefix"
+  measurements:
+    - object_count: 10
+      fsx_ontap_ap_median_ms: 37.5
+      fsx_ontap_ap_min_ms: 35.8
+      fsx_ontap_ap_max_ms: 37.9
+      fsx_ontap_ap_api_calls: 1
+      native_s3_median_ms: 27.3
+      native_s3_min_ms: 26.1
+      native_s3_max_ms: 30.0
+      native_s3_api_calls: 1
+      slowdown_factor: 1.4
+    - object_count: 100
+      fsx_ontap_ap_median_ms: 52.0
+      fsx_ontap_ap_min_ms: 49.2
+      fsx_ontap_ap_max_ms: 62.1
+      fsx_ontap_ap_api_calls: 1
+      native_s3_median_ms: 38.8
+      native_s3_min_ms: 36.8
+      native_s3_max_ms: 40.3
+      native_s3_api_calls: 1
+      slowdown_factor: 1.3
+    - object_count: 1000
+      fsx_ontap_ap_median_ms: 162.2
+      fsx_ontap_ap_min_ms: 154.4
+      fsx_ontap_ap_max_ms: 171.8
+      fsx_ontap_ap_api_calls: 2
+      native_s3_median_ms: 127.8
+      native_s3_min_ms: 124.2
+      native_s3_max_ms: 132.5
+      native_s3_api_calls: 1
+      slowdown_factor: 1.3
+    - object_count: 5000
+      fsx_ontap_ap_median_ms: 665.1
+      fsx_ontap_ap_min_ms: 650.6
+      fsx_ontap_ap_max_ms: 686.2
+      fsx_ontap_ap_api_calls: 6
+      native_s3_median_ms: 704.3
+      native_s3_min_ms: 646.3
+      native_s3_max_ms: 751.7
+      native_s3_api_calls: 5
+      slowdown_factor: 0.9
+
+# ---------------------------------------------------------------------------
+# Result 2: nested layout (two directory levels, 10 objects per leaf)
+# ---------------------------------------------------------------------------
+# Rationale: ONTAP maps S3 keys onto real filesystem paths, so a wide-and-flat
+# keyspace and a deep-and-narrow one could plausibly behave differently. This
+# layout emulates date-partitioned lakehouse data.
+results_nested_layout:
+  layout: "nested — two directory levels, fanout 10 per leaf directory"
+  measurements:
+    - object_count: 1000
+      fsx_ontap_ap_median_ms: 146.2
+      fsx_ontap_ap_min_ms: 143.9
+      fsx_ontap_ap_max_ms: 162.1
+      fsx_ontap_ap_api_calls: 2
+      native_s3_median_ms: 104.5
+      native_s3_min_ms: 93.1
+      native_s3_max_ms: 123.1
+      native_s3_api_calls: 1
+      slowdown_factor: 1.4
+    - object_count: 5000
+      fsx_ontap_ap_median_ms: 570.5
+      fsx_ontap_ap_min_ms: 564.2
+      fsx_ontap_ap_max_ms: 605.7
+      fsx_ontap_ap_api_calls: 6
+      native_s3_median_ms: 569.1
+      native_s3_min_ms: 505.6
+      native_s3_max_ms: 573.6
+      native_s3_api_calls: 5
+      slowdown_factor: 1.0
+
+# ---------------------------------------------------------------------------
+# Observations
+# ---------------------------------------------------------------------------
+observations:
+  - id: "OBS-1"
+    finding: "Measured slowdown is 0.9x-1.4x, not 30-80x."
+    detail: |
+      Across both layouts and all object counts tested (10 to 5000), the
+      FSx for ONTAP S3 Access Point listed objects within roughly 1.4x of the
+      native S3 bucket. At 5000 objects the Access Point was marginally faster
+      than native S3 in the flat layout (0.9x) and equal in the nested layout
+      (1.0x), which is within run-to-run variance rather than a real advantage.
+  - id: "OBS-2"
+    finding: "Layout (flat vs nested) had no material effect."
+    detail: |
+      At 1000 objects both layouts produced a 1.4x ratio; at 5000 objects both
+      produced 0.9-1.0x. Directory nesting did not introduce the penalty that
+      the filesystem-backed keyspace might have suggested.
+  - id: "OBS-3"
+    finding: "The Access Point returns fewer keys per page than native S3."
+    detail: |
+      With MaxKeys=1000 requested, native S3 returned 1000 objects in a single
+      API call, while the Access Point required 2 calls for the same 1000
+      objects, and 6 calls versus 5 at 5000 objects. Total wall time stayed
+      comparable, so this is an efficiency detail rather than a bottleneck, but
+      it means per-request API call counts should not be assumed identical when
+      estimating request costs or when a client caps pagination.
+  - id: "OBS-4"
+    finding: "Absolute numbers include public-internet round trip."
+    detail: |
+      Measurements were taken from a workstation over the public internet, so
+      roughly 20-25 ms of every figure is network round trip (visible in the
+      10-object native S3 case at 27 ms). An in-VPC client would see lower
+      absolute latency. Because both targets share the same network path, the
+      ratio between them is unaffected.
+
+# ---------------------------------------------------------------------------
+# Conclusion
+# ---------------------------------------------------------------------------
+conclusion:
+  claim_under_test: "ListObjectsV2 is 30-80x slower than native S3 for small directories"
+  verdict: "NOT REPRODUCED"
+  measured_range: "0.9x - 1.4x (median-to-median, 10-5000 objects, two layouts)"
+  action_taken: |
+    Documentation across the repository was corrected to report the measured
+    1.3-1.4x range and to link to this evidence record, replacing the
+    unsourced 30-80x figure.
+  caveats:
+    - "Single file system, single SVM, single volume, one region, one day."
+    - "Object counts tested up to 5000. Behaviour at 100k+ objects is untested."
+    - "Measured from outside the VPC; in-VPC absolute latency will be lower."
+    - "No concurrent-client load was applied; this is a single-threaded measurement."
+  possible_origin_of_original_claim: |
+    Not determined. The 30-80x figure predates this measurement and carries no
+    evidence record in this repository. Contributing factors could include
+    measurement via a CLI wrapper (process startup dominates short calls), a
+    file system in a degraded state, or platform improvements landing between
+    the original observation and this run. Recorded here as unexplained rather
+    than attributed, since no supporting data survives to compare against.
+  reproduce: |
+    python3 shared/scripts/benchmark_list_objects.py \
+      --ap-arn arn:aws:s3:<region>:<account>:accesspoint/<ap-name> \
+      --native-bucket <comparison-bucket> \
+      --counts 10,100,1000,5000 --trials 5 --layout flat --teardown

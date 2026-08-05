@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-FSxN DuckDB Integration — Write-Back Verification
+FSx for ONTAP DuckDB Integration — Write-Back Verification
 
-Writes DuckDB query results back to FSxN via S3 AP using COPY command.
+Writes DuckDB query results back to FSx for ONTAP via S3 AP using COPY command.
 Verifies data integrity by reading back written files.
 
 Usage:

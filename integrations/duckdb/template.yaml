@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  FSxN Lakehouse Integration — DuckDB Verification Stack.
+  FSx for ONTAP Lakehouse Integration — DuckDB Verification Stack.
   Deploys Lambda function with DuckDB layer for in-process serverless analytics
-  on FSxN data via VPC-scoped S3 Access Point.
+  on FSx for ONTAP data via VPC-scoped S3 Access Point.
 
 Parameters:
   VpcId:
@@ -20,7 +20,7 @@ Parameters:
   S3AccessPointName:
     Type: String
     Default: fsxn-duckdb-ap
-    Description: Name of the VPC-scoped S3 Access Point for FSxN
+    Description: Name of the VPC-scoped S3 Access Point for FSx for ONTAP
 
   S3AccessPointAlias:
     Type: String
@@ -108,7 +108,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub "fsxn-duckdb-query-${Environment}"
-      Description: "Execute DuckDB SQL queries on FSxN data via S3 Access Point"
+      Description: "Execute DuckDB SQL queries on FSx for ONTAP data via S3 Access Point"
       Runtime: python3.12
       Architectures:
         - arm64

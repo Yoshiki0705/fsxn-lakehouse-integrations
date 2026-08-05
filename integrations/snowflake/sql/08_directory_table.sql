@@ -1,5 +1,5 @@
 -- =============================================================================
--- 08 - Directory Table for Unstructured Data on FSxN
+-- 08 - Directory Table for Unstructured Data on FSx for ONTAP
 -- =============================================================================
 -- Manages metadata for unstructured files (images, video, audio, documents)
 -- stored on FSx for NetApp ONTAP via S3 Access Point.
@@ -9,14 +9,14 @@
 -- for external application access.
 --
 -- ┌─────────────────────────────────────────────────────────────────────────┐
--- │ IMPORTANT: FSxN S3 Access Point Limitations with Directory Tables       │
+-- │ IMPORTANT: FSx for ONTAP S3 Access Point Limitations with Directory Tables       │
 -- ├─────────────────────────────────────────────────────────────────────────┤
 -- │ 1. AUTO_REFRESH = FALSE is REQUIRED.                                    │
--- │    FSxN S3 Access Points do NOT support S3 Event Notifications,         │
+-- │    FSx for ONTAP S3 Access Points do NOT support S3 Event Notifications,         │
 -- │    which Snowflake relies on for automatic directory refresh.            │
 -- │                                                                         │
 -- │ 2. Manual refresh (ALTER STAGE ... REFRESH) must be executed:            │
--- │    - After uploading new files to FSxN via NFS/SMB                      │
+-- │    - After uploading new files to FSx for ONTAP via NFS/SMB                      │
 -- │    - Before querying the Directory Table for up-to-date results         │
 -- │    - Can be automated via Snowflake Task on a schedule                  │
 -- │                                                                         │
@@ -39,21 +39,21 @@ USE SCHEMA MEDIA;
 -- =============================================================================
 -- 2. Stage with Directory Table Enabled
 -- =============================================================================
--- NOTE: AUTO_REFRESH = FALSE because FSxN S3 Access Points do NOT support
+-- NOTE: AUTO_REFRESH = FALSE because FSx for ONTAP S3 Access Points do NOT support
 -- S3 Event Notifications. Snowflake cannot receive automatic notifications
--- when files are added/removed on FSxN. Manual refresh is required.
+-- when files are added/removed on FSx for ONTAP. Manual refresh is required.
 CREATE OR REPLACE STAGE FSXN_MEDIA_STAGE
   STORAGE_INTEGRATION = fsxn_storage_integration
   URL = 's3://<AP_ALIAS>/media/'
   DIRECTORY = (ENABLE = TRUE, AUTO_REFRESH = FALSE)
-  COMMENT = 'FSxN media files with Directory Table. AUTO_REFRESH=FALSE due to FSxN S3 AP limitation (no S3 Event Notifications).';
+  COMMENT = 'FSx for ONTAP media files with Directory Table. AUTO_REFRESH=FALSE due to FSx for ONTAP S3 AP limitation (no S3 Event Notifications).';
 
 -- =============================================================================
 -- 3. Manual Directory Refresh
 -- =============================================================================
 -- Since AUTO_REFRESH is disabled, we must manually refresh to index files.
 -- This scans the stage location and updates the Directory Table metadata.
--- Run this after uploading new files to FSxN via NFS/SMB.
+-- Run this after uploading new files to FSx for ONTAP via NFS/SMB.
 ALTER STAGE FSXN_MEDIA_STAGE REFRESH;
 
 -- =============================================================================
@@ -125,7 +125,7 @@ FROM DIRECTORY(@FSXN_MEDIA_STAGE);
 -- =============================================================================
 -- 6. File Count by Type
 -- =============================================================================
--- Summary: how many files of each media type are stored on FSxN
+-- Summary: how many files of each media type are stored on FSx for ONTAP
 SELECT
     media_type,
     COUNT(*) AS file_count,
@@ -140,7 +140,7 @@ ORDER BY file_count DESC;
 -- =============================================================================
 -- 7. Total Size Summary
 -- =============================================================================
--- Overall storage consumption for media files on FSxN
+-- Overall storage consumption for media files on FSx for ONTAP
 SELECT
     COUNT(*) AS total_files,
     ROUND(SUM(SIZE) / 1024.0 / 1024.0, 2) AS total_size_mb,
@@ -161,9 +161,9 @@ ORDER BY total_size_mb DESC;
 -- =============================================================================
 -- 8. Pre-Signed URLs for External Application Access
 -- =============================================================================
--- NOTE: AWS documentation states that Presign is "Not supported" for FSxN S3
+-- NOTE: AWS documentation states that Presign is "Not supported" for FSx for ONTAP S3
 -- Access Points. However, testing confirms GET_PRESIGNED_URL() works correctly
--- with FSxN S3 AP in practice. URLs are generated and files are accessible.
+-- with FSx for ONTAP S3 AP in practice. URLs are generated and files are accessible.
 --
 -- Use cases:
 --   1. Provide temporary download links to external applications
@@ -182,7 +182,7 @@ LIMIT 5;
 -- =============================================================================
 -- 9. Optional: Scheduled Refresh Task
 -- =============================================================================
--- Since FSxN doesn't support auto-refresh, you can schedule periodic refreshes
+-- Since FSx for ONTAP doesn't support auto-refresh, you can schedule periodic refreshes
 -- using a Snowflake Task. This ensures the Directory Table stays reasonably current.
 --
 -- CREATE OR REPLACE TASK REFRESH_MEDIA_DIRECTORY
@@ -193,6 +193,6 @@ LIMIT 5;
 --
 -- ALTER TASK REFRESH_MEDIA_DIRECTORY RESUME;
 --
--- NOTE: Adjust schedule based on how frequently files are added to FSxN.
+-- NOTE: Adjust schedule based on how frequently files are added to FSx for ONTAP.
 -- For near-real-time needs, consider FPolicy event-driven refresh instead.
 -- =============================================================================

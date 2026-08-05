@@ -157,7 +157,7 @@ S3 AP metadata exists on two layers:
 
 **Finding:**
 
-The Object Store Server exclusion constraint ("ONTAP native S3 object-store-server and FSx S3 AP cannot coexist on the same SVM") does NOT propagate to the destination SVM via volume-level SnapMirror. Source and destination are independent SVMs. The destination SVM can have a new S3 AP attached as long as it does not have `vserver object-store-server` configured independently.
+The Object Store Server exclusion constraint ("ONTAP native S3 object-store-server and FSx for ONTAP S3 AP cannot coexist on the same SVM") does NOT propagate to the destination SVM via volume-level SnapMirror. Source and destination are independent SVMs. The destination SVM can have a new S3 AP attached as long as it does not have `vserver object-store-server` configured independently.
 
 ---
 

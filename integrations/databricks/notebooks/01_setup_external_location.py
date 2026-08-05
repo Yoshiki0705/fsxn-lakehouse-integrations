@@ -5,7 +5,7 @@
 
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 01 - Setup External Location for FSxN
+# MAGIC # 01 - Setup External Location for FSx for ONTAP
 # MAGIC
 # MAGIC This notebook creates and validates a Databricks Unity Catalog External Location
 # MAGIC pointing to FSx for NetApp ONTAP via S3 Access Point.
@@ -46,7 +46,7 @@ GOLD_PATH = f"s3://{S3_ACCESS_POINT_ALIAS}/gold/"
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC -- Describe the FSxN storage credential
+# MAGIC -- Describe the FSx for ONTAP storage credential
 # MAGIC DESCRIBE STORAGE CREDENTIAL `fsxn-lakehouse-fsxn-credential`;
 
 # COMMAND ----------
@@ -92,7 +92,7 @@ except Exception as e:
 # Test write access
 test_path = f"s3://{S3_ACCESS_POINT_ALIAS}/_connectivity_test/"
 try:
-    dbutils.fs.put(f"{test_path}test.txt", "FSxN connectivity test", overwrite=True)
+    dbutils.fs.put(f"{test_path}test.txt", "FSx for ONTAP connectivity test", overwrite=True)
     content = dbutils.fs.head(f"{test_path}test.txt")
     dbutils.fs.rm(test_path, recurse=True)
     print(f"✅ Write/Read/Delete test passed")
@@ -112,7 +112,7 @@ for layer, path in [("bronze", BRONZE_PATH), ("silver", SILVER_PATH), ("gold", G
         CREATE EXTERNAL LOCATION IF NOT EXISTS `fsxn-{layer}`
         URL '{path}'
         WITH (STORAGE CREDENTIAL `{STORAGE_CREDENTIAL_NAME}`)
-        COMMENT 'FSxN {layer} layer'
+        COMMENT 'FSx for ONTAP {layer} layer'
         """)
         print(f"✅ External location 'fsxn-{layer}' created: {path}")
     except Exception as e:
@@ -124,7 +124,7 @@ for layer, path in [("bronze", BRONZE_PATH), ("silver", SILVER_PATH), ("gold", G
 # MAGIC ## Summary
 # MAGIC
 # MAGIC External locations created:
-# MAGIC - `fsxn-lakehouse-root` → Root access to FSxN volume
+# MAGIC - `fsxn-lakehouse-root` → Root access to FSx for ONTAP volume
 # MAGIC - `fsxn-bronze` → Bronze layer (raw data)
 # MAGIC - `fsxn-silver` → Silver layer (cleaned)
 # MAGIC - `fsxn-gold` → Gold layer (business-ready)

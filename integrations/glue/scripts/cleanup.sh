@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =============================================================================
-# FSxN Glue Integration — Resource Cleanup
+# FSx for ONTAP Glue Integration — Resource Cleanup
 # =============================================================================
 # Deletes all resources created during verification:
 #   - Glue ETL jobs
@@ -11,7 +11,7 @@ set -euo pipefail
 #   - EventBridge rule
 #   - CloudFormation stack
 #   - ETL scripts from S3
-#   - Test data on FSxN (optional)
+#   - Test data on FSx for ONTAP (optional)
 #
 # Usage:
 #   ./cleanup.sh [--region ap-northeast-1] [--env dev] [--delete-data]
@@ -35,7 +35,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "============================================"
-echo "FSxN Glue Integration — Cleanup"
+echo "FSx for ONTAP Glue Integration — Cleanup"
 echo "============================================"
 echo "Region:      ${REGION}"
 echo "Environment: ${ENVIRONMENT}"
@@ -120,7 +120,7 @@ aws cloudformation wait stack-delete-complete \
 # Step 7: Delete test data (optional)
 if [[ "${DELETE_DATA}" == "true" ]]; then
   MOUNT_POINT=$(jq -r '.NfsMountPoint // "/mnt/fsxn"' "${PARAMS_FILE}" 2>/dev/null || echo "/mnt/fsxn")
-  echo "🗑️  Deleting test data from FSxN (${MOUNT_POINT})..."
+  echo "🗑️  Deleting test data from FSx for ONTAP (${MOUNT_POINT})..."
   if mountpoint -q "${MOUNT_POINT}" 2>/dev/null; then
     rm -rf "${MOUNT_POINT}/bronze" "${MOUNT_POINT}/silver" "${MOUNT_POINT}/gold"
     echo "  ✅ Test data deleted (bronze, silver, gold)"

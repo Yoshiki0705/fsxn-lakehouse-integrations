@@ -75,15 +75,19 @@ FPolicy → SQS → Lambda → EventBridge → Step Functions → EMR AddStep
 - **レイテンシ**: <10 秒（ファイル操作 → EMR Step 起動）
 - **ユースケース**: 大規模バッチ処理、ML パイプライン
 
-## レイテンシ比較
+## レイテンシ比較（設計目標値）
 
-| ベンダー | ポーリング方式 | FPolicy 方式 | 改善率 |
+> ⚠️ **これらは実測値ではありません**。下表の FPolicy 方式の数値は、各コンポーネント（FPolicy 通知 → Fargate → SQS → Lambda → 下流サービス）の想定処理時間から積み上げた**設計目標値**です。FPolicy → Lambda 経路は現時点で **設計のみ**（live 検証未実施）であり、実環境での計測値は取得していません。検証状況は [Blocker Tracker](./blocker-tracker.md) および [Snowpipe 検証結果](../../integrations/snowflake/docs/ja/snowpipe-verification-results.md) を参照してください。
+
+| ベンダー | ポーリング方式（設計目標値） | FPolicy 方式（設計目標値） | 期待改善率 |
 |---------|-------------|-------------|--------|
 | Databricks | N/A (手動) | <2 秒 | — |
 | Snowflake (Snowpipe) | 5-7 分 | <30 秒 | 90%+ |
 | Glue | 分単位 (スケジュール) | <5 秒 | 95%+ |
 | Athena (Crawler) | 分単位 (スケジュール) | <60 秒 | 90%+ |
 | EMR | N/A (手動) | <10 秒 | — |
+
+> **実測済みの数値について**: ポーリング方式の検出遅延を左右する ListObjectsV2 のレイテンシは実測しています。実測条件と生数値は [Snowpipe 検証結果](../../integrations/snowflake/docs/ja/snowpipe-verification-results.md) に記載しています。
 
 ## CloudFormation テンプレート
 

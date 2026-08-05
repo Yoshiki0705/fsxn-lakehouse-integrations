@@ -2,7 +2,7 @@
 -- 09 - Snowpark Python UDF for Media File Processing
 -- =============================================================================
 -- Creates Snowpark Python UDFs to parse and classify unstructured media files
--- stored on FSxN via S3 Access Point, then builds an enriched catalog table.
+-- stored on FSx for ONTAP via S3 Access Point, then builds an enriched catalog table.
 --
 -- ┌─────────────────────────────────────────────────────────────────────────┐
 -- │ Snowpark Python UDF Runtime Notes                                       │
@@ -216,7 +216,7 @@ LIMIT 10;
 -- =============================================================================
 -- 4. Create ENRICHED_MEDIA_CATALOG Table
 -- =============================================================================
--- Stores enriched metadata for all media files on FSxN, combining Directory
+-- Stores enriched metadata for all media files on FSx for ONTAP, combining Directory
 -- Table metadata with UDF-extracted information.
 --
 -- Columns:
@@ -245,7 +245,7 @@ CREATE OR REPLACE TABLE ENRICHED_MEDIA_CATALOG (
     last_modified    TIMESTAMP_NTZ,
     enriched_at      TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 )
-COMMENT = 'Enriched media catalog built by applying Snowpark UDFs (PARSE_IMAGE_FILENAME, CLASSIFY_MEDIA_FILE) to Directory Table metadata from FSxN.';
+COMMENT = 'Enriched media catalog built by applying Snowpark UDFs (PARSE_IMAGE_FILENAME, CLASSIFY_MEDIA_FILE) to Directory Table metadata from FSx for ONTAP.';
 
 -- =============================================================================
 -- 5. Populate ENRICHED_MEDIA_CATALOG from Directory Table + UDFs

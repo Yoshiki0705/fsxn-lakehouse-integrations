@@ -1,8 +1,8 @@
 """
 Snowpipe Lambda Polling Function
 
-Detects new files on FSxN via S3 Access Point and publishes notifications
-to SNS for Snowpipe auto-ingest. Required because FSxN S3 AP does not
+Detects new files on FSx for ONTAP via S3 Access Point and publishes notifications
+to SNS for Snowpipe auto-ingest. Required because FSx for ONTAP S3 AP does not
 support native S3 Event Notifications.
 
 Architecture:
@@ -42,7 +42,20 @@ dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION) if STATE_TABLE els
 
 
 def get_last_processed_time() -> datetime:
-    """Get the last processed timestamp from DynamoDB or use polling interval."""
+    """Get the last processed timestamp from DynamoDB, or fall back to a window.
+
+    !! DATA LOSS WARNING (DEFECT-2, verified 2026-08-05)
+    The fallback below returns ``now - POLLING_INTERVAL``. Because that cutoff
+    tracks wall clock, any object whose LastModified predates it is skipped and
+    never revisited. Reproduced: an object written at 05:07:52Z was invisible to
+    an invocation at 05:09:33Z whose cutoff was 05:08:33Z.
+
+    Set STATE_TABLE to use the DynamoDB checkpoint instead. Note that
+    template.yaml does not currently expose STATE_TABLE, so a
+    CloudFormation-deployed poller always runs in the lossy mode.
+
+    See integrations/snowflake/docs/en/snowpipe-verification-results.md.
+    """
     if STATE_TABLE and dynamodb:
         try:
             table = dynamodb.Table(STATE_TABLE)
@@ -54,7 +67,13 @@ def get_last_processed_time() -> datetime:
         except Exception as e:
             logger.warning(f"Failed to read state from DynamoDB: {e}")
 
-    # Fallback: look back by polling interval
+    # Fallback: look back by polling interval. Lossy — see the docstring.
+    logger.warning(
+        "STATE_TABLE not configured: falling back to a %d-minute lookback "
+        "window. Objects older than this window will never be notified "
+        "(DEFECT-2). Configure STATE_TABLE for at-least-once delivery.",
+        POLLING_INTERVAL,
+    )
     return datetime.now(timezone.utc) - timedelta(minutes=POLLING_INTERVAL)
 
 
@@ -113,9 +132,40 @@ def list_new_files(cutoff_time: datetime) -> list[dict]:
 
 
 def publish_to_sns(new_files: list[dict]) -> int:
-    """Publish file notifications to SNS for Snowpipe."""
+    """Publish synthesized S3-event-shaped notifications to SNS for Snowpipe.
+
+    !! UNVERIFIED AND INCOMPLETE (DEFECT-3 / DEFECT-4, reviewed 2026-08-05)
+
+    Whether Snowflake accepts a *synthesized* notification on a pipe's
+    notification_channel and triggers COPY has never been tested. That is the
+    deciding unknown for this whole pattern.
+
+    Two known gaps in the payload built below:
+
+    * Missing fields that a genuine S3 event notification carries: awsRegion,
+      s3.s3SchemaVersion, s3.configurationId, s3.bucket.ownerIdentity,
+      s3.bucket.arn, s3.object.eTag, s3.object.sequencer. eTag and sequencer are
+      the ones most likely to matter, since a consumer would use them for
+      deduplication and ordering.
+
+    * s3.bucket.name is populated straight from S3_ACCESS_POINT_ALIAS. Supplying
+      the Access Point ARN therefore emits an ARN where a bucket name belongs,
+      which is unlikely to match a stage URL of the form s3://<bucket>/<path>.
+      Supply the Access Point *alias*, not the ARN.
+
+    See integrations/snowflake/docs/en/snowpipe-verification-results.md.
+    """
     if not new_files:
         return 0
+
+    if S3_AP_ALIAS.startswith("arn:"):
+        logger.warning(
+            "S3_ACCESS_POINT_ALIAS looks like an ARN (%s). Snowpipe matches "
+            "notifications against the pipe's stage location, so an ARN in "
+            "s3.bucket.name will probably not match. Supply the Access Point "
+            "alias instead (DEFECT-4).",
+            S3_AP_ALIAS,
+        )
 
     # Snowpipe expects S3 event notification format
     # Batch files into groups of 100 (SNS message size limit)
@@ -147,7 +197,7 @@ def publish_to_sns(new_files: list[dict]) -> int:
         sns.publish(
             TopicArn=SNS_TOPIC_ARN,
             Message=json.dumps(message),
-            Subject="FSxN Snowpipe Notification",
+            Subject="FSx for ONTAP Snowpipe Notification",
         )
         published += len(batch)
 

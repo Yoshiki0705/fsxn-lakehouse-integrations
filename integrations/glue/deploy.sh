@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =============================================================================
-# FSxN Glue Integration — Deployment Script
+# FSx for ONTAP Glue Integration — Deployment Script
 # =============================================================================
 # Deploys CloudFormation stack, uploads ETL scripts, runs Glue Crawler,
 # and captures outputs to params.json.
@@ -35,7 +35,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "============================================"
-echo "FSxN Glue Integration Deployment"
+echo "FSx for ONTAP Glue Integration Deployment"
 echo "============================================"
 echo "Region:      ${REGION}"
 echo "Environment: ${ENVIRONMENT}"

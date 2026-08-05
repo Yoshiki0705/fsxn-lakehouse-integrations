@@ -24,13 +24,13 @@
 
 **A**: **No.** Annotations are descriptive metadata attached to objects and do not enforce read authorization. Enforcement boundaries remain ONTAP file-level ACL + FPolicy + S3 AP access point policy + IAM.
 
-> **Discovery vs enforcement** (Permission-aware RAG / Security Architect lens): Misinterpreting annotations as ACL substitutes creates a critical security gap. Annotations are mutable, so any principal with `s3:PutObjectAnnotation` permission can tamper with them. Use annotations only as discovery signals and always reference actual ONTAP/IAM ACLs for authorization decisions.
+> **Discovery vs enforcement**: Misinterpreting annotations as ACL substitutes creates a critical security gap. Annotations are mutable, so any principal with `s3:PutObjectAnnotation` permission can tamper with them. Use annotations only as discovery signals and always reference actual ONTAP/IAM ACLs for authorization decisions.
 
 ### Q2: Can annotations be attached directly to FSx for ONTAP S3 AP?
 
 **A**: **No.** S3 Annotations / Metadata target only native general-purpose buckets managed by the Amazon S3 control plane. ONTAP S3 buckets are outside the S3 namespace (not listed by `aws s3 ls`), so annotation APIs cannot apply. The only valid path is staged-to-S3 (FSx for ONTAP → DataSync/FPolicy/Glue → native S3).
 
-> **ONTAP S3 structural constraint** (ONTAP Multiprotocol Specialist lens): This is a structural constraint of the ONTAP S3 protocol. ONTAP S3 provides an S3-compatible API, but Amazon S3 control-plane features (Event Notifications, S3 Metadata, Annotations) are AWS-managed service capabilities not applicable to ONTAP S3 endpoints.
+> **ONTAP S3 structural constraint**: This is a structural constraint of the ONTAP S3 protocol. ONTAP S3 provides an S3-compatible API, but Amazon S3 control-plane features (Event Notifications, S3 Metadata, Annotations) are AWS-managed service capabilities not applicable to ONTAP S3 endpoints.
 
 ### Q3: What's the difference between "attach" and "query"?
 
@@ -48,15 +48,15 @@
 
 **A**: Annotation storage is charged as S3 storage (additional storage for annotation size). Annotation tables (S3 Metadata) incur S3 Tables storage + Athena/Trino scan charges. In large environments, staged S3 duplication cost is the primary cost driver.
 
-> **Cost optimization** (Cost Optimization Specialist lens): For cost optimization, minimize annotation size (design compact JSON schemas, exclude unnecessary fields). Annotation table Athena scans benefit from partition pruning, so include `classification` or `source_volume` as top-level fields in your annotation schema to reduce scan costs.
+> **Cost optimization**: For cost optimization, minimize annotation size (design compact JSON schemas, exclude unnecessary fields). Annotation table Athena scans benefit from partition pruning, so include `classification` or `source_volume` as top-level fields in your annotation schema to reduce scan costs.
 
 ### Q6: Can annotations be used for real-time use cases?
 
 **A**: **Annotations are for cold path (discovery & context).** Backfill delay makes them unsuitable for real-time hot paths. For real-time requirements (connected vehicle telemetry, streaming quality inspection, etc.), use Structured Streaming / Lakeflow / RT OLAP infrastructure.
 
-> **Hot/cold path separation** (Real-time / Streaming Architect lens): Real-time quality decisions in manufacturing should use streaming infrastructure (Kafka → Spark Structured Streaming → ClickHouse), not annotations. Annotations are appropriate for post-hoc discovery, audit, and traceability.
+> **Hot/cold path separation**: Real-time quality decisions in manufacturing should use streaming infrastructure (Kafka → Spark Structured Streaming → ClickHouse), not annotations. Annotations are appropriate for post-hoc discovery, audit, and traceability.
 
-> **Real-time OLAP** (ClickHouse Specialist lens): For real-time quality alerts, use ClickHouse Materialized Views consuming directly from Kafka. Annotations enrich the cold path for post-hoc analysis and audit. When reading annotation tables from ClickHouse via the `iceberg()` table function (23.8+), limit to batch enrichment (periodic snapshot reference) and do not place in the hot path.
+> **Real-time OLAP**: For real-time quality alerts, use ClickHouse Materialized Views consuming directly from Kafka. Annotations enrich the cold path for post-hoc analysis and audit. When reading annotation tables from ClickHouse via the `iceberg()` table function (23.8+), limit to batch enrichment (periodic snapshot reference) and do not place in the hot path.
 
 ### Q7: How do annotations differ from UC tags / Lake Formation LF-Tags?
 
@@ -67,7 +67,7 @@
 
 Annotations **do not automatically integrate** with UC/LF governance tags. Annotation → tag mapping requires separate design.
 
-> **Governance tag mapping** (Data Governance Specialist lens): To make annotations contribute to UC governance, a periodic batch pipeline mapping annotation classification results to UC tags is required. No automatic integration API currently exists.
+> **Governance tag mapping**: To make annotations contribute to UC governance, a periodic batch pipeline mapping annotation classification results to UC tags is required. No automatic integration API currently exists.
 
 ## Selection Guide (Decision Flowchart)
 
@@ -95,7 +95,7 @@ graph TD
     style L fill:#ccffcc
 ```
 
-> **Two-phase strategy** (Solution Architect lens): Many organizations target Case 3 (UC integration), but the `iceberg_rest` blocker currently exists. A two-phase strategy is recommended: deliver value immediately with Case 1 while awaiting blocker resolution.
+> **Two-phase strategy**: Many organizations target Case 3 (UC integration), but the `iceberg_rest` blocker currently exists. A two-phase strategy is recommended: deliver value immediately with Case 1 while awaiting blocker resolution.
 
 ## OT/IT Security Considerations
 
@@ -109,7 +109,7 @@ Annotations are mutable, making write permission control mandatory:
 | `DeleteObjectAnnotation` | `s3:DeleteObjectAnnotation` | Same. Only re-sync pipeline should delete |
 | `GetObjectAnnotation` | `s3:GetObjectAnnotation` | Read can be granted to analytics roles / RAG pipelines |
 
-> **Write-permission control** (IAM Security Architect lens): If annotation write permissions are uncontrolled, ACL-hints (Case 2) can be tampered with or spoofed, undermining discovery signal reliability. In the S3 bucket policy, allow `s3:PutObjectAnnotation` only for specific IAM roles (annotation pipeline) and explicitly Deny for all other principals.
+> **Write-permission control**: If annotation write permissions are uncontrolled, ACL-hints (Case 2) can be tampered with or spoofed, undermining discovery signal reliability. In the S3 bucket policy, allow `s3:PutObjectAnnotation` only for specific IAM roles (annotation pipeline) and explicitly Deny for all other principals.
 
 ### FPolicy → Annotation Pipeline Security
 
@@ -134,7 +134,7 @@ S3 PutObjectAnnotation
 | Internal (raw sensor data) | ACL-hint + classification (Case 1+2) | `{"classification": "internal", "owner": "factory-a-team"}` |
 | Confidential (quality inspection images) | ACL-hint + encryption flag (Case 2) | `{"classification": "confidential", "encryption": "SSE-KMS"}` |
 
-> **Retention policy** (Data Lifecycle / Records Retention lens): Include a `retention_days` field in manufacturing data annotation schema. Combined with S3 Lifecycle rules, this enables tracking regulatory requirements (e.g., quality record retention 7 years) at annotation level and detecting retention violations via Athena queries.
+> **Retention policy**: Include a `retention_days` field in manufacturing data annotation schema. Combined with S3 Lifecycle rules, this enables tracking regulatory requirements (e.g., quality record retention 7 years) at annotation level and detecting retention violations via Athena queries.
 
 ### VPC Endpoint Requirements
 
@@ -155,9 +155,9 @@ Annotation pipeline requires access to:
 
 > Phases 1-2 can proceed independently, but Phase 3+ requires integrating annotation generation steps into CI/CD pipelines. Including annotation schema versioning (`schema_version` field) from Phase 1 makes later schema evolution easier.
 
-> **Schema evolution** (Schema Evolution Engineer lens): Define a migration strategy in Phase 1 for breaking annotation schema changes (field renames, type changes, etc.). Recommended pattern: (1) attach the new version under a separate name such as `business-context-v2`, (2) co-exist v1 and v2 during the migration window, (3) delete v1 after downstream pipelines complete migration to v2. The `schema_version` field enables version filtering in Athena queries.
+> **Schema evolution**: Define a migration strategy in Phase 1 for breaking annotation schema changes (field renames, type changes, etc.). Recommended pattern: (1) attach the new version under a separate name such as `business-context-v2`, (2) co-exist v1 and v2 during the migration window, (3) delete v1 after downstream pipelines complete migration to v2. The `schema_version` field enables version filtering in Athena queries.
 
-> **Traceability design** (Manufacturing Traceability Specialist lens): For automotive manufacturing traceability annotations, include the following fields to meet IATF 16949 requirements: `lot_id`, `serial_number`, `production_order`, `work_center`, `inspection_result`, `defect_category` (when applicable), `operator_shift`, `equipment_id`. This accelerates root-cause tracking (8D report creation) when quality issues arise.
+> **Traceability design**: For automotive manufacturing traceability annotations, include the following fields to meet IATF 16949 requirements: `lot_id`, `serial_number`, `production_order`, `work_center`, `inspection_result`, `defect_category` (when applicable), `operator_shift`, `equipment_id`. This accelerates root-cause tracking (8D report creation) when quality issues arise.
 
 ## Verification Status Summary
 

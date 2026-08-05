@@ -31,7 +31,7 @@ total_job_duration_seconds: 37
 spark_execution_time_seconds: 16.35
 
 tests:
-  - name: "Read Parquet from FSxN S3 AP"
+  - name: "Read Parquet from FSx for ONTAP S3 AP"
     result: "PASS"
     duration_s: 6.78
     rows: 10000
@@ -43,7 +43,7 @@ tests:
     result: "PASS"
     duration_s: 1.19
     rows: 10000
-  - name: "Write-back to FSxN S3 AP (Parquet)"
+  - name: "Write-back to FSx for ONTAP S3 AP (Parquet)"
     result: "PASS"
     duration_s: 3.61
     output_rows: 3
@@ -57,8 +57,8 @@ key_findings:
   - "EMRFS (s3://) natively supports S3 AP aliases — no S3A configuration needed"
   - "Spark 3.5 does NOT support TIMESTAMP(NANOS,false) — use microsecond resolution"
   - "EMR Serverless cold start adds ~20s overhead (total 37s vs 16s Spark execution)"
-  - "Read + GROUP BY + Window + Write + Read-back all succeed on FSxN S3 AP"
-  - "Write-back creates valid Parquet on FSxN volume (verified by read-back)"
+  - "Read + GROUP BY + Window + Write + Read-back all succeed on FSx for ONTAP S3 AP"
+  - "Write-back creates valid Parquet on FSx for ONTAP volume (verified by read-back)"
   - "No session policy issues (AWS-native service, direct IAM role)"
 
 # Known Limitations

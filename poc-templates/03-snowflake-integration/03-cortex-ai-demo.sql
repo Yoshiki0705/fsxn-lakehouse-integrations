@@ -80,7 +80,7 @@ FROM DIRECTORY(@fsxn_poc_stage)
 LIMIT 5;
 
 -- ============================================================
--- Summary: What works on FSx S3 AP External Table (zero-copy)
+-- Summary: What works on FSx for ONTAP S3 AP External Table (zero-copy)
 -- ============================================================
 -- ✅ CORTEX.SUMMARIZE — Text summarization
 -- ✅ CORTEX.TRANSLATE — Multi-language translation

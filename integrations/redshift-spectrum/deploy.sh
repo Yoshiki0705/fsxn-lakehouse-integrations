@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # =============================================================================
-# FSxN Redshift Spectrum Integration — Deploy & Verify & Cleanup
+# FSx for ONTAP Redshift Spectrum Integration — Deploy & Verify & Cleanup
 # =============================================================================
-# Creates Redshift Serverless, runs Spectrum queries on FSxN S3 AP data,
+# Creates Redshift Serverless, runs Spectrum queries on FSx for ONTAP S3 AP data,
 # records results, then DELETES Redshift to avoid ongoing costs.
 #
 # Cost: ~$2.88/hr (8 RPU minimum). Script targets <30 min total.
@@ -41,7 +41,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "============================================"
-echo "FSxN Redshift Spectrum Verification"
+echo "FSx for ONTAP Redshift Spectrum Verification"
 echo "============================================"
 echo "Region:     ${REGION}"
 echo "Namespace:  ${NAMESPACE}"

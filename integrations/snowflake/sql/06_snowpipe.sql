@@ -7,13 +7,33 @@
 -- Requirements: REQ-4 (Snowpipe auto-ingest, FPolicy event-driven)
 --
 -- =============================================================================
+-- !! VERIFICATION STATUS: NOT VERIFIED END-TO-END
+-- =============================================================================
+-- This script is a reference implementation, not a validated path.
+--
+-- FSx for ONTAP S3 Access Points do not emit S3 Event Notifications, so the
+-- notification that drives AUTO_INGEST must be synthesized by the pipeline
+-- below and published to the Snowflake-managed SQS queue. Whether Snowflake
+-- accepts a synthesized notification and triggers COPY has NOT been confirmed
+-- in a live environment.
+--
+-- Verified alternative for scheduled ingestion: Snowflake Task + COPY INTO
+-- (COPY INTO from an FSx for ONTAP S3 AP stage is verified when the stage sets
+-- AWS_ACCESS_POINT_ARN). Prefer that path for production until this one is
+-- validated in your environment.
+--
+-- Current evidence: integrations/snowflake/docs/en/snowpipe-verification-results.md
+-- =============================================================================
+--
+-- =============================================================================
 -- FPolicy → SQS → Lambda → SNS → Snowpipe Flow
 -- =============================================================================
 --
--- FSxN S3 Access Point does NOT support native S3 Event Notifications.
+-- FSx for ONTAP S3 Access Point does NOT support native S3 Event Notifications.
 -- Instead, we use ONTAP FPolicy for real-time file event detection:
 --
---   1. NFS Client writes a file to FSxN volume (e.g., /bronze/events/new.json)
+--   1. NFS Client writes a file to the FSx for ONTAP volume
+--      (e.g., /bronze/events/new.json)
 --   2. ONTAP FPolicy (asynchronous mode) detects the file create operation
 --   3. FPolicy Server (ECS Fargate) receives the event notification
 --   4. Fargate enqueues the event to SQS (event buffer / decoupling)
@@ -22,10 +42,16 @@
 --   7. SNS delivers to Snowflake's SQS queue (notification_channel)
 --   8. Snowpipe triggers COPY INTO from the S3 Access Point path
 --
--- Latency comparison:
+-- Latency comparison (DESIGN TARGETS — NOT MEASURED):
 --   - Lambda Polling (legacy):  5-7 minutes (polling interval + COPY time)
 --   - FPolicy (event-driven):   <30 seconds (event detection + pipeline + COPY)
---   - Improvement:              90%+ latency reduction
+--   - Expected improvement:     90%+ latency reduction
+--
+-- !! These figures are design targets derived from expected per-component
+-- !! processing time, NOT measurements. The FPolicy path is design-only and
+-- !! has not been verified live. Snowpipe auto-ingest against an FSx for ONTAP
+-- !! S3 Access Point is NOT verified end-to-end — see
+-- !! integrations/snowflake/docs/en/snowpipe-verification-results.md for what is and is not proven.
 --
 -- Architecture diagram:
 --
@@ -53,7 +79,7 @@ USE SCHEMA BRONZE;
 -- =============================================================================
 -- 1. Target Table for Snowpipe Ingestion
 -- =============================================================================
--- RAW_EVENTS stores all events ingested via Snowpipe from the FSxN bronze layer.
+-- RAW_EVENTS stores all events ingested via Snowpipe from the FSx for ONTAP bronze layer.
 -- The payload column (VARIANT) allows flexible schema for different event types.
 -- ingested_at tracks when each record was loaded by Snowpipe.
 -- =============================================================================
@@ -66,7 +92,7 @@ CREATE OR REPLACE TABLE RAW_EVENTS (
     payload         VARIANT       COMMENT 'Full event payload as semi-structured JSON',
     ingested_at     TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP() COMMENT 'Snowpipe ingestion timestamp'
 )
-COMMENT = 'Raw events ingested via Snowpipe from FSxN bronze layer (FPolicy event-driven)';
+COMMENT = 'Raw events ingested via Snowpipe from FSx for ONTAP bronze layer (FPolicy event-driven)';
 
 -- =============================================================================
 -- 2. Snowpipe Definition (AUTO_INGEST = TRUE)
@@ -83,7 +109,7 @@ COMMENT = 'Raw events ingested via Snowpipe from FSxN bronze layer (FPolicy even
 CREATE OR REPLACE PIPE FSXN_EVENTS_PIPE
     AUTO_INGEST = TRUE
     AWS_SNS_TOPIC = '<SNS_TOPIC_ARN>'  -- Replace with fpolicy-routing stack output: SnowpipeSNSTopicArn
-    COMMENT = 'Auto-ingest events from FSxN bronze layer via FPolicy → SQS → Lambda → SNS pipeline'
+    COMMENT = 'Auto-ingest events from FSx for ONTAP bronze layer via FPolicy → SQS → Lambda → SNS pipeline'
 AS
 COPY INTO RAW_EVENTS
 FROM @FSXN_BRONZE_STAGE/events/
@@ -146,8 +172,10 @@ ORDER BY LAST_LOAD_TIME DESC;
 -- 7. Verification Query — Confirm Data in Target Table
 -- =============================================================================
 -- After Snowpipe processes files, verify that events appear in RAW_EVENTS.
--- Records should appear within <30 seconds of file creation on FSxN (FPolicy mode)
--- or within 5-7 minutes (Lambda polling legacy mode).
+-- Design target: records appear within <30 seconds of file creation on
+-- FSx for ONTAP (FPolicy mode) or within 5-7 minutes (Lambda polling mode).
+-- These targets are unverified — treat an empty result here as expected until
+-- the pipeline is validated in your own environment.
 -- =============================================================================
 
 SELECT *

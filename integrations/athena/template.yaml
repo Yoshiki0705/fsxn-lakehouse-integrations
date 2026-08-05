@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  FSxN Lakehouse Integration — Athena Verification Stack.
+  FSx for ONTAP Lakehouse Integration — Athena Verification Stack.
   Creates S3 Access Point (internet origin), IAM Roles for Glue Crawler and Athena,
   Glue Database, Glue Crawler, and Athena Workgroup.
 
@@ -165,7 +165,7 @@ Resources:
       CatalogId: !Ref AWS::AccountId
       DatabaseInput:
         Name: !Ref GlueDatabaseName
-        Description: "FSxN Athena verification database — tables discovered by Crawler from S3 AP"
+        Description: "FSx for ONTAP Athena verification database — tables discovered by Crawler from S3 AP"
 
   # --- Glue Crawler ---
   GlueCrawler:
@@ -174,7 +174,7 @@ Resources:
       Name: !Sub "fsxn-athena-crawler-${Environment}"
       Role: !GetAtt GlueCrawlerRole.Arn
       DatabaseName: !Ref GlueDatabaseName
-      Description: "Crawls FSxN data via S3 Access Point (internet origin)"
+      Description: "Crawls FSx for ONTAP data via S3 Access Point (internet origin)"
       Targets:
         S3Targets:
           - Path: !Sub "s3://${S3AccessPointName}-${AWS::AccountId}.s3-accesspoint.${AWS::Region}.amazonaws.com/"
@@ -200,7 +200,7 @@ Resources:
     Type: AWS::Athena::WorkGroup
     Properties:
       Name: !Ref AthenaWorkgroupName
-      Description: "FSxN verification workgroup with cost controls"
+      Description: "FSx for ONTAP verification workgroup with cost controls"
       State: ENABLED
       WorkGroupConfiguration:
         ResultConfiguration:

@@ -1,8 +1,8 @@
 -- =============================================================================
--- 04 - External Tables on FSxN via S3 Access Point
+-- 04 - External Tables on FSx for ONTAP via S3 Access Point
 -- =============================================================================
 -- Creates External Tables that query data directly on FSx for NetApp ONTAP
--- via S3 Access Point. Data remains on FSxN (no copy into Snowflake).
+-- via S3 Access Point. Data remains on FSx for ONTAP (no copy into Snowflake).
 --
 -- Tables Created:
 --   TRANSACTIONS   — Financial transactions (Parquet)
@@ -14,7 +14,7 @@
 --   - 01_storage_integration.sql (Storage Integration + trust setup)
 --   - 02_external_stage.sql (FSXN_BRONZE_STAGE created)
 --   - 03_file_format.sql (PARQUET_FORMAT, CSV_FORMAT, JSON_FORMAT created)
---   - Sample data uploaded to FSxN bronze/ path
+--   - Sample data uploaded to FSx for ONTAP bronze/ path
 --
 -- Requirements: REQ-2 (External Table queries on Parquet, CSV, JSON)
 -- =============================================================================
@@ -32,7 +32,7 @@ CREATE OR REPLACE EXTERNAL TABLE TRANSACTIONS
   WITH LOCATION = @FSXN_BRONZE_STAGE/transactions/
   AUTO_REFRESH = FALSE
   FILE_FORMAT = (FORMAT_NAME = 'BRONZE.PARQUET_FORMAT')
-  COMMENT = 'Financial transactions on FSxN (Parquet) — REQ-2'
+  COMMENT = 'Financial transactions on FSx for ONTAP (Parquet) — REQ-2'
   AS
   SELECT
     VALUE:transaction_id::STRING       AS transaction_id,
@@ -58,7 +58,7 @@ CREATE OR REPLACE EXTERNAL TABLE IOT_SENSORS
   AUTO_REFRESH = FALSE
   PARTITION BY (PARTITION_DATE)
   FILE_FORMAT = (FORMAT_NAME = 'BRONZE.PARQUET_FORMAT')
-  COMMENT = 'IoT sensor data on FSxN (Parquet, partitioned by date) — REQ-2'
+  COMMENT = 'IoT sensor data on FSx for ONTAP (Parquet, partitioned by date) — REQ-2'
   AS
   SELECT
     VALUE:sensor_id::STRING            AS sensor_id,
@@ -82,7 +82,7 @@ CREATE OR REPLACE EXTERNAL TABLE CUSTOMERS_CSV
   WITH LOCATION = @FSXN_BRONZE_STAGE/customers/
   AUTO_REFRESH = FALSE
   FILE_FORMAT = (FORMAT_NAME = 'BRONZE.CSV_FORMAT')
-  COMMENT = 'Customer master data on FSxN (CSV) — REQ-2'
+  COMMENT = 'Customer master data on FSx for ONTAP (CSV) — REQ-2'
   AS
   SELECT
     VALUE:c1::STRING                   AS customer_id,
@@ -104,7 +104,7 @@ CREATE OR REPLACE EXTERNAL TABLE EVENTS_JSON
   WITH LOCATION = @FSXN_BRONZE_STAGE/events/
   AUTO_REFRESH = FALSE
   FILE_FORMAT = (FORMAT_NAME = 'BRONZE.JSON_FORMAT')
-  COMMENT = 'Event stream data on FSxN (JSON) — REQ-2'
+  COMMENT = 'Event stream data on FSx for ONTAP (JSON) — REQ-2'
   AS
   SELECT
     VALUE:event_id::STRING             AS event_id,
@@ -118,7 +118,7 @@ CREATE OR REPLACE EXTERNAL TABLE EVENTS_JSON
 -- =============================================================================
 -- 5. Partition Metadata Refresh
 -- =============================================================================
--- Since AUTO_REFRESH = FALSE (FSxN S3 AP does not support S3 Event Notifications),
+-- Since AUTO_REFRESH = FALSE (FSx for ONTAP S3 AP does not support S3 Event Notifications),
 -- metadata must be refreshed manually after new files are added.
 -- =============================================================================
 

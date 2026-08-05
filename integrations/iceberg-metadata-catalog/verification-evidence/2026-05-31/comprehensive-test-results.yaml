@@ -185,9 +185,9 @@ summary:
 
 test_ST1_e2e_file_upload:
   status: "PASS"
-  description: "Upload file to FSx S3 AP → simulate FPolicy event → Lambda → S3 Tables → Athena"
+  description: "Upload file to FSx for ONTAP S3 AP → simulate FPolicy event → Lambda → S3 Tables → Athena"
   steps:
-    - "aws s3 cp test-doc.txt to FSx S3 AP (media/documents/)"
+    - "aws s3 cp test-doc.txt to FSx for ONTAP S3 AP (media/documents/)"
     - "Send FPolicy create event to SQS"
     - "Lambda processes and writes to S3 Tables"
     - "Athena query confirms record exists"

@@ -57,14 +57,14 @@ performance_summary:
 comparison_with_local:
   local_count_10k_ms: 628
   lambda_count_10k_ms: 452
-  note: "Lambda warm is faster than local (Lambda runs in same region as FSxN, lower network latency)"
+  note: "Lambda warm is faster than local (Lambda runs in same region as FSx for ONTAP, lower network latency)"
 
 # Key Findings
 key_findings:
   - "Cold start ~1.9s (httpfs install dominates — consider pre-warming)"
   - "Warm queries sub-second for simple operations"
   - "S3 AP queries from Lambda: 452ms (COUNT) to 1.4s (GROUP BY) for 10K rows"
-  - "Lambda in same region as FSxN has lower latency than local over internet"
+  - "Lambda in same region as FSx for ONTAP has lower latency than local over internet"
   - "No VPC attachment needed for internet-origin AP (avoids ENI cold start penalty)"
   - "DuckDB connection reuse across invocations works correctly"
   - "s3_url_style='path' and explicit s3_endpoint required for S3 AP alias"

@@ -75,15 +75,19 @@ FPolicy → SQS → Lambda → EventBridge → Step Functions → EMR AddStep
 - **Latency**: <10 seconds (file operation → EMR step start)
 - **Use cases**: Large-scale batch processing, ML pipelines
 
-## Latency Comparison
+## Latency Comparison (Design Targets)
 
-| Vendor | Polling Approach | FPolicy Approach | Improvement |
+> ⚠️ **These are not measured values.** The FPolicy figures below are **design targets** derived by summing the expected processing time of each component (FPolicy notification → Fargate → SQS → Lambda → downstream service). The FPolicy → Lambda path is currently **design only** (live verification pending), and no measurements from a real environment have been collected. For verification status, see [Blocker Tracker](./blocker-tracker.md) and [Snowpipe Verification Results](../../integrations/snowflake/docs/en/snowpipe-verification-results.md).
+
+| Vendor | Polling Approach (design target) | FPolicy Approach (design target) | Expected Improvement |
 |--------|-----------------|-----------------|-------------|
 | Databricks | N/A (manual) | <2 sec | — |
 | Snowflake (Snowpipe) | 5-7 min | <30 sec | 90%+ |
 | Glue | Minutes (schedule) | <5 sec | 95%+ |
 | Athena (Crawler) | Minutes (schedule) | <60 sec | 90%+ |
 | EMR | N/A (manual) | <10 sec | — |
+
+> **On measured figures**: ListObjectsV2 latency, which drives detection lag in the polling approach, has been measured. Measurement conditions and raw numbers are documented in [Snowpipe Verification Results](../../integrations/snowflake/docs/en/snowpipe-verification-results.md).
 
 ## CloudFormation Templates
 

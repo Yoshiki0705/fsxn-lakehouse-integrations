@@ -27,7 +27,7 @@ Output:
 
 References:
   - OpenSharing spec: https://github.com/OpenSharing-IO/OpenSharing
-  - FSx S3 AP API support: https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html
+  - FSx for ONTAP S3 AP API support: https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html
   - Blog: Part 1 (Architecture + PoC Results)
 """
 
@@ -183,7 +183,7 @@ def test_presigned_url(
     print("\n" + "=" * 70)
     print("TEST 2: Presigned URL ('url' access mode)")
     print("=" * 70)
-    print("  Note: AWS docs list Presign as 'Not supported' for FSx S3 AP.")
+    print("  Note: AWS docs list Presign as 'Not supported' for FSx for ONTAP S3 AP.")
     print("  This test verifies empirical behavior.")
 
     results = {"mode": "presigned_url", "tests": []}
@@ -269,7 +269,7 @@ def main():
     args = parser.parse_args()
 
     print("╔══════════════════════════════════════════════════════════════════════╗")
-    print("║  OpenSharing Credential Vending Verification for FSx S3 AP          ║")
+    print("║  OpenSharing Credential Vending Verification for FSx for ONTAP S3 AP          ║")
     print("╚══════════════════════════════════════════════════════════════════════╝")
     print(f"  AP Alias: {args.ap_alias}")
     print(f"  Region:   {args.region}")

@@ -124,7 +124,7 @@ response = s3.list_objects_v2(Bucket='<ap-alias>', Prefix='sensor-data/')
 
 ## Demo Scenario: Factory Quality Inspection
 
-> **Manufacturing lens**: A factory stores quality inspection images on FSx for ONTAP. The corporate quality team needs secure, scoped access without copying 500 GB to S3.
+> **Manufacturing use case**: A factory stores quality inspection images on FSx for ONTAP. The corporate quality team needs secure, scoped access without copying 500 GB to S3.
 
 1. **Provider** (factory IT) runs this server, maps `/vol1/quality/lineA/images/` as a Volume
 2. **Recipient** (quality team) receives a bearer token

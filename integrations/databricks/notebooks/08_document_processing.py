@@ -5,7 +5,7 @@
 
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 08 - Unstructured Data: Document Processing on FSxN
+# MAGIC # 08 - Unstructured Data: Document Processing on FSx for ONTAP
 # MAGIC
 # MAGIC Extract text and metadata from PDF/DOCX documents stored on FSx for NetApp ONTAP.
 # MAGIC Build a searchable document catalog as a Delta table.
@@ -19,7 +19,7 @@
 # MAGIC ## Prerequisites
 # MAGIC - ML Runtime cluster (Python libraries available)
 # MAGIC - External Location configured (from notebook 01)
-# MAGIC - Sample PDF/DOCX documents uploaded to FSxN via NFS/SMB
+# MAGIC - Sample PDF/DOCX documents uploaded to FSx for ONTAP via NFS/SMB
 # MAGIC - Install: `%pip install pypdf python-docx`
 
 # COMMAND ----------
@@ -183,7 +183,7 @@ spark.sql(f"""
 CREATE TABLE IF NOT EXISTS fsxn_lakehouse.silver.document_catalog
 USING DELTA
 LOCATION '{CATALOG_OUTPUT_PATH}'
-COMMENT 'Document metadata catalog from FSxN unstructured files'
+COMMENT 'Document metadata catalog from FSx for ONTAP unstructured files'
 """)
 
 print(f"✅ Document catalog saved: {CATALOG_OUTPUT_PATH}")
@@ -230,7 +230,7 @@ spark.sql(f"""
 CREATE TABLE IF NOT EXISTS fsxn_lakehouse.silver.document_text
 USING DELTA
 LOCATION '{TEXT_OUTPUT_PATH}'
-COMMENT 'Full text extracted from FSxN documents (for RAG/search)'
+COMMENT 'Full text extracted from FSx for ONTAP documents (for RAG/search)'
 """)
 
 print(f"✅ Document text saved: {TEXT_OUTPUT_PATH}")

@@ -28,7 +28,7 @@ def main():
     # Initialize Spark with S3 Tables Iceberg catalog
     spark = (
         SparkSession.builder
-        .appName("FSxN Metadata Catalog - EMR Access")
+        .appName("FSx for ONTAP Metadata Catalog - EMR Access")
         .config("spark.sql.catalog.s3tables", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.s3tables.catalog-impl", "org.apache.iceberg.rest.RESTCatalog")
         .config("spark.sql.catalog.s3tables.uri", "https://s3tables.ap-northeast-1.amazonaws.com/iceberg")

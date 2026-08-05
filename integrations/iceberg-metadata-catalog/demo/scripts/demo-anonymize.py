@@ -2,7 +2,7 @@
 """
 demo-anonymize.py — PII Detection & Anonymization Demo
 
-Reads a document from FSx S3 AP, detects PII, and produces anonymized output.
+Reads a document from FSx for ONTAP S3 AP, detects PII, and produces anonymized output.
 Supports both English (Comprehend) and Japanese (Bedrock Claude).
 
 Usage:
@@ -95,7 +95,7 @@ def main():
                 "SSN: 123-45-6789\n"
                 "Credit Card: 4111-1111-1111-1111\n")
         s3.put_object(Bucket=args.ap_alias, Key=args.file_key, Body=text.encode("utf-8"))
-        print(f"  Uploaded sample document to FSx S3 AP")
+        print(f"  Uploaded sample document to FSx for ONTAP S3 AP")
 
     print(f"  Content ({len(text)} chars):")
     print(f"  {'─' * 50}")

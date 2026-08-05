@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FSxN Glue Integration — Glue Crawler Execution and Verification
+FSx for ONTAP Glue Integration — Glue Crawler Execution and Verification
 
 Starts Glue Crawler, waits for completion, and verifies discovered tables
 match expected schemas for the bronze layer.
@@ -176,7 +176,7 @@ def main():
     region = params.get("Region", args.region)
 
     print("=" * 60)
-    print("FSxN Glue Integration — Crawler Execution")
+    print("FSx for ONTAP Glue Integration — Crawler Execution")
     print("=" * 60)
     print(f"Crawler:  {crawler_name}")
     print(f"Database: {database_name}")

@@ -63,7 +63,7 @@ analysis: |
 
 # Key Findings
 key_findings:
-  - "Partition projection works on FSx S3 AP (table created, queries succeed)"
+  - "Partition projection works on FSx for ONTAP S3 AP (table created, queries succeed)"
   - "Hive-style partitioning (year=X/month=Y/) correctly recognized"
   - "Columnar pruning confirmed: 57KB scanned out of 394KB total (14.6%)"
   - "Partition pruning benefit not measurable at 12K row scale"

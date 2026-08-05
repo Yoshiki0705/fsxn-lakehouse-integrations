@@ -1,14 +1,14 @@
-# Databricks + FSx S3 AP Validation Test Cases
+# Databricks + FSx for ONTAP S3 AP Validation Test Cases
 # Use this matrix for reproducible validation runs
 
 test_cases:
   # --- Unity Catalog Path ---
   - id: DBX-FSX-UC-001
-    name: "Unity Catalog External Location to FSx S3 AP"
+    name: "Unity Catalog External Location to FSx for ONTAP S3 AP"
     category: "unity-catalog"
     preconditions:
       - "Storage credential exists with IAM role that has s3:* on S3 AP ARN"
-      - "External location points to FSx S3 AP alias"
+      - "External location points to FSx for ONTAP S3 AP alias"
       - "Cluster uses standard or dedicated access mode"
     steps:
       - "CREATE EXTERNAL LOCATION with S3 AP alias URL"
@@ -25,7 +25,7 @@ test_cases:
       - "DBR version and access mode"
 
   - id: DBX-FSX-UC-002
-    name: "Unity Catalog Spark read from FSx S3 AP"
+    name: "Unity Catalog Spark read from FSx for ONTAP S3 AP"
     category: "unity-catalog"
     preconditions:
       - "External location configured for S3 AP"
@@ -85,7 +85,7 @@ test_cases:
 
   # --- Instance Profile + boto3 Path ---
   - id: DBX-FSX-IP-001
-    name: "Instance Profile boto3 ListObjectsV2 on FSx S3 AP"
+    name: "Instance Profile boto3 ListObjectsV2 on FSx for ONTAP S3 AP"
     category: "instance-profile"
     preconditions:
       - "Customer-managed VPC workspace"
@@ -105,7 +105,7 @@ test_cases:
       - "Cluster configuration"
 
   - id: DBX-FSX-IP-002
-    name: "Instance Profile boto3 GetObject on FSx S3 AP"
+    name: "Instance Profile boto3 GetObject on FSx for ONTAP S3 AP"
     category: "instance-profile"
     preconditions:
       - "DBX-FSX-IP-001 passes"

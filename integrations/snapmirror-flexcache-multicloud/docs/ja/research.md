@@ -177,7 +177,7 @@ FSx for ONTAP S3 AP のメタデータは以下の2レイヤーで構成され�
 
 #### 調査結果
 
-Object Store Server 排他制約は「同一 SVM 上で ONTAP ネイティブ S3 object store server（`vserver object-store-server`）と FSx S3 AP が共存できない」という制約である。
+Object Store Server 排他制約は「同一 SVM 上で ONTAP ネイティブ S3 object store server（`vserver object-store-server`）と FSx for ONTAP S3 AP が共存できない」という制約である。
 
 SnapMirror **ボリュームレベル**のレプリケーションでは:
 - ソース SVM とデスティネーション SVM は**異なる SVM**である

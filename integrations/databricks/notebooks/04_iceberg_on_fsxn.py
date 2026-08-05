@@ -5,7 +5,7 @@
 
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 04 - Apache Iceberg Tables on FSxN
+# MAGIC # 04 - Apache Iceberg Tables on FSx for ONTAP
 # MAGIC
 # MAGIC Create and manage Iceberg tables on FSx for NetApp ONTAP.
 # MAGIC Iceberg provides vendor-neutral ACID tables accessible from multiple engines.
@@ -30,7 +30,7 @@ CATALOG = "fsxn_lakehouse"
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Create Iceberg Table on FSxN
+# MAGIC ## Create Iceberg Table on FSx for ONTAP
 
 # COMMAND ----------
 
@@ -68,7 +68,7 @@ products_df = generate_products()
 
 # COMMAND ----------
 
-# Write as Iceberg table on FSxN
+# Write as Iceberg table on FSx for ONTAP
 iceberg_path = f"s3://{S3_ACCESS_POINT_ALIAS}/silver/products_iceberg/"
 
 products_df.writeTo("fsxn_lakehouse.iceberg_tables.products") \
@@ -158,7 +158,7 @@ print(f"✅ Iceberg table created at: {iceberg_path}")
 # MAGIC %md
 # MAGIC ## Cross-Platform Access
 # MAGIC
-# MAGIC Iceberg tables on FSxN can be accessed from multiple engines:
+# MAGIC Iceberg tables on FSx for ONTAP can be accessed from multiple engines:
 # MAGIC
 # MAGIC | Engine | Access Method |
 # MAGIC |--------|--------------|
@@ -168,7 +168,7 @@ print(f"✅ Iceberg table created at: {iceberg_path}")
 # MAGIC | Trino | Iceberg Connector |
 # MAGIC | Spark (EMR) | Iceberg Spark Runtime |
 # MAGIC
-# MAGIC All engines read the same Iceberg metadata and data files on FSxN.
+# MAGIC All engines read the same Iceberg metadata and data files on FSx for ONTAP.
 # MAGIC ONTAP ensures consistent reads via S3 API.
 
 # COMMAND ----------

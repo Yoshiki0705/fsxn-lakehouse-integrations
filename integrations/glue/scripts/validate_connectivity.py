@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FSxN Glue Integration — Connectivity Validation
+FSx for ONTAP Glue Integration — Connectivity Validation
 
 Verifies:
   1. S3 Access Point is accessible (internet origin)
@@ -132,7 +132,7 @@ def check_eventbridge_rule(events_client, rule_name: str) -> bool:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Validate Glue + FSxN connectivity")
+    parser = argparse.ArgumentParser(description="Validate Glue + FSx for ONTAP connectivity")
     parser.add_argument("--region", default="ap-northeast-1")
     args = parser.parse_args()
 
@@ -140,7 +140,7 @@ def main():
     region = params.get("Region", args.region)
 
     print("=" * 60)
-    print("FSxN Glue Integration — Connectivity Validation")
+    print("FSx for ONTAP Glue Integration — Connectivity Validation")
     print("=" * 60)
     print(f"Region: {region}")
 

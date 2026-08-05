@@ -1,5 +1,5 @@
 -- =============================================================================
--- 01 - Storage Integration for FSxN S3 Access Point
+-- 01 - Storage Integration for FSx for ONTAP S3 Access Point
 -- =============================================================================
 --
 -- Purpose:
@@ -98,7 +98,7 @@ CREATE OR REPLACE STORAGE INTEGRATION fsxn_storage_integration
     's3://<AP_ALIAS>/gold/',
     's3://<AP_ALIAS>/media/'
   )
-  COMMENT = 'FSxN S3 Access Point integration — two-phase trust setup with IAM Role';
+  COMMENT = 'FSx for ONTAP S3 Access Point integration — two-phase trust setup with IAM Role';
 
 -- #############################################################################
 -- DESCRIBE INTEGRATION — Retrieve Snowflake Trust Information
@@ -145,7 +145,7 @@ GRANT USAGE ON INTEGRATION fsxn_storage_integration TO ROLE SYSADMIN;
 --   - DESCRIBE INTEGRATION shows no error properties
 --   - STORAGE_AWS_IAM_USER_ARN and STORAGE_AWS_EXTERNAL_ID are populated
 --   - Creating a stage with this integration succeeds
---   - LIST @stage returns files (if data exists on FSxN)
+--   - LIST @stage returns files (if data exists on FSx for ONTAP)
 
 -- Re-describe to verify trust is established
 DESCRIBE INTEGRATION fsxn_storage_integration;
