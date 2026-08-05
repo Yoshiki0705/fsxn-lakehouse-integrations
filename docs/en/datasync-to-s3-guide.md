@@ -62,7 +62,7 @@
 3. Run DataSync from the FlexClone volume
 4. Production workloads are unaffected
 
-> **Production safety** (FSx for ONTAP Architect lens): In manufacturing environments, Snapshot-based staging is essential to avoid I/O impact on production file systems. Ensure DataSync crawling does not affect OT system latency requirements.
+> **Production safety**: In manufacturing environments, Snapshot-based staging is essential to avoid I/O impact on production file systems. Ensure DataSync crawling does not affect OT system latency requirements.
 
 ### Q6: Should I use DataSync or FSx for ONTAP S3 AP direct for Snowflake?
 
@@ -117,7 +117,7 @@ DataSync implementation in manufacturing environments requires consideration of 
 | OT/IT separation | DataSync requires VPC access to FSx for ONTAP NFS | Place FSx for ONTAP in IT network, OT → IT via edge buffering |
 | Bandwidth limits | Large initial sync consumes bandwidth | Nighttime batch sync, or Snapshot transport → DataSync (staged) |
 
-> **OT/IT separation pattern** (OT Network Security Specialist lens): In many factories, DataSync runs against FSx for ONTAP in the IT network, and OT systems send data to IT FSx for ONTAP via FPolicy or edge gateway. Direct OT-to-DataSync is not common.
+> **OT/IT separation pattern**: In many factories, DataSync runs against FSx for ONTAP in the IT network, and OT systems send data to IT FSx for ONTAP via FPolicy or edge gateway. Direct OT-to-DataSync is not common.
 
 ### Edge Buffering Pattern
 
@@ -203,7 +203,7 @@ When syncing manufacturing data via DataSync, data sovereignty requirements must
 | Automotive OEM requirements | Supplier data must reside in OEM-designated region | Create DataSync destination S3 bucket in same region as OEM's Databricks/analytics platform |
 | ITAR/EAR (defense-related) | Restrictions on access to technical data outside US | Use GovCloud region. Restrict via S3 bucket policy |
 
-> **Data sovereignty** (Data Sovereignty / Compliance Specialist lens): In global automotive supply chains, data for the same part exists across multiple regions. Limit DataSync tasks to intra-region sync (same-region FSx for ONTAP → S3), and if cross-region analytics is needed, use S3 Cross-Region Replication to transfer post-sync data. DataSync itself supports cross-region transfer technically, but intra-region completion is recommended from a data sovereignty perspective.
+> **Data sovereignty**: In global automotive supply chains, data for the same part exists across multiple regions. Limit DataSync tasks to intra-region sync (same-region FSx for ONTAP → S3), and if cross-region analytics is needed, use S3 Cross-Region Replication to transfer post-sync data. DataSync itself supports cross-region transfer technically, but intra-region completion is recommended from a data sovereignty perspective.
 
 ### Data Quality Validation
 
@@ -223,7 +223,7 @@ FSx for ONTAP → DataSync → S3 (raw zone)
 - NULL ratio threshold violation detection
 - Timestamp range validation (exclude future dates, too-old data)
 
-> **Quality gate** (Data Reliability Engineer lens): DataSync guarantees transfer integrity (byte-level consistency) but does **not guarantee business-level quality**. Source-side file corruption, incomplete writes (files being written on NFS side), and schema drift pass through DataSync. Place Glue Data Quality rules or dbt source freshness tests as a quality gate after S3 arrival. The Snapshot staging pattern (Phase 2) avoids the "mid-write" problem, but schema drift and NULL anomalies require separate detection.
+> **Quality gate**: DataSync guarantees transfer integrity (byte-level consistency) but does **not guarantee business-level quality**. Source-side file corruption, incomplete writes (files being written on NFS side), and schema drift pass through DataSync. Place Glue Data Quality rules or dbt source freshness tests as a quality gate after S3 arrival. The Snapshot staging pattern (Phase 2) avoids the "mid-write" problem, but schema drift and NULL anomalies require separate detection.
 
 ## Phased Implementation Steps
 
@@ -235,13 +235,13 @@ FSx for ONTAP → DataSync → S3 (raw zone)
 | **Phase 4**: Monitoring/cost optimization | Operational quality improvement | S3 Lifecycle rules, includes/excludes filter optimization, cost dashboard | Monthly cost target met, unnecessary data auto-tiered | 1 week |
 | **Phase 5**: Multi-volume/DR | Production expansion | Multi-volume parallel sync, cross-region DR, failover testing | Multi-volume stable operation, RPO/RTO targets confirmed | 2-4 weeks |
 
-> **Pilot-line adoption** (Manufacturing DX Specialist lens): In automotive manufacturing, run Phase 1 on a **pilot line** (a single production line). Full plant rollout comes at Phase 5 and later. Pilot-line selection criteria: representative data volume, includes quality-inspection images, has MES/SCADA integration. Following the IATF 16949 change-management process, review pilot results at a quality review before approving horizontal rollout.
+> **Pilot-line adoption**: In automotive manufacturing, run Phase 1 on a **pilot line** (a single production line). Full plant rollout comes at Phase 5 and later. Pilot-line selection criteria: representative data volume, includes quality-inspection images, has MES/SCADA integration. Following the IATF 16949 change-management process, review pilot results at a quality review before approving horizontal rollout.
 
-> **Observability** (SRE / Observability Engineer lens): When transitioning from Phase 3 to Phase 4, always include `BytesTransferred`, `FilesTransferred`, `TaskExecutionStatus`, and `Duration` in your CloudWatch dashboard. Before Phase 5 multi-volume expansion, confirm at least 2 weeks of stable operation on a single volume.
+> **Observability**: When transitioning from Phase 3 to Phase 4, always include `BytesTransferred`, `FilesTransferred`, `TaskExecutionStatus`, and `Duration` in your CloudWatch dashboard. Before Phase 5 multi-volume expansion, confirm at least 2 weeks of stable operation on a single volume.
 
-> **Infrastructure as Code** (Platform Engineering / IaC lens): Version-control DataSync task includes/excludes patterns in CloudFormation / CDK. Managing the definition of the "curated subset" as code prevents operational tribal knowledge and tracks change history.
+> **Infrastructure as Code**: Version-control DataSync task includes/excludes patterns in CloudFormation / CDK. Managing the definition of the "curated subset" as code prevents operational tribal knowledge and tracks change history.
 
-> **Cost optimization** (Cost Optimization Specialist lens): In Phase 4, consider S3 Intelligent-Tiering. DataSync destination data tends to experience rapidly declining access frequency after write, and auto-tiering Standard → IA after 30 days can achieve 30-40% monthly storage cost reduction.
+> **Cost optimization**: In Phase 4, consider S3 Intelligent-Tiering. DataSync destination data tends to experience rapidly declining access frequency after write, and auto-tiering Standard → IA after 30 days can achieve 30-40% monthly storage cost reduction.
 
 ## When You Need This
 
@@ -403,9 +403,9 @@ aws datasync describe-task-execution --task-execution-arn <EXECUTION_ARN>
 7. **Design IAM policies with least privilege** — Grant DataSync service role write permissions only to the target S3 prefix
 8. **Retain task execution logs** — Enable CloudTrail + S3 access logs for audit trail
 
-> **Least-privilege IAM** (IAM Security Architect lens): In the DataSync service role IAM policy, limit `s3:PutObject` Resource to the target prefix like `arn:aws:s3:::<bucket>/fsxn-sync/*`. Avoid `s3:*` or bucket-wide write permissions. Additionally, explicitly Deny writes from non-DataSync service roles in the S3 bucket policy to reduce data tampering risk.
+> **Least-privilege IAM**: In the DataSync service role IAM policy, limit `s3:PutObject` Resource to the target prefix like `arn:aws:s3:::<bucket>/fsxn-sync/*`. Avoid `s3:*` or bucket-wide write permissions. Additionally, explicitly Deny writes from non-DataSync service roles in the S3 bucket policy to reduce data tampering risk.
 
-> **Data lineage tracking** (Data Governance / Lineage Engineer lens): For lineage tracking of DataSync-synced data, attach S3 object tags including `source_volume`, `sync_timestamp`, and `datasync_task_arn`. This enables data provenance tracking in downstream Databricks UC or Lake Formation, facilitating compliance with regulatory requirements (data retention, right to deletion).
+> **Data lineage tracking**: For lineage tracking of DataSync-synced data, attach S3 object tags including `source_volume`, `sync_timestamp`, and `datasync_task_arn`. This enables data provenance tracking in downstream Databricks UC or Lake Formation, facilitating compliance with regulatory requirements (data retention, right to deletion).
 
 ## Integration with Databricks UC
 
@@ -429,7 +429,7 @@ CREATE EXTERNAL VOLUME catalog.schema.fsxn_files
 -- Access via Volumes: /Volumes/catalog/schema/fsxn_files/sensor-data/*.parquet
 ```
 
-> **Dual authorization design** (Databricks Governance Architect lens): When registering External Locations, configure UC Storage Credentials with IAM Role-based authentication and implement dual authorization with S3 bucket policies. If the DataSync write prefix and Databricks read prefix are the same, grant only `s3:GetObject` / `s3:ListBucket` to the Databricks IAM Role — do not grant write permissions.
+> **Dual authorization design**: When registering External Locations, configure UC Storage Credentials with IAM Role-based authentication and implement dual authorization with S3 bucket policies. If the DataSync write prefix and Databricks read prefix are the same, grant only `s3:GetObject` / `s3:ListBucket` to the Databricks IAM Role — do not grant write permissions.
 
 > UC Volumes (introduced 2024) provide lighter-weight file access than External Tables, allowing direct file reference via `/Volumes/` paths. For ETL pipelines that process files incrementally, Volumes are simpler to manage than External Locations.
 
@@ -451,7 +451,7 @@ df = spark.readStream.format("cloudFiles") \
     .load("s3://<BUCKET>/fsxn-sync/sensor-data/")
 ```
 
-> **Auto Loader notification mode** (Data Engineering SA lens): `cloudFiles.useNotifications = true` (notification mode) depends on S3 Event Notifications and does not work on FSx for ONTAP S3 AP directly. One of the key benefits of the DataSync → standard S3 path is enabling this notification mode. Listing mode works on FSx for ONTAP S3 AP but suffers from ListObjectsV2 high latency (30-80x) on large directories.
+> **Auto Loader notification mode note**: `cloudFiles.useNotifications = true` (notification mode) depends on S3 Event Notifications and does not work on FSx for ONTAP S3 AP directly. One of the key benefits of the DataSync → standard S3 path is enabling this notification mode. Listing mode works on FSx for ONTAP S3 AP, and listing latency measured 1.3-1.4x native S3 up to 5,000 objects ([BLK-006](./blocker-tracker.md)); behaviour on much larger directories is unmeasured, so validate before relying on listing mode at scale.
 
 ## Integration with Delta Lake / Iceberg
 

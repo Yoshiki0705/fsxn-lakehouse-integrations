@@ -273,7 +273,7 @@ Foreign Iceberg パスでは、データ鮮度に**3 つのレイヤー**が累�
 
 **合計鮮度**: DataSync RPO + Iceberg 書き込み遅延 + REFRESH 遅延 = **10 分〜24 時間+**
 
-> **鮮度設計** (Principal Cloud Data Architect lens): Foreign Iceberg は「分析用メタデータカタログ」の参照に最適であり、リアルタイム性が求められるユースケースには適しません。リアルタイム要件がある場合は FPolicy → Kafka → Structured Streaming パスを併用してください。
+> **鮮度設計**: Foreign Iceberg は「分析用メタデータカタログ」の参照に最適であり、リアルタイム性が求められるユースケースには適しません。リアルタイム要件がある場合は FPolicy → Kafka → Structured Streaming パスを併用してください。
 
 | リスク | 影響 | 緩和策 |
 |--------|------|--------|
