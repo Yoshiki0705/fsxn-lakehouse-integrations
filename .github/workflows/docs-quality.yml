@@ -30,6 +30,11 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Check Markdown table/fence rendering
+        run: |
+          echo "🔍 Checking Markdown tables and code fences for rendering breakage..."
+          git ls-files -- '*.md' | xargs python3 scripts/check-markdown-tables.py
+
       - name: Check for AWS Account IDs in tracked files
         run: |
           echo "🔍 Scanning for hardcoded AWS Account IDs..."
@@ -43,11 +48,6 @@ jobs:
             exit 1
           fi
           echo "✓ No hardcoded AWS Account IDs"
-
-      - name: Check Markdown table/fence rendering
-        run: |
-          echo "🔍 Checking Markdown tables and code fences for rendering breakage..."
-          git ls-files -- '*.md' | xargs python3 scripts/check-markdown-tables.py
 
       - name: Check EN/JA pair completeness
         run: |
