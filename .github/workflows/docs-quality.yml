@@ -35,19 +35,10 @@ jobs:
           echo "🔍 Checking Markdown tables and code fences for rendering breakage..."
           git ls-files -- '*.md' | xargs python3 scripts/check-markdown-tables.py
 
-      - name: Check for AWS Account IDs in tracked files
+      - name: Check for real AWS Account IDs in tracked files
         run: |
-          echo "🔍 Scanning for hardcoded AWS Account IDs..."
-          HITS=$(git ls-files -- '*.md' '*.yaml' '*.yml' '*.py' '*.sql' '*.sh' '*.json' | \
-            xargs grep -Pn '\b123456789012\b' 2>/dev/null | \
-            grep -v '<ACCOUNT_ID>' | \
-            grep -v '# Contains account ID for reference' || true)
-          if [[ -n "$HITS" ]]; then
-            echo "::error::Hardcoded AWS Account ID (123456789012) found in tracked files. Use <ACCOUNT_ID> placeholder."
-            echo "$HITS"
-            exit 1
-          fi
-          echo "✓ No hardcoded AWS Account IDs"
+          echo "🔍 Scanning for real AWS Account IDs..."
+          python3 scripts/check-account-ids.py
 
       - name: Check EN/JA pair completeness
         run: |
