@@ -48,7 +48,7 @@ FSx for ONTAP provides **enterprise data protection + multiprotocol access + Lak
 | **Constraints** | Conditional writes not supported, Event Notifications not supported ([BLK-002](./blocker-tracker.md), [BLK-003](./blocker-tracker.md)) |
 | **Related docs** | [Compatibility Matrix](./compatibility-matrix.md), [Networking](./fsx-ontap-s3ap-networking.md) |
 
-> **The true value of multiprotocol** (FSx for ONTAP Architect lens): The value of S3 AP is not "providing S3 API" but enabling analytics engines to read **the same data** that business users access via NFS/SMB — without transformation. With EBS + S3, data copy or ETL is always required.
+> **The true value of multiprotocol**: The value of S3 AP is not "providing S3 API" but enabling analytics engines to read **the same data** that business users access via NFS/SMB — without transformation. With EBS + S3, data copy or ETL is always required.
 
 ### Snapshot
 
@@ -59,7 +59,7 @@ FSx for ONTAP provides **enterprise data protection + multiprotocol access + Lak
 | **Constraints** | Snapshot alone cannot replicate to other regions (combine with SnapMirror) |
 | **Related docs** | [DataSync Guide](./datasync-to-s3-guide.md) (Phase 2), [Recovery Semantics](./recovery-semantics.md) |
 
-> **DataSync + Snapshot pattern** (FSx for ONTAP Architect lens): Executing Snapshot → FlexClone → DataSync achieves the triple benefit of "zero production impact + data consistency + incremental sync." Without Snapshot, there's a risk of data inconsistency from files changing during sync.
+> **DataSync + Snapshot pattern**: Executing Snapshot → FlexClone → DataSync achieves the triple benefit of "zero production impact + data consistency + incremental sync." Without Snapshot, there's a risk of data inconsistency from files changing during sync.
 
 ### FlexClone
 
@@ -70,7 +70,7 @@ FSx for ONTAP provides **enterprise data protection + multiprotocol access + Lak
 | **Constraints** | Storage consumption begins when writes to the clone increase |
 | **Related docs** | [DataSync Guide](./datasync-to-s3-guide.md) (Phase 2), [ADR-001](../adr/ADR-001-datasync-as-primary-sync.md) |
 
-> **What zero-cost means** (FSx for ONTAP Architect lens): FlexClone uses WAFL (Write Anywhere File Layout) metadata references to create a complete volume clone without physical copy. Cloning a 1 TB volume adds 0 bytes of additional storage. Unlike EBS Snapshots, it's immediately mountable as an independent readable volume.
+> **What zero-cost means**: FlexClone uses WAFL (Write Anywhere File Layout) metadata references to create a complete volume clone without physical copy. Cloning a 1 TB volume adds 0 bytes of additional storage. Unlike EBS Snapshots, it's immediately mountable as an independent readable volume.
 
 ### FPolicy
 
@@ -81,7 +81,7 @@ FSx for ONTAP provides **enterprise data protection + multiprotocol access + Lak
 | **Constraints** | Metadata events only (file content not transferred), operational complexity via Lambda |
 | **Related docs** | [Kafka-ClickHouse-UC Connectivity](./kafka-clickhouse-unity-catalog-connectivity.md), [DataSync Guide](./datasync-to-s3-guide.md) (FPolicy alternative pattern) |
 
-> **S3 Event Notifications alternative** (FSx for ONTAP Architect lens): Because FSx for ONTAP S3 AP does not support Event Notifications (BLK-003), FPolicy is the only means for event-driven pipelines. FPolicy detects NFS/SMB-side file operations, so operations via S3 AP are not detected. Protocol selection per use case is important.
+> **S3 Event Notifications alternative**: Because FSx for ONTAP S3 AP does not support Event Notifications (BLK-003), FPolicy is the only means for event-driven pipelines. FPolicy detects NFS/SMB-side file operations, so operations via S3 AP are not detected. Protocol selection per use case is important.
 
 ### SnapMirror
 
@@ -92,7 +92,7 @@ FSx for ONTAP provides **enterprise data protection + multiprotocol access + Lak
 | **Constraints** | SnapMirror **S3** (ONTAP S3 → AWS S3) is unavailable on FSx for ONTAP ([BLK-004](./blocker-tracker.md)). Volume-level SnapMirror IS available |
 | **Related docs** | [ADR-002](../adr/ADR-002-snapmirror-s3-unavailability.md), [Blocker Tracker](./blocker-tracker.md) |
 
-> **Volume SnapMirror vs SnapMirror S3 distinction** (FSx for ONTAP Architect lens): Volume-level SnapMirror (replication between FSx for ONTAP instances) is fully available. What's unavailable is object replication from "ONTAP S3 bucket → AWS S3 bucket" (SnapMirror S3) only. DR designs can leverage Volume SnapMirror.
+> **Volume SnapMirror vs SnapMirror S3 distinction**: Volume-level SnapMirror (replication between FSx for ONTAP instances) is fully available. What's unavailable is object replication from "ONTAP S3 bucket → AWS S3 bucket" (SnapMirror S3) only. DR designs can leverage Volume SnapMirror.
 
 ### FabricPool (Tiering)
 
@@ -129,7 +129,7 @@ FSx for ONTAP provides **enterprise data protection + multiprotocol access + Lak
 | Event Notifications | ❌ Not supported | ✅ S3 supported | When Auto Loader notification mode is needed → standard S3 |
 | Scale (unlimited capacity) | ⚠️ Volume size limits | ✅ Virtually unlimited | For petabyte-scale data lakes → standard S3 |
 
-> **Right tool selection** (Solution Architect lens): FSx for ONTAP is optimal when the primary requirements are "enterprise file data + multiprotocol access + data protection." For pure object storage use cases (massive data lakes, CDN origins), standard S3 is appropriate. Most enterprise environments **use both in combination** (FSx for ONTAP = source + business access, S3 = analytics copy + Lakehouse).
+> **Right tool selection**: FSx for ONTAP is optimal when the primary requirements are "enterprise file data + multiprotocol access + data protection." For pure object storage use cases (massive data lakes, CDN origins), standard S3 is appropriate. Most enterprise environments **use both in combination** (FSx for ONTAP = source + business access, S3 = analytics copy + Lakehouse).
 
 ---
 

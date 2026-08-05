@@ -6,7 +6,7 @@
 
 - **Purpose**: Defines verified compatibility between FSx for ONTAP S3 Access Points and Lakehouse platforms/formats, clarifying support status from read-only analytics to write paths
 - **Key findings**: Read-only analytics (Athena/Glue/EMR/Snowflake/Bedrock) are verified and production-ready. Write paths (Delta Lake/Iceberg) are limited due to lack of conditional writes support
-- **Critical constraints**: Conditional writes (`If-None-Match`) not supported, S3 Event Notifications not supported, ListObjectsV2 high latency (30-80x), SnapMirror S3 not available
+- **Critical constraints**: Conditional writes (`If-None-Match`) not supported, S3 Event Notifications not supported, SnapMirror S3 not available. ListObjectsV2 latency was re-measured 2026-08-05 at 1.3-1.4x native S3 for up to 5,000 objects — the previously quoted 30-80x did not reproduce ([BLK-006](./blocker-tracker.md))
 - **Recommended approach**: Implement read-only use cases via FSx for ONTAP S3 AP direct path. Use DataSync → standard S3 path when writes are required
 - **Verification levels**: 4-stage progression: API verified → Functionally verified → Security verified → Production verified. Most platforms currently at functional verification
 
@@ -16,9 +16,9 @@
 
 **A**: Delta Lake's commit protocol requires atomic rename within the `_delta_log/` directory, but the S3 API has no native rename operation. The CopyObject + DeleteObject workaround is possible, but conditional writes (`If-None-Match`) are also unsupported, meaning **transaction integrity cannot be guaranteed for concurrent writers**. Do not use for production writes.
 
-> **Common S3-compatible storage challenge** (S3 Compatibility / Storage Specialist lens): This constraint is not unique to FSx for ONTAP S3 AP — it exists across S3-compatible storage. Standard S3 resolved this with conditional writes (available since Aug 2024), but FSx for ONTAP S3 AP has not yet received this capability.
+> **Common S3-compatible storage challenge**: This constraint is not unique to FSx for ONTAP S3 AP — it exists across S3-compatible storage. Standard S3 resolved this with conditional writes (available since Aug 2024), but FSx for ONTAP S3 AP has not yet received this capability.
 
-> **UniForm read path** (Iceberg / Open Table Specialist lens): Delta Lake UniForm (`delta.universalFormat`) generates metadata for both Delta and Iceberg. Because the Iceberg metadata path manages pointers via an external catalog (Glue), the Iceberg read path may function even on FSx for ONTAP S3 AP. However, the UniForm write commit itself depends on the Delta protocol, so direct writes to FSx for ONTAP S3 AP remain unsupported.
+> **UniForm read path**: Delta Lake UniForm (`delta.universalFormat`) generates metadata for both Delta and Iceberg. Because the Iceberg metadata path manages pointers via an external catalog (Glue), the Iceberg read path may function even on FSx for ONTAP S3 AP. However, the UniForm write commit itself depends on the Delta protocol, so direct writes to FSx for ONTAP S3 AP remain unsupported.
 
 ### Q2: Can I use presigned URLs?
 
@@ -28,11 +28,21 @@
 
 **A**: SnapMirror S3 (ONTAP S3 bucket → AWS S3 replication) is **intentionally disabled** on FSx for ONTAP (confirmed by AWS Support, May 2026). Use AWS DataSync for FSx for ONTAP → standard S3 sync. Details: [DataSync Guide](./datasync-to-s3-guide.md)
 
-### Q4: Why is ListObjectsV2 slow on large datasets?
+### Q4: Is ListObjectsV2 slow on FSx for ONTAP S3 Access Points?
 
-**A**: FSx for ONTAP S3 AP's ListObjectsV2 exhibits 30-80x higher latency than standard S3. AWS Support confirmed this as a **product-level performance characteristic** (not an environmental issue). For workloads requiring extensive file listing, consolidate files to ≥ 128 MB and organize with partition structures.
+**A**: Not at the scales measured. A re-measurement on 2026-08-05 found 1.3-1.4x
+native S3 latency for 10 to 5,000 objects (0.9x at 5,000, i.e. no measurable
+difference), across both flat and nested key layouts. This repository previously
+quoted 30-80x; that figure **did not reproduce** and has been withdrawn. See
+[BLK-006](./blocker-tracker.md) and the
+[evidence record](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml).
 
-> **Small-file consolidation** (Data Lake Optimization lens): Manufacturing data tends to generate massive numbers of small files (sensor logs, etc.). Pre-processing with Glue ETL or EMR to consolidate into Parquet ≥ 128 MB before analytics via FSx for ONTAP S3 AP is recommended.
+Listing above 5,000 objects in a single directory is still unmeasured, and ONTAP
+must sort directory entries in memory, so consolidating files to ≥ 128 MB and
+organizing with partition structures remains sound design practice for
+large-scale datasets — just not because of a measured penalty at small scale.
+
+> **Small-file consolidation**: Manufacturing data tends to generate massive numbers of small files (sensor logs, etc.). Pre-processing with Glue ETL or EMR to consolidate into Parquet ≥ 128 MB before analytics via FSx for ONTAP S3 AP is recommended.
 
 ### Q5: Do I need Multi-AZ for production?
 
@@ -46,7 +56,7 @@
 - **Security verified**: IAM + AP policy + filesystem permissions + CloudTrail all confirmed
 - **Production verified**: Concurrent queries, disaster recovery, cost validation, SLA compliance confirmed
 
-> **Pre-production security verification** (Security Verification lens): Many PoCs stop at API/functional verification, but security verification (including negative tests) must be completed before production deployment. Cross-account access denial and VPC-origin AP isolation confirmation are mandatory.
+> **Pre-production security verification**: Many PoCs stop at API/functional verification, but security verification (including negative tests) must be completed before production deployment. Cross-account access denial and VPC-origin AP isolation confirmation are mandatory.
 
 ### Q7: Can I mix formats (Parquet/Delta/Iceberg/Hudi) in one bucket?
 
@@ -84,7 +94,7 @@ graph TD
     style J fill:#ccffcc
 ```
 
-> **UC governance path** (Databricks Governance Architect lens): When selecting Databricks, UC External Location does not directly support S3 AP (session policy constraint). Reading via Instance Profile is possible but bypasses UC governance. For UC-governed analytics, use the DataSync → standard S3 → UC External Location path.
+> **UC governance path**: When selecting Databricks, UC External Location does not directly support S3 AP (session policy constraint). Reading via Instance Profile is possible but bypasses UC governance. For UC-governed analytics, use the DataSync → standard S3 → UC External Location path.
 
 ## OT/IT Security Considerations
 
@@ -107,7 +117,7 @@ FSx for ONTAP S3 AP implements **dual-layer authorization**:
 | Recommended for | Production, sensitive data | Development, Athena/Glue (managed services outside VPC) |
 | Athena compatibility | ❌ Athena connects from outside VPC | ✅ Athena requires Internet-Origin only |
 
-> **VPC-Origin AP isolation** (OT Network Security Specialist lens): For sensitive data like manufacturing data, use VPC-Origin AP and allow access only from VPC-internal services (EMR/Lambda). When Athena access is needed, use Internet-Origin AP + IAM + AP policy triple control as an alternative.
+> **VPC-Origin AP isolation**: For sensitive data like manufacturing data, use VPC-Origin AP and allow access only from VPC-internal services (EMR/Lambda). When Athena access is needed, use Internet-Origin AP + IAM + AP policy triple control as an alternative.
 
 ### Manufacturing Environment Security Design
 
@@ -132,7 +142,7 @@ IT VPC:
 | `PutAccessPointPolicy` | AP policy changes | Privilege escalation detection |
 | `DeleteObject` via AP | Who deleted | Data loss tracking |
 
-> **Audit-log identifiability** (Audit / Observability lens): S3 data event CloudTrail logs are recorded based on AP ARN. When operating multiple APs, include purpose in AP names (`analytics-readonly`, `etl-readwrite`) to facilitate log analysis identification.
+> **Audit-log identifiability**: S3 data event CloudTrail logs are recorded based on AP ARN. When operating multiple APs, include purpose in AP names (`analytics-readonly`, `etl-readwrite`) to facilitate log analysis identification.
 
 ### Credential Rotation
 
@@ -153,9 +163,9 @@ IT VPC:
 | **Phase 4**: Security hardening | Least privilege / negative testing | IAM policy minimization, all negative tests pass, CloudTrail enabled | Security verification level achieved | 1-2 weeks |
 | **Phase 5**: Production validation | Performance/DR/cost confirmation | Concurrent query benchmarks, DR failover test, monthly cost validation | Production verification level achieved, SLA compliance confirmed | 2-4 weeks |
 
-> **Production-deployment gate** (Reliability / QA lens): Before transitioning from Phase 4 to Phase 5, ensure all items in the negative test matrix (NEG-001 through NEG-010) pass. Block production deployment if any Critical-level item fails.
+> **Production-deployment gate**: Before transitioning from Phase 4 to Phase 5, ensure all items in the negative test matrix (NEG-001 through NEG-010) pass. Block production deployment if any Critical-level item fails.
 
-> **Throughput optimization** (Performance / Throughput Architect lens): In Phase 5, verify the gap between FSx for ONTAP provisioned throughput and actual workload measurements. For over-provisioning (utilization < 30%), consider throughput reduction; for under-provisioning (sustained utilization > 80%), consider increase. Use CloudWatch `ThroughputUtilization` metric for decision-making.
+> **Throughput optimization**: In Phase 5, verify the gap between FSx for ONTAP provisioned throughput and actual workload measurements. For over-provisioning (utilization < 30%), consider throughput reduction; for under-provisioning (sustained utilization > 80%), consider increase. Use CloudWatch `ThroughputUtilization` metric for decision-making.
 
 ## Related Documents
 
@@ -192,7 +202,7 @@ aws athena start-query-execution \
   --work-group primary
 ```
 
-> **Phased approach** (Solution Architect lens): 80% of users start with "is read-only analytics sufficient, or do I need writes?" If unsure, try the Quick Start above with FSx for ONTAP S3 AP + Athena, and add the DataSync path when writes are needed. No need to build a complex architecture from the start.
+> **Phased approach**: 80% of users start with "is read-only analytics sufficient, or do I need writes?" If unsure, try the Quick Start above with FSx for ONTAP S3 AP + Athena, and add the DataSync path when writes are needed. No need to build a complex architecture from the start.
 
 ## Cross-Path Cost Comparison
 
@@ -203,7 +213,7 @@ aws athena start-query-execution \
 | DataSync → S3 → Iceberg Lakehouse | ~$50-80/month (transfer+S3+compute) | DataSync + S3 + EMR/Glue transformation | Full-governance Lakehouse |
 | FPolicy → Lambda → S3 (near-real-time) | ~$15-40/month (Lambda+S3) | Lambda + EventBridge + S3 | Near-real-time change detection needed |
 
-> **Long-term retention tiering** (Manufacturing Compliance Specialist lens): In automotive manufacturing environments, quality inspection data requires minimum 15-year retention per regulatory requirements (IATF 16949). Combining S3 Lifecycle + Glacier Deep Archive reduces long-term retention cost to ~$1/TB/month. Typical tiering: Standard/IA for short-term analytics (last 90 days), Glacier for long-term retention.
+> **Long-term retention tiering**: In automotive manufacturing environments, quality inspection data requires minimum 15-year retention per regulatory requirements (IATF 16949). Combining S3 Lifecycle + Glacier Deep Archive reduces long-term retention cost to ~$1/TB/month. Typical tiering: Standard/IA for short-term analytics (last 90 days), Glacier for long-term retention.
 
 ## Overview
 
@@ -219,7 +229,7 @@ Before reviewing the compatibility matrix, understand these fundamental constrai
 | Max upload size: 5 GB | Single object upload limited to 5 GB (multipart upload supported) | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | No Object Versioning | S3 Object Versioning is not supported | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | No conditional writes | Conditional writes (`If-None-Match`) are not supported — returns HTTP 501 `NotImplemented`. This is a **product-level limitation** (confirmed by AWS Support, May 2026). Feature request submitted for parity with S3 native conditional writes (available since Aug 2024). Blocks Delta Lake, Iceberg, and Hudi transactional writes. | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
-| ListObjectsV2 latency | ListObjectsV2 exhibits higher latency than standard S3 (observed 30-80x for small directories). AWS Support confirmed this as a **product-level performance characteristic** (May 2026), not an environmental issue. Feature request submitted with target: <1s for <100 files, <3s for <1000 files. | Validated May 2026 |
+| ListObjectsV2 latency | Re-measured 2026-08-05: **1.3-1.4x** native S3 for 10-5,000 objects (0.9x at 5,000), flat and nested layouts alike — inside the original target of <1s for <100 files and <3s for <1000 files. The previously quoted 30-80x did not reproduce and has been withdrawn. Behaviour above 5,000 objects per directory remains unmeasured. | Re-measured 2026-08-05 ([evidence](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml)) |
 | No S3 Event Notifications | S3 Event Notifications (s3:ObjectCreated, etc.) are not supported. Prevents Snowpipe auto-ingest and Auto Loader file notification mode. Feature request submitted (May 2026). Use FPolicy → Lambda or scheduled polling as alternatives. | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | No SnapMirror S3 | SnapMirror S3 (ONTAP S3 bucket → AWS S3 replication) is **intentionally disabled** on FSx for ONTAP (confirmed by AWS Support, May 2026). `snapmirror object-store` commands and `/api/cloud/targets` REST API are blocked as service-level restrictions. Use AWS DataSync (NFS → S3) as the validated sync mechanism. | Validated May 2026 |
 | Presigned URLs: Not officially supported | Presigning is a client-side signature calculation, not a server-side operation. Presigned URLs for supported operations (e.g., GetObject) work in practice because the server sees a standard signed request. However, AWS lists this as "Not supported" and does not guarantee stability. **Do not rely on for production.** | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html), [AWS Support (verified)](verified 2026-05-22) |
@@ -271,8 +281,6 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **AWS Glue ETL** | Iceberg | Read | ⚠️ Experimental | Glue 4.0+ native Iceberg support, Glue Catalog as Iceberg catalog | Glue 4.0 provides native Iceberg integration. Iceberg metadata reading on FSx for ONTAP S3 AP via external catalog (Glue) expected to work. Write commits limited by lack of conditional writes |
 | **AWS Glue ETL** | Delta Lake | Write | ❌ Not Supported | — | Delta commit protocol requires atomic rename of _delta_log JSON files; not natively supported |
 | **AWS Glue ETL** | Iceberg | Write | ⚠️ Experimental | Glue 4.0+ Iceberg native + Glue Catalog | Iceberg uses external catalog for pointer management (no rename needed). However, some implementations use conditional writes for concurrent writer conflict resolution, which may fail on FSx for ONTAP S3 AP. Single-writer configuration expected to work |
-
-> **Single-writer configuration** (Data Engineering SA lens): Glue 4.0's native Iceberg support uses Glue Catalog as the Iceberg catalog to manage metadata pointer updates. This means reads of data files on FSx for ONTAP S3 AP work without issues, and **single-writer configuration** writes are theoretically possible. However, if multiple Glue jobs write to the same table, conflicts may occur — standard S3 writes are recommended for multi-writer scenarios.
 | **Amazon EMR Serverless** | Parquet | Read | ✅ Verified | Spark with S3A connector, AP alias | — |
 | **Amazon EMR Serverless** | Parquet | Write (Append) | ✅ Verified | Read-write file system user | 5 GB max per file |
 | **Amazon EMR Serverless** | Iceberg | Read | ⚠️ Experimental | Iceberg Spark runtime, Glue Catalog | Metadata reading works; write commit untested |
@@ -292,11 +300,13 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **ClickHouse** | Iceberg | Read (iceberg() table function) | 🔲 Planned | ClickHouse 23.8+ `iceberg()` table function. Glue Catalog integration needs verification | Annotation table (Iceberg on S3 Tables) reading mentioned in [S3 Annotations Evaluation](./s3-annotations-governance-evaluation.md). Version/config dependent |
 | **ClickHouse** | Parquet/CSV | Read (S3Queue engine) | ⚠️ Design phase | DataSync → S3 → ClickHouse S3Queue engine for automated ingestion | Standard S3 bucket path expected to work. FSx for ONTAP S3 AP direct S3Queue not possible (no Event Notifications) |
 
-> **ClickHouse hot/cold role** (ClickHouse Specialist lens): ClickHouse's primary role in manufacturing use cases is real-time quality analytics via Kafka/streaming (hot path). Reading from FSx for ONTAP S3 AP should be positioned as cold path (historical analysis, batch enrichment). For real-time quality alerts, use ClickHouse Materialized Views consuming directly from Kafka, and limit S3 AP batch reads to post-hoc analysis.
+> **Single-writer configuration for AWS Glue ETL / Iceberg writes**: Glue 4.0's native Iceberg support uses Glue Catalog as the Iceberg catalog to manage metadata pointer updates. This means reads of data files on FSx for ONTAP S3 AP work without issues, and **single-writer configuration** writes are theoretically possible. However, if multiple Glue jobs write to the same table, conflicts may occur — standard S3 writes are recommended for multi-writer scenarios.
+
+> **ClickHouse hot/cold role**: ClickHouse's primary role in manufacturing use cases is real-time quality analytics via Kafka/streaming (hot path). Reading from FSx for ONTAP S3 AP should be positioned as cold path (historical analysis, batch enrichment). For real-time quality alerts, use ClickHouse Materialized Views consuming directly from Kafka, and limit S3 AP batch reads to post-hoc analysis.
 
 ## Parquet Timestamp Compatibility
 
-> **Positioning note** (Data Format Specialist lens): This is a sizing/implementation reference, not a service limit. The constraint originates from Apache Spark's Parquet reader, not from FSx for ONTAP S3 AP.
+> **Positioning note**: This is a sizing/implementation reference, not a service limit. The constraint originates from Apache Spark's Parquet reader, not from FSx for ONTAP S3 AP.
 
 When generating Parquet files for use with Spark-based engines (Glue ETL, EMR, Databricks), timestamp resolution matters:
 
@@ -1057,7 +1067,7 @@ clickhouse-client --query "
 "
 ```
 
-> **ListObjectsV2 latency mitigation** (Query Performance Engineer lens): Even if CH-001/CH-002 succeed, the high ListObjectsV2 latency (30-80x) may make wildcard scans over many files impractical. When reading FSx for ONTAP S3 AP from ClickHouse, either pre-fetch the file path list and pass individual paths to `s3()`, or use the indirect path DataSync → standard S3 → S3Queue. In ClickHouse Cloud environments, the IAM auth mechanism differs from self-managed (SharedRole-based), so test CH-005 in both environments.
+> **ListObjectsV2 latency note**: ListObjectsV2 measured 1.3-1.4x native S3 up to 5,000 objects ([BLK-006](./blocker-tracker.md)), so wildcard scans at that scale are not a concern. Above 5,000 objects per directory the behaviour is unmeasured; if CH-001/CH-002 target datasets larger than that, either pre-fetch the file path list and pass individual paths to `s3()`, or use the indirect path DataSync → standard S3 → S3Queue. In ClickHouse Cloud environments, the IAM auth mechanism differs from self-managed (SharedRole-based), so test CH-005 in both environments.
 
 ## References
 

@@ -1,5 +1,5 @@
 -- =============================================================================
--- FSxN Athena Integration — Basic Queries
+-- FSx for ONTAP Athena Integration — Basic Queries
 -- =============================================================================
 -- Executes SELECT, WHERE, GROUP BY, COUNT, SUM, AVG, JOIN queries
 -- on Parquet, CSV, and JSON tables discovered by Glue Crawler.

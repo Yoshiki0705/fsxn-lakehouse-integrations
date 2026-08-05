@@ -13,7 +13,7 @@
 --
 -- Prerequisites:
 --   - Snowflake account with Iceberg Tables enabled
---   - Storage Integration for FSx S3 AP (FSXN_VERIFICATION_INTEGRATION)
+--   - Storage Integration for FSx for ONTAP S3 AP (FSXN_VERIFICATION_INTEGRATION)
 --   - External Volume (s3tables_metadata_vol) — already created
 -- =============================================================================
 

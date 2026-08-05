@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Defines reusable file formats for External Tables and Snowpipe ingestion.
 -- All formats are created in the BRONZE schema since that is where raw data
--- lands from FSxN via S3 Access Point.
+-- lands from FSx for ONTAP via S3 Access Point.
 --
 -- Format → External Table mapping:
 --   PARQUET_FORMAT  → TRANSACTIONS, IOT_SENSORS (04_external_table.sql)
@@ -50,7 +50,7 @@ CREATE OR REPLACE FILE FORMAT BRONZE.CSV_FORMAT
 -- Used by: EVENTS_JSON External Table
 -- STRIP_OUTER_ARRAY = FALSE because each file contains a JSON array wrapper
 -- that we want to preserve (Snowflake auto-expands arrays in External Tables).
--- COMPRESSION = NONE since FSxN stores uncompressed JSON files written via NFS.
+-- COMPRESSION = NONE since FSx for ONTAP stores uncompressed JSON files written via NFS.
 -- =============================================================================
 CREATE OR REPLACE FILE FORMAT BRONZE.JSON_FORMAT
   TYPE = JSON

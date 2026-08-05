@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate test data in multiple formats and upload to FSx S3 AP.
+Generate test data in multiple formats and upload to FSx for ONTAP S3 AP.
 
 Generates Parquet, CSV, and JSON files with configurable row counts,
 then uploads to the specified S3 Access Point path.
@@ -99,7 +99,7 @@ def upload_json(s3, bucket: str, key: str, df: pd.DataFrame) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate and upload test data to FSx S3 AP")
+    parser = argparse.ArgumentParser(description="Generate and upload test data to FSx for ONTAP S3 AP")
     parser.add_argument("--ap-alias", required=True, help="S3 Access Point alias")
     parser.add_argument("--region", required=True, help="AWS region")
     parser.add_argument("--prefix", default="test-data/", help="S3 key prefix")

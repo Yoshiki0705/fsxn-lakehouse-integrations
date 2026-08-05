@@ -1,14 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# FSxN DuckDB Integration — Resource Cleanup
+# FSx for ONTAP DuckDB Integration — Resource Cleanup
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PARAMS_FILE="${SCRIPT_DIR}/../params.json"
 REGION="${AWS_DEFAULT_REGION:-ap-northeast-1}"
 ENVIRONMENT="dev"
 STACK_NAME="fsxn-duckdb-integration"
 
-echo "🗑️  FSxN DuckDB Cleanup"
+echo "🗑️  FSx for ONTAP DuckDB Cleanup"
 read -p "Delete all DuckDB verification resources? [y/N] " -n 1 -r; echo
 [[ ! $REPLY =~ ^[Yy]$ ]] && exit 0
 

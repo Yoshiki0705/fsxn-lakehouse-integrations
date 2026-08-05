@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   FSx for NetApp ONTAP file system with S3 Access Point base configuration.
-  Deploys FSxN with S3 protocol enabled and creates a base S3 Access Point.
+  Deploys FSx for ONTAP with S3 protocol enabled and creates a base S3 Access Point.
 
 Parameters:
   EnvironmentName:
@@ -11,19 +11,19 @@ Parameters:
 
   VpcId:
     Type: AWS::EC2::VPC::Id
-    Description: VPC ID where FSxN will be deployed
+    Description: VPC ID where FSx for ONTAP will be deployed
 
   PreferredSubnetId:
     Type: AWS::EC2::Subnet::Id
-    Description: Preferred subnet for FSxN (primary)
+    Description: Preferred subnet for FSx for ONTAP (primary)
 
   StandbySubnetId:
     Type: AWS::EC2::Subnet::Id
-    Description: Standby subnet for FSxN (HA pair)
+    Description: Standby subnet for FSx for ONTAP (HA pair)
 
   FSxNSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Security group for FSxN
+    Description: Security group for FSx for ONTAP
 
   StorageCapacityGiB:
     Type: Number
@@ -60,7 +60,7 @@ Parameters:
   S3BucketName:
     Type: String
     Description: >
-      S3 bucket name exposed by FSxN SVM (format: svm-name).
+      S3 bucket name exposed by FSx for ONTAP SVM (format: svm-name).
       This is the bucket name configured on the ONTAP SVM S3 server.
 
   EnableTiering:
@@ -73,7 +73,7 @@ Parameters:
     Type: String
     Default: MULTI_AZ_1
     AllowedValues: [MULTI_AZ_1, MULTI_AZ_2, SINGLE_AZ_1, SINGLE_AZ_2]
-    Description: FSxN deployment type
+    Description: FSx for ONTAP deployment type
 
 Resources:
   # ============================================================

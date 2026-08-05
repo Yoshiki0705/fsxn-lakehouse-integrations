@@ -1,1 +1,1 @@
-# FPolicy External Server for FSxN Lakehouse Integrations
+# FPolicy External Server for FSx for ONTAP Lakehouse Integrations

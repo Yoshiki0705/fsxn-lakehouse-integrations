@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FSxN Athena Integration — Query Execution Script
+FSx for ONTAP Athena Integration — Query Execution Script
 
 Submits Athena queries, waits for results, and records execution metrics
 (query time, data scanned, cost).
@@ -136,7 +136,7 @@ class AthenaQueryRunner:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Execute Athena queries on FSxN data")
+    parser = argparse.ArgumentParser(description="Execute Athena queries on FSx for ONTAP data")
     parser.add_argument("--workgroup", default="fsxn-verification")
     parser.add_argument("--database", default="fsxn_athena_db")
     parser.add_argument("--region", default="ap-northeast-1")
@@ -149,7 +149,7 @@ def main():
     output_path = script_dir / args.output
 
     print("=" * 60)
-    print("FSxN Athena Integration — Query Execution")
+    print("FSx for ONTAP Athena Integration — Query Execution")
     print("=" * 60)
     print(f"Workgroup: {args.workgroup}")
     print(f"Database:  {args.database}")

@@ -20,16 +20,16 @@ tests:
   - name: "Admin user creation (REST API)"
     result: "PASS"
     note: "PUT /apiv2/bootstrap/firstuser succeeded"
-  - name: "S3 source creation with FSx S3 AP"
+  - name: "S3 source creation with FSx for ONTAP S3 AP"
     result: "TIMEOUT"
     note: "POST /apiv3/catalog with S3 source config timed out (>15s)"
-    possible_cause: "Dremio validates bucket access during source creation; FSx S3 AP ListObjects latency may exceed timeout"
+    possible_cause: "Dremio validates bucket access during source creation; FSx for ONTAP S3 AP ListObjects latency may exceed timeout"
 
 # Key Findings
 key_findings:
   - "Dremio OSS starts successfully in Docker"
   - "REST API for admin setup works"
-  - "S3 source creation with FSx S3 AP alias timed out — likely due to ListObjects latency"
+  - "S3 source creation with FSx for ONTAP S3 AP alias timed out — likely due to ListObjects latency"
   - "Dremio uses S3A filesystem (same as Spark) — path-style access should work with fs.s3a.path.style.access=true"
   - "Full verification requires longer timeout or pre-configured source"
 
@@ -51,7 +51,7 @@ config_for_success: |
     - Authentication: Access Key + Secret (or IAM Role for Dremio Cloud)
     - Session Token: via fs.s3a.session.token property
   
-  Note: Source creation may timeout due to FSx S3 AP ListObjects latency.
+  Note: Source creation may timeout due to FSx for ONTAP S3 AP ListObjects latency.
   Workaround: Increase Dremio source validation timeout or skip validation.
 
 # Priority

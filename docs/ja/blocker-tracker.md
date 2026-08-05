@@ -17,7 +17,7 @@
 | BLK-003 | S3 Event Notifications 非サポート | Auto Loader 通知モード / Snowpipe | ❌ 未解決 | ✅ あり |
 | BLK-004 | SnapMirror S3 が FSx for ONTAP で無効化 | ONTAP ネイティブ S3 レプリケーション | ❌ 未解決 | ✅ あり |
 | BLK-005 | `iceberg_rest` Connection Type 未サポート | UC Foreign Catalog × S3 Tables | ❌ 未解決 | ⚠️ 部分的 |
-| BLK-006 | ListObjectsV2 高レイテンシ（30-80x） | 大規模ディレクトリスキャン | ⚠️ 仕様 | ✅ あり |
+| BLK-006 | ListObjectsV2 レイテンシ（30-80x は撤回、実測 1.3〜1.4 倍） | 大規模ディレクトリスキャン | ⚠️ 範囲縮小 | ✅ あり |
 | BLK-007 | NFS/SMB マウントが seccomp でブロック | Databricks からの直接ファイルシステムアクセス | ❌ 設計上不可 | ✅ あり |
 | BLK-008 | Lake Formation 列レベル制御が S3 Tables 非対応 | S3 Tables フェデレーテッドカタログのガバナンス | ❌ 未解決 | ⚠️ テーブルレベルのみ |
 
@@ -44,7 +44,7 @@
 
 **エビデンス**: [integrations/databricks/README.md](../../integrations/databricks/README.md)
 
-> **影響の限定** (Databricks Governance Architect lens): このブロッカーは「ゼロコピーのガバナンス適用」をブロックしますが、DataSync パスで S3 にコピーすれば UC のフルガバナンスは適用可能です。コピーコスト（~$27/月/TB）対ガバナンス価値のトレードオフで判断してください。
+> **影響の限定**: このブロッカーは「ゼロコピーのガバナンス適用」をブロックしますが、DataSync パスで S3 にコピーすれば UC のフルガバナンスは適用可能です。コピーコスト（~$27/月/TB）対ガバナンス価値のトレードオフで判断してください。
 
 ---
 
@@ -67,7 +67,7 @@
 
 **エビデンス**: [互換性マトリクス](./compatibility-matrix.md)（Lakehouse テーブルフォーマットへの影響セクション）
 
-> **S3 parity ロードマップ** (FSx for ONTAP Architect lens): S3 ネイティブに conditional writes が追加されたのは 2024-08 です。FSx for ONTAP S3 AP への追加は AWS の開発ロードマップ次第ですが、parity 達成は合理的な期待です。タイムラインは未公開。
+> **S3 parity ロードマップ**: S3 ネイティブに conditional writes が追加されたのは 2024-08 です。FSx for ONTAP S3 AP への追加は AWS の開発ロードマップ次第ですが、parity 達成は合理的な期待です。タイムラインは未公開。
 
 ---
 
@@ -82,6 +82,7 @@
 | **ステータス** | ❌ 未解決 — Feature Request 提出済み |
 | **解除条件** | AWS が FSx for ONTAP S3 AP に Event Notifications を実装 |
 | **影響度** | **Medium** — イベント駆動パイプラインが直接構築できない。スケジュールベースの代替は可能 |
+| **回避策の検証状況** | Lambda ポーリング → SNS の AWS 側は検証済み（欠陥 6 件あり）。Snowflake 側（合成通知の受理）は未検証。[Snowpipe 検証結果](../../integrations/snowflake/docs/ja/snowpipe-verification-results.md) |
 
 **回避策**:
 1. **FPolicy → Lambda → S3** — FSx for ONTAP ネイティブのファイルイベント検知で代替。[詳細](./datasync-to-s3-guide.md)（FPolicy 代替パターンセクション）
@@ -89,7 +90,7 @@
 3. **Auto Loader リスティングモード** — ディレクトリスキャンで検知（ListObjectsV2 レイテンシの影響あり）
 4. **スケジュールポーリング** — EventBridge schedule で定期クロール
 
-> **FPolicy の運用複雑性** (Manufacturing Edge Data Architect lens): FPolicy → Lambda 代替は技術的に有効ですが、運用複雑性が高い（Lambda 同時実行制限、DLQ、バックプレッシャー）。DataSync スケジュール（rate(5 minutes)）で許容できる場合はそちらを優先してください。
+> **FPolicy の運用複雑性**: FPolicy → Lambda 代替は技術的に有効ですが、運用複雑性が高い（Lambda 同時実行制限、DLQ、バックプレッシャー）。DataSync スケジュール（rate(5 minutes)）で許容できる場合はそちらを優先してください。
 
 ---
 
@@ -110,7 +111,7 @@
 
 **エビデンス**: [verification-pack/snapmirror-s3/evidence/2026-05-26/evidence-record.yaml](../../verification-pack/snapmirror-s3/evidence/2026-05-26/evidence-record.yaml)
 
-> **オンプレミスとの差異** (FSx for ONTAP Architect lens): オンプレミス ONTAP では SnapMirror S3 は利用可能です（9.10.1+）。FSx for ONTAP 固有の制限であり、オンプレミス→クラウドの移行計画では注意が必要です。
+> **オンプレミスとの差異**: オンプレミス ONTAP では SnapMirror S3 は利用可能です（9.10.1+）。FSx for ONTAP 固有の制限であり、オンプレミス→クラウドの移行計画では注意が必要です。
 
 ---
 
@@ -134,21 +135,37 @@
 
 **エビデンス**: [互換性マトリクス](./compatibility-matrix.md)（S3 Tables Iceberg REST Endpoint セクション）
 
-> **二重ブロッカー** (Databricks Governance Architect lens): S3 Annotations 評価の案3（annotation テーブルの UC 参照）は BLK-001 + BLK-005 の二重ブロッカーにより完全にブロックされています。案1（AWS ネイティブエンジンでのクエリ）は影響を受けません。
+> **二重ブロッカー**: S3 Annotations 評価の案3（annotation テーブルの UC 参照）は BLK-001 + BLK-005 の二重ブロッカーにより完全にブロックされています。案1（AWS ネイティブエンジンでのクエリ）は影響を受けません。
 
 ---
 
-### BLK-006: ListObjectsV2 高レイテンシ（30-80x）
+### BLK-006: ListObjectsV2 レイテンシ（再測定 — 30-80x は再現せず）
 
 | 属性 | 値 |
 |------|---|
 | **影響サービス** | FSx for ONTAP S3 Access Points |
 | **影響機能** | ディレクトリスキャン、Glue Crawler、Auto Loader リスティングモード |
 | **根本原因** | FSx for ONTAP S3 AP のプロダクトレベルのパフォーマンス特性 |
-| **確認日** | 2026-05-22（AWS Support 確認） |
-| **ステータス** | ⚠️ 仕様（改善要望提出済みだが、現時点ではプロダクト特性として確認） |
-| **解除条件** | AWS による ListObjectsV2 パフォーマンス改善 |
-| **影響度** | **Low-Medium** — ワークアラウンドで対処可能。大規模ディレクトリでのみ顕在化 |
+| **当初の確認日** | 2026-05-22（AWS Support がプロダクトレベルの特性として確認、30-80x として引用） |
+| **再測定日** | 2026-08-05 — 10〜5,000 オブジェクトで **0.9x〜1.4x**。30-80x は再現しませんでした。[エビデンス](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml) |
+| **ステータス** | ⚠️ 範囲を縮小 — 5,000 オブジェクト以下では観測されず、それを超える規模は未定量 |
+| **解除条件** | 10 万オブジェクト以上での測定により、ペナルティが現れる境界（もしあれば）を特定すること |
+| **影響度** | **Low** — 測定したオブジェクト数では検出不能。ワークアラウンドは設計上の良い実践として引き続き有効 |
+
+**再測定サマリ**（median、データ点ごとに 5 試行、計測範囲はページネーションされたリストループのみ）:
+
+| オブジェクト数 | FSx for ONTAP S3 AP | ネイティブ S3 | 比率 |
+|--------:|--------------------:|----------:|------:|
+| 10 | 38 ms | 27 ms | 1.4x |
+| 100 | 52 ms | 39 ms | 1.3x |
+| 1,000 | 162 ms | 128 ms | 1.3x |
+| 5,000 | 665 ms | 704 ms | 0.9x |
+
+2 階層のネスト構造でも同じ比率でした。すべての結果が、本ブロッカーに当初記録されていた性能目標（100 ファイル未満で 1 秒未満、1,000 ファイル未満で 3 秒未満）の範囲内に収まっています。
+
+**未解明のまま残る点**: リスティングは 5,000 オブジェクトまでしか測定していません。単一ディレクトリに数十万〜数百万オブジェクトある場合の挙動は未検証で、[S3 AP 設計上の考慮点](./s3ap-design-considerations.md) には ONTAP がディレクトリ内全エントリをインメモリでソートする必要があると記載されており、これはエントリ数に応じて増大するはずです。したがって以下のワークアラウンドは推奨される設計実践として引き続き有効です。ただし、小規模で実測された 30-80x のペナルティを根拠とするものではなくなりました。
+
+**当初の数値の出自**: 特定できていません。比較対象となるエビデンス記録が残っていないため、帰属させずに未解明として残します。考えられる要因としては、CLI ラッパー経由での測定（短時間の呼び出しではプロセス起動時間が支配的）、当時ファイルシステムが劣化状態にあった、その後のプラットフォーム側の変更などがあります。
 
 **回避策**:
 1. **ファイル統合** — 小ファイルを ≥ 128 MB に統合して ListObjects 呼び出し回数を削減

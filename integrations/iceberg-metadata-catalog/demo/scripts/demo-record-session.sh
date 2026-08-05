@@ -40,7 +40,7 @@ AP_ALIAS=""
 REGION="${AWS_DEFAULT_REGION:-ap-northeast-1}"
 OUTPUT_FILE=""
 UPLOAD=false
-TITLE="FSx ONTAP Iceberg Metadata Catalog — Customer Demo"
+TITLE="FSx for ONTAP Iceberg Metadata Catalog — Customer Demo"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 while [[ $# -gt 0 ]]; do

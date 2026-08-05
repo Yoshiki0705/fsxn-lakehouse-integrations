@@ -1,4 +1,4 @@
--- Create schema pointing to FSx S3 AP
+-- Create schema pointing to FSx for ONTAP S3 AP
 -- Replace <FSX_S3_AP_ALIAS> with your actual alias
 CREATE SCHEMA IF NOT EXISTS fsxn.sensor_data
 WITH (location = 's3://<FSX_S3_AP_ALIAS>/sensor-data/');

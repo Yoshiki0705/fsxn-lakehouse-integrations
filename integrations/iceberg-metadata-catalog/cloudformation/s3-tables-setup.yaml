@@ -83,7 +83,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: fsxn-metadata-initial-scan
-      Description: Scans FSx S3 AP and populates Iceberg metadata table
+      Description: Scans FSx for ONTAP S3 AP and populates Iceberg metadata table
       Runtime: python3.12
       Handler: index.handler
       MemorySize: 512

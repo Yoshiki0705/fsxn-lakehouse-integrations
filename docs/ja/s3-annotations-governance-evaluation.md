@@ -24,13 +24,13 @@
 
 **A**: **できません**。Annotations はオブジェクトに付随する記述メタデータであり、読み取り認可を強制しません。強制境界は引き続き ONTAP ファイルレベル ACL + FPolicy + S3 AP access point policy + IAM が担います。
 
-> **発見 vs 強制の区別** (Permission-aware RAG / Security Architect lens): annotation を ACL 代替と誤解すると重大なセキュリティギャップが発生します。annotation はミュータブルなため、`s3:PutObjectAnnotation` 権限を持つ主体が改ざん可能です。発見シグナルとしてのみ使用し、認可判定には必ず ONTAP/IAM の実 ACL を参照してください。
+> **発見 vs 強制の区別**: annotation を ACL 代替と誤解すると重大なセキュリティギャップが発生します。annotation はミュータブルなため、`s3:PutObjectAnnotation` 権限を持つ主体が改ざん可能です。発見シグナルとしてのみ使用し、認可判定には必ず ONTAP/IAM の実 ACL を参照してください。
 
 ### Q2: FSx for ONTAP S3 AP に直接 annotation を付与できるか？
 
 **A**: **できません**。S3 Annotations / Metadata は Amazon S3 コントロールプレーンが管理するネイティブ汎用バケットのみが対象です。ONTAP S3 バケットは S3 名前空間外（`aws s3 ls` に現れない）のため、annotation API は適用不可です。有効なパスは staged-to-S3（FSx for ONTAP → DataSync/FPolicy/Glue → ネイティブ S3）のみ。
 
-> **ONTAP S3 の構造的制約** (ONTAP Multiprotocol Specialist lens): これは ONTAP S3 プロトコルの構造的制約です。ONTAP S3 は S3 互換 API を提供しますが、Amazon S3 のコントロールプレーン機能（Event Notifications、S3 Metadata、Annotations）は AWS マネージドサービス側の機能であり、ONTAP S3 エンドポイントには適用されません。
+> **ONTAP S3 の構造的制約**: これは ONTAP S3 プロトコルの構造的制約です。ONTAP S3 は S3 互換 API を提供しますが、Amazon S3 のコントロールプレーン機能（Event Notifications、S3 Metadata、Annotations）は AWS マネージドサービス側の機能であり、ONTAP S3 エンドポイントには適用されません。
 
 ### Q3: 「attach」と「query」の違いは何か？
 
@@ -48,15 +48,15 @@
 
 **A**: annotation ストレージ自体は S3 ストレージ料金に含まれます（annotation サイズ分の追加ストレージ課金）。annotation テーブル（S3 Metadata）は S3 Tables のストレージ + Athena/Trino のスキャン量で課金されます。大規模環境では staged S3 の二重化コストが主要コスト要因です。
 
-> **コスト最適化** (Cost Optimization Specialist lens): コスト最適化の観点では、annotation サイズを最小化してください（JSON schema を compact に設計、不要フィールドを含めない）。また、annotation テーブルの Athena スキャンはパーティション pruning が効くため、annotation schema に `classification` や `source_volume` をトップレベルフィールドとして含めることでスキャンコストを削減できます。
+> **コスト最適化**: コスト最適化の観点では、annotation サイズを最小化してください（JSON schema を compact に設計、不要フィールドを含めない）。また、annotation テーブルの Athena スキャンはパーティション pruning が効くため、annotation schema に `classification` や `source_volume` をトップレベルフィールドとして含めることでスキャンコストを削減できます。
 
 ### Q6: リアルタイムユースケースに使えるか？
 
 **A**: **annotation は cold path（発見・コンテキスト）向け**です。backfill 遅延があるため、リアルタイムのホットパスには適しません。リアルタイム要件（コネクテッドカー telemetry、ストリーミング品質検査等）には Structured Streaming / Lakeflow / RT OLAP 基盤を使用してください。
 
-> **ホット/コールドパスの分離** (Real-time / Streaming Architect lens): 製造現場のリアルタイム品質判定は annotation ではなく、ストリーミング基盤（Kafka → Spark Structured Streaming → ClickHouse）で処理し、annotation は事後の発見・監査・トレーサビリティに使用するのが適切です。
+> **ホット/コールドパスの分離**: 製造現場のリアルタイム品質判定は annotation ではなく、ストリーミング基盤（Kafka → Spark Structured Streaming → ClickHouse）で処理し、annotation は事後の発見・監査・トレーサビリティに使用するのが適切です。
 
-> **リアルタイム OLAP** (ClickHouse Specialist lens): リアルタイム品質アラートには ClickHouse Materialized View を Kafka から直接消費するパターンを使用してください。Annotations は事後分析と監査のコールドパスに位置づけ、ホットパスに配置しないでください。ClickHouse の `iceberg()` テーブル関数（23.8+）で annotation テーブルを読む場合も、バッチ enrichment（定期的なスナップショット参照）に限定してください。
+> **リアルタイム OLAP**: リアルタイム品質アラートには ClickHouse Materialized View を Kafka から直接消費するパターンを使用してください。Annotations は事後分析と監査のコールドパスに位置づけ、ホットパスに配置しないでください。ClickHouse の `iceberg()` テーブル関数（23.8+）で annotation テーブルを読む場合も、バッチ enrichment（定期的なスナップショット参照）に限定してください。
 
 ### Q7: UC tags / Lake Formation LF-Tags との違いは？
 
@@ -67,7 +67,7 @@
 
 annotation が UC/LF のガバナンス tag に**自動統合されることはありません**。annotation → tag マッピングは別途設計が必要です。
 
-> **ガバナンス tag マッピング** (Data Governance Specialist lens): annotation を UC governance に寄与させたい場合、annotation の分類結果を定期バッチで UC tags にマッピングするパイプラインが必要です。現時点では自動連携 API は存在しません。
+> **ガバナンス tag マッピング**: annotation を UC governance に寄与させたい場合、annotation の分類結果を定期バッチで UC tags にマッピングするパイプラインが必要です。現時点では自動連携 API は存在しません。
 
 ## 選択ガイド（意思決定フローチャート）
 
@@ -95,7 +95,7 @@ graph TD
     style L fill:#ccffcc
 ```
 
-> **二段構え戦略** (Solution Architect lens): 多くの組織は案3（UC 統合）を目標としますが、現時点では `iceberg_rest` ブロッカーが存在します。即時着手可能な案1 で価値を出しつつ、ブロッカー解消を待つ二段構え戦略を推奨します。
+> **二段構え戦略**: 多くの組織は案3（UC 統合）を目標としますが、現時点では `iceberg_rest` ブロッカーが存在します。即時着手可能な案1 で価値を出しつつ、ブロッカー解消を待つ二段構え戦略を推奨します。
 
 ## OT/IT セキュリティ考慮事項
 
@@ -109,7 +109,7 @@ annotation はミュータブルなため、書き込み権限の統制が必須
 | `DeleteObjectAnnotation` | `s3:DeleteObjectAnnotation` | 同上。削除は再同期パイプラインのみが実行 |
 | `GetObjectAnnotation` | `s3:GetObjectAnnotation` | 読み取りは分析ロール/RAG パイプラインに付与可能 |
 
-> **書き込み権限の統制** (IAM Security Architect lens): annotation 書き込み権限が未統制の場合、ACL ヒント（案2）の改ざんやなりすましが可能になり、発見シグナルの信頼性が損なわれます。S3 バケットポリシーで `s3:PutObjectAnnotation` を特定 IAM ロール（annotation パイプライン）にのみ許可し、他の全プリンシパルには Deny してください。
+> **書き込み権限の統制**: annotation 書き込み権限が未統制の場合、ACL ヒント（案2）の改ざんやなりすましが可能になり、発見シグナルの信頼性が損なわれます。S3 バケットポリシーで `s3:PutObjectAnnotation` を特定 IAM ロール（annotation パイプライン）にのみ許可し、他の全プリンシパルには Deny してください。
 
 ### FPolicy → annotation パイプラインのセキュリティ
 
@@ -134,7 +134,7 @@ S3 PutObjectAnnotation
 | 内部（生センサーデータ） | ACL ヒント + 分類（案1+2） | `{"classification": "internal", "owner": "factory-a-team"}` |
 | 機密（品質検査画像） | ACL ヒント + 暗号化フラグ（案2） | `{"classification": "confidential", "encryption": "SSE-KMS"}` |
 
-> **保持ポリシー** (Data Lifecycle / Records Retention lens): 製造データの annotation schema には `retention_days` フィールドを含めることを推奨します。S3 Lifecycle ルールと組み合わせて、規制要件（品質記録保持 7 年等）を annotation レベルで追跡し、保持期間違反を Athena クエリで検出できます。
+> **保持ポリシー**: 製造データの annotation schema には `retention_days` フィールドを含めることを推奨します。S3 Lifecycle ルールと組み合わせて、規制要件（品質記録保持 7 年等）を annotation レベルで追跡し、保持期間違反を Athena クエリで検出できます。
 
 ### VPC Endpoint 要件
 
@@ -155,9 +155,9 @@ annotation パイプラインは以下へのアクセスが必要:
 
 > Phase 1-2 は独立して進行可能ですが、Phase 3 以降は CI/CD パイプラインへの annotation 生成ステップ組み込みが必要です。annotation schema のバージョン管理（`schema_version` フィールド）を Phase 1 から含めておくと、後続フェーズでの schema 進化が容易になります。
 
-> **スキーマ進化** (Schema Evolution Engineer lens): annotation schema の破壊的変更（フィールド名変更、型変更等）が発生した場合の移行戦略を Phase 1 で定義してください。推奨パターン: (1) 新バージョンの annotation を `business-context-v2` として別名で付与、(2) 移行期間中は v1 と v2 を共存、(3) 下流パイプラインが v2 に移行完了後に v1 を削除。`schema_version` フィールドで Athena クエリ時にバージョンフィルタが可能です。
+> **スキーマ進化**: annotation schema の破壊的変更（フィールド名変更、型変更等）が発生した場合の移行戦略を Phase 1 で定義してください。推奨パターン: (1) 新バージョンの annotation を `business-context-v2` として別名で付与、(2) 移行期間中は v1 と v2 を共存、(3) 下流パイプラインが v2 に移行完了後に v1 を削除。`schema_version` フィールドで Athena クエリ時にバージョンフィルタが可能です。
 
-> **トレーサビリティ設計** (Manufacturing Traceability Specialist lens): 自動車製造のトレーサビリティ annotation では、IATF 16949 の要求に対応するため以下のフィールドを含めてください: `lot_id`、`serial_number`、`production_order`、`work_center`、`inspection_result`、`defect_category`（該当時）、`operator_shift`、`equipment_id`。これにより品質問題発生時の原因追跡（8D レポート作成）が迅速化されます。
+> **トレーサビリティ設計**: 自動車製造のトレーサビリティ annotation では、IATF 16949 の要求に対応するため以下のフィールドを含めてください: `lot_id`、`serial_number`、`production_order`、`work_center`、`inspection_result`、`defect_category`（該当時）、`operator_shift`、`equipment_id`。これにより品質問題発生時の原因追跡（8D レポート作成）が迅速化されます。
 
 ## 検証ステータスサマリ
 

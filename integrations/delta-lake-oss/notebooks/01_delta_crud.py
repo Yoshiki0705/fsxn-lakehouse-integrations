@@ -1,7 +1,7 @@
 """
-FSxN Delta Lake OSS — CRUD Operations Verification
+FSx for ONTAP Delta Lake OSS — CRUD Operations Verification
 
-Creates Delta table on FSxN via S3 AP, performs INSERT, UPDATE, DELETE, MERGE.
+Creates Delta table on FSx for ONTAP via S3 AP, performs INSERT, UPDATE, DELETE, MERGE.
 Records operation latency and write throughput.
 
 Usage (spark-submit):
@@ -31,7 +31,7 @@ from pyspark.sql.types import (
 
 def get_spark() -> SparkSession:
     return SparkSession.builder \
-        .appName("FSxN Delta Lake CRUD Verification") \
+        .appName("FSx for ONTAP Delta Lake CRUD Verification") \
         .getOrCreate()
 
 
@@ -60,7 +60,7 @@ def main():
     results = []
 
     print("=" * 60)
-    print("FSxN Delta Lake OSS — CRUD Verification")
+    print("FSx for ONTAP Delta Lake OSS — CRUD Verification")
     print("=" * 60)
     print(f"Delta table path: {base_path}")
 

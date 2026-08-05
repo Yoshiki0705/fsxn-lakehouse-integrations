@@ -17,7 +17,7 @@
 | BLK-003 | S3 Event Notifications not supported | Auto Loader notification / Snowpipe | ❌ Unresolved | ✅ Available |
 | BLK-004 | SnapMirror S3 disabled on FSx for ONTAP | ONTAP-native S3 replication | ❌ Unresolved | ✅ Available |
 | BLK-005 | `iceberg_rest` Connection Type not supported | UC Foreign Catalog × S3 Tables | ❌ Unresolved | ⚠️ Partial |
-| BLK-006 | ListObjectsV2 high latency (30-80x) | Large directory scans | ⚠️ By design | ✅ Available |
+| BLK-006 | ListObjectsV2 latency (30-80x withdrawn; 1.3-1.4x measured) | Large directory scans | ⚠️ Scope reduced | ✅ Available |
 | BLK-007 | NFS/SMB mount blocked by seccomp | Databricks direct filesystem access | ❌ By design | ✅ Available |
 | BLK-008 | Lake Formation column-level control unsupported on S3 Tables | S3 Tables federated catalog governance | ❌ Unresolved | ⚠️ Table-level only |
 
@@ -44,7 +44,7 @@
 
 **Evidence**: [integrations/databricks/README.md](../../integrations/databricks/README.md)
 
-> **Impact scoping** (Databricks Governance Architect lens): This blocker prevents "zero-copy governance" but copying to S3 via DataSync enables full UC governance. Evaluate the trade-off: copy cost (~$27/month/TB) vs governance value.
+> **Impact scoping**: This blocker prevents "zero-copy governance" but copying to S3 via DataSync enables full UC governance. Evaluate the trade-off: copy cost (~$27/month/TB) vs governance value.
 
 ---
 
@@ -67,7 +67,7 @@
 
 **Evidence**: [Compatibility Matrix](./compatibility-matrix.md) (Lakehouse Table Formats section)
 
-> **S3 parity roadmap** (FSx for ONTAP Architect lens): S3 native received conditional writes in Aug 2024. Addition to FSx for ONTAP S3 AP depends on the AWS development roadmap, but parity is a reasonable expectation. Timeline undisclosed.
+> **S3 parity roadmap**: S3 native received conditional writes in Aug 2024. Addition to FSx for ONTAP S3 AP depends on the AWS development roadmap, but parity is a reasonable expectation. Timeline undisclosed.
 
 ---
 
@@ -82,6 +82,7 @@
 | **Status** | ❌ Unresolved — Feature Request filed |
 | **Resolution criteria** | AWS implements Event Notifications on FSx for ONTAP S3 AP |
 | **Severity** | **Medium** — Event-driven pipelines cannot be built directly. Schedule-based alternatives available |
+| **Workaround verification** | Lambda polling → SNS verified on the AWS side (6 defects found). The Snowflake leg (acceptance of a synthesized notification) is unverified. [Snowpipe Verification Results](../../integrations/snowflake/docs/en/snowpipe-verification-results.md) |
 
 **Workarounds**:
 1. **FPolicy → Lambda → S3** — FSx for ONTAP native file event detection as alternative. [Details](./datasync-to-s3-guide.md) (FPolicy section)
@@ -89,7 +90,7 @@
 3. **Auto Loader listing mode** — Directory scan detection (affected by ListObjectsV2 latency)
 4. **Schedule polling** — EventBridge schedule for periodic crawl
 
-> **FPolicy operational complexity** (Manufacturing Edge Data Architect lens): FPolicy → Lambda is technically valid but operationally complex (Lambda concurrency limits, DLQ, backpressure). If DataSync schedule (rate(5 minutes)) is acceptable, prefer it.
+> **FPolicy operational complexity**: FPolicy → Lambda is technically valid but operationally complex (Lambda concurrency limits, DLQ, backpressure). If DataSync schedule (rate(5 minutes)) is acceptable, prefer it.
 
 ---
 
@@ -110,7 +111,7 @@
 
 **Evidence**: [verification-pack/snapmirror-s3/evidence/2026-05-26/evidence-record.yaml](../../verification-pack/snapmirror-s3/evidence/2026-05-26/evidence-record.yaml)
 
-> **On-premises difference** (FSx for ONTAP Architect lens): On-premises ONTAP supports SnapMirror S3 (9.10.1+). This is an FSx for ONTAP-specific limitation. Note this in on-premises → cloud migration planning.
+> **On-premises difference**: On-premises ONTAP supports SnapMirror S3 (9.10.1+). This is an FSx for ONTAP-specific limitation. Note this in on-premises → cloud migration planning.
 
 ---
 
@@ -134,21 +135,49 @@
 
 **Evidence**: [Compatibility Matrix](./compatibility-matrix.md) (S3 Tables Iceberg REST Endpoint section)
 
-> **Double blocker** (Databricks Governance Architect lens): S3 Annotations evaluation Case 3 (annotation table UC reference) is completely blocked by BLK-001 + BLK-005. Case 1 (AWS native engine query) is unaffected.
+> **Double blocker**: S3 Annotations evaluation Case 3 (annotation table UC reference) is completely blocked by BLK-001 + BLK-005. Case 1 (AWS native engine query) is unaffected.
 
 ---
 
-### BLK-006: ListObjectsV2 High Latency (30-80x)
+### BLK-006: ListObjectsV2 Latency (re-measured — 30-80x not reproduced)
 
 | Attribute | Value |
 |-----------|-------|
 | **Affected service** | FSx for ONTAP S3 Access Points |
 | **Affected features** | Directory scans, Glue Crawler, Auto Loader listing mode |
 | **Root cause** | Product-level performance characteristic of FSx for ONTAP S3 AP |
-| **Confirmed** | 2026-05-22 (AWS Support confirmed) |
-| **Status** | ⚠️ By design (improvement requested but confirmed as product characteristic) |
-| **Resolution criteria** | AWS ListObjectsV2 performance improvement |
-| **Severity** | **Low-Medium** — Workarounds available. Only manifests on large directories |
+| **Originally confirmed** | 2026-05-22 (AWS Support confirmed as a product-level characteristic, quoted as 30-80x) |
+| **Re-measured** | 2026-08-05 — **0.9x-1.4x** at 10-5,000 objects. The 30-80x figure did not reproduce. [Evidence](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml) |
+| **Status** | ⚠️ Scope reduced — not observed at ≤5,000 objects; unquantified above that |
+| **Resolution criteria** | Measurement at 100k+ objects to establish where, if anywhere, the penalty appears |
+| **Severity** | **Low** — Not measurable at the object counts tested. Workarounds remain sound design practice |
+
+**Re-measurement summary** (medians, 5 trials per point, paginated list loop only):
+
+| Objects | FSx for ONTAP S3 AP | Native S3 | Ratio |
+|--------:|--------------------:|----------:|------:|
+| 10 | 38 ms | 27 ms | 1.4x |
+| 100 | 52 ms | 39 ms | 1.3x |
+| 1,000 | 162 ms | 128 ms | 1.3x |
+| 5,000 | 665 ms | 704 ms | 0.9x |
+
+A nested two-level layout produced the same ratios. All results fall inside the
+performance target originally recorded for this blocker (<1 s for <100 files,
+<3 s for <1,000 files).
+
+**What is still unknown**: listing was only measured up to 5,000 objects.
+Behaviour at hundreds of thousands or millions of objects in one directory is
+untested, and [S3 AP design considerations](./s3ap-design-considerations.md)
+notes that ONTAP must sort all directory entries in memory, which would grow
+with entry count. The workarounds below therefore remain the recommended design
+practice — they are just no longer justified by a measured 30-80x penalty at
+small scale.
+
+**Origin of the original figure**: not determined. No evidence record survives
+to compare against, so it is left unexplained rather than attributed. Possible
+contributors include measurement through a CLI wrapper (process startup
+dominates short calls), a file system in a degraded state at the time, or
+platform changes since.
 
 **Workarounds**:
 1. **File consolidation** — Merge small files to ≥ 128 MB to reduce ListObjects calls

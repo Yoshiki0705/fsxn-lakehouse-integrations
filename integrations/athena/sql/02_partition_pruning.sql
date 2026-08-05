@@ -1,5 +1,5 @@
 -- =============================================================================
--- FSxN Athena Integration — Partition Pruning Verification
+-- FSx for ONTAP Athena Integration — Partition Pruning Verification
 -- =============================================================================
 -- Compares data scanned between filtered (partition-pruned) and unfiltered queries.
 -- Partition pruning should significantly reduce DataScannedInBytes.

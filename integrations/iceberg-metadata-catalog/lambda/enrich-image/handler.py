@@ -1,7 +1,7 @@
 """
 enrich-image — Image AI Enrichment Lambda
 
-Reads an image from FSx S3 AP and generates:
+Reads an image from FSx for ONTAP S3 AP and generates:
   - Description (what the image shows)
   - Classification (product_photo, medical_image, blueprint, satellite, screenshot, other)
   - Detected objects/elements
@@ -78,7 +78,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     # Extract S3 key
     s3_key = "/".join(file_path.split("/")[4:])
 
-    # Read image from FSx S3 AP
+    # Read image from FSx for ONTAP S3 AP
     s3_client = boto3.client("s3", region_name=REGION)
     try:
         response = s3_client.get_object(Bucket=access_point_arn, Key=s3_key)

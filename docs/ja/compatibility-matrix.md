@@ -6,7 +6,7 @@
 
 - **目的**: FSx for ONTAP S3 Access Points と各 Lakehouse プラットフォーム/フォーマットの検証済み互換性を定義し、読み取り専用分析から書き込みパスまでの対応状況を明確化
 - **主要知見**: 読み取り専用分析（Athena/Glue/EMR/Snowflake/Bedrock）は検証済みで本番利用可能。書き込みパス（Delta Lake/Iceberg）は条件付き書き込み非サポートにより制限あり
-- **重要制約**: conditional writes（`If-None-Match`）非サポート、S3 Event Notifications 非サポート、ListObjectsV2 高レイテンシ（30-80x）、SnapMirror S3 非対応
+- **重要制約**: conditional writes（`If-None-Match`）非サポート、S3 Event Notifications 非サポート、SnapMirror S3 非対応。ListObjectsV2 レイテンシは 2026-08-05 に再測定し、5,000 オブジェクトまでネイティブ S3 比 1.3〜1.4 倍でした。従来引用していた 30-80x は再現しませんでした（[BLK-006](./blocker-tracker.md)）
 - **推奨アプローチ**: 読み取り専用ユースケースは FSx for ONTAP S3 AP 直接パスで実装。書き込みが必要な場合は DataSync → 標準 S3 パスを使用
 - **検証レベル**: API 検証 → 機能検証 → セキュリティ検証 → 本番検証の 4 段階。現在ほとんどのプラットフォームが機能検証済み
 
@@ -16,9 +16,9 @@
 
 **A**: Delta Lake のコミットプロトコルは `_delta_log/` ディレクトリ内でのアトミック rename を必要としますが、S3 API にはネイティブの rename 操作がありません。CopyObject + DeleteObject での回避は可能ですが、条件付き書き込み（`If-None-Match`）も非サポートのため、**同時書き込み時のトランザクション整合性を保証できません**。本番書き込みには使用しないでください。
 
-> **S3 互換ストレージの共通課題** (S3 Compatibility / Storage Specialist lens): この制約は FSx for ONTAP S3 AP 固有ではなく、S3 互換ストレージ全般に存在する課題です。標準 S3 では conditional writes（2024年8月提供開始）で解決されましたが、FSx for ONTAP S3 AP にはまだ提供されていません。
+> **S3 互換ストレージの共通課題**: この制約は FSx for ONTAP S3 AP 固有ではなく、S3 互換ストレージ全般に存在する課題です。標準 S3 では conditional writes（2024年8月提供開始）で解決されましたが、FSx for ONTAP S3 AP にはまだ提供されていません。
 
-> **UniForm の読み取りパス** (Iceberg / Open Table Specialist lens): Delta Lake UniForm（`delta.universalFormat`）は Delta と Iceberg の両方のメタデータを生成します。Iceberg メタデータパスは外部カタログ（Glue）経由でポインタを管理するため、FSx for ONTAP S3 AP 上でも Iceberg 読み取りパスが機能する可能性があります。ただし、UniForm の書き込みコミット自体は Delta プロトコルに依存するため、FSx for ONTAP S3 AP への直接書き込みは依然として非サポートです。
+> **UniForm の読み取りパス**: Delta Lake UniForm（`delta.universalFormat`）は Delta と Iceberg の両方のメタデータを生成します。Iceberg メタデータパスは外部カタログ（Glue）経由でポインタを管理するため、FSx for ONTAP S3 AP 上でも Iceberg 読み取りパスが機能する可能性があります。ただし、UniForm の書き込みコミット自体は Delta プロトコルに依存するため、FSx for ONTAP S3 AP への直接書き込みは依然として非サポートです。
 
 ### Q2: Presigned URL は使えるか？
 
@@ -28,11 +28,13 @@
 
 **A**: SnapMirror S3（ONTAP S3 バケット → AWS S3 レプリケーション）は FSx for ONTAP で**意図的に無効化**されています（2026年5月 AWS サポート確認）。FSx for ONTAP から標準 S3 への同期には AWS DataSync を使用してください。詳細: [DataSync ガイド](./datasync-to-s3-guide.md)
 
-### Q4: ListObjectsV2 が遅いのはなぜか？
+### Q4: FSx for ONTAP S3 Access Point の ListObjectsV2 は遅いのか？
 
-**A**: FSx for ONTAP S3 AP の ListObjectsV2 は標準 S3 より 30-80 倍高いレイテンシを示します。これは AWS サポートが**プロダクトレベルのパフォーマンス特性**と確認しています（環境問題ではない）。大量のファイルリスティングが必要なワークロードでは、ファイルを ≥ 128 MB に統合し、パーティション構造で整理してください。
+**A**: 測定した規模では遅くありません。2026-08-05 の再測定では、10〜5,000 オブジェクトでネイティブ S3 比 1.3〜1.4 倍（5,000 件では 0.9 倍、つまり有意差なし）で、フラット構造・ネスト構造の両方で同様でした。本リポジトリでは従来 30-80 倍と記載していましたが、この数値は**再現せず**、撤回しました。[BLK-006](./blocker-tracker.md) と[エビデンス記録](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml)を参照してください。
 
-> **小ファイル統合** (Data Lake Optimization lens): 製造データは小ファイル（センサーログ等）が大量に生成される傾向があります。FSx for ONTAP S3 AP 経由での分析前に、Glue ETL または EMR で Parquet ≥ 128 MB に統合する前処理を推奨します。
+単一ディレクトリに 5,000 オブジェクトを超える場合のリスティングは未測定であり、ONTAP はディレクトリエントリをインメモリでソートする必要があるため、大規模データセットではファイルを ≥ 128 MB に統合しパーティション構造で整理することは引き続き妥当な設計実践です。ただしそれは、小規模で実測されたペナルティを根拠とするものではありません。
+
+> **小ファイル統合**: 製造データは小ファイル（センサーログ等）が大量に生成される傾向があります。FSx for ONTAP S3 AP 経由での分析前に、Glue ETL または EMR で Parquet ≥ 128 MB に統合する前処理を推奨します。
 
 ### Q5: 本番利用には Multi-AZ が必要か？
 
@@ -46,7 +48,7 @@
 - **セキュリティ検証**: IAM + AP ポリシー + ファイルシステム権限 + CloudTrail すべて確認
 - **本番検証**: 同時クエリ、障害復旧、コスト検証、SLA 準拠を確認
 
-> **本番前セキュリティ検証** (Security Verification lens): 多くの PoC は API/機能検証で止まりますが、本番投入前にセキュリティ検証（ネガティブテスト含む）を必ず実施してください。特にクロスアカウントアクセス拒否と VPC-origin AP の分離確認は必須です。
+> **本番前セキュリティ検証**: 多くの PoC は API/機能検証で止まりますが、本番投入前にセキュリティ検証（ネガティブテスト含む）を必ず実施してください。特にクロスアカウントアクセス拒否と VPC-origin AP の分離確認は必須です。
 
 ### Q7: フォーマットを混在させて良いか（Parquet/Delta/Iceberg/Hudi）？
 
@@ -84,7 +86,7 @@ graph TD
     style J fill:#ccffcc
 ```
 
-> **UC ガバナンスパス** (Databricks Governance Architect lens): Databricks を選択する場合、UC External Location は S3 AP を直接サポートしません（session policy 制約）。Instance Profile 経由で読み取りは可能ですが UC ガバナンスをバイパスします。UC ガバナンス付きの分析には DataSync → 標準 S3 → UC External Location パスを使用してください。
+> **UC ガバナンスパス**: Databricks を選択する場合、UC External Location は S3 AP を直接サポートしません（session policy 制約）。Instance Profile 経由で読み取りは可能ですが UC ガバナンスをバイパスします。UC ガバナンス付きの分析には DataSync → 標準 S3 → UC External Location パスを使用してください。
 
 ## OT/IT セキュリティ考慮事項
 
@@ -107,7 +109,7 @@ FSx for ONTAP S3 AP は**二層認可**を実装します:
 | 推奨環境 | 本番環境、機密データ | 開発環境、Athena/Glue（VPC 外マネージドサービス） |
 | Athena 対応 | ❌ Athena は VPC 外から接続 | ✅ Athena は Internet-Origin のみ |
 
-> **VPC-Origin AP の分離** (OT Network Security Specialist lens): 製造データなど機密性の高いデータには VPC-Origin AP を使用し、EMR/Lambda 等 VPC 内サービスからのみアクセスさせてください。Athena アクセスが必要な場合は、Internet-Origin AP + IAM + AP ポリシーの三重制御で代替します。
+> **VPC-Origin AP の分離**: 製造データなど機密性の高いデータには VPC-Origin AP を使用し、EMR/Lambda 等 VPC 内サービスからのみアクセスさせてください。Athena アクセスが必要な場合は、Internet-Origin AP + IAM + AP ポリシーの三重制御で代替します。
 
 ### 製造環境向けセキュリティ設計
 
@@ -132,7 +134,7 @@ IT VPC:
 | `PutAccessPointPolicy` | AP ポリシー変更 | 権限昇格検出 |
 | `DeleteObject` via AP | 誰が削除したか | データ消失追跡 |
 
-> **監査ログの識別性** (Audit / Observability lens): S3 データイベントの CloudTrail ログは AP ARN ベースで記録されます。複数 AP を運用する場合、AP 名に用途（`analytics-readonly`、`etl-readwrite`）を含め、ログ分析時の識別を容易にしてください。
+> **監査ログの識別性**: S3 データイベントの CloudTrail ログは AP ARN ベースで記録されます。複数 AP を運用する場合、AP 名に用途（`analytics-readonly`、`etl-readwrite`）を含め、ログ分析時の識別を容易にしてください。
 
 ### 認証情報ローテーション
 
@@ -153,9 +155,9 @@ IT VPC:
 | **Phase 4**: セキュリティ強化 | 最小権限/ネガティブテスト | IAM ポリシー最小化、ネガティブテスト全パス、CloudTrail 有効化 | セキュリティ検証レベル達成 | 1-2週間 |
 | **Phase 5**: 本番検証 | パフォーマンス/DR/コスト確認 | 同時クエリベンチマーク、DR フェイルオーバーテスト、月次コスト検証 | 本番検証レベル達成、SLA 準拠確認 | 2-4週間 |
 
-> **本番投入ゲート** (Reliability / QA lens): Phase 4 → Phase 5 の移行前に、ネガティブテストマトリクス（NEG-001 〜 NEG-010）を全項目パスさせてください。1 項目でも Critical レベルで失敗する場合、本番投入をブロックしてください。
+> **本番投入ゲート**: Phase 4 → Phase 5 の移行前に、ネガティブテストマトリクス（NEG-001 〜 NEG-010）を全項目パスさせてください。1 項目でも Critical レベルで失敗する場合、本番投入をブロックしてください。
 
-> **スループット最適化** (Performance / Throughput Architect lens): Phase 5 では FSx for ONTAP プロビジョンドスループットとワークロード実測値の乖離を確認してください。過剰プロビジョニング（利用率 < 30%）の場合はスループット削減、不足（利用率 > 80% が継続）の場合は増強を検討します。CloudWatch の `ThroughputUtilization` メトリクスで判断できます。
+> **スループット最適化**: Phase 5 では FSx for ONTAP プロビジョンドスループットとワークロード実測値の乖離を確認してください。過剰プロビジョニング（利用率 < 30%）の場合はスループット削減、不足（利用率 > 80% が継続）の場合は増強を検討します。CloudWatch の `ThroughputUtilization` メトリクスで判断できます。
 
 ## 関連ドキュメント
 
@@ -192,7 +194,7 @@ aws athena start-query-execution \
   --work-group primary
 ```
 
-> **段階的アプローチ** (Solution Architect lens): 利用者の多くは「読み取り専用分析で十分か、書き込みが必要か」の判断から始まります。不明な場合は、上記のクイックスタートで FSx for ONTAP S3 AP + Athena を試し、書き込みが必要になった時点で DataSync パスを追加してください。最初から複雑な構成を組む必要はありません。
+> **段階的アプローチ**: 利用者の多くは「読み取り専用分析で十分か、書き込みが必要か」の判断から始まります。不明な場合は、上記のクイックスタートで FSx for ONTAP S3 AP + Athena を試し、書き込みが必要になった時点で DataSync パスを追加してください。最初から複雑な構成を組む必要はありません。
 
 ## パス別コスト比較
 
@@ -203,7 +205,7 @@ aws athena start-query-execution \
 | DataSync → S3 → Iceberg Lakehouse | ~$50-80/月（転送+S3+compute） | DataSync + S3 + EMR/Glue 変換 | フルガバナンス付き Lakehouse |
 | FPolicy → Lambda → S3（準リアルタイム） | ~$15-40/月（Lambda+S3） | Lambda + EventBridge + S3 | 準リアルタイム変更検知が必要 |
 
-> **長期保持の階層化** (Manufacturing Compliance Specialist lens): 自動車製造環境では、品質検査データは規制要件（IATF 16949）により最低 15 年保持が必要です。S3 Lifecycle + Glacier Deep Archive を組み合わせると、長期保持コストは ~$1/TB/月まで削減できます。短期分析（直近 90 日）は Standard/IA、長期保持は Glacier という階層化が一般的です。
+> **長期保持の階層化**: 自動車製造環境では、品質検査データは規制要件（IATF 16949）により最低 15 年保持が必要です。S3 Lifecycle + Glacier Deep Archive を組み合わせると、長期保持コストは ~$1/TB/月まで削減できます。短期分析（直近 90 日）は Standard/IA、長期保持は Glacier という階層化が一般的です。
 
 ## 概要
 
@@ -219,7 +221,7 @@ aws athena start-query-execution \
 | 最大アップロードサイズ: 5 GB | 単一オブジェクトのアップロードは 5 GB まで（マルチパートアップロードはサポート） | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | Object Versioning なし | S3 Object Versioning は非サポート | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | 条件付き書き込みなし | Conditional writes（`If-None-Match`）は非サポート — HTTP 501 `NotImplemented` を返す。これは**プロダクトレベルの制限**（AWS サポート確認、2026年5月）。S3 ネイティブ conditional writes（2024年8月提供開始）との parity を求める機能要望を提出済み。Delta Lake、Iceberg、Hudi のトランザクショナル書き込みをブロック。 | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
-| ListObjectsV2 レイテンシ | ListObjectsV2 は標準 S3 より高いレイテンシを示す（小規模ディレクトリで 30-80 倍を観測）。AWS サポートがこれを**プロダクトレベルのパフォーマンス特性**と確認（2026年5月）。環境問題ではない。目標: <100 ファイルで <1秒、<1000 ファイルで <3秒。機能要望提出済み。 | 2026年5月検証 |
+| ListObjectsV2 レイテンシ | 2026-08-05 再測定: 10〜5,000 オブジェクトでネイティブ S3 比 **1.3〜1.4 倍**（5,000 件では 0.9 倍）。フラット構造・ネスト構造とも同様で、当初の目標（100 ファイル未満で 1 秒未満、1,000 ファイル未満で 3 秒未満）の範囲内。従来引用していた 30-80 倍は再現せず、撤回しました。1 ディレクトリ 5,000 オブジェクトを超える場合の挙動は未測定。 | 2026-08-05 再測定（[エビデンス](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml)） |
 | S3 Event Notifications なし | S3 Event Notifications（s3:ObjectCreated 等）は非サポート。Snowpipe auto-ingest と Auto Loader ファイル通知モードを阻害。機能要望提出済み（2026年5月）。代替: FPolicy → Lambda またはスケジュールポーリング。 | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | SnapMirror S3 なし | SnapMirror S3（ONTAP S3 バケット → AWS S3 レプリケーション）は FSx for ONTAP で**意図的に無効化**（AWS サポート確認、2026年5月）。`snapmirror object-store` コマンドと `/api/cloud/targets` REST API はサービスレベルの制限としてブロック。検証済み同期メカニズムとして AWS DataSync（NFS → S3）を使用。 | 2026年5月検証 |
 | Presigned URLs: 公式には非サポート | Presigning はクライアント側の署名計算であり、サーバー側の操作ではない。サポートされている操作（例: GetObject）の Presigned URLs は、サーバーが標準の署名付きリクエストとして認識するため実際には動作する。ただし、AWS はこれを「非サポート」としており、安定性を保証していない。**本番環境では依存しないこと。** | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)、[AWS Support (verified)](verified 2026-05-22) |
@@ -271,8 +273,6 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **AWS Glue ETL** | Iceberg | 読み取り | ⚠️ 実験的 | Glue 4.0+ ネイティブ Iceberg サポート、Glue Catalog を Iceberg カタログとして使用 | Glue 4.0 は Iceberg ネイティブ統合を提供。FSx for ONTAP S3 AP 上の Iceberg メタデータ読み取りは外部カタログ（Glue）経由で動作見込み。書き込みコミットは条件付き書き込み非サポートにより制限あり |
 | **AWS Glue ETL** | Delta Lake | 書き込み | ❌ 非サポート | — | Delta コミットプロトコルは _delta_log JSON ファイルのアトミック rename が必要。ネイティブ非サポート |
 | **AWS Glue ETL** | Iceberg | 書き込み | ⚠️ 実験的 | Glue 4.0+ Iceberg ネイティブ + Glue Catalog | Iceberg は外部カタログでポインタ管理するため rename 不要。ただし同時書き込み時の競合解決に条件付き書き込みが使われる実装があり、FSx for ONTAP S3 AP では失敗する可能性。単一ライター構成では動作見込み |
-
-> **単一ライター構成** (Data Engineering SA lens): Glue 4.0 の Iceberg ネイティブサポートは、Glue Catalog を Iceberg カタログとして使用する場合にメタデータポインタの更新をカタログ側で管理します。このため FSx for ONTAP S3 AP 上のデータファイルに対する読み取りは問題なく動作し、**単一ライター構成**での書き込みも理論的に可能です。ただし、複数 Glue ジョブが同一テーブルに書き込む場合は衝突が発生する可能性があるため、標準 S3 への書き込みを推奨します。
 | **Amazon EMR Serverless** | Parquet | 読み取り | ✅ 検証済み | S3A コネクタ付き Spark、AP エイリアス | — |
 | **Amazon EMR Serverless** | Parquet | 書き込み（Append） | ✅ 検証済み | 読み書きファイルシステムユーザー | ファイルあたり最大 5 GB |
 | **Amazon EMR Serverless** | Iceberg | 読み取り | ⚠️ 実験的 | Iceberg Spark ランタイム、Glue Catalog | メタデータ読み取りは動作。書き込みコミットは未テスト |
@@ -291,11 +291,13 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **ClickHouse** | Iceberg | 読み取り（iceberg() テーブル関数） | 🔲 計画中 | ClickHouse 23.8+ の `iceberg()` テーブル関数。Glue Catalog 連携要検証 | annotation テーブル（S3 Tables 上 Iceberg）の読み取りは [S3 Annotations 評価](./s3-annotations-governance-evaluation.md) で言及。バージョン/設定依存 |
 | **ClickHouse** | Parquet/CSV | 読み取り（S3Queue エンジン） | ⚠️ 設計中 | DataSync → S3 → ClickHouse S3Queue エンジンで自動取り込み | 標準 S3 バケット経由のパスは動作見込み。FSx for ONTAP S3 AP 直接の S3Queue は Event Notifications 非サポートのため不可 |
 
-> **ClickHouse のホット/コールド役割** (ClickHouse Specialist lens): ClickHouse の製造ユースケースでの主要な役割は、Kafka/ストリーミング経由のリアルタイム品質分析（ホットパス）です。FSx for ONTAP S3 AP からの読み取りはコールドパス（履歴分析、バッチ enrichment）に位置づけてください。リアルタイム品質アラートには ClickHouse Materialized View を Kafka から直接消費するパターンを使用し、S3 AP 経由のバッチ読み取りは事後分析に限定してください。
+> **AWS Glue ETL / Iceberg 書き込みの単一ライター構成**: Glue 4.0 の Iceberg ネイティブサポートは、Glue Catalog を Iceberg カタログとして使用する場合にメタデータポインタの更新をカタログ側で管理します。このため FSx for ONTAP S3 AP 上のデータファイルに対する読み取りは問題なく動作し、**単一ライター構成**での書き込みも理論的に可能です。ただし、複数 Glue ジョブが同一テーブルに書き込む場合は衝突が発生する可能性があるため、標準 S3 への書き込みを推奨します。
+
+> **ClickHouse のホット/コールド役割**: ClickHouse の製造ユースケースでの主要な役割は、Kafka/ストリーミング経由のリアルタイム品質分析（ホットパス）です。FSx for ONTAP S3 AP からの読み取りはコールドパス（履歴分析、バッチ enrichment）に位置づけてください。リアルタイム品質アラートには ClickHouse Materialized View を Kafka から直接消費するパターンを使用し、S3 AP 経由のバッチ読み取りは事後分析に限定してください。
 
 ## Parquet タイムスタンプ互換性
 
-> **位置づけの注記** (Data Format Specialist lens): これはサイジング/実装リファレンスであり、サービス上限ではありません。制約は Apache Spark の Parquet リーダーに由来するものであり、FSx for ONTAP S3 AP に起因するものではありません。
+> **位置づけの注記**: これはサイジング/実装リファレンスであり、サービス上限ではありません。制約は Apache Spark の Parquet リーダーに由来するものであり、FSx for ONTAP S3 AP に起因するものではありません。
 
 Spark ベースのエンジン（Glue ETL、EMR、Databricks）で利用する Parquet ファイルを生成する際、タイムスタンプ解像度が重要になります:
 
@@ -1051,7 +1053,7 @@ clickhouse-client --query "
 "
 ```
 
-> **ListObjectsV2 レイテンシ対策** (Query Performance Engineer lens): CH-001/CH-002 が成功した場合でも、ListObjectsV2 の高レイテンシ（30-80x）により大量ファイルのワイルドカードスキャンは実用的でない可能性があります。ClickHouse から FSx for ONTAP S3 AP を読む場合は、事前にファイルパスリストを取得し `s3()` に個別パスを渡すパターンか、DataSync → 標準 S3 → S3Queue の間接パスを推奨します。ClickHouse Cloud 環境では IAM 認証メカニズムが self-managed と異なる（SharedRole ベース）ため、CH-005 は両環境でテストしてください。
+> **ListObjectsV2 レイテンシに関する補足**: ListObjectsV2 は 5,000 オブジェクトまでネイティブ S3 比 1.3〜1.4 倍と実測されており（[BLK-006](./blocker-tracker.md)）、その規模でのワイルドカードスキャンは問題になりません。1 ディレクトリ 5,000 オブジェクトを超える範囲は未測定です。CH-001/CH-002 がそれより大きなデータセットを対象とする場合は、事前にファイルパスリストを取得し `s3()` に個別パスを渡すパターンか、DataSync → 標準 S3 → S3Queue の間接パスを推奨します。ClickHouse Cloud 環境では IAM 認証メカニズムが self-managed と異なる（SharedRole ベース）ため、CH-005 は両環境でテストしてください。
 
 ## 参考資料
 

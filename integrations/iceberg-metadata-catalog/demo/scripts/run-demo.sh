@@ -4,7 +4,7 @@
 # =============================================================================
 # Runs the complete demo flow:
 #   1. Deploy infrastructure (CloudFormation)
-#   2. Initial metadata scan (FSx S3 AP → S3 Tables)
+#   2. Initial metadata scan (FSx for ONTAP S3 AP → S3 Tables)
 #   3. AI enrichment (Bedrock Vision + Embeddings)
 #   4. Athena query demonstration
 #   5. Vector similarity search (OpenSearch)
@@ -221,7 +221,7 @@ echo -e "${BOLD}Demo duration: ${DEMO_MINUTES}m ${DEMO_SECONDS}s${NC}"
 echo ""
 echo -e "${BOLD}Demonstrated capabilities:${NC}"
 echo "  1. ✅ Before/After: File search time comparison (ListObjectsV2 vs Athena)"
-echo "  2. ✅ Metadata scan: FSx S3 AP → S3 Tables (Iceberg)"
+echo "  2. ✅ Metadata scan: FSx for ONTAP S3 AP → S3 Tables (Iceberg)"
 echo "  3. ✅ AI classification: Bedrock Vision (image → category)"
 echo "  4. ✅ Vector embeddings: Titan Embeddings V2 (1024-dim)"
 echo "  5. ✅ SQL queries: Athena < 2 seconds + Iceberg Time Travel"

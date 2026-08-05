@@ -10,8 +10,8 @@
 #
 # Prerequisites:
 #   - AWS CLI v2 configured
-#   - FSxN SVM with S3 protocol enabled
-#   - VPC ID where FSxN resides
+#   - FSx for ONTAP SVM with S3 protocol enabled
+#   - VPC ID where FSx for ONTAP resides
 # =============================================================================
 
 set -euo pipefail
@@ -33,8 +33,8 @@ usage() {
     echo "Usage: $0 --bucket <svm-bucket> --vpc <vpc-id> --name <ap-name> [--region <region>]"
     echo ""
     echo "Options:"
-    echo "  --bucket    FSxN SVM S3 bucket name"
-    echo "  --vpc       VPC ID where FSxN resides"
+    echo "  --bucket    FSx for ONTAP SVM S3 bucket name"
+    echo "  --vpc       VPC ID where FSx for ONTAP resides"
     echo "  --name      S3 Access Point name"
     echo "  --region    AWS region (default: ap-northeast-1)"
     echo "  --help      Show this help message"

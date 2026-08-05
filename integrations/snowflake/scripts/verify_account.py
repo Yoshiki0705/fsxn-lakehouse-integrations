@@ -2,7 +2,7 @@
 """
 verify_account.py - Snowflake Account Verification Script
 
-Validates Snowflake account prerequisites for FSxN × S3 AP integration:
+Validates Snowflake account prerequisites for FSx for ONTAP × S3 AP integration:
   1. Account Edition (Enterprise or higher)
   2. Region (ap-northeast-1 / AWS Tokyo)
   3. ACCOUNTADMIN role access
@@ -64,7 +64,7 @@ DEFAULT_OUTPUT_PATH = "integrations/snowflake/scripts/config/snowflake_account.j
 
 def create_parser():
     parser = argparse.ArgumentParser(
-        description="Verify Snowflake account prerequisites for FSxN integration"
+        description="Verify Snowflake account prerequisites for FSx for ONTAP integration"
     )
     parser.add_argument(
         "--account",
@@ -531,7 +531,7 @@ def main():
         print("   - ACCOUNTADMIN role access")
         sys.exit(1)
     else:
-        print("✅ All checks passed. Account is ready for FSxN integration.")
+        print("✅ All checks passed. Account is ready for FSx for ONTAP integration.")
         sys.exit(0)
 
 

@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  FSxN Lakehouse Integration — AWS Glue ETL Stack.
+  FSx for ONTAP Lakehouse Integration — AWS Glue ETL Stack.
   Creates S3 Access Point (internet origin), IAM Role for Glue,
   Glue Database, Crawler, ETL Jobs (bronze→silver, silver→gold),
   and EventBridge scheduled execution rule.
@@ -122,7 +122,7 @@ Resources:
       CatalogId: !Ref AWS::AccountId
       DatabaseInput:
         Name: !Ref GlueDatabaseName
-        Description: "FSxN Glue ETL database — medallion architecture (bronze/silver/gold)"
+        Description: "FSx for ONTAP Glue ETL database — medallion architecture (bronze/silver/gold)"
 
   # --- Glue Crawler ---
   GlueCrawler:
@@ -131,7 +131,7 @@ Resources:
       Name: !Sub "fsxn-glue-crawler-${Environment}"
       Role: !GetAtt GlueServiceRole.Arn
       DatabaseName: !Ref GlueDatabaseName
-      Description: "Crawls FSxN bronze data via S3 Access Point (internet origin)"
+      Description: "Crawls FSx for ONTAP bronze data via S3 Access Point (internet origin)"
       Targets:
         S3Targets:
           - Path: !Sub "s3://${S3AccessPointName}-${AWS::AccountId}.s3-accesspoint.${AWS::Region}.amazonaws.com/bronze/"
@@ -231,7 +231,7 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Name: !Sub "fsxn-glue-etl-schedule-${Environment}"
-      Description: "Scheduled trigger for FSxN Glue ETL pipeline"
+      Description: "Scheduled trigger for FSx for ONTAP Glue ETL pipeline"
       ScheduleExpression: !Ref ScheduleExpression
       State: DISABLED
       Targets:

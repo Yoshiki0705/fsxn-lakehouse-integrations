@@ -53,7 +53,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     logger.info(f"Anonymizing image: {file_name}")
 
-    # Read image from FSx S3 AP
+    # Read image from FSx for ONTAP S3 AP
     s3_client = boto3.client("s3", region_name=REGION)
     s3_key = "/".join(file_path.split("/")[4:])
 

@@ -66,18 +66,18 @@ write_tests:
     error_message: "Generic S3 error: Error performing PUT .../delta-lake/write_test/_delta_log/00000000000000000000.json - Server returned non-2xx status code: 501 Not Implemented"
     details: |
       delta-rs 1.2.1 uses conditional writes (If-None-Match) by default when
-      writing the initial commit file. FSx S3 AP returns 501 Not Implemented
+      writing the initial commit file. FSx for ONTAP S3 AP returns 501 Not Implemented
       for conditional writes, which is consistent with the documented limitation.
-      This confirms Delta Lake write operations are NOT SUPPORTED on FSx S3 AP.
+      This confirms Delta Lake write operations are NOT SUPPORTED on FSx for ONTAP S3 AP.
 
 # Summary
 summary:
-  read_operations: "ALL PASS - Delta Lake tables can be read from FSx S3 AP"
+  read_operations: "ALL PASS - Delta Lake tables can be read from FSx for ONTAP S3 AP"
   write_operations: "NOT SUPPORTED - 501 Not Implemented (conditional writes)"
   recommendation: |
-    Use FSx S3 AP for read-only Delta Lake access:
+    Use FSx for ONTAP S3 AP for read-only Delta Lake access:
     1. Create/write Delta tables via NFS or native S3
-    2. Read Delta tables from FSx S3 AP using delta-rs or Spark
+    2. Read Delta tables from FSx for ONTAP S3 AP using delta-rs or Spark
     3. Do NOT attempt write/append/merge operations via S3 AP
 
 # Verification Level

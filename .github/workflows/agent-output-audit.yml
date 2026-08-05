@@ -80,7 +80,12 @@ jobs:
       - name: Forbidden NetApp tooling
         run: |
           [[ -s changed_md.txt ]] || { echo "✓ no changed .md"; exit 0; }
-          HITS=$(xargs grep -niE 'Workload Factory|NetApp Console|BlueXP' < changed_md.txt 2>/dev/null || true)
+          # Strip URLs before re-matching: a product name inside a citation URL
+          # (e.g. docs.netapp.com/us-en/bluexp-.../) is an accurate reference, not a
+          # recommendation. Prose on a line that also carries a link is still caught.
+          HITS=$(xargs grep -niE 'Workload Factory|NetApp Console|BlueXP' < changed_md.txt 2>/dev/null | \
+            sed -E 's#https?://[^ )"]*##g' | \
+            grep -iE 'Workload Factory|NetApp Console|BlueXP' || true)
           if [[ -n "$HITS" ]]; then
             echo "::error::Do not propose NetApp Workload Factory / NetApp Console / BlueXP. Reframe to native equivalents (CloudWatch, ONTAP REST API, FabricPool, AWS DataSync, Snapshot/FlexClone/SnapMirror)."
             echo "$HITS"; exit 1

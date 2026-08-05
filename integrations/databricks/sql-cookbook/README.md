@@ -43,7 +43,7 @@ WITH (
 DESCRIBE STORAGE CREDENTIAL fsxn_synced_credential;
 ```
 
-> **最小権限** (IAM Security Architect lens): Databricks 用 IAM Role には `s3:GetObject` / `s3:ListBucket` / `s3:GetBucketLocation` のみ付与してください。`s3:PutObject` は DataSync サービスロール専用とし、Databricks からの書き込みは Managed Table（Databricks 管理 S3）に限定します。
+> **最小権限**: Databricks 用 IAM Role には `s3:GetObject` / `s3:ListBucket` / `s3:GetBucketLocation` のみ付与してください。`s3:PutObject` は DataSync サービスロール専用とし、Databricks からの書き込みは Managed Table（Databricks 管理 S3）に限定します。
 
 ---
 
@@ -63,7 +63,7 @@ VALIDATE EXTERNAL LOCATION fsxn_synced;
 LIST 's3://<BUCKET_NAME>/fsxn-sync/sensor-data/';
 ```
 
-> **プレフィックス分離** (Data Governance Specialist lens): DataSync 書き込みプレフィックスと Databricks 読み取りプレフィックスを同一にする場合、S3 バケットポリシーで Databricks IAM Role に `s3:PutObject` を明示的に Deny してください。書き込み権限は DataSync サービスロールのみに限定します。
+> **プレフィックス分離**: DataSync 書き込みプレフィックスと Databricks 読み取りプレフィックスを同一にする場合、S3 バケットポリシーで Databricks IAM Role に `s3:PutObject` を明示的に Deny してください。書き込み権限は DataSync サービスロールのみに限定します。
 
 ---
 
@@ -114,7 +114,7 @@ DESCRIBE HISTORY catalog_name.schema_name.sensor_data;
 OPTIMIZE catalog_name.schema_name.sensor_data;
 ```
 
-> **Managed vs External** (Databricks Governance Architect lens): Managed Table は Databricks が S3 上のストレージライフサイクルを完全管理します。Time Travel、OPTIMIZE、Z-ORDER が利用可能です。読み取り専用の分析には External Table で十分ですが、DML（UPDATE/DELETE/MERGE）が必要な場合は Managed Table にコピーしてください。
+> **Managed vs External**: Managed Table は Databricks が S3 上のストレージライフサイクルを完全管理します。Time Travel、OPTIMIZE、Z-ORDER が利用可能です。読み取り専用の分析には External Table で十分ですが、DML（UPDATE/DELETE/MERGE）が必要な場合は Managed Table にコピーしてください。
 
 ---
 
@@ -134,7 +134,7 @@ LIST '/Volumes/catalog_name/schema_name/fsxn_files/quality-images/';
 -- df = spark.read.format("binaryFile").load("/Volumes/catalog_name/schema_name/fsxn_files/quality-images/*.jpg")
 ```
 
-> **Volume vs External Table** (Data Engineering SA lens): UC Volume（2024 年導入）は構造化テーブルではなくファイルレベルのアクセスを提供します。画像/PDF/動画などの非構造化データには Volume を使用し、構造化データ（CSV/Parquet）には External Table または Managed Table を使用してください。
+> **Volume vs External Table**: UC Volume（2024 年導入）は構造化テーブルではなくファイルレベルのアクセスを提供します。画像/PDF/動画などの非構造化データには Volume を使用し、構造化データ（CSV/Parquet）には External Table または Managed Table を使用してください。
 
 ---
 
@@ -166,7 +166,7 @@ SELECT DISTINCT line_id FROM catalog_name.schema_name.sensor_data;
 -- ALTER TABLE catalog_name.schema_name.sensor_data DROP ROW FILTER;
 ```
 
-> **Row Filter の設計原則** (Databricks Governance Architect lens): Row Filter は「テーブルを分割せずにアクセス制御を実現する」メカニズムです。工場単位、部門単位、地域単位でデータを分離する場合に有効です。ただし、Row Filter は UC 内エンジンでのみ強制されます。Athena や外部エンジンからの読み取りには適用されません。
+> **Row Filter の設計原則**: Row Filter は「テーブルを分割せずにアクセス制御を実現する」メカニズムです。工場単位、部門単位、地域単位でデータを分離する場合に有効です。ただし、Row Filter は UC 内エンジンでのみ強制されます。Athena や外部エンジンからの読み取りには適用されません。
 
 ---
 
@@ -195,7 +195,7 @@ FROM catalog_name.schema_name.sensor_data LIMIT 5;
 -- ALTER TABLE catalog_name.schema_name.sensor_data ALTER COLUMN value DROP MASK;
 ```
 
-> **Column Mask vs Views** (Databricks Governance Architect lens): Column Mask はテーブルレベルで強制されるため、どのクエリからアクセスしてもマスクが適用されます。View ベースのマスキングは View を経由しないアクセスでバイパス可能なため、Column Mask を推奨します。
+> **Column Mask vs Views**: Column Mask はテーブルレベルで強制されるため、どのクエリからアクセスしてもマスクが適用されます。View ベースのマスキングは View を経由しないアクセスでバイパス可能なため、Column Mask を推奨します。
 
 ---
 
@@ -232,7 +232,7 @@ FROM system.information_schema.table_tags
 WHERE tag_name = 'data_source' AND tag_value LIKE 'fsxn%';
 ```
 
-> **Tag と S3 Annotations の関係** (Data Governance Specialist lens): UC Tags と S3 Annotations は並行する別メカニズムです。S3 Annotations はオブジェクトレベルの発見シグナル、UC Tags はテーブル/列レベルのガバナンスメタデータです。annotation → UC Tag のマッピングパイプラインは別途設計が必要です（[S3 Annotations 評価](../../docs/ja/s3-annotations-governance-evaluation.md) 参照）。
+> **Tag と S3 Annotations の関係**: UC Tags と S3 Annotations は並行する別メカニズムです。S3 Annotations はオブジェクトレベルの発見シグナル、UC Tags はテーブル/列レベルのガバナンスメタデータです。annotation → UC Tag のマッピングパイプラインは別途設計が必要です（[S3 Annotations 評価](../../docs/ja/s3-annotations-governance-evaluation.md) 参照）。
 
 ---
 
@@ -269,7 +269,7 @@ df = (spark.readStream
 )
 ```
 
-> **通知モード vs リスティングモード** (Data Engineering SA lens): `cloudFiles.useNotifications = true` は S3 Event Notifications に依存するため、**DataSync → 標準 S3** パスでのみ動作します。FSx for ONTAP S3 AP 直接ではイベント通知が非サポートのため使用できません（[BLK-003](../../docs/ja/blocker-tracker.md)）。標準 S3 への同期はこの通知モードを有効化する主要なメリットの一つです。
+> **通知モード vs リスティングモード**: `cloudFiles.useNotifications = true` は S3 Event Notifications に依存するため、**DataSync → 標準 S3** パスでのみ動作します。FSx for ONTAP S3 AP 直接ではイベント通知が非サポートのため使用できません（[BLK-003](../../docs/ja/blocker-tracker.md)）。標準 S3 への同期はこの通知モードを有効化する主要なメリットの一つです。
 
 ---
 
@@ -302,7 +302,7 @@ ORDER BY event_time DESC
 LIMIT 100;
 ```
 
-> **監査要件** (Security Audit Specialist lens): 製造データのガバナンスでは「誰が、いつ、どのデータに、どのような操作を行ったか」の追跡が必須です。UC 監査ログ（`system.access.audit`）と CloudTrail（DataSync 操作）を組み合わせることで、FSx for ONTAP → S3 → UC の全データフローを追跡できます。
+> **監査要件**: 製造データのガバナンスでは「誰が、いつ、どのデータに、どのような操作を行ったか」の追跡が必須です。UC 監査ログ（`system.access.audit`）と CloudTrail（DataSync 操作）を組み合わせることで、FSx for ONTAP → S3 → UC の全データフローを追跡できます。
 
 ---
 
@@ -368,7 +368,7 @@ WITH (
 DESCRIBE STORAGE CREDENTIAL fsxn_synced_credential;
 ```
 
-> **Least privilege** (IAM Security Architect lens): Grant only `s3:GetObject` / `s3:ListBucket` / `s3:GetBucketLocation` to the Databricks IAM Role. Reserve `s3:PutObject` for the DataSync service role. Writes from Databricks should use Managed Tables (Databricks-managed S3).
+> **Least privilege**: Grant only `s3:GetObject` / `s3:ListBucket` / `s3:GetBucketLocation` to the Databricks IAM Role. Reserve `s3:PutObject` for the DataSync service role. Writes from Databricks should use Managed Tables (Databricks-managed S3).
 
 ---
 
@@ -384,7 +384,7 @@ VALIDATE EXTERNAL LOCATION fsxn_synced;
 LIST 's3://<BUCKET_NAME>/fsxn-sync/sensor-data/';
 ```
 
-> **Prefix isolation** (Data Governance Specialist lens): If DataSync write prefix and Databricks read prefix are the same, explicitly Deny `s3:PutObject` for the Databricks IAM Role in the S3 bucket policy. Write permission should be exclusive to the DataSync service role.
+> **Prefix isolation**: If DataSync write prefix and Databricks read prefix are the same, explicitly Deny `s3:PutObject` for the Databricks IAM Role in the S3 bucket policy. Write permission should be exclusive to the DataSync service role.
 
 ---
 
@@ -424,7 +424,7 @@ DESCRIBE HISTORY catalog_name.schema_name.sensor_data;
 OPTIMIZE catalog_name.schema_name.sensor_data;
 ```
 
-> **Managed vs External** (Databricks Governance Architect lens): Managed Tables provide full storage lifecycle management by Databricks — Time Travel, OPTIMIZE, Z-ORDER. Use External Tables for read-only analytics; use Managed Tables when DML (UPDATE/DELETE/MERGE) is needed.
+> **Managed vs External**: Managed Tables provide full storage lifecycle management by Databricks — Time Travel, OPTIMIZE, Z-ORDER. Use External Tables for read-only analytics; use Managed Tables when DML (UPDATE/DELETE/MERGE) is needed.
 
 ---
 
@@ -457,7 +457,7 @@ ALTER TABLE catalog_name.schema_name.sensor_data
 SET ROW FILTER catalog_name.schema_name.filter_by_line ON (line_id);
 ```
 
-> **Row Filter enforcement scope** (Databricks Governance Architect lens): Row Filters are enforced only within UC engines. External engines (Athena, EMR reading via Iceberg REST) will NOT have these filters applied. For cross-engine enforcement, use S3 bucket policies or Lake Formation.
+> **Row Filter enforcement scope**: Row Filters are enforced only within UC engines. External engines (Athena, EMR reading via Iceberg REST) will NOT have these filters applied. For cross-engine enforcement, use S3 bucket policies or Lake Formation.
 
 ---
 
@@ -525,7 +525,7 @@ df = (spark.readStream
 )
 ```
 
-> **Notification mode dependency** (Data Engineering SA lens): `cloudFiles.useNotifications = true` depends on S3 Event Notifications and works **only on standard S3** (the DataSync destination). It does NOT work on FSx for ONTAP S3 AP directly ([BLK-003](../../docs/en/blocker-tracker.md)).
+> **Notification mode dependency**: `cloudFiles.useNotifications = true` depends on S3 Event Notifications and works **only on standard S3** (the DataSync destination). It does NOT work on FSx for ONTAP S3 AP directly ([BLK-003](../../docs/en/blocker-tracker.md)).
 
 ---
 

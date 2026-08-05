@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =============================================================================
-# FSxN Athena Integration — Deployment Script
+# FSx for ONTAP Athena Integration — Deployment Script
 # =============================================================================
 # Deploys CloudFormation stack, creates S3 Access Point, runs Glue Crawler,
 # and captures outputs to params.json.
@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "============================================"
-echo "FSxN Athena Integration Deployment"
+echo "FSx for ONTAP Athena Integration Deployment"
 echo "============================================"
 echo "Region:      ${REGION}"
 echo "Environment: ${ENVIRONMENT}"
@@ -71,7 +71,7 @@ AP_EXISTS=$(aws fsx describe-data-repository-associations \
   --output text 2>/dev/null || echo "")
 
 # Create S3 AP via FSx CLI
-# Note: FSxN S3 AP is created via `aws fsx create-and-attach-s3-access-point`
+# Note: FSx for ONTAP S3 AP is created via `aws fsx create-and-attach-s3-access-point`
 echo "  Creating S3 AP: ${S3_AP_NAME} (internet origin)..."
 echo "  ⚠️  If AP already exists, this step will be skipped."
 echo ""

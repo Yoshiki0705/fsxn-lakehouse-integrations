@@ -25,15 +25,15 @@ Description: |
 Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
-    Description: FPolicy Server を配置する VPC ID（FSxN と同一 VPC）
+    Description: FPolicy Server を配置する VPC ID（FSx for ONTAP と同一 VPC）
 
   SubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
-    Description: Fargate タスクを配置する Private Subnet（FSxN SVM data LIF と同一サブネット推奨）
+    Description: Fargate タスクを配置する Private Subnet（FSx for ONTAP SVM data LIF と同一サブネット推奨）
 
   FsxnSvmSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: FSxN SVM の Security Group ID（インバウンド許可元）
+    Description: FSx for ONTAP SVM の Security Group ID（インバウンド許可元）
 
   SqsQueueUrl:
     Type: String
@@ -105,14 +105,14 @@ Resources:
   FPolicyServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: FPolicy External Server - allows TCP from FSxN SVM Security Group
+      GroupDescription: FPolicy External Server - allows TCP from FSx for ONTAP SVM Security Group
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: !Ref FPolicyPort
           ToPort: !Ref FPolicyPort
           SourceSecurityGroupId: !Ref FsxnSvmSecurityGroupId
-          Description: FPolicy TCP from FSxN SVM (primary-servers connection)
+          Description: FPolicy TCP from FSx for ONTAP SVM (primary-servers connection)
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 443
@@ -224,7 +224,7 @@ Resources:
                 Resource: '*'
                 Condition:
                   StringEquals:
-                    cloudwatch:namespace: FSxN-Lakehouse-Integrations
+                    cloudwatch:namespace: FSx for ONTAP-Lakehouse-Integrations
 
   # --- ECS Task Definition ---
   FPolicyTaskDefinition:

@@ -3,7 +3,7 @@
 # Snowpipe End-to-End Test Script
 # =============================================================================
 # Validates the FPolicy → SQS → Lambda → SNS → Snowpipe pipeline by:
-#   1. Writing a JSON event file to FSxN via NFS mount
+#   1. Writing a JSON event file to FSx for ONTAP via NFS mount
 #   2. Polling Snowflake for the record to appear in RAW_EVENTS table
 #   3. Measuring end-to-end latency (file write → queryable in Snowflake)
 #
@@ -17,7 +17,7 @@
 #     --snowflake-password <password>
 #
 # Environment variables (alternative to flags):
-#   FSXN_NFS_MOUNT       - NFS mount path for FSxN volume
+#   FSXN_NFS_MOUNT       - NFS mount path for FSx for ONTAP volume
 #   SNOWFLAKE_ACCOUNT    - Snowflake account identifier
 #   SNOWFLAKE_USER       - Snowflake username
 #   SNOWFLAKE_PASSWORD   - Snowflake password
@@ -106,7 +106,7 @@ usage() {
 Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  --nfs-mount PATH          FSxN NFS mount path (or set FSXN_NFS_MOUNT)
+  --nfs-mount PATH          FSx for ONTAP NFS mount path (or set FSXN_NFS_MOUNT)
   --snowflake-account ACCT  Snowflake account identifier (or set SNOWFLAKE_ACCOUNT)
   --snowflake-user USER     Snowflake username (or set SNOWFLAKE_USER)
   --snowflake-password PASS Snowflake password (or set SNOWFLAKE_PASSWORD)
@@ -466,7 +466,7 @@ main() {
     echo ""
 
     # Step 2: Write file to NFS mount
-    step "2/4 Writing test file to FSxN via NFS..."
+    step "2/4 Writing test file to FSx for ONTAP via NFS..."
     if ! write_test_file; then
         fail "Could not write test file to NFS mount"
         report_results "fail"

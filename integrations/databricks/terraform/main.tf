@@ -1,5 +1,5 @@
 # =============================================================================
-# Databricks Unity Catalog Integration with FSxN via S3 Access Point
+# Databricks Unity Catalog Integration with FSx for ONTAP via S3 Access Point
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -22,7 +22,7 @@ resource "databricks_storage_credential" "fsxn" {
 # -----------------------------------------------------------------------------
 resource "databricks_external_location" "fsxn_root" {
   name            = "${var.environment_name}-fsxn-root"
-  comment         = "FSxN root location via S3 Access Point"
+  comment         = "FSx for ONTAP root location via S3 Access Point"
   url             = "s3://${var.s3_access_point_alias}/"
   credential_name = databricks_storage_credential.fsxn.name
 
@@ -32,7 +32,7 @@ resource "databricks_external_location" "fsxn_root" {
 
 resource "databricks_external_location" "fsxn_bronze" {
   name            = "${var.environment_name}-fsxn-bronze"
-  comment         = "FSxN Bronze layer (raw data)"
+  comment         = "FSx for ONTAP Bronze layer (raw data)"
   url             = "s3://${var.s3_access_point_alias}/bronze/"
   credential_name = databricks_storage_credential.fsxn.name
   skip_validation = false
@@ -40,7 +40,7 @@ resource "databricks_external_location" "fsxn_bronze" {
 
 resource "databricks_external_location" "fsxn_silver" {
   name            = "${var.environment_name}-fsxn-silver"
-  comment         = "FSxN Silver layer (cleaned data)"
+  comment         = "FSx for ONTAP Silver layer (cleaned data)"
   url             = "s3://${var.s3_access_point_alias}/silver/"
   credential_name = databricks_storage_credential.fsxn.name
   skip_validation = false
@@ -48,14 +48,14 @@ resource "databricks_external_location" "fsxn_silver" {
 
 resource "databricks_external_location" "fsxn_gold" {
   name            = "${var.environment_name}-fsxn-gold"
-  comment         = "FSxN Gold layer (business-ready)"
+  comment         = "FSx for ONTAP Gold layer (business-ready)"
   url             = "s3://${var.s3_access_point_alias}/gold/"
   credential_name = databricks_storage_credential.fsxn.name
   skip_validation = false
 }
 
 # -----------------------------------------------------------------------------
-# Catalog for FSxN External Data
+# Catalog for FSx for ONTAP External Data
 # -----------------------------------------------------------------------------
 resource "databricks_catalog" "fsxn" {
   name    = var.catalog_name
@@ -73,7 +73,7 @@ resource "databricks_catalog" "fsxn" {
 resource "databricks_schema" "bronze" {
   catalog_name = databricks_catalog.fsxn.name
   name         = "bronze"
-  comment      = "Bronze layer - raw ingested data from FSxN"
+  comment      = "Bronze layer - raw ingested data from FSx for ONTAP"
 
   properties = {
     data_layer = "bronze"

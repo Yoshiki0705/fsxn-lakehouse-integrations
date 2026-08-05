@@ -51,7 +51,7 @@ validated_paths:
   - operation: "GET_PRESIGNED_URL"
     status: "PASS (observed)"
     duration_ms: 515
-    note: "URL generated; presign not officially supported in FSx S3 AP docs"
+    note: "URL generated; presign not officially supported in FSx for ONTAP S3 AP docs"
   - operation: "BUILD_SCOPED_FILE_URL"
     status: "PASS"
     duration_ms: 43
@@ -64,7 +64,7 @@ validated_paths:
     note: "ListObjectsV2, HeadObject, GetObject all succeed without session policy"
 
 not_validated:
-  - "COPY INTO unload (write-back to FSx S3 AP)"
+  - "COPY INTO unload (write-back to FSx for ONTAP S3 AP)"
   - "Snowpipe auto-ingest (S3 Event Notifications not supported)"
   - "AUTO_REFRESH (S3 Event Notifications not supported)"
   - "Iceberg Table write-back (conditional writes not supported)"

@@ -40,7 +40,7 @@ comparison:
 
 # Lakehouse Write Constraint Summary
 lakehouse_write_summary: |
-  ALL transactional table formats are NOT SUPPORTED for write on FSx S3 AP:
+  ALL transactional table formats are NOT SUPPORTED for write on FSx for ONTAP S3 AP:
   - Delta Lake: No atomic rename + no conditional writes
   - Apache Hudi: No atomic rename (timeline)
   - Apache Iceberg: S3FileIO cannot handle AP alias for metadata

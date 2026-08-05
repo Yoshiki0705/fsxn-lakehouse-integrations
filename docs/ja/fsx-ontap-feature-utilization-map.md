@@ -48,7 +48,7 @@ FSx for ONTAP は「**エンタープライズデータ保護 + マルチプロ�
 | **制約** | conditional writes 非サポート、Event Notifications 非サポート（[BLK-002](./blocker-tracker.md), [BLK-003](./blocker-tracker.md)） |
 | **関連ドキュメント** | [互換性マトリクス](./compatibility-matrix.md), [Networking](./fsx-ontap-s3ap-networking.md) |
 
-> **マルチプロトコルの真価** (FSx for ONTAP Architect lens): S3 AP の価値は「S3 API を追加提供する」ことではなく、「NFS/SMB で業務ユーザーがアクセスする**同じデータ**を変換なしで分析エンジンから読める」ことです。EBS + S3 の組み合わせでは、データのコピーまたは ETL が常に必要になります。
+> **マルチプロトコルの真価**: S3 AP の価値は「S3 API を追加提供する」ことではなく、「NFS/SMB で業務ユーザーがアクセスする**同じデータ**を変換なしで分析エンジンから読める」ことです。EBS + S3 の組み合わせでは、データのコピーまたは ETL が常に必要になります。
 
 ### Snapshot
 
@@ -59,7 +59,7 @@ FSx for ONTAP は「**エンタープライズデータ保護 + マルチプロ�
 | **制約** | Snapshot 単体では他リージョンへのレプリケーションは不可（SnapMirror と組み合わせ） |
 | **関連ドキュメント** | [DataSync ガイド](./datasync-to-s3-guide.md)（Phase 2）, [Recovery Semantics](./recovery-semantics.md) |
 
-> **DataSync + Snapshot パターン** (FSx for ONTAP Architect lens): Snapshot → FlexClone → DataSync の順で実行することで、「業務影響ゼロ + データ一貫性 + 増分同期」のトリプルメリットを実現します。Snapshot がなければ、同期中のファイル変更でデータ不整合のリスクがあります。
+> **DataSync + Snapshot パターン**: Snapshot → FlexClone → DataSync の順で実行することで、「業務影響ゼロ + データ一貫性 + 増分同期」のトリプルメリットを実現します。Snapshot がなければ、同期中のファイル変更でデータ不整合のリスクがあります。
 
 ### FlexClone
 
@@ -70,7 +70,7 @@ FSx for ONTAP は「**エンタープライズデータ保護 + マルチプロ�
 | **制約** | クローン先への書き込みが増えると容量消費が開始される |
 | **関連ドキュメント** | [DataSync ガイド](./datasync-to-s3-guide.md)（Phase 2）, [ADR-001](../adr/ADR-001-datasync-as-primary-sync.md) |
 
-> **ゼロコストの意味** (FSx for ONTAP Architect lens): FlexClone は WAFL（Write Anywhere File Layout）のメタデータ参照により、物理コピーなしでボリュームの完全なクローンを作成します。1 TB のボリュームを FlexClone しても追加ストレージは 0 bytes です。EBS Snapshot とは異なり、読み取り可能な独立ボリュームとして即座にマウント可能です。
+> **ゼロコストの意味**: FlexClone は WAFL（Write Anywhere File Layout）のメタデータ参照により、物理コピーなしでボリュームの完全なクローンを作成します。1 TB のボリュームを FlexClone しても追加ストレージは 0 bytes です。EBS Snapshot とは異なり、読み取り可能な独立ボリュームとして即座にマウント可能です。
 
 ### FPolicy
 
@@ -81,7 +81,7 @@ FSx for ONTAP は「**エンタープライズデータ保護 + マルチプロ�
 | **制約** | メタデータイベントのみ（ファイル内容は転送しない）、Lambda 経由の運用複雑性 |
 | **関連ドキュメント** | [Kafka-ClickHouse-UC 接続](./kafka-clickhouse-unity-catalog-connectivity.md), [DataSync ガイド](./datasync-to-s3-guide.md)（FPolicy 代替パターン） |
 
-> **S3 Event Notifications の代替** (FSx for ONTAP Architect lens): FSx for ONTAP S3 AP が Event Notifications をサポートしない（BLK-003）ため、FPolicy がイベント駆動パイプラインの唯一の手段です。FPolicy は NFS/SMB 側のファイル操作を検知するため、S3 AP 経由の操作は検知しません。用途に応じたプロトコル選択が重要です。
+> **S3 Event Notifications の代替**: FSx for ONTAP S3 AP が Event Notifications をサポートしない（BLK-003）ため、FPolicy がイベント駆動パイプラインの唯一の手段です。FPolicy は NFS/SMB 側のファイル操作を検知するため、S3 AP 経由の操作は検知しません。用途に応じたプロトコル選択が重要です。
 
 ### SnapMirror
 
@@ -92,7 +92,7 @@ FSx for ONTAP は「**エンタープライズデータ保護 + マルチプロ�
 | **制約** | SnapMirror **S3**（ONTAP S3 → AWS S3）は FSx for ONTAP で利用不可（[BLK-004](./blocker-tracker.md)）。Volume レベルの SnapMirror は利用可能 |
 | **関連ドキュメント** | [ADR-002](../adr/ADR-002-snapmirror-s3-unavailability.md), [ブロッカー追跡](./blocker-tracker.md) |
 
-> **Volume SnapMirror vs SnapMirror S3 の区別** (FSx for ONTAP Architect lens): Volume レベルの SnapMirror（FSx for ONTAP 間のレプリケーション）は完全に利用可能です。利用不可なのは「ONTAP S3 バケット → AWS S3 バケット」へのオブジェクトレプリケーション（SnapMirror S3）のみです。DR 設計では Volume SnapMirror を活用できます。
+> **Volume SnapMirror vs SnapMirror S3 の区別**: Volume レベルの SnapMirror（FSx for ONTAP 間のレプリケーション）は完全に利用可能です。利用不可なのは「ONTAP S3 バケット → AWS S3 バケット」へのオブジェクトレプリケーション（SnapMirror S3）のみです。DR 設計では Volume SnapMirror を活用できます。
 
 ### FabricPool（階層化）
 
@@ -129,7 +129,7 @@ FSx for ONTAP は「**エンタープライズデータ保護 + マルチプロ�
 | Event Notifications | ❌ 非サポート | ✅ S3 対応 | Auto Loader 通知モードが必要な場合は標準 S3 |
 | スケール（容量無制限） | ⚠️ ボリュームサイズ制限 | ✅ 事実上無制限 | ペタバイト規模のデータレイクには標準 S3 |
 
-> **右ツールの選択** (Solution Architect lens): FSx for ONTAP は「エンタープライズファイルデータ + マルチプロトコルアクセス + データ保護」が主要要件の場合に最適です。純粋なオブジェクトストレージ用途（大規模データレイク、CDN オリジン）には標準 S3 が適切です。多くのエンタープライズ環境では**両方を組み合わせて使用**します（FSx for ONTAP = ソース + 業務アクセス、S3 = 分析コピー + Lakehouse）。
+> **右ツールの選択**: FSx for ONTAP は「エンタープライズファイルデータ + マルチプロトコルアクセス + データ保護」が主要要件の場合に最適です。純粋なオブジェクトストレージ用途（大規模データレイク、CDN オリジン）には標準 S3 が適切です。多くのエンタープライズ環境では**両方を組み合わせて使用**します（FSx for ONTAP = ソース + 業務アクセス、S3 = 分析コピー + Lakehouse）。
 
 ---
 

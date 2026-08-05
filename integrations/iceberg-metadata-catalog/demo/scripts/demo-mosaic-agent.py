@@ -50,7 +50,7 @@ def demo_tool_definitions():
     tools = [
         {
             "name": "search_metadata",
-            "description": "Search the FSx ONTAP file metadata catalog using SQL or natural language",
+            "description": "Search the FSx for ONTAP file metadata catalog using SQL or natural language",
             "parameters": {
                 "query": "Natural language search query",
                 "filters": "Optional: file_type, classification, date_range",
@@ -69,7 +69,7 @@ def demo_tool_definitions():
         },
         {
             "name": "generate_presigned_url",
-            "description": "Generate a time-limited URL to access the actual file on FSx ONTAP",
+            "description": "Generate a time-limited URL to access the actual file on FSx for ONTAP",
             "parameters": {
                 "file_path": "Internal file path (from metadata)",
                 "expiry_seconds": "URL validity period (default: 3600)",

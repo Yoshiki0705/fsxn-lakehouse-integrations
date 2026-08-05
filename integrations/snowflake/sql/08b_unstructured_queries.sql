@@ -7,7 +7,7 @@
 --
 -- Prerequisites:
 --   - 08_directory_table.sql executed (FSXN_MEDIA_STAGE + MEDIA_CATALOG view)
---   - Media files uploaded to FSxN media/ path via NFS/SMB
+--   - Media files uploaded to FSx for ONTAP media/ path via NFS/SMB
 --   - ALTER STAGE FSXN_MEDIA_STAGE REFRESH executed after upload
 --
 -- Validates: REQ-6 (Unstructured Data via Directory Table + Pre-signed URLs)
@@ -22,7 +22,7 @@ USE SCHEMA MEDIA;
 -- =============================================================================
 -- 2. Refresh Directory Table (ensure latest file listing)
 -- =============================================================================
--- Required before querying because FSxN S3 AP does NOT support auto-refresh.
+-- Required before querying because FSx for ONTAP S3 AP does NOT support auto-refresh.
 -- See 08_directory_table.sql for details on this limitation.
 ALTER STAGE FSXN_MEDIA_STAGE REFRESH;
 
@@ -72,9 +72,9 @@ ORDER BY LAST_MODIFIED DESC;
 -- =============================================================================
 -- 6. Pre-signed URL Generation
 -- =============================================================================
--- NOTE: AWS documentation states that Presign is "Not supported" for FSxN S3
+-- NOTE: AWS documentation states that Presign is "Not supported" for FSx for ONTAP S3
 -- Access Points. However, testing confirms GET_PRESIGNED_URL() works correctly
--- with FSxN S3 AP in practice. URLs are generated and files are accessible.
+-- with FSx for ONTAP S3 AP in practice. URLs are generated and files are accessible.
 -- =============================================================================
 
 -- 6a. Pre-signed URLs for ALL files

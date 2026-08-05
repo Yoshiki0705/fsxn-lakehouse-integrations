@@ -9,6 +9,18 @@
 > **Verified**: LIST, SELECT, External Table, COPY INTO load, Directory Table, Governance Tags.
 >
 > **Not validated or not suitable**: Snowpipe AUTO_REFRESH, Iceberg write-back, transactional table writes, presigned URL as a governed production path.
+>
+> **Ingestion, specifically**: Snowpipe is event-driven and cannot be scheduled.
+> For scheduled ingestion use a **Snowflake Task running COPY INTO** — a
+> different feature, and one that is verified. The Lambda-polling workaround that
+> synthesizes S3 notifications is verified on the AWS side only, and six defects
+> were found in its published artifacts. See
+> [Snowpipe Verification Results](docs/en/snowpipe-verification-results.md).
+>
+> **ListObjectsV2 latency correction**: earlier revisions of this repository
+> quoted 30-80x native S3. Re-measured 2026-08-05 at **1.3-1.4x** for up to 5,000
+> objects; the 30-80x figure did not reproduce and has been withdrawn
+> ([BLK-006](../../docs/en/blocker-tracker.md)).
 
 ## Observed Results
 
@@ -39,7 +51,8 @@
 | Automated enrichment (Dynamic Table) | ✅ | External Table → Dynamic Table (TARGET_LAG = '1 hour', FULL refresh) — confirmed May 2026 |
 | Share curated data with partners | ✅ | External Table or Dynamic Table → Snowflake Data Sharing |
 | Open format for multi-engine access | ✅ | COPY INTO → Managed Iceberg Table → Databricks/Athena can read — confirmed May 2026 |
-| Real-time auto-ingest (Snowpipe) | ❌ | Use Task + ALTER EXTERNAL TABLE REFRESH or FPolicy + Lambda |
+| Scheduled ingestion (every N minutes) | ✅ | Snowflake Task + COPY INTO — Snowpipe itself cannot be scheduled |
+| Real-time auto-ingest (Snowpipe) | ❌ | No S3 Event Notifications. Synthesized-notification workarounds are [unverified end-to-end](docs/en/snowpipe-verification-results.md) |
 | Iceberg write-back on FSx for ONTAP S3 AP | ❌ | Use native S3 for transactional writes |
 
 > Choose Snowflake when governed external tables, AI functions, data sharing, or multi-engine Iceberg interoperability are required. Choose Athena when lightweight AWS-native serverless SQL over NAS data is sufficient.
@@ -379,12 +392,12 @@ Since FSx for ONTAP S3 AP does not support S3 Event Notifications, standard Snow
 |---|---|---|---|---|
 | **FPolicy → Lambda → SNS → Snowpipe** | FPolicy detects file changes → Lambda sends SNS notification → Snowpipe REST API triggers load | Seconds (<30s) | Medium | [FPolicy docs](https://docs.netapp.com/us-en/ontap/nas-audit/fpolicy-config-types-concept.html) |
 | **Snowflake Task + COPY INTO** | Scheduled Task runs COPY INTO from stage at intervals | Minutes (configurable) | Low | [Tasks docs](https://docs.snowflake.com/en/user-guide/tasks-intro) |
-
-> **FPolicy throughput note**: FPolicy introduces minimal latency on the NFS/SMB I/O path (typically <1ms per operation for passthrough mode). However, under high-frequency file write workloads (thousands of files/second), validate throughput impact on the FSx for ONTAP file system before production deployment.
 | **Snowflake Task + ALTER STAGE REFRESH** | Scheduled Task refreshes Directory Table metadata | Minutes | Low | [Tasks docs](https://docs.snowflake.com/en/user-guide/tasks-intro) |
 | **External function + Lambda** | Snowflake calls Lambda to check for new files | On-demand | Medium | [External functions](https://docs.snowflake.com/en/sql-reference/external-functions) |
 | **AWS Glue → Snowflake** | Glue reads FSx for ONTAP S3 AP → writes to Snowflake via connector | Minutes | Medium | [Glue + FSx tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-transform-data-with-glue.html) |
 | **Snowpipe REST API (manual trigger)** | Application calls Snowpipe REST API with file list | Seconds | Low | [Snowpipe REST](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-rest-overview) |
+
+> **FPolicy throughput note**: FPolicy introduces minimal latency on the NFS/SMB I/O path (typically <1ms per operation for passthrough mode). However, under high-frequency file write workloads (thousands of files/second), validate throughput impact on the FSx for ONTAP file system before production deployment.
 
 **Recommended production pattern:**
 ```
@@ -435,7 +448,7 @@ cp params.example.json params.json  # Edit: set S3AccessPointArn
 
 The following limitations are observed when using FSx for ONTAP S3 AP as a Snowflake External Stage:
 
-1. **FSx for ONTAP S3 AP latency**: ListObjects can take tens of seconds to minutes
+1. **FSx for ONTAP S3 AP listing latency**: measured at 1.3-1.4x native S3 for up to 5,000 objects (2026-08-05), so listing is not a practical constraint at that scale. Behaviour above 5,000 objects per directory is unmeasured — consolidate files and partition the key space for large datasets. The earlier "tens of seconds to minutes" and "30-80x" claims did not reproduce ([evidence](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml))
 2. **Pre-signed URL (FSx for ONTAP S3 AP limitation)**: AWS FSx for ONTAP S3 AP documentation states Pre-signed URLs are "Not supported," but Snowflake's `GET_PRESIGNED_URL()` function generates working download URLs in practice. Use at own risk as this is outside official FSx for ONTAP S3 AP support
 3. **S3 Event Notifications not supported (FSx for ONTAP S3 AP limitation)**: FSx for ONTAP S3 AP does not support S3 Event Notifications, so Snowpipe auto-ingest trigger is not possible (use FPolicy + Lambda as alternative)
 4. **Max upload size**: 5GB (Multipart Upload supported)

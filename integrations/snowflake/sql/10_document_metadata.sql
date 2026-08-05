@@ -1,7 +1,7 @@
 -- =============================================================================
 -- 10 - Document Metadata Catalog (PDF/DOCX) with Snowpark UDF
 -- =============================================================================
--- Queries the Directory Table for document files (PDF, DOCX) stored on FSxN,
+-- Queries the Directory Table for document files (PDF, DOCX) stored on FSx for ONTAP,
 -- applies a Snowpark Python UDF to estimate page counts based on file size,
 -- and builds a persistent DOCUMENT_CATALOG table for downstream analytics.
 --
@@ -43,7 +43,7 @@ USE SCHEMA MEDIA;
 -- 2. Query Directory Table for PDF/DOCX Files Only
 -- =============================================================================
 -- Filter the Directory Table to show only document files (PDF, DOCX).
--- This demonstrates targeted querying of unstructured file metadata on FSxN.
+-- This demonstrates targeted querying of unstructured file metadata on FSx for ONTAP.
 
 -- Refresh stage to ensure latest files are indexed
 ALTER STAGE FSXN_MEDIA_STAGE REFRESH;
@@ -188,7 +188,7 @@ CREATE OR REPLACE TABLE DOCUMENT_CATALOG (
     last_modified    TIMESTAMP_NTZ,
     cataloged_at     TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 )
-COMMENT = 'Document catalog for PDF/DOCX files on FSxN. Page counts are ESTIMATES based on file size heuristics (not actual binary parsing). See ESTIMATE_DOCUMENT_PAGES UDF for methodology.';
+COMMENT = 'Document catalog for PDF/DOCX files on FSx for ONTAP. Page counts are ESTIMATES based on file size heuristics (not actual binary parsing). See ESTIMATE_DOCUMENT_PAGES UDF for methodology.';
 
 -- =============================================================================
 -- 5. Populate DOCUMENT_CATALOG from Directory Table + UDF
@@ -287,7 +287,7 @@ LIMIT 10;
 -- End of Script
 -- =============================================================================
 -- Summary:
---   - Queried Directory Table for PDF/DOCX files on FSxN
+--   - Queried Directory Table for PDF/DOCX files on FSx for ONTAP
 --   - Created ESTIMATE_DOCUMENT_PAGES UDF (Python 3.11, no external packages)
 --   - Built DOCUMENT_CATALOG table with estimated page counts
 --   - Verification queries show document distribution and confidence levels

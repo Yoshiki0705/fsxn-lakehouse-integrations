@@ -10,7 +10,7 @@ Key Message:
     "Share metadata across organizations without copying data"
 
 Architecture:
-    FSx ONTAP → Iceberg Metadata Table → Delta Sharing Server → Recipients
+    FSx for ONTAP → Iceberg Metadata Table → Delta Sharing Server → Recipients
     (Data stays in place; only metadata access is shared)
 
 Usage:
@@ -47,7 +47,7 @@ def demo_create_share(share_name: str, table_name: str):
     print()
     print(f"    ALTER SHARE {share_name}")
     print(f"      ADD TABLE fsxn_metadata_catalog.metadata.unstructured_files")
-    print(f"      COMMENT 'FSx ONTAP unstructured file metadata — Iceberg format';")
+    print(f"      COMMENT 'FSx for ONTAP unstructured file metadata — Iceberg format';")
     print()
     print(f"    -- Share includes: file_name, file_type, classification,")
     print(f"    --   confidence_score, summary, file_size, last_modified")

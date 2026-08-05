@@ -1,5 +1,5 @@
 -- =============================================================================
--- 02 - External Stages for FSxN via S3 Access Point
+-- 02 - External Stages for FSx for ONTAP via S3 Access Point
 -- =============================================================================
 --
 -- Purpose:
@@ -55,7 +55,7 @@ USE WAREHOUSE COMPUTE_WH;
 -- =============================================================================
 -- 2. Database & Schema Setup
 -- =============================================================================
--- Create the database for all FSxN lakehouse data
+-- Create the database for all FSx for ONTAP lakehouse data
 CREATE DATABASE IF NOT EXISTS FSXN_LAKEHOUSE
   COMMENT = 'FSx for NetApp ONTAP Lakehouse data via S3 Access Point';
 
@@ -63,7 +63,7 @@ USE DATABASE FSXN_LAKEHOUSE;
 
 -- Create schemas for medallion architecture + media layer
 CREATE SCHEMA IF NOT EXISTS BRONZE
-  COMMENT = 'Raw ingested data from FSxN (Parquet, CSV, JSON)';
+  COMMENT = 'Raw ingested data from FSx for ONTAP (Parquet, CSV, JSON)';
 
 CREATE SCHEMA IF NOT EXISTS SILVER
   COMMENT = 'Cleaned and transformed data (Iceberg Tables)';
@@ -79,12 +79,12 @@ CREATE SCHEMA IF NOT EXISTS MEDIA
 -- =============================================================================
 -- Used by: External Tables (TRANSACTIONS, IOT_SENSORS, CUSTOMERS_CSV, EVENTS_JSON)
 --          Snowpipe (FSXN_EVENTS_PIPE for auto-ingest)
--- Data:    Raw Parquet, CSV, JSON files written to FSxN via NFS
+-- Data:    Raw Parquet, CSV, JSON files written to FSx for ONTAP via NFS
 -- Replace <AP_ALIAS> with your S3 Access Point alias from CloudFormation output
 CREATE OR REPLACE STAGE BRONZE.FSXN_BRONZE_STAGE
   STORAGE_INTEGRATION = fsxn_storage_integration
   URL = 's3://<AP_ALIAS>/bronze/'
-  COMMENT = 'Bronze layer — raw structured data on FSxN. Used by External Tables and Snowpipe.';
+  COMMENT = 'Bronze layer — raw structured data on FSx for ONTAP. Used by External Tables and Snowpipe.';
 
 -- =============================================================================
 -- 4. External Stage — Silver Layer
@@ -95,7 +95,7 @@ CREATE OR REPLACE STAGE BRONZE.FSXN_BRONZE_STAGE
 CREATE OR REPLACE STAGE SILVER.FSXN_SILVER_STAGE
   STORAGE_INTEGRATION = fsxn_storage_integration
   URL = 's3://<AP_ALIAS>/silver/'
-  COMMENT = 'Silver layer — Iceberg Tables on FSxN. Snowflake manages metadata + data files.';
+  COMMENT = 'Silver layer — Iceberg Tables on FSx for ONTAP. Snowflake manages metadata + data files.';
 
 -- =============================================================================
 -- 5. External Stage — Gold Layer
@@ -107,7 +107,7 @@ CREATE OR REPLACE STAGE SILVER.FSXN_SILVER_STAGE
 CREATE OR REPLACE STAGE GOLD.FSXN_GOLD_STAGE
   STORAGE_INTEGRATION = fsxn_storage_integration
   URL = 's3://<AP_ALIAS>/gold/'
-  COMMENT = 'Gold layer — business-ready data on FSxN. Used by Secure Data Sharing.';
+  COMMENT = 'Gold layer — business-ready data on FSx for ONTAP. Used by Secure Data Sharing.';
 
 -- =============================================================================
 -- 6. External Stage — Media Layer (Basic)
@@ -119,14 +119,14 @@ CREATE OR REPLACE STAGE GOLD.FSXN_GOLD_STAGE
 --       08_directory_table.sql will recreate this stage with:
 --         DIRECTORY = (ENABLE = TRUE, AUTO_REFRESH = FALSE)
 --       to enable Directory Table metadata queries.
---       AUTO_REFRESH = FALSE is required because FSxN S3 Access Points
+--       AUTO_REFRESH = FALSE is required because FSx for ONTAP S3 Access Points
 --       do NOT support S3 Event Notifications.
 --
 -- Replace <AP_ALIAS> with your S3 Access Point alias from CloudFormation output
 CREATE OR REPLACE STAGE MEDIA.FSXN_MEDIA_STAGE
   STORAGE_INTEGRATION = fsxn_storage_integration
   URL = 's3://<AP_ALIAS>/media/'
-  COMMENT = 'Media layer — unstructured files on FSxN. Recreated with DIRECTORY=TRUE in 08_directory_table.sql.';
+  COMMENT = 'Media layer — unstructured files on FSx for ONTAP. Recreated with DIRECTORY=TRUE in 08_directory_table.sql.';
 
 -- =============================================================================
 -- 7. Validation — LIST Stages
@@ -180,5 +180,5 @@ SHOW STAGES IN DATABASE FSXN_LAKEHOUSE;
 --
 -- 4. Empty result (no error):
 --    → Integration is working correctly
---    → Upload sample data to FSxN via NFS, then re-run LIST
+--    → Upload sample data to FSx for ONTAP via NFS, then re-run LIST
 -- =============================================================================

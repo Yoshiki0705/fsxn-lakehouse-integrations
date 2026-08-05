@@ -28,12 +28,12 @@ input_size_bytes: 189900
 
 # ETL Operations Tested
 operations:
-  - name: "Read Parquet from FSx S3 AP"
+  - name: "Read Parquet from FSx for ONTAP S3 AP"
     s3_operation: "GetObject"
     result: "PASS"
   - name: "Spark DataFrame transformations (GROUP BY, AVG, COUNT)"
     result: "PASS"
-  - name: "Write Parquet back to FSx S3 AP"
+  - name: "Write Parquet back to FSx for ONTAP S3 AP"
     s3_operation: "PutObject (multipart)"
     result: "PASS"
   - name: "Read-back verification"
@@ -52,15 +52,15 @@ output_size_bytes: 2590
 notes:
   - "Initial run failed due to nanosecond timestamp in Parquet (Glue 4.0 incompatibility)"
   - "Fixed by generating Parquet with string timestamps (event_date as STRING)"
-  - "Glue ETL can both READ and WRITE to FSx S3 AP successfully"
+  - "Glue ETL can both READ and WRITE to FSx for ONTAP S3 AP successfully"
   - "Write uses standard PutObject (no conditional writes or rename needed for Parquet append)"
   - "This confirms Pattern C (ETL Pipeline) from the architecture documentation"
 
 # Verification Level
 current_level: "Functional Verified"
 verified_patterns:
-  - "Read Parquet from FSx S3 AP via Glue ETL"
-  - "Write Parquet to FSx S3 AP via Glue ETL (append/overwrite mode)"
+  - "Read Parquet from FSx for ONTAP S3 AP via Glue ETL"
+  - "Write Parquet to FSx for ONTAP S3 AP via Glue ETL (append/overwrite mode)"
   - "End-to-end ETL pipeline: Read → Transform → Write-back"
 
 # Known Limitations

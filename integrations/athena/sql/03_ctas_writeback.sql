@@ -1,12 +1,12 @@
 -- =============================================================================
--- FSxN Athena Integration — CTAS Write-Back to FSxN
+-- FSx for ONTAP Athena Integration — CTAS Write-Back to FSx for ONTAP
 -- =============================================================================
--- Creates curated (gold) tables on FSxN via S3 Access Point using CTAS.
--- Verifies Athena can write Parquet files back to FSxN.
+-- Creates curated (gold) tables on FSx for ONTAP via S3 Access Point using CTAS.
+-- Verifies Athena can write Parquet files back to FSx for ONTAP.
 --
 -- Prerequisites:
 --   - IAM role has s3:PutObject on S3 AP /gold/* path
---   - FSxN volume has sufficient space
+--   - FSx for ONTAP volume has sufficient space
 -- =============================================================================
 
 -- ============================================================

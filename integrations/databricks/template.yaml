@@ -13,12 +13,12 @@ Parameters:
   S3BucketName:
     Type: String
     Description: >
-      FSxN SVM S3 bucket name (the bucket exposed by ONTAP S3 server).
+      FSx for ONTAP SVM S3 bucket name (the bucket exposed by ONTAP S3 server).
       Format: svm-name or custom bucket name configured on SVM.
 
   VpcId:
     Type: AWS::EC2::VPC::Id
-    Description: VPC ID where Databricks workspace and FSxN reside
+    Description: VPC ID where Databricks workspace and FSx for ONTAP reside
 
   SubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
@@ -107,7 +107,7 @@ Resources:
     Properties:
       RoleName: !Sub '${EnvironmentName}-databricks-s3-role'
       Description: >
-        IAM Role assumed by Databricks Unity Catalog to access FSxN via S3 AP.
+        IAM Role assumed by Databricks Unity Catalog to access FSx for ONTAP via S3 AP.
         Trust policy allows Databricks AWS account with external ID.
       AssumeRolePolicyDocument:
         Version: '2012-10-17'

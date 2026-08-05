@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Lambda-based sample data generator for FSxN Lakehouse testing.
+  Lambda-based sample data generator for FSx for ONTAP Lakehouse testing.
   Generates Parquet, CSV, and JSON sample data via S3 Access Point.
 
 Parameters:
@@ -84,7 +84,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub '${EnvironmentName}-data-generator'
-      Description: Generates sample data (Parquet/CSV/JSON) to FSxN via S3 AP
+      Description: Generates sample data (Parquet/CSV/JSON) to FSx for ONTAP via S3 AP
       Runtime: python3.12
       Handler: index.handler
       Role: !GetAtt GeneratorLambdaRole.Arn

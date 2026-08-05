@@ -5,9 +5,9 @@
 
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 09 - ML Embeddings on FSxN (Feature Engineering)
+# MAGIC # 09 - ML Embeddings on FSx for ONTAP (Feature Engineering)
 # MAGIC
-# MAGIC Generate vector embeddings from images and documents stored on FSxN.
+# MAGIC Generate vector embeddings from images and documents stored on FSx for ONTAP.
 # MAGIC Store embeddings as Delta table for similarity search and ML pipelines.
 # MAGIC
 # MAGIC ## Use Cases
@@ -120,7 +120,7 @@ spark.sql(f"""
 CREATE TABLE IF NOT EXISTS fsxn_lakehouse.features.image_embeddings
 USING DELTA
 LOCATION '{IMAGE_EMBEDDINGS_PATH}'
-COMMENT 'CLIP image embeddings from FSxN media files'
+COMMENT 'CLIP image embeddings from FSx for ONTAP media files'
 TBLPROPERTIES ('purpose' = 'ml_feature_store', 'model' = '{IMAGE_MODEL}')
 """)
 
@@ -205,7 +205,7 @@ spark.sql(f"""
 CREATE TABLE IF NOT EXISTS fsxn_lakehouse.features.text_embeddings
 USING DELTA
 LOCATION '{TEXT_EMBEDDINGS_PATH}'
-COMMENT 'Sentence embeddings from FSxN documents (for RAG/search)'
+COMMENT 'Sentence embeddings from FSx for ONTAP documents (for RAG/search)'
 TBLPROPERTIES ('purpose' = 'ml_feature_store', 'model' = '{TEXT_MODEL}')
 """)
 
@@ -264,7 +264,7 @@ similar_images.show(truncate=False)
 # MAGIC ## Feature Store Pattern
 # MAGIC
 # MAGIC ```
-# MAGIC FSxN Volume
+# MAGIC FSx for ONTAP Volume
 # MAGIC ├── /media/images/          ← Source (uploaded via NFS/SMB)
 # MAGIC ├── /media/documents/       ← Source (uploaded via NFS/SMB)
 # MAGIC ├── /silver/image_metadata/ ← Metadata (Delta table)

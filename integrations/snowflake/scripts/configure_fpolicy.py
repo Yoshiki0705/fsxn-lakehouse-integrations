@@ -111,7 +111,7 @@ Examples:
 
 NFSv4.1 Requirement:
   FPolicy does NOT support NFSv4.2 monitoring.
-  Mount FSxN volumes with: mount -o vers=4.1,hard,rsize=65536,wsize=65536
+  Mount FSx for ONTAP volumes with: mount -o vers=4.1,hard,rsize=65536,wsize=65536
   Do NOT use vers=4 (negotiates to 4.2, breaking FPolicy).
         """,
     )
@@ -519,7 +519,7 @@ def verify_fpolicy_engine_status(client, svm_uuid):
     Expected status: "connected"
     If status is "disconnected", check:
       - Fargate task is RUNNING
-      - Security Group allows TCP 9898 from FSxN SVM
+      - Security Group allows TCP 9898 from FSx for ONTAP SVM
       - Fargate task IP matches primary-servers configuration
     """
     print("\n  Verifying FPolicy Engine status...")

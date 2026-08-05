@@ -30,7 +30,7 @@ OUTPUT_PATH = f"{S3_AP_ALIAS}/gold/emr-poc-output/"
 # Initialize Spark
 # ============================================================
 spark = SparkSession.builder \
-    .appName("FSxN-S3AP-PoC-ETL") \
+    .appName("FSx for ONTAP-S3AP-PoC-ETL") \
     .getOrCreate()
 
 print("=" * 60)

@@ -5,7 +5,7 @@
 
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 05 - ML Feature Store on FSxN
+# MAGIC # 05 - ML Feature Store on FSx for ONTAP
 # MAGIC
 # MAGIC Use FSx for NetApp ONTAP as the storage layer for Databricks Feature Store.
 # MAGIC ONTAP FlexClone enables instant feature set snapshots for model reproducibility.
@@ -25,7 +25,7 @@ FEATURE_SCHEMA = "features"
 
 # MAGIC %sql
 # MAGIC USE CATALOG fsxn_lakehouse;
-# MAGIC CREATE SCHEMA IF NOT EXISTS features COMMENT 'ML Feature Store tables on FSxN';
+# MAGIC CREATE SCHEMA IF NOT EXISTS features COMMENT 'ML Feature Store tables on FSx for ONTAP';
 # MAGIC USE SCHEMA features;
 
 # COMMAND ----------
@@ -71,7 +71,7 @@ customer_features_df = generate_customer_features()
 
 # COMMAND ----------
 
-# Write feature table as Delta on FSxN
+# Write feature table as Delta on FSx for ONTAP
 feature_path = f"s3://{S3_ACCESS_POINT_ALIAS}/gold/features/customer_features/"
 
 customer_features_df.write \
@@ -85,7 +85,7 @@ spark.sql(f"""
 CREATE TABLE IF NOT EXISTS fsxn_lakehouse.features.customer_features
 USING DELTA
 LOCATION '{feature_path}'
-COMMENT 'Customer ML features on FSxN'
+COMMENT 'Customer ML features on FSx for ONTAP'
 TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true',
     'purpose' = 'ml_feature_store',
@@ -129,7 +129,7 @@ print(f"✅ Feature table created: {feature_path}")
 # MAGIC 5. Guaranteed identical features for reproducibility
 # MAGIC
 # MAGIC ```
-# MAGIC Feature Volume (FSxN)
+# MAGIC Feature Volume (FSx for ONTAP)
 # MAGIC ├── Snapshot: features_2024_Q1 ──→ FlexClone → Model v1 training
 # MAGIC ├── Snapshot: features_2024_Q2 ──→ FlexClone → Model v2 training
 # MAGIC └── Current (live features)    ──→ Model v3 training (in progress)

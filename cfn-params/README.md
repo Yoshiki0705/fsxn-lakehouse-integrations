@@ -62,5 +62,4 @@ Standard AWS CLI parameter JSON format:
 | `opensharing-server.example.json` | `integrations/opensharing-server/template.yaml` | OpenSharing |
 | `delta-lake-oss.example.json` | `integrations/delta-lake-oss/template.yaml` | Delta Lake |
 | `iceberg-s3-tables.example.json` | `integrations/iceberg-metadata-catalog/cloudformation/s3-tables-setup.yaml` | Iceberg |
-
 | `snapmirror-flexcache.example.json` | `integrations/snapmirror-flexcache-multicloud/template.yaml` | SnapMirror/FlexCache validation |

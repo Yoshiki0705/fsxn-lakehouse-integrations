@@ -70,6 +70,6 @@
       "What medical images do we have from the radiology department?",
       "List all PDF reports classified as specifications"
     ],
-    "integration_with_agents": "Use Bedrock Agents to combine KB search with file access via FSx S3 AP. Agent can: (1) search metadata via KB, (2) retrieve file via S3 AP, (3) process with Bedrock Claude."
+    "integration_with_agents": "Use Bedrock Agents to combine KB search with file access via FSx for ONTAP S3 AP. Agent can: (1) search metadata via KB, (2) retrieve file via S3 AP, (3) process with Bedrock Claude."
   }
 }

@@ -1,0 +1,113 @@
+{
+  "benchmark": "listobjectsv2-latency",
+  "measured_at_utc": "2026-08-05T04:51:37Z",
+  "region": "ap-northeast-1",
+  "object_counts": [
+    1000,
+    5000
+  ],
+  "trials_per_count": 5,
+  "layout": "nested",
+  "fanout": 10,
+  "timing_scope": "Paginated ListObjectsV2 loop only. Client construction, credential resolution, and object setup excluded. One discarded warm-up call per (target, count) before recorded trials.",
+  "results": {
+    "fsx-ontap-s3ap": [
+      {
+        "target_label": "fsx-ontap-s3ap",
+        "layout": "nested",
+        "object_count": 1000,
+        "keys_listed": 1000,
+        "api_calls_per_trial": 2,
+        "trials": 5,
+        "median_ms": 146.2,
+        "mean_ms": 149.3,
+        "min_ms": 143.9,
+        "max_ms": 162.1,
+        "stdev_ms": 7.3,
+        "durations_ms": [
+          162.1,
+          148.4,
+          146.1,
+          146.2,
+          143.9
+        ]
+      },
+      {
+        "target_label": "fsx-ontap-s3ap",
+        "layout": "nested",
+        "object_count": 5000,
+        "keys_listed": 5000,
+        "api_calls_per_trial": 6,
+        "trials": 5,
+        "median_ms": 570.5,
+        "mean_ms": 579.7,
+        "min_ms": 564.2,
+        "max_ms": 605.7,
+        "stdev_ms": 18.9,
+        "durations_ms": [
+          570.5,
+          564.5,
+          593.7,
+          605.7,
+          564.2
+        ]
+      }
+    ],
+    "native-s3": [
+      {
+        "target_label": "native-s3",
+        "layout": "nested",
+        "object_count": 1000,
+        "keys_listed": 1000,
+        "api_calls_per_trial": 1,
+        "trials": 5,
+        "median_ms": 104.5,
+        "mean_ms": 105.1,
+        "min_ms": 93.1,
+        "max_ms": 123.1,
+        "stdev_ms": 11.5,
+        "durations_ms": [
+          97.5,
+          123.1,
+          93.1,
+          104.5,
+          107.1
+        ]
+      },
+      {
+        "target_label": "native-s3",
+        "layout": "nested",
+        "object_count": 5000,
+        "keys_listed": 5000,
+        "api_calls_per_trial": 5,
+        "trials": 5,
+        "median_ms": 569.1,
+        "mean_ms": 551.8,
+        "min_ms": 505.6,
+        "max_ms": 573.6,
+        "stdev_ms": 28.8,
+        "durations_ms": [
+          505.6,
+          541.4,
+          569.1,
+          573.6,
+          569.2
+        ]
+      }
+    ]
+  },
+  "comparison": [
+    {
+      "object_count": 1000,
+      "fsx_ontap_ap_median_ms": 146.2,
+      "native_s3_median_ms": 104.5,
+      "slowdown_factor": 1.4
+    },
+    {
+      "object_count": 5000,
+      "fsx_ontap_ap_median_ms": 570.5,
+      "native_s3_median_ms": 569.1,
+      "slowdown_factor": 1.0
+    }
+  ]
+}

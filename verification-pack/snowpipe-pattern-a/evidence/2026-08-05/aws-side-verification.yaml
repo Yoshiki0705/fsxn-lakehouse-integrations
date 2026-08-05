@@ -1,0 +1,257 @@
+# Snowpipe Pattern A (Lambda polling) — AWS-side verification
+#
+# Pattern A design:
+#   EventBridge Schedule -> Lambda (ListObjectsV2 on FSx for ONTAP S3 AP)
+#     -> synthesize an S3-event-shaped notification -> SNS
+#     -> Snowflake-managed SQS (notification_channel) -> Snowpipe COPY INTO
+#
+# Scope of THIS record: everything up to and including SNS delivery.
+# The Snowflake leg (does Snowpipe accept a synthesized notification and fire
+# COPY?) is NOT covered — no Snowflake credentials were available. That leg
+# remains the deciding unknown for whether Pattern A works at all.
+
+test_id: "SNOWPIPE-PATTERN-A-AWS-001"
+date_tested: "2026-08-05"
+region: "ap-northeast-1"
+scope: "AWS-side only (file write -> ListObjectsV2 detection -> SNS delivery)"
+snowflake_leg_status: "NOT TESTED — no credentials available"
+
+environment:
+  fsx_file_system: "<FILE_SYSTEM_ID>"
+  fsx_deployment_type: "SINGLE_AZ_1"
+  svm: "<SVM_ID>"
+  volume: "<VOLUME_ID>"
+  volume_security_style: "UNIX"
+  ap_name: "snowflake-verification-ap"
+  ap_file_system_identity: "UNIX (root)"
+  lambda_runtime: "python3.12"
+  lambda_memory_mb: 256
+  lambda_timeout_s: 120
+  lambda_placement: "outside VPC"
+  handler_source: "integrations/snowflake/snowpipe-lambda/handler.py"
+  capture_mechanism: "SQS queue subscribed to the SNS topic, to prove delivery"
+
+# ---------------------------------------------------------------------------
+# What passed
+# ---------------------------------------------------------------------------
+verified:
+  - id: "PASS-1"
+    operation: "Object write to FSx for ONTAP S3 AP (PutObject)"
+    status: "PASS"
+    duration_ms: 716
+    note: "Median of 3 observed writes: 716-805 ms for a 74-byte object."
+  - id: "PASS-2"
+    operation: "Poller Lambda ListObjectsV2 detection"
+    status: "PASS"
+    lambda_wall_time_ms: 981
+    note: "Detected the newly written object and reported new_files_found=2."
+  - id: "PASS-3"
+    operation: "SNS publish and delivery"
+    status: "PASS"
+    note: "Notification captured on a subscribed SQS queue, confirming delivery."
+  - id: "PASS-4"
+    operation: "End-to-end AWS-side latency"
+    status: "PASS"
+    measured_seconds: 2.1
+    note: |
+      File write to notification captured on SQS: 2.1 s. This EXCLUDES the
+      EventBridge schedule wait. Real detection lag is
+      (schedule interval) + 2.1 s, so a rate(5 minutes) schedule yields up to
+      about 5 minutes of lag. The design target of "5-7 min" for the polling
+      approach is consistent with this.
+  - id: "PASS-5"
+    operation: "Access Point addressing — ARN and alias both usable"
+    status: "PASS"
+    note: |
+      ListObjectsV2 succeeded with both the Access Point ARN and the Access
+      Point alias supplied as the Bucket parameter. An IAM policy granting
+      s3:ListBucket on the Access Point ARN also authorizes alias-addressed
+      requests, so no additional grant is needed for the alias form.
+
+# ---------------------------------------------------------------------------
+# Defects found
+# ---------------------------------------------------------------------------
+defects:
+  - id: "DEFECT-1"
+    severity: "High"
+    title: "template.yaml deploys a placeholder function, not the real handler"
+    location: "integrations/snowflake/snowpipe-lambda/template.yaml"
+    detail: |
+      The Lambda resource uses an inline Code.ZipFile whose body is:
+        def handler(event, context):
+            return {"statusCode": 200, "body": "Deploy handler.py"}
+      Deploying the template as published produces a poller that never lists
+      objects and never publishes to SNS. handler.py (the working
+      implementation, ~180 lines) exceeds the inline ZipFile size limit, so it
+      cannot simply be pasted in — the template needs a real packaging step.
+    evidence: "Verification used a manually packaged zip of handler.py instead."
+    recommendation: |
+      Either convert to a genuine SAM build (the template already declares
+      Transform: AWS::Serverless-2016-10-31 but defines no SAM resources, so the
+      transform is currently inert), or document an explicit
+      `aws cloudformation package` / `sam build` step as a prerequisite.
+
+  - id: "DEFECT-2"
+    severity: "High"
+    title: "Files older than the polling window are silently never notified"
+    location: "integrations/snowflake/snowpipe-lambda/handler.py (get_last_processed_time)"
+    detail: |
+      When STATE_TABLE is unset, the cutoff is computed as
+      `now - POLLING_INTERVAL_MINUTES`. Any object whose LastModified predates
+      that cutoff is skipped, and because the cutoff always tracks wall clock,
+      it is never revisited. The object is lost to the pipeline permanently.
+    reproduction:
+      - "Set POLLING_INTERVAL_MINUTES=1."
+      - "Write bronze/missed/late-file.json (LastModified 2026-08-05T05:07:52Z)."
+      - "Wait 100 s, then invoke the Lambda (cutoff became 2026-08-05T05:08:33Z)."
+    observed_result: |
+      Lambda returned new_files_found=0 and notifications_published=0, while
+      ListObjectsV2 on the same prefix confirmed late-file.json was present.
+      Object present, notification never sent.
+    aggravating_factor: |
+      template.yaml exposes no STATE_TABLE parameter and never sets the
+      environment variable, so every CloudFormation-deployed poller runs in
+      exactly this lossy mode. The DynamoDB checkpoint path in handler.py is
+      unreachable through the published template.
+    recommendation: |
+      Wire the DynamoDB checkpoint through the template, and treat the
+      time-window fallback as a bootstrap-only path. Overlap the window by a
+      safety margin rather than using an exact interval, so a slow or delayed
+      invocation cannot open a gap.
+
+  - id: "DEFECT-3"
+    severity: "Medium"
+    title: "Synthesized notification omits fields present in real S3 events"
+    location: "integrations/snowflake/snowpipe-lambda/handler.py (publish_to_sns)"
+    detail: |
+      The synthesized record carries only:
+        eventVersion, eventSource, eventName, eventTime,
+        s3.bucket.name, s3.object.key, s3.object.size
+      A genuine S3 event notification record additionally carries:
+        awsRegion, s3.s3SchemaVersion, s3.configurationId,
+        s3.bucket.ownerIdentity, s3.bucket.arn,
+        s3.object.eTag, s3.object.sequencer
+      (plus userIdentity, requestParameters and responseElements).
+    impact: |
+      Whether Snowpipe tolerates the reduced payload is unverified. eTag and
+      sequencer are the fields most likely to matter, since they are what a
+      consumer would use for deduplication and ordering.
+    recommendation: |
+      Populate the full record shape from the ListObjectsV2 response (ETag and
+      Size are already available there; awsRegion and bucket.arn are known
+      configuration), or confirm empirically which subset Snowpipe accepts.
+
+  - id: "DEFECT-4"
+    severity: "Medium"
+    title: "bucket.name carries an ARN when the AP ARN is configured"
+    location: "integrations/snowflake/snowpipe-lambda/handler.py (publish_to_sns)"
+    detail: |
+      handler.py copies S3_ACCESS_POINT_ALIAS straight into s3.bucket.name.
+      Configured with the Access Point ARN, the emitted value was:
+        "arn:aws:s3:<region>:<account>:accesspoint/snowflake-verification-ap"
+      Configured with the alias, it was:
+        "snowflake-verifi-...-ext-s3alias"
+      Real S3 notifications place a bucket name here, never an ARN.
+    impact: |
+      Snowpipe matches an incoming notification against its pipe's stage
+      location. An ARN in this field is unlikely to match a stage URL of the
+      form s3://<bucket>/<path>. The alias form is at least the right shape.
+    note: |
+      The environment variable is named S3_ACCESS_POINT_ALIAS, so the alias is
+      evidently the intended input — but template.yaml accepts both an
+      S3AccessPointAlias and an S3AccessPointArn parameter and passes the alias
+      here, while granting IAM on the ARN. The naming invites the wrong value
+      to be supplied.
+    recommendation: |
+      Require the alias for this field, validate its shape at startup, and
+      reject an ARN with a clear error rather than emitting an invalid
+      notification.
+
+  - id: "DEFECT-5"
+    severity: "Low"
+    title: "Overlapping windows re-notify already-notified objects"
+    location: "integrations/snowflake/snowpipe-lambda/handler.py"
+    detail: |
+      Each observed run reported new_files_found=2, re-including an object
+      notified by the previous run, because successive time windows overlap.
+    impact: |
+      Tolerable for Snowpipe, which deduplicates by file name for roughly 14
+      days. Not tolerable for a plain COPY INTO consumer, which would load the
+      same object twice.
+    recommendation: "Resolved by wiring the DynamoDB checkpoint (see DEFECT-2)."
+
+  - id: "DEFECT-6"
+    severity: "Low"
+    title: "No dead-letter queue or error alarm on the poller"
+    location: "integrations/snowflake/snowpipe-lambda/template.yaml"
+    detail: |
+      The function has no DeadLetterConfig and the template creates no
+      CloudWatch alarm. A failing poller is silent, and because detection is
+      window-based (DEFECT-2), a silent outage lasting longer than the polling
+      interval loses every object written during it.
+    recommendation: "Add a DLQ and an error-rate alarm before any production use."
+
+# ---------------------------------------------------------------------------
+# Captured payload (redacted)
+# ---------------------------------------------------------------------------
+captured_notification_alias_config:
+  sns_envelope_keys:
+    - Message
+    - MessageId
+    - Signature
+    - SignatureVersion
+    - SigningCertURL
+    - Subject
+    - Timestamp
+    - TopicArn
+    - Type
+    - UnsubscribeURL
+  subject: "FSxN Snowpipe Notification"
+  subject_note: "Uses the disallowed FSxN abbreviation; should read 'FSx for ONTAP'."
+  inner_message:
+    Records:
+      - eventVersion: "2.1"
+        eventSource: "aws:s3"
+        eventName: "ObjectCreated:Put"
+        eventTime: "2026-08-05T05:07:00+00:00"
+        s3:
+          bucket:
+            name: "<AP_ALIAS>"
+          object:
+            key: "bronze/events/verify-20260805T050700Z.json"
+            size: 74
+
+# ---------------------------------------------------------------------------
+# Conclusion
+# ---------------------------------------------------------------------------
+conclusion:
+  aws_side_verdict: "PASS with defects"
+  summary: |
+    The AWS-side mechanics of Pattern A work: an object written to the
+    FSx for ONTAP S3 Access Point is detected by ListObjectsV2 and a
+    notification reaches SNS in about 2 seconds once the poller runs. Access
+    Point ARN and alias addressing both function, and IAM granted on the ARN
+    covers alias-addressed requests.
+
+    However, the published artifacts cannot be deployed as-is: the
+    CloudFormation template ships a placeholder function (DEFECT-1), and the
+    only checkpoint mode reachable through that template loses any object that
+    ages past the polling window (DEFECT-2, reproduced). The synthesized
+    notification also diverges from the real S3 event schema in ways that
+    plausibly prevent Snowpipe from matching it to a stage (DEFECT-3, DEFECT-4).
+  overall_pattern_a_verdict: "STILL UNVERIFIED end-to-end"
+  deciding_unknown: |
+    Whether Snowflake accepts a synthesized notification on the pipe's
+    notification_channel and triggers COPY. Until that is tested, Pattern A
+    should not be presented as a working path.
+  recommended_path_meanwhile: |
+    Snowflake Task + COPY INTO. COPY INTO from an FSx for ONTAP S3 AP stage
+    configured with AWS_ACCESS_POINT_ARN is already verified
+    (verification-pack/snowflake/evidence/2026-05-24), it needs no synthesized
+    notification, and Snowflake's own load history provides the
+    exactly-once behaviour that the poller's time window does not.
+  caveats:
+    - "Single environment, single day, single file system."
+    - "Lambda ran outside the VPC against an Internet-origin Access Point."
+    - "Object counts were small; behaviour under high write rates is untested."
+    - "The EventBridge schedule leg was not exercised; the Lambda was invoked directly."

@@ -5,7 +5,7 @@
 
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 03 - Delta Lake Tables on FSxN
+# MAGIC # 03 - Delta Lake Tables on FSx for ONTAP
 # MAGIC
 # MAGIC Create and manage Delta Lake tables with FSx for NetApp ONTAP as the storage layer.
 # MAGIC Demonstrates ACID transactions, time travel, and ONTAP Snapshot integration.
@@ -29,7 +29,7 @@ CATALOG = "fsxn_lakehouse"
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Create Delta Table on FSxN (Silver Layer)
+# MAGIC ## Create Delta Table on FSx for ONTAP (Silver Layer)
 
 # COMMAND ----------
 
@@ -68,11 +68,11 @@ orders_df.display()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Write Delta Table to FSxN
+# MAGIC ### Write Delta Table to FSx for ONTAP
 
 # COMMAND ----------
 
-# Write as Delta table on FSxN
+# Write as Delta table on FSx for ONTAP
 delta_path = f"s3://{S3_ACCESS_POINT_ALIAS}/silver/orders_delta/"
 
 orders_df.write \
@@ -102,7 +102,7 @@ COMMENT 'Orders Delta table on FSx for NetApp ONTAP'
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Delta Lake Operations on FSxN
+# MAGIC ## Delta Lake Operations on FSx for ONTAP
 
 # COMMAND ----------
 
@@ -148,7 +148,7 @@ cdc_df.createOrReplaceTempView("cdc_updates")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Delta Time Travel on FSxN
+# MAGIC ## Delta Time Travel on FSx for ONTAP
 
 # COMMAND ----------
 
@@ -198,7 +198,7 @@ cdc_df.createOrReplaceTempView("cdc_updates")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## OPTIMIZE and VACUUM on FSxN
+# MAGIC ## OPTIMIZE and VACUUM on FSx for ONTAP
 
 # COMMAND ----------
 
