@@ -145,14 +145,14 @@ graph TD
 
 ### SA / ソリューションアーキテクト
 
-**目的**: 顧客への提案設計、PoC 計画、アーキテクチャレビューを行いたい
+**目的**: アーキテクチャ設計、PoC 計画、アーキテクチャレビューを行いたい
 
 | 順序 | ドキュメント | 読む理由 | 所要時間 |
 |:---:|---|---|:---:|
 | 1 | [アーキテクチャ概要](./architecture.md) | 全体設計思想の把握 | 15分 |
 | 2 | [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) | パス選定ロジックと制約の完全理解 | 30分 |
 | 3 | [互換性マトリクス](./compatibility-matrix.md) | プラットフォーム/フォーマット対応の詳細 | 20分 |
-| 4 | [業界別ソリューションカタログ](./industry-solution-catalog.md) | 顧客業界ごとの適用パターン | 20分 |
+| 4 | [業界別ソリューションカタログ](./industry-solution-catalog.md) | 業界ごとの適用パターン | 20分 |
 | 5 | [ガバナンスとコンプライアンス](./governance-and-compliance.md) | エンタープライズ要件への対応 | 15分 |
 | 6 | [DataSync → S3 ガイド](./datasync-to-s3-guide.md) | 推奨パスの技術詳細 | 20分 |
 | 7 | [リカバリセマンティクス](./recovery-semantics.md) | Snapshot vs Time Travel の比較 | 10分 |
@@ -247,6 +247,8 @@ graph TD
 | | [Networking](./fsx-ontap-s3ap-networking.md) | VPC / AP / エンドポイント |
 | | [Supported Regions](./supported-regions.md) | リージョン対応状況 |
 | **検証** | [互換性マトリクス](./compatibility-matrix.md) | プラットフォーム/フォーマット互換性 |
+| | [レイヤー別の既知の課題](./known-challenges.md) | 全制約を起因レイヤー別に整理 |
+| | [ベンダーフィードバック](../vendor-feedback/README-ja.md) | 各ベンダーに提起している内容 |
 | | [KPI and Validation](./kpi-and-validation.md) | 検証 KPI と進捗 |
 | | [ClickHouse UC 検証計画](./verification-plan-clickhouse-uc-connectivity.md) | ClickHouse 検証計画 |
 | **ガバナンス** | [Governance and Compliance](./governance-and-compliance.md) | セキュリティ/コンプライアンス |

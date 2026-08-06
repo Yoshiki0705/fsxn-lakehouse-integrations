@@ -145,7 +145,7 @@ graph TD
 
 ### SA / Solutions Architect
 
-**Goal**: Design proposals for customers, plan PoCs, conduct architecture reviews
+**Goal**: Design the architecture, plan a PoC, and run architecture reviews
 
 | Order | Document | Why to read | Time |
 |:---:|---|---|:---:|
@@ -247,6 +247,8 @@ graph TD
 | | [Networking](./fsx-ontap-s3ap-networking.md) | VPC / AP / endpoints |
 | | [Supported Regions](./supported-regions.md) | Region availability |
 | **Verification** | [Compatibility Matrix](./compatibility-matrix.md) | Platform/format compatibility |
+| | [Known Challenges by Layer](./known-challenges.md) | Every constraint, grouped by where it originates |
+| | [Vendor Feedback](../vendor-feedback/README.md) | What has been raised with each vendor |
 | | [KPI and Validation](./kpi-and-validation.md) | Validation KPIs and progress |
 | | [ClickHouse UC Verification Plan](./verification-plan-clickhouse-uc-connectivity.md) | ClickHouse verification plan |
 | **Governance** | [Governance and Compliance](./governance-and-compliance.md) | Security/compliance |

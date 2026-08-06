@@ -31,11 +31,31 @@
 | DataSync ガイド | [docs/ja/datasync-to-s3-guide.md](../docs/ja/datasync-to-s3-guide.md) | モジュール 04 (Databricks) 同期メカニズム |
 | 非構造化データ | [docs/ja/unstructured-data-access.md](../docs/ja/unstructured-data-access.md) | 画像/PDF/動画アクセスパターン |
 | リージョン設計 | [docs/ja/region-design-guide.md](../docs/ja/region-design-guide.md) | 同一リージョン要件 |
-| ネットワーキング | [docs/en/fsx-ontap-s3ap-networking.md](../docs/en/fsx-ontap-s3ap-networking.md) | VPC/Internet origin、DNS/AD 問題 |
+| ネットワーキング | [docs/ja/fsx-ontap-s3ap-networking.md](../docs/ja/fsx-ontap-s3ap-networking.md) | VPC/Internet origin、DNS/AD 問題 |
 | リカバリセマンティクス | [docs/ja/recovery-semantics.md](../docs/ja/recovery-semantics.md) | Snapshot + テーブルフォーマットリカバリ |
 | ゼロコピー非構造化データガバナンス | [docs/ja/zero-copy-media-governance.md](../docs/ja/zero-copy-media-governance.md) | S3 重複排除 + マルチプラットフォーム活用 + FlexCache S3 AP ロードマップ |
 | Iceberg メタデータカタログ | [docs/ja/iceberg-metadata-catalog.md](../docs/ja/iceberg-metadata-catalog.md) | S3 Tables + FSx for ONTAP による非構造化データメタデータ管理 |
 | KPI と PoC 検証 | [docs/ja/kpi-and-validation.md](../docs/ja/kpi-and-validation.md) | PoC 成功基準と検証メトリクス |
+
+---
+
+## Snowflake 固有ドキュメント
+
+| ドキュメント | 内容 | PoC モジュール |
+|-----------|------|--------------|
+| [内部テーブル取り込みガイド](../integrations/snowflake/docs/ja/internal-table-ingestion-guide.md) | COPY INTO が必要になる条件、Dynamic Table、Managed Iceberg | 03 |
+| [AI デモガイド](../integrations/snowflake/docs/ja/ai-demo-guide.md) | Cortex AI 関数、Vision AI、Cortex Search (RAG) | 03 |
+| [Delta Sharing ガイド](../integrations/databricks/docs/ja/delta-sharing-volume-guide.md) | プラットフォーム間のデータ共有パターン | 03 + 04 |
+
+---
+
+## Databricks 固有ドキュメント
+
+| ドキュメント | 内容 | PoC モジュール |
+|-----------|------|--------------|
+| [AI デモガイド](../integrations/databricks/docs/ja/ai-demo-guide.md) | ai_query、ai_parse_document、Volume Sharing | 04 |
+| [Delta Sharing ガイド](../integrations/databricks/docs/ja/delta-sharing-volume-guide.md) | FSx データ共有のパターン A/B/C | 04 |
+| [DataSync ガイド](../docs/ja/datasync-to-s3-guide.md) | Unity Catalog 向け FSx → S3 同期 | 04 |
 
 ---
 
@@ -48,17 +68,20 @@
 | `05-emr-spark-etl/spark-job.py` | — (PoC 固有) | ブログ Part 5 検証スクリプトに基づく |
 | `04-databricks-integration/datasync-task.yaml` | — (PoC 固有) | [DataSync ガイド](../docs/ja/datasync-to-s3-guide.md)に基づく |
 | `07-governance/lakeformation-setup.sh` | — (PoC 固有) | ブログ Part 6 検証に基づく |
+| `02-athena-quickstart/sample-queries.sql` | — (PoC 固有) | ブログ Part 1 検証に基づく |
+| `03-snowflake-integration/*.sql` | — (PoC 固有) | ブログ Part 3 検証に基づく |
 
 ---
 
-## エビデンス記録フォーマット
+## エビデンス → PoC 検証のマッピング
 
 PoC モジュール実行後、[verification-pack/](../verification-pack/) と同じ形式でエビデンスを記録:
 
 ```yaml
-verification_id: poc-<顧客名>-<エンジン>-<日付>
+# 例: verification-pack/<エンジン>/evidence/<日付>/evidence-record.yaml
+verification_id: poc-<環境名>-<エンジン>-<日付>
 date: "YYYY-MM-DD"
-engineer: <名前>
+engineer: <実施者>
 platform: <エンジン>
 results:
   read_test:

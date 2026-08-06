@@ -79,9 +79,9 @@ After running a PoC module, record evidence in the same format as [verification-
 
 ```yaml
 # Example: verification-pack/<engine>/evidence/<date>/evidence-record.yaml
-verification_id: poc-<customer>-<engine>-<date>
+verification_id: poc-<environment>-<engine>-<date>
 date: "YYYY-MM-DD"
-engineer: <name>
+engineer: <operator>
 platform: <engine>
 results:
   read_test:
