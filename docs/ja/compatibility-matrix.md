@@ -276,16 +276,17 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **Amazon EMR Serverless** | Parquet | 読み取り | ✅ 検証済み | S3A コネクタ付き Spark、AP エイリアス | — |
 | **Amazon EMR Serverless** | Parquet | 書き込み（Append） | ✅ 検証済み | 読み書きファイルシステムユーザー | ファイルあたり最大 5 GB |
 | **Amazon EMR Serverless** | Iceberg | 読み取り | ⚠️ 実験的 | Iceberg Spark ランタイム、Glue Catalog | メタデータ読み取りは動作。書き込みコミットは未テスト |
+| **Amazon EMR Serverless** | Iceberg | 書き込み | ❌ 非サポート | — | S3FileIO が メタデータの書き込み/検証で S3 AP エイリアスを処理できない。コミット時に NullPointerException が発生 |
 | **Amazon EMR Serverless** | Delta Lake | 読み取り | ⚠️ 実験的 | Delta Lake Spark ライブラリ | ログ読み取りは動作 |
 | **Amazon EMR Serverless** | Delta Lake | Write/MERGE | ❌ 非サポート | — | コミットプロトコルにアトミック rename が必要 |
-| **Databricks** | Parquet/CSV | 読み取り（External Location） | ✅ 検証済み | Unity Catalog External Location、AP 権限付きインスタンスプロファイル/ストレージクレデンシャル | — |
-| **Databricks** | Delta Lake | 読み取り（External Table） | ⚠️ 実験的 | Unity Catalog、FSx for ONTAP ボリューム上の Delta ログ | 既存の Delta ログがあれば読み取り可能 |
+| **Databricks** | Parquet/CSV | 読み取り（External Location） | ❌ 非サポート | — | 2026-05-26 に Databricks Support が S3 AP は UC External Location のサポート対象外であり `access_point` フィールドは GA ではないことを確認。2026-05-24 のテストではバケット直下の一覧と明示パスのファイル読み取りに成功したが、これは「不完全な内部処理の副作用でありサポートされたコードパスではない」。サブディレクトリ一覧と CREATE TABLE は失敗。Instance Profile + boto3 経由の読み取りは動作するが UC ガバナンスをバイパスする（PoC 限定）。[Databricks 統合](../../integrations/databricks/README.md#support-confirmation-2026-05-26) 参照 |
+| **Databricks** | Delta Lake | 読み取り（External Table） | ❌ 非サポート | — | S3 AP 上の UC External Location が前提となるが、これが非サポート（上行参照）。S3 AP パスに対する `CREATE TABLE` は `UC_CLOUD_STORAGE_ACCESS_FAILURE` で失敗 |
 | **Databricks** | Delta Lake | Write/MERGE/Compaction | ❌ 非サポート | — | Delta コミットプロトコルに rename が必要。S3A rename エミュレーション（copy+delete）は条件付き書き込みなしで失敗する可能性 |
 | **Snowflake** | Parquet/CSV | 読み取り（External Stage） | ✅ 検証済み | AP エイリアス付き External Stage、ストレージ統合 IAM ロール | — |
 | **Snowflake** | Iceberg | 読み取り（External Catalog） | ⚠️ 実験的 | 外部カタログ付き Snowflake Iceberg Tables | メタデータポインタの読み取りは動作 |
-| **Snowflake** | Iceberg | 書き込み（Managed Iceberg Table） | ✅ 確認済み（2026年5月） | FSx for ONTAP S3 AP External Stage から COPY INTO → 顧客 S3 上の Managed Iceberg Table | オープン Iceberg 形式で書き込み。Horizon Iceberg REST Catalog 経由で Databricks/Athena/EMR から読み取り可能。Dynamic Table ソースも確認済み（FULL refresh、最小 60秒 TARGET_LAG）。**COPY INTO 64日間重複排除確認済み** — 標準テーブルと同じ動作。Task + COPY INTO パターンは本番利用可能。Horizon Catalog が外部エンジンアクセスにガバナンス（Row Access Policy, Masking）を強制。 |
+| **Snowflake** | Iceberg | 書き込み（Managed Iceberg Table） | ⚠️ 設計は文書化済み、エンドツーエンド未検証 | FSx for ONTAP S3 AP External Stage から COPY INTO → 顧客 S3 上の Managed Iceberg Table | **検証済み**: External Volume の作成（`s3tables_metadata_vol`、2026-05-31）と、AP 経由 Stage から標準テーブルへの COPY INTO（2026-05-24）。**未検証**: Managed Iceberg への書き込みのエンドツーエンド、Dynamic Table をソースとする動作（FULL refresh / TARGET_LAG）、COPY INTO の 64 日間重複排除、外部エンジンに対する Horizon Catalog のガバナンス強制。本番利用前に自環境での検証が必要な設計として扱うこと。 |
 | **Snowflake** | 全て | 書き込み（FSx for ONTAP S3 AP へ） | ❌ 非サポート | — | Snowflake External Stage は設計上読み取り専用。書き込みパスは COPY INTO → Snowflake マネージドストレージ（内部テーブルまたは S3 上の Managed Iceberg）。 |
-| **Redshift Spectrum** | Parquet/CSV | 読み取り専用 | 🔲 計画中 | Glue Catalog 経由の External Schema、AP 権限付き IAM ロール | 動作見込み（Athena と同じパターン） |
+| **Redshift Spectrum** | Parquet/CSV | 読み取り専用 | ✅ 検証済み（2026-05-23） | Glue Catalog 経由の External Schema、AP 権限付き IAM ロール | Athena と同じパターン（インターネットオリジン AP + Glue Catalog + IAM ロール）。クエリ結果は Redshift 内に留まり、FSx for ONTAP には書き戻されない。Redshift Serverless (8 RPU) で 500 万行 COUNT が 4,277 ms — 同一データに対する Athena の 2,196 ms より低速（Serverless のコールドスタート分）。[検証エビデンス](../../verification-pack/redshift-spectrum/evidence/2026-05-23/evidence-record.yaml) |
 | **Amazon Bedrock** | ドキュメント（PDF、TXT 等） | 読み取り（Knowledge Base） | ✅ 検証済み | AP を指す S3 データソース付き Bedrock Knowledge Base | RAG アプリケーション用。ドキュメントが検索用にインデックス化 |
 | **ClickHouse** | Parquet | 読み取り（s3() テーブル関数） | 🔲 計画中 | `s3('https://<AP-ALIAS>.s3.<REGION>.amazonaws.com/path/*.parquet')` + IAM 認証 | FSx for ONTAP S3 AP に対する s3() テーブル関数の動作は未検証。ListObjectsV2 レイテンシの影響要確認。ClickHouse Cloud と self-managed で S3 認証メカニズムが異なる点に注意 |
 | **ClickHouse** | Iceberg | 読み取り（iceberg() テーブル関数） | 🔲 計画中 | ClickHouse 23.8+ の `iceberg()` テーブル関数。Glue Catalog 連携要検証 | annotation テーブル（S3 Tables 上 Iceberg）の読み取りは [S3 Annotations 評価](./s3-annotations-governance-evaluation.md) で言及。バージョン/設定依存 |
@@ -382,7 +383,7 @@ FSx for ONTAP S3 Access Points 上の分析ワークロードを計画する際�
 | **Snowflake** | External Iceberg Table (`CATALOG = 'ICEBERG_REST'`) | ❌ 未サポート | S3 Tables REST endpoint はサポートされるカタログタイプではない | Glue Iceberg REST を使用 |
 | **Snowflake** | Glue Iceberg REST + VENDED_CREDENTIALS | ✅ 検証済み (2026-06-05) | REST_CONFIG に明示的 `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS`; デフォルト External Volume なしのスキーマ | CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH 全動作。LF カラムレベル非適用。 |
 | **Snowflake** | External Volume (直接 S3 読み取り) | ✅ 検証済み | External Volume `s3tables_metadata_vol` 作成成功 | Managed Iceberg Table にはカラムスキーマ指定が必要 |
-| **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ 想定動作 | 設計ドキュメント記載のパス: エクスポート → Stage → COPY INTO | 本番対応パターン |
+| **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ 未検証 | 設計ドキュメント記載のパス: エクスポート → Stage → COPY INTO | 設計のみ。[cross-platform-compatibility.yaml](../../integrations/iceberg-metadata-catalog/verification-evidence/cross-platform-compatibility.yaml) では `workaround_superseded` として記録。実行エビデンスなし |
 | **Redshift Spectrum** | Glue Federated Catalog | ✅ 想定動作 | Athena と同じ (Glue Catalog バックエンド) | — |
 | **DuckDB** | PyIceberg REST Catalog | ✅ 検証済み | Lambda で使用した同じ PyIceberg SDK | Python 直接アクセス |
 

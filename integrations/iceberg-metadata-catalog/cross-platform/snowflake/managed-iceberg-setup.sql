@@ -16,7 +16,7 @@
 --   - Snowflake account with Iceberg Tables enabled
 --   - Storage Integration for FSx for ONTAP S3 AP (existing)
 --   - External volume for Managed Iceberg Table output
---   - Snowflake account: MH89262 (CVDRQJT, ap-northeast-1)
+--   - Snowflake account: <SNOWFLAKE_ACCOUNT> (ap-northeast-1)
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
