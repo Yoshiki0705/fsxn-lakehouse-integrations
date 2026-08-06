@@ -541,4 +541,4 @@ python scripts/initial-metadata-scan.py \
 4. **Phase 5**: Add vector similarity search (OpenSearch Serverless)
 5. **Phase 6**: Implement anonymization pipeline for PII-containing files
 
-See [Architecture Document](../../docs/en/iceberg-metadata-catalog.md) for full design details.
+See [Architecture Document](../../../docs/en/iceberg-metadata-catalog.md) for full design details.

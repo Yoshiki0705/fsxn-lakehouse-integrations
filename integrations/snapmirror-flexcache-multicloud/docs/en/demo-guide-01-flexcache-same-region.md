@@ -978,5 +978,5 @@ UNIX security style のボリュームに SMB でアクセスする場合、ONTA
 - [AWS Docs: FSx for ONTAP FlexCache](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/using-flexcache.html)
 - [NetApp Docs: FlexCache supported features](https://docs.netapp.com/us-en/ontap/flexcache/supported-unsupported-features-concept.html)
 - [NetApp Docs: FlexCache write-back](https://docs.netapp.com/us-en/ontap/flexcache-writeback/flexcache-write-back-overview.html)
-- [Research Document (EN)](./en/research.md) — 41 Findings の詳細
-- [AD Join Script](../../shared/scripts/demo-ad-join-svm.sh) — SVM ドメイン参加手順
+- [Research Document (EN)](./research.md) — 41 Findings の詳細
+- [AD Join Script](../../../../shared/scripts/demo-ad-join-svm.sh) — SVM ドメイン参加手順

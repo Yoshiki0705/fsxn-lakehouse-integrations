@@ -343,7 +343,7 @@ See [Governance Deep Dive](governance-deep-dive.md) for the full access control 
 
 The classification prompts are applied in the Lambda handler:
 
-- Handler code: [`lambda/ai-classifier/handler.py`](../../lambda/ai-classifier/handler.py)
+- Handler code: [`lambda/ai-classifier/handler.py`](../../lambda/)
 - Industry configs: [`demo/sample-data/industry-configs/`](../sample-data/industry-configs/)
 - Prompt templates: Embedded in YAML config per industry
 

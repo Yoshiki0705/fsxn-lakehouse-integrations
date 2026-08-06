@@ -143,7 +143,7 @@ The payload generator produces a JSON manifest file listing all uploaded files:
 - [ADR-003](../../docs/adr/ADR-003.md) — FSx for ONTAP as payload storage
 - [ADR-005](../../docs/adr/ADR-005.md) — Metadata/payload separation
 - [DES-003](../../docs/en/03_architecture_design.md#des-003-kafka-topic-design) — Kafka topic design
-- [DES-004](../../docs/en/03_architecture_design.md#des-004-message-schema-avojson-schema) — Message schema
+- [DES-004](../../docs/en/03_architecture_design.md#des-004-message-schema-avrojson-schema) — Message schema
 
 ## Confidentiality Note
 

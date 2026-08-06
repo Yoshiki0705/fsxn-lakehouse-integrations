@@ -303,7 +303,7 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ## Step 5: Origin Volume + S3 AP + Lambda Writer
 
-> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Refer to this guide.AWS  side:  Create Origin Volumeし Attach S3 AP、Lambda でデータを書き込みます。
+> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-create-origin-volume--attach-s3-ap) . Refer to this guide.AWS  side:  Create Origin Volumeし Attach S3 AP、Lambda でデータを書き込みます。
 
 ---
 

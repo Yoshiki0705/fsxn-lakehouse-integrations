@@ -361,4 +361,4 @@ python demo/sample-data/generate-sample-data.py --industry manufacturing --count
 1. **S3 のみクイックスタートを試す**（10分、インフラ不要）: [quickstart-s3-only-ja.md](../demo/docs/quickstart-s3-only-ja.md)
 2. **インフラを依頼する**（プラットフォームチームに送付）: [infrastructure-request-template-ja.md](infrastructure-request-template-ja.md)
 3. **フルデモを実行する**（15分、FSx for ONTAP S3 AP 必要）: [demo-guide-ja.md](../demo/docs/demo-guide-ja.md)
-4. **アーキテクチャを確認する**: [アーキテクチャドキュメント](../../docs/ja/iceberg-metadata-catalog.md)
+4. **アーキテクチャを確認する**: [アーキテクチャドキュメント](../../../docs/ja/iceberg-metadata-catalog.md)

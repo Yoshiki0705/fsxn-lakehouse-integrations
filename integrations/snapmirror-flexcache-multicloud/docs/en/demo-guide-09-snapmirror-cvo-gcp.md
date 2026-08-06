@@ -76,7 +76,7 @@ flowchart LR
 | HA VPN | AWS ↔ GCP | Intercluster communication |
 | Cluster + SVM Peering | Both clusters | SnapMirror prerequisite |
 
-> **VPN + Cluster Peering**: [Demo Guide 04 Step 1-3](../en/demo-guide-04-flexcache-cvo-gcp.md#step-1-gcp-ha-vpn-の作成) . Refer to this guide.
+> **VPN + Cluster Peering**: [Demo Guide 04 Step 1-3](../en/demo-guide-04-flexcache-cvo-gcp.md#step-1-create-gcp-ha-vpn) . Refer to this guide.
 
 ---
 
@@ -113,7 +113,7 @@ export S3AP_NAME="fsxn-sm-gcp"
 
 ## Step 1: Source Volume + S3 AP + Lambda Writer（AWS  side）
 
-> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Refer to this guide.
+> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-create-origin-volume--attach-s3-ap) . Refer to this guide.
 
 ---
 
@@ -124,7 +124,7 @@ export S3AP_NAME="fsxn-sm-gcp"
 
 ## Step 2: VPN + Cluster Peering + SVM Peering
 
-> [Demo Guide 04 Step 1-3](../en/demo-guide-04-flexcache-cvo-gcp.md#step-1-gcp-ha-vpn-の作成) . Refer to this guide.SVM Peering の `applications` に `snapmirror`  flagしてください。
+> [Demo Guide 04 Step 1-3](../en/demo-guide-04-flexcache-cvo-gcp.md#step-1-create-gcp-ha-vpn) . Refer to this guide.SVM Peering の `applications` に `snapmirror`  flagしてください。
 
 ```bash
 # Set SVM Peer applications to snapmirror

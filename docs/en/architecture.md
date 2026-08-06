@@ -208,6 +208,6 @@ Each platform accesses FSx for ONTAP via S3 API.
 ## Next Steps
 
 - [Getting Started](getting-started.md) — First deployment
-- [S3 AP Fundamentals](s3ap-fundamentals.md) — S3 Access Points × FSx for ONTAP details
+- S3 AP fundamentals — S3 Access Points × FSx for ONTAP details
 - [Vendor Comparison](vendor-comparison.md) — Platform selection guide
-- [Data Formats](data-formats.md) — Per-format recommended configurations
+- data formats — Per-format recommended configurations

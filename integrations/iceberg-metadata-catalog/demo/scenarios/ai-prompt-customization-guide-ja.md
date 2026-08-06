@@ -343,7 +343,7 @@ Return:
 
 分類プロンプトはLambda handlerで適用されます：
 
-- Handlerコード: [`lambda/ai-classifier/handler.py`](../../lambda/ai-classifier/handler.py)
+- Handlerコード: [`lambda/ai-classifier/handler.py`](../../lambda/)
 - 業界設定: [`demo/sample-data/industry-configs/`](../sample-data/industry-configs/)
 - プロンプトテンプレート: 業界別YAML設定に組み込み
 

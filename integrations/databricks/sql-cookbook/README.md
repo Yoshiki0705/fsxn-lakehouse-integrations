@@ -7,7 +7,7 @@
 # Databricks UC ガバナンス SQL Cookbook
 
 > **目的**: DataSync → S3 パスで FSx for ONTAP データを UC に取り込んだ後のガバナンス設定を、コピー＆ペーストで実行可能な SQL として提供します。
-> **前提条件**: DataSync で FSx for ONTAP → S3 同期済み（[DataSync ガイド](../../docs/ja/datasync-to-s3-guide.md) Phase 1-3 完了）
+> **前提条件**: DataSync で FSx for ONTAP → S3 同期済み（[DataSync ガイド](../../../docs/ja/datasync-to-s3-guide.md) Phase 1-3 完了）
 > **対象**: Databricks SQL Warehouse または DBR 15.4+ クラスター
 
 ## レシピ一覧
@@ -232,7 +232,7 @@ FROM system.information_schema.table_tags
 WHERE tag_name = 'data_source' AND tag_value LIKE 'fsxn%';
 ```
 
-> **Tag と S3 Annotations の関係**: UC Tags と S3 Annotations は並行する別メカニズムです。S3 Annotations はオブジェクトレベルの発見シグナル、UC Tags はテーブル/列レベルのガバナンスメタデータです。annotation → UC Tag のマッピングパイプラインは別途設計が必要です（[S3 Annotations 評価](../../docs/ja/s3-annotations-governance-evaluation.md) 参照）。
+> **Tag と S3 Annotations の関係**: UC Tags と S3 Annotations は並行する別メカニズムです。S3 Annotations はオブジェクトレベルの発見シグナル、UC Tags はテーブル/列レベルのガバナンスメタデータです。annotation → UC Tag のマッピングパイプラインは別途設計が必要です（[S3 Annotations 評価](../../../docs/ja/s3-annotations-governance-evaluation.md) 参照）。
 
 ---
 
@@ -269,7 +269,7 @@ df = (spark.readStream
 )
 ```
 
-> **通知モード vs リスティングモード**: `cloudFiles.useNotifications = true` は S3 Event Notifications に依存するため、**DataSync → 標準 S3** パスでのみ動作します。FSx for ONTAP S3 AP 直接ではイベント通知が非サポートのため使用できません（[BLK-003](../../docs/ja/blocker-tracker.md)）。標準 S3 への同期はこの通知モードを有効化する主要なメリットの一つです。
+> **通知モード vs リスティングモード**: `cloudFiles.useNotifications = true` は S3 Event Notifications に依存するため、**DataSync → 標準 S3** パスでのみ動作します。FSx for ONTAP S3 AP 直接ではイベント通知が非サポートのため使用できません（[BLK-003](../../../docs/ja/blocker-tracker.md)）。標準 S3 への同期はこの通知モードを有効化する主要なメリットの一つです。
 
 ---
 
@@ -320,11 +320,11 @@ LIMIT 100;
 
 ## 関連ドキュメント
 
-- [DataSync → S3 ガイド](../../docs/ja/datasync-to-s3-guide.md) — 前提手順（Phase 1-3）
-- [UC 接続総合ガイド](../../docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) — 全接続パスの俯瞰
-- [ブロッカー追跡](../../docs/ja/blocker-tracker.md) — BLK-001/003 の回避として本 Cookbook を使用
-- [S3 Annotations 評価](../../docs/ja/s3-annotations-governance-evaluation.md) — annotation → UC Tag マッピング
-- [サンプルデータ](../../samples/manufacturing/) — 本 Cookbook の入力データ
+- [DataSync → S3 ガイド](../../../docs/ja/datasync-to-s3-guide.md) — 前提手順（Phase 1-3）
+- [UC 接続総合ガイド](../../../docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) — 全接続パスの俯瞰
+- [ブロッカー追跡](../../../docs/ja/blocker-tracker.md) — BLK-001/003 の回避として本 Cookbook を使用
+- [S3 Annotations 評価](../../../docs/ja/s3-annotations-governance-evaluation.md) — annotation → UC Tag マッピング
+- [サンプルデータ](../../../samples/manufacturing/) — 本 Cookbook の入力データ
 
 ---
 ---
@@ -336,7 +336,7 @@ LIMIT 100;
 # Databricks UC Governance SQL Cookbook
 
 > **Purpose**: Provides copy-paste SQL for governance setup after ingesting FSx for ONTAP data into UC via the DataSync → S3 path.
-> **Prerequisites**: DataSync FSx for ONTAP → S3 sync completed ([DataSync Guide](../../docs/en/datasync-to-s3-guide.md) Phase 1-3)
+> **Prerequisites**: DataSync FSx for ONTAP → S3 sync completed ([DataSync Guide](../../../docs/en/datasync-to-s3-guide.md) Phase 1-3)
 > **Target**: Databricks SQL Warehouse or DBR 15.4+ cluster
 
 ## Recipe List
@@ -525,7 +525,7 @@ df = (spark.readStream
 )
 ```
 
-> **Notification mode dependency**: `cloudFiles.useNotifications = true` depends on S3 Event Notifications and works **only on standard S3** (the DataSync destination). It does NOT work on FSx for ONTAP S3 AP directly ([BLK-003](../../docs/en/blocker-tracker.md)).
+> **Notification mode dependency**: `cloudFiles.useNotifications = true` depends on S3 Event Notifications and works **only on standard S3** (the DataSync destination). It does NOT work on FSx for ONTAP S3 AP directly ([BLK-003](../../../docs/en/blocker-tracker.md)).
 
 ---
 
@@ -561,8 +561,8 @@ ORDER BY event_time DESC;
 
 ## Related Documents
 
-- [DataSync → S3 Guide](../../docs/en/datasync-to-s3-guide.md) — Prerequisite steps (Phase 1-3)
-- [UC Connection Guide](../../docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) — All connection paths overview
-- [Blocker Tracker](../../docs/en/blocker-tracker.md) — Using this Cookbook as BLK-001/003 workaround
-- [S3 Annotations Evaluation](../../docs/en/s3-annotations-governance-evaluation.md) — annotation → UC Tag mapping
-- [Sample Data](../../samples/manufacturing/) — Input data for this Cookbook
+- [DataSync → S3 Guide](../../../docs/en/datasync-to-s3-guide.md) — Prerequisite steps (Phase 1-3)
+- [UC Connection Guide](../../../docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) — All connection paths overview
+- [Blocker Tracker](../../../docs/en/blocker-tracker.md) — Using this Cookbook as BLK-001/003 workaround
+- [S3 Annotations Evaluation](../../../docs/en/s3-annotations-governance-evaluation.md) — annotation → UC Tag mapping
+- [Sample Data](../../../samples/manufacturing/) — Input data for this Cookbook

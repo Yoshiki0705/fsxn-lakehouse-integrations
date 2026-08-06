@@ -125,7 +125,7 @@ export S3AP_NAME="fsxn-sm-gcnv"
 
 ## Step 1: VPN 設定
 
-> [Demo Guide 04 Step 1](../en/demo-guide-04-flexcache-cvo-gcp.md#step-1-gcp-ha-vpn-の作成) の HA VPN 設定. Refer to this guide.
+> [Demo Guide 04 Step 1](../en/demo-guide-04-flexcache-cvo-gcp.md#step-1-create-gcp-ha-vpn) の HA VPN 設定. Refer to this guide.
 
 ---
 
@@ -136,7 +136,7 @@ export S3AP_NAME="fsxn-sm-gcnv"
 
 ## Step 2: Source Volume + S3 AP + Lambda Writer（AWS  side）
 
-> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Refer to this guide.
+> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-create-origin-volume--attach-s3-ap) . Refer to this guide.
 
 ---
 

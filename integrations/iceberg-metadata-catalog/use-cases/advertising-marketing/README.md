@@ -61,6 +61,6 @@ ORDER BY campaign_id, channel;
 
 ## Related
 
-- [Industry Use Cases — Advertising & Marketing](../../docs/industry-use-cases.md#advertising--marketing)
+- [Industry Use Cases — Advertising & Marketing](../../docs/industry-use-cases.md)
 - [Demo Scenario](../../demo/scenarios/industry-advertising-marketing.md)
 - [Base Schema](../_shared/base-schema.yaml)
