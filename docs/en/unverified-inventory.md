@@ -8,14 +8,14 @@ This exists so the gaps are countable. A claim marked ⚠️ or 🔲 in the [com
 
 Things that are known **not** to work are tracked separately in the [blocker tracker](./blocker-tracker.md). This page is about the unknown, not the broken.
 
-**Total: 27 items.**
+**Total: 22 items.** Five were closed on 2026-08-06 — see Recently closed.
 
 ## Summary
 
 | Blocked by | Items | Meaning |
 |---|:---:|---|
 | Feasible now, not yet run | 12 | Only AWS services this project already uses. These are the realistic next candidates. |
-| Needs a Snowflake session | 6 | Credentials are not held in this repository. These are runnable in a single sitting once signed in. |
+| Needs a Snowflake session | 1 | Credentials are not held in this repository. These are runnable in a single sitting once signed in. |
 | Needs a Databricks workspace | 3 | The workspaces used in May 2026 were torn down. Note that BLK-001 blocks the Unity Catalog path regardless. |
 | Needs another engine deployed | 3 | No ClickHouse instance is running. |
 | Blocked by account tier or cost | 1 | Requires a paid tier or chargeable resource. |
@@ -28,6 +28,11 @@ Only AWS services this project already uses. These are the realistic next candid
 
 | ID | Area | Unverified claim | What it would take |
 |---|---|---|---|
+| Snowflake | Managed Iceberg Table write, end to end (COPY INTO from an AP-backed stage) | Verified — External Volume passed all checks, table created, rows loaded and read back, real Iceberg layout on the destination bucket | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| Snowflake | Dynamic Table over Access Point data | Verified with a constraint — `TARGET_LAG='60 seconds'` and `REFRESH_MODE=FULL` behave as specified, but a Dynamic Table cannot select from an EXTERNAL TABLE, so the stage must be landed into a standard table first | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| Snowflake | Snowpark `SnowflakeFile.open` on an AP-backed stage | Verified — returned the file contents | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| Snowflake | Read JSON, Avro and ORC from an AP-backed stage | Verified — identical content in all three formats returned identical rows | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| Snowflake | COPY INTO unload back to the Access Point | **Does not work, and the reason recorded here was wrong.** The write is not refused: the object lands intact and Snowflake then fails the statement on checksum validation because FSx for ONTAP reports encryption as `aws:fsx`. A complete object is left behind — a partial-write hazard | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
 | UNV-012 | Databricks | No automated tests exist for the integration (`integrations/databricks/tests/` holds only `.gitkeep`) | Test authoring. Snowflake has 8 test files; Databricks has none. |
 | UNV-016 | EMR Serverless | Iceberg write commit | An EMR Serverless run. Recorded as failing with a NullPointerException in S3FileIO; the failure is noted but no evidence record exists. |
 | UNV-017 | AWS Glue ETL | Delta Lake write commit protocol | A Glue job run. Expected to fail for the same reason Delta fails elsewhere. |
@@ -47,12 +52,7 @@ Credentials are not held in this repository. These are runnable in a single sitt
 
 | ID | Area | Unverified claim | What it would take |
 |---|---|---|---|
-| UNV-001 | Snowflake | Managed Iceberg Table write end to end (COPY INTO from an AP-backed stage into a Managed Iceberg Table on customer S3) | A Snowflake session. The External Volume creation and the COPY INTO into a standard table are already recorded; the Managed Iceberg leg is not. |
-| UNV-002 | Snowflake | Dynamic Table with an AP-backed stage as source (FULL refresh, minimum 60 s TARGET_LAG) | A Snowflake session plus one refresh cycle. |
 | UNV-004 | Snowflake | Horizon Catalog governance (row access policies, masking) enforced on external engines reading the Iceberg table | A Snowflake session and a second engine configured against the Horizon catalog. |
-| UNV-005 | Snowflake | Snowpark file access (`SnowflakeFile.open`) against an AP-backed stage | A Snowflake session with Snowpark enabled. |
-| UNV-006 | Snowflake | COPY INTO unload (write back to the FSx for ONTAP S3 AP) | A Snowflake session. Expected to fail — external stages are read-only by design — but the failure mode is not recorded. |
-| UNV-008 | Snowflake | Read of JSON, Avro and ORC from an AP-backed stage (Parquet and CSV are verified) | A Snowflake session and sample files in each format. |
 
 ## Needs a Databricks workspace
 

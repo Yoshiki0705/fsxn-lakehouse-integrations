@@ -22,6 +22,7 @@
 | BLK-006 | ListObjectsV2 レイテンシ（30-80x は撤回、実測 1.3〜1.4 倍） | 大規模ディレクトリスキャン | ⚠️ 範囲縮小 | ✅ あり |
 | BLK-007 | NFS/SMB マウントが seccomp でブロック | Databricks からの直接ファイルシステムアクセス | ❌ 設計上不可 | ✅ あり |
 | BLK-008 | Lake Formation 列レベル制御が S3 Tables 非対応 | S3 Tables フェデレーテッドカタログのガバナンス | ❌ 未解決 | ⚠️ テーブルレベルのみ |
+| BLK-009 | S3 AP へのアンロードが checksum 検証で失敗し、オブジェクトが残る | Snowflake `COPY INTO @stage`（および AP への任意のアンロード） | ❌ 未解決 | ✅ あり |
 
 ---
 
@@ -219,6 +220,37 @@
 
 **回避策**:
 - 列レベル制御が必要なテーブルは通常の Glue Catalog テーブル（汎用 S3 バケット上）に配置し、Lake Formation 列マスクを適用
+
+---
+
+### BLK-009: S3 Access Point へのアンロードが checksum 検証で失敗し、オブジェクトが残る
+
+| 属性 | 値 |
+|------|---|
+| **影響サービス** | FSx for ONTAP S3 Access Points × アンロードを行う任意のエンジン |
+| **影響機能** | Snowflake `COPY INTO @stage`。返却された暗号化タイプに対して checksum を検証する他のアンロード処理も同様と考えられる |
+| **根本原因** | FSx for ONTAP がサーバーサイド暗号化を `aws:fsx` と報告し、これが `AWS_SSE_S3` でも `AWS_SSE_KMS` でもない。書き込み自体は成功し、その後クライアント側の アップロード後 checksum 検証が失敗する |
+| **確認日** | 2026-08-06（実測） |
+| **ステータス** | ❌ 未解決 |
+| **解除条件** | FSx for ONTAP S3 AP がクライアントの受け付ける暗号化タイプを報告する、またはクライアントが `aws:fsx` を許容する |
+| **影響度** | **Medium** — 操作自体が利用不可であり、かつクリーンに拒否されず状態が残る形で失敗する |
+
+**実測内容**
+
+| 試行 | 結果 |
+|---|---|
+| 暗号化を明示しない `COPY INTO @stage` | 479 ms で `Remote upload failed checksum validation` により失敗。**それでもオブジェクトは書き込まれていた** — 25 バイト、gzip 正常、内容一致、`ServerSideEncryption: aws:fsx` |
+| ステージに `ENCRYPTION=(TYPE='AWS_SSE_S3')` を設定 | ハング。2 分 54 秒でキャンセル。書き込みなし |
+
+**単なる拒否より問題が大きい理由**: 文は失敗を報告するため、呼び出し側は何も書かれていないと考える。しかし完全なオブジェクトが Access Point 上に残る。AP 経由ステージへのアンロードを試したことがある場合は、対象プレフィックスを一覧して孤児オブジェクトを削除すること。
+
+**回避策**:
+1. **Access Point へアンロードしない。** 標準 S3 バケット、または Snowflake マネージドストレージ（内部テーブル、あるいは External Volume 上の Managed Iceberg Table— 2026-08-06 検証済み）へ書き込む
+2. 同一ボリュームへ NFS または SMB でアクセスできる場合はそちらへ書き込む。S3 レイヤーを経由しない
+
+**エビデンス**: [Snowflake 検証 2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml)
+
+> 本リポジトリの以前のリビジョンは、これを「Snowflake External Stage は設計上読み取り専用」と説明していました。これは誤りであり、部分書き込みの挙動を見えなくしていました。
 
 ---
 

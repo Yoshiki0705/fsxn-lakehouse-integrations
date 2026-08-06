@@ -8,14 +8,14 @@
 
 動作**しない**ことが判明している事項は [ブロッカートラッカー](./blocker-tracker.md) が扱います。本ページの対象は「壊れているもの」ではなく「未知のもの」です。
 
-**合計 27 件。**
+**合計 22 件。** 2026-08-06 に 5 件をクローズしました（下記「直近でクローズした項目」参照）。
 
 ## サマリ
 
 | 阻害要因 | 件数 | 内容 |
 |---|:---:|---|
 | 現在実行可能。未実施のみ | 12 | 本プロジェクトで既に使用している AWS サービスのみで完結します。次の現実的な候補です。 |
-| Snowflake セッションが必要 | 6 | 認証情報は本リポジトリに保持していません。サインインすれば一度の作業で実行可能です。 |
+| Snowflake セッションが必要 | 1 | 認証情報は本リポジトリに保持していません。サインインすれば一度の作業で実行可能です。 |
 | Databricks ワークスペースが必要 | 3 | 2026 年 5 月に使用したワークスペースは削除済みです。なお Unity Catalog 経路は BLK-001 により、いずれにせよブロックされます。 |
 | 別エンジンのデプロイが必要 | 3 | ClickHouse インスタンスは稼働していません。 |
 | アカウントティアまたはコストによる制約 | 1 | 有償ティアまたは課金リソースが必要です。 |
@@ -28,6 +28,11 @@
 
 | ID | 対象 | 未検証の主張 | 必要なもの |
 |---|---|---|---|
+| Snowflake | Managed Iceberg Table への書き込み（AP 経由 Stage からの COPY INTO）エンドツーエンド | 検証済み — External Volume の全チェックが PASSED、テーブル作成、行のロードと読み出し、宛先バケットに真の Iceberg レイアウト | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| Snowflake | Access Point データに対する Dynamic Table | 制約付きで検証済み — `TARGET_LAG='60 seconds'`・`REFRESH_MODE=FULL` は仕様どおり動作。ただし Dynamic Table は EXTERNAL TABLE を参照できないため、先に標準テーブルへ取り込む必要がある | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| Snowflake | AP 経由 Stage に対する Snowpark `SnowflakeFile.open` | 検証済み — ファイル内容を取得 | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| Snowflake | AP 経由 Stage からの JSON・Avro・ORC 読み取り | 検証済み — 3 形式すべて同一内容から同一の行を取得 | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| Snowflake | Access Point へのアンロード（COPY INTO） | **動作せず。かつ従来の理由記載が誤りだった。** 書き込みは拒否されず、オブジェクトは正常な状態で書き込まれた後、FSx for ONTAP が暗号化を `aws:fsx` と報告するため checksum 検証で文が失敗する。完全なオブジェクトが残るため部分書き込みの危険がある | [2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
 | UNV-012 | Databricks | No automated tests exist for the integration (`integrations/databricks/tests/` holds only `.gitkeep`) | Test authoring. Snowflake has 8 test files; Databricks has none. |
 | UNV-016 | EMR Serverless | Iceberg write commit | An EMR Serverless run. Recorded as failing with a NullPointerException in S3FileIO; the failure is noted but no evidence record exists. |
 | UNV-017 | AWS Glue ETL | Delta Lake write commit protocol | A Glue job run. Expected to fail for the same reason Delta fails elsewhere. |
@@ -47,12 +52,7 @@
 
 | ID | 対象 | 未検証の主張 | 必要なもの |
 |---|---|---|---|
-| UNV-001 | Snowflake | Managed Iceberg Table write end to end (COPY INTO from an AP-backed stage into a Managed Iceberg Table on customer S3) | A Snowflake session. The External Volume creation and the COPY INTO into a standard table are already recorded; the Managed Iceberg leg is not. |
-| UNV-002 | Snowflake | Dynamic Table with an AP-backed stage as source (FULL refresh, minimum 60 s TARGET_LAG) | A Snowflake session plus one refresh cycle. |
 | UNV-004 | Snowflake | Horizon Catalog governance (row access policies, masking) enforced on external engines reading the Iceberg table | A Snowflake session and a second engine configured against the Horizon catalog. |
-| UNV-005 | Snowflake | Snowpark file access (`SnowflakeFile.open`) against an AP-backed stage | A Snowflake session with Snowpark enabled. |
-| UNV-006 | Snowflake | COPY INTO unload (write back to the FSx for ONTAP S3 AP) | A Snowflake session. Expected to fail — external stages are read-only by design — but the failure mode is not recorded. |
-| UNV-008 | Snowflake | Read of JSON, Avro and ORC from an AP-backed stage (Parquet and CSV are verified) | A Snowflake session and sample files in each format. |
 
 ## Databricks ワークスペースが必要
 

@@ -1,0 +1,208 @@
+# Verification Evidence Record — Snowflake against an FSx for ONTAP S3 Access Point
+test_id: "SNOWFLAKE-S3AP-003"
+date_tested: "2026-08-06"
+tester: "Yoshiki Fujiwara"
+
+purpose: |
+  Close the Snowflake items in docs/en/unverified-inventory.md that only needed a
+  session to run. Five were exercised. One of the five contradicted what this
+  repository documented.
+
+environment:
+  snowflake_account: "<SNOWFLAKE_ACCOUNT>"
+  snowflake_region: "AWS_AP_NORTHEAST_1"
+  snowflake_version: "10.27.100"
+  snowflake_role: "ACCOUNTADMIN"
+  snowflake_warehouse: "COMPUTE_WH (X-Small)"
+  database_schema: "FSXN_S3AP_VERIFY_DB.BRONZE"
+  storage_integration: "FSXN_S3AP_VERIFY"
+  aws_account: "<ACCOUNT_ID>"
+  aws_region: "ap-northeast-1"
+  s3_access_point: "snowflake-verification-ap"
+  s3_ap_network_origin: "INTERNET"
+  stage_parameter: "AWS_ACCESS_POINT_ARN set on every stage used"
+
+# ---------------------------------------------------------------------------
+# UNV-008 — read JSON, Avro and ORC from an AP-backed stage
+# ---------------------------------------------------------------------------
+unv_008_semi_structured_formats:
+  claim_before: "Expected to work, same read path as Parquet/CSV. No run recorded."
+  method: |
+    One file per format written with identical content (3 rows, 4 columns) so the
+    formats can be compared directly. Uploaded through the Access Point, then read
+    with a named FILE FORMAT for each type.
+  results:
+    - format: "JSON"
+      status: "PASS"
+      rows_returned: 3
+      duration_ms: 4120
+    - format: "AVRO"
+      status: "PASS"
+      rows_returned: 3
+      duration_ms: 3923
+    - format: "ORC"
+      status: "PASS"
+      rows_returned: 3
+      duration_ms: 1277
+  note: |
+    All three returned the same three rows with correct types, including the
+    boolean. Inline FILE_FORMAT is not accepted in the stage table-function form;
+    a named FILE FORMAT object is required. That is Snowflake syntax, not an
+    Access Point limitation.
+  conclusion: "Verified. JSON, Avro and ORC read the same as Parquet and CSV."
+
+# ---------------------------------------------------------------------------
+# UNV-001 — COPY INTO a Managed Iceberg Table from an AP-backed stage
+# ---------------------------------------------------------------------------
+unv_001_managed_iceberg_write:
+  claim_before: "Design documented, end to end not verified."
+  method: |
+    Created a standard S3 bucket and an IAM role, registered them as a Snowflake
+    External Volume, then created a Managed Iceberg Table on it and loaded from
+    the Access Point stage.
+  external_volume:
+    name: "EV_ICEBERG_VERIFY"
+    base_url: "s3://<BUCKET>/iceberg/"
+    verify_external_volume:
+      success: true
+      writeResult: "PASSED"
+      readResult: "PASSED"
+      listResult: "PASSED"
+      deleteResult: "PASSED"
+      awsRoleArnValidationResult: "PASSED"
+  results:
+    - operation: "CREATE EXTERNAL VOLUME"
+      status: "PASS"
+      duration_ms: 230
+    - operation: "SYSTEM$VERIFY_EXTERNAL_VOLUME"
+      status: "PASS"
+      duration_ms: 2231
+    - operation: "CREATE ICEBERG TABLE (CATALOG='SNOWFLAKE')"
+      status: "PASS"
+      duration_ms: 1644
+    - operation: "COPY INTO iceberg table FROM AP-backed stage"
+      status: "PASS"
+      duration_ms: 2143
+      rows_parsed: 3
+      rows_loaded: 3
+    - operation: "SELECT from iceberg table"
+      status: "PASS"
+      duration_ms: 1291
+      rows_returned: 3
+  files_written_to_external_volume:
+    data_parquet: 1
+    metadata_json: 2
+    manifest_avro: 2
+    note: "Real Iceberg layout, confirmed by listing the bucket."
+  conclusion: |
+    Verified end to end. The two-phase IAM trust setup an External Volume needs is
+    the same pattern as a Storage Integration.
+
+# ---------------------------------------------------------------------------
+# UNV-002 — Dynamic Table over data from an AP-backed stage
+# ---------------------------------------------------------------------------
+unv_002_dynamic_table:
+  claim_before: "Dynamic Table source confirmed (FULL refresh, min 60s TARGET_LAG) — a claim with no evidence, since withdrawn."
+  constraint_found:
+    attempt: "CREATE DYNAMIC TABLE selecting from an EXTERNAL TABLE over the AP stage"
+    status: "REJECTED"
+    error: "Object ref EXT_FMT_JSON of type EXTERNAL_TABLE not supported in Dynamic Table definition"
+    meaning: |
+      A Dynamic Table cannot read an Access Point through an external table. The
+      stage has to be landed into a standard table first.
+  working_path:
+    - operation: "COPY INTO standard table FROM AP-backed stage"
+      status: "PASS"
+      duration_ms: 2114
+      rows_loaded: 3
+    - operation: "CREATE DYNAMIC TABLE (TARGET_LAG='60 seconds', REFRESH_MODE=FULL)"
+      status: "PASS"
+      duration_ms: 1872
+    - operation: "SELECT from dynamic table"
+      status: "PASS"
+      duration_ms: 541
+  refresh_behaviour:
+    method: "Added a second file to the Access Point, loaded it, waited past the target lag."
+    observed: |
+      Aggregates updated correctly: one sensor went from 1 row avg 21.5 to 2 rows
+      avg 25.75, and a new sensor appeared. Refresh history shows runs about every
+      48 s, refresh_action FULL when data changed and NO_DATA when it had not, all
+      SUCCEEDED, lag 1-3 s.
+  conclusion: |
+    Verified, with the constraint that the source must be a standard table.
+    TARGET_LAG of 60 seconds and REFRESH_MODE FULL behave as specified.
+
+# ---------------------------------------------------------------------------
+# UNV-005 — Snowpark file access
+# ---------------------------------------------------------------------------
+unv_005_snowpark_file_access:
+  claim_before: "Not validated."
+  method: |
+    Python UDF using snowflake.snowpark.files.SnowflakeFile.open against a file on
+    the AP-backed stage.
+  results:
+    - operation: "CREATE FUNCTION (Python 3.11)"
+      status: "PASS"
+      duration_ms: 150
+    - operation: "SELECT calling the UDF, reading the staged file"
+      status: "PASS"
+      duration_ms: 6372
+      returned: "file contents, matching what was uploaded"
+  conclusion: "Verified. SnowflakeFile.open reads directly from an AP-backed stage."
+
+# ---------------------------------------------------------------------------
+# UNV-006 — COPY INTO unload back to the Access Point
+# ---------------------------------------------------------------------------
+unv_006_unload_write_back:
+  claim_before: |
+    "Snowflake External Stages are read-only by design." That explanation is wrong.
+  attempt_1_no_explicit_encryption:
+    status: "FAILED_WITH_ERROR"
+    duration_ms: 479
+    error: |
+      Remote upload failed checksum validation. Ensure the destination stage or
+      COPY command was configured with the storage bucket's default encryption
+      type, such as AWS_SSE_KMS.
+    object_actually_written: true
+    object_details:
+      key: "sfverify/formats/unload_probe_1/data_0_0_0.csv.gz"
+      size_bytes: 25
+      gzip_integrity: "valid"
+      content: "matches what was selected"
+      server_side_encryption: "aws:fsx"
+      storage_class: "FSX_ONTAP"
+  attempt_2_encryption_aws_sse_s3:
+    status: "HUNG"
+    duration_ms: 173899
+    outcome: "Cancelled after 2 m 54 s. Nothing was written."
+  finding: |
+    The write is not refused. It reaches the file system and the object is intact,
+    but Snowflake fails the statement at checksum validation because FSx for ONTAP
+    reports server-side encryption as aws:fsx, which is neither AWS_SSE_S3 nor
+    AWS_SSE_KMS.
+
+    The practical consequence is worse than a clean rejection: the statement
+    reports failure while a complete object remains on the Access Point. Anyone who
+    has attempted unload against an AP-backed stage should check for orphaned
+    objects.
+
+    Setting ENCRYPTION=(TYPE='AWS_SSE_S3') on the stage does not fix it; the
+    statement stops failing fast and hangs instead.
+  conclusion: |
+    Unload to an AP-backed stage is not usable, and the reason recorded in this
+    repository was wrong. Correct reason: encryption-type mismatch surfacing as a
+    checksum validation failure, with a partial-write hazard.
+
+# ---------------------------------------------------------------------------
+not_established_by_this_session:
+  - "UNV-003 COPY INTO 64-day load-history deduplication — needs 64 days of elapsed time."
+  - "UNV-004 Horizon Catalog governance enforced on external engines — needs a second engine configured against the catalog."
+  - "UNV-007 PrivateLink — needs Business Critical edition."
+  - "Scale: every test used single-digit row counts."
+  - "Whether AWS_SSE_KMS on the destination stage changes the unload outcome."
+  - "Iceberg table maintenance (compaction, snapshot expiry) on the Managed Iceberg Table."
+
+cleanup: |
+  The orphaned unload object was deleted from the Access Point. The External
+  Volume, its S3 bucket and IAM role, and the Snowflake objects created for this
+  session are listed in cleanup-notes.md.

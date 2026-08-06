@@ -22,6 +22,7 @@
 | BLK-006 | ListObjectsV2 latency (30-80x withdrawn; 1.3-1.4x measured) | Large directory scans | ⚠️ Scope reduced | ✅ Available |
 | BLK-007 | NFS/SMB mount blocked by seccomp | Databricks direct filesystem access | ❌ By design | ✅ Available |
 | BLK-008 | Lake Formation column-level control unsupported on S3 Tables | S3 Tables federated catalog governance | ❌ Unresolved | ⚠️ Table-level only |
+| BLK-009 | Unload to an S3 AP fails checksum validation, leaving the object behind | Snowflake `COPY INTO @stage` (and any unload to an AP) | ❌ Unresolved | ✅ Available |
 
 ---
 
@@ -231,6 +232,37 @@ platform changes since.
 
 **Workaround**:
 - Place tables requiring column-level control on regular Glue Catalog tables (general-purpose S3 buckets) and apply Lake Formation column masks there
+
+---
+
+### BLK-009: Unload to an S3 Access Point Fails Checksum Validation and Leaves the Object
+
+| Attribute | Value |
+|-----------|-------|
+| **Affected service** | FSx for ONTAP S3 Access Points × any engine that unloads to them |
+| **Affected features** | Snowflake `COPY INTO @stage`; likely any unload that validates a checksum against the returned encryption type |
+| **Root cause** | FSx for ONTAP reports server-side encryption as `aws:fsx`, which is neither `AWS_SSE_S3` nor `AWS_SSE_KMS`. The write itself succeeds; the client then fails its post-upload checksum validation |
+| **Confirmed** | 2026-08-06 (measured) |
+| **Status** | ❌ Unresolved |
+| **Resolution criteria** | FSx for ONTAP S3 AP reports an encryption type that clients accept, or clients tolerate `aws:fsx` |
+| **Severity** | **Medium** — the operation is unusable, and it fails in a way that leaves state behind rather than rejecting cleanly |
+
+**What was measured**
+
+| Attempt | Result |
+|---|---|
+| `COPY INTO @stage` with no explicit encryption | Failed in 479 ms with `Remote upload failed checksum validation`. **The object was written anyway** — 25 bytes, valid gzip, correct content, `ServerSideEncryption: aws:fsx` |
+| Stage with `ENCRYPTION=(TYPE='AWS_SSE_S3')` | Hung. Cancelled after 2 m 54 s. Nothing written |
+
+**Why this matters more than a plain rejection**: the statement reports failure, so a caller will assume nothing was written. A complete object remains on the Access Point. Anyone who has attempted unload against an AP-backed stage should list the target prefix and remove orphans.
+
+**Workarounds**:
+1. **Do not unload to an Access Point.** Write to a standard S3 bucket, or to Snowflake-managed storage (internal table, or a Managed Iceberg Table on an External Volume — verified 2026-08-06)
+2. If NFS or SMB access to the same volume is available, write there instead; the S3 layer is not involved
+
+**Evidence**: [Snowflake verification 2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml)
+
+> Earlier revisions of this repository explained this as "Snowflake external stages are read-only by design". That was wrong, and it hid the partial-write behaviour.
 
 ---
 

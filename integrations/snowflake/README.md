@@ -7,8 +7,25 @@
 > Snowflake can query FSx for ONTAP S3 Access Point data when the external stage is configured with `AWS_ACCESS_POINT_ARN`.
 >
 > **Verified**: LIST, SELECT, External Table, COPY INTO load, Directory Table, Governance Tags.
+> Added 2026-08-06: JSON/Avro/ORC reads, Snowpark `SnowflakeFile.open`, a Dynamic Table
+> over data landed from the Access Point, and `COPY INTO` a Managed Iceberg Table on an
+> External Volume — end to end
+> ([evidence](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml)).
 >
-> **Not validated or not suitable**: Snowpipe AUTO_REFRESH, Iceberg write-back, transactional table writes, presigned URL as a governed production path.
+> **Not validated or not suitable**: Snowpipe AUTO_REFRESH, Iceberg write-back to the
+> Access Point, transactional table writes, presigned URL as a governed production path,
+> COPY INTO 64-day deduplication (needs 64 days of elapsed time), Horizon Catalog
+> enforcement on external engines, PrivateLink (needs Business Critical).
+>
+> **Unload is a trap, not a no-op.** `COPY INTO @stage` against an AP-backed stage is not
+> refused: the object is written and is intact, then the statement fails with
+> `Remote upload failed checksum validation` because FSx for ONTAP reports encryption as
+> `aws:fsx`. A complete object is left behind while the caller is told the write failed.
+> If you have tried this, list the target prefix and remove orphans. See
+> [BLK-009](../../docs/en/blocker-tracker.md).
+>
+> **Dynamic Table constraint**: a Dynamic Table cannot select from an EXTERNAL TABLE, so
+> the stage has to be landed into a standard table first.
 >
 > **Ingestion, specifically**: Snowpipe is event-driven and cannot be scheduled.
 > For scheduled ingestion use a **Snowflake Task running COPY INTO** — a
