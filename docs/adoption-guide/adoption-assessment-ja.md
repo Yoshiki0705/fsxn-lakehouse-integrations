@@ -165,13 +165,13 @@ Amazon FSx for ONTAP S3 Access Points により、FSx for ONTAP ボリューム�
 | 規制業界でのデフォルトとしての Internet-origin AP | 規制データにはネットワークレベルの分離が必要。VPC-origin は非 VPC トラフィックに対する明示的 Deny を組み込み提供 | 機密/規制データには VPC-origin AP（注: Athena は internet-origin が必要） |
 | 「S3 完全互換」と主張すること | FSx for ONTAP S3 AP は S3 操作のサブセットをサポート。Object Versioning なし、条件付き書き込みなし、署名付き URL なし、5GB アップロード制限 | 正確な表現を使用: 「サポートされる操作での S3 API アクセス」+ 互換性マトリクスへのリンク |
 | Iceberg の書き込みパスをすべて同等に扱う | Athena + Glue Data Catalog 経由の Iceberg は読み書きとも検証済み（2026-08-06）。コミットのポインタを Glue が保持するため。一方 EMR Serverless 経由の Iceberg は依然失敗し、Delta はコミット自体ができない | エンジン名を明示する。「Iceberg の書き込みは動く」が成り立つのは Athena のみ |
-| FSx for ONTAP スループットプロビジョニングの無視 | 導入先は S3 のような無制限スループットを期待するが、FSx for ONTAP S3 AP スループットはプロビジョンド容量に制限される | FSx for ONTAP スループットをワークロード要件に合わせてサイジング。PoC 検証に含める |
+| FSx for ONTAP スループットプロビジョニングの無視 | S3 のような無制限スループットを期待しがちだが、FSx for ONTAP S3 AP スループットはプロビジョンド容量に制限される | FSx for ONTAP スループットをワークロード要件に合わせてサイジング。PoC 検証に含める |
 | 高並行性・小ファイルワークロードへの FSx for ONTAP S3 AP 提案 | 数十ミリ秒のレイテンシ + プロビジョンドスループット制限により、ネイティブ S3 と比較して最適ではない | 大規模シーケンシャルスキャン、バッチ分析、ドキュメント検索に使用。高頻度 API コールには不向き |
 
 ### 主張してはいけないこと
 
 1. **絶対に** FSx for ONTAP S3 AP が S3 バケットのドロップイン代替であると主張しないこと
-2. **絶対に** 制限事項の明示的な導入先承認なしに Delta/Hudi 書き込み操作を提案しないこと
+2. **絶対に** 制限事項を導入チームが明示的に承知しないまま Delta/Hudi 書き込み操作を提案しないこと
 3. **絶対に** PoC 環境で実際の PHI/PII を使用しないこと
 4. **絶対に** セキュリティトレードオフを文書化せずに医療/金融向けに internet-origin AP を提案しないこと
 5. **必ず** 技術提案書に互換性マトリクスの参照を含めること
@@ -187,7 +187,7 @@ Amazon FSx for ONTAP S3 Access Points により、FSx for ONTAP ボリューム�
 | **FSx for ONTAP S3 AP（本ソリューション）** | なし | なし | 数時間 | 統一（二層） | あり（Bedrock） | 既存 NAS データ、読み取り中心の分析、ドキュメント AI |
 | **Native S3 + DataSync** | あり（フルコピー） | なし | 数日（初期同期） | 分離（S3 vs NAS） | あり | 書き込み中心の Lakehouse、Delta/Iceberg マネージドテーブル |
 | **Native S3 + ETL パイプライン** | あり（変換済み） | なし | 数日〜数週間 | 分離 | あり | 複雑な変換、S3 上のメダリオンアーキテクチャ |
-| **Snowflake External Stage on FSx for ONTAP S3 AP** | なし（ゼロコピー読み取り） | なし | 数時間 | Snowflake 管理（Tags, Row Policy, Masking） | あり（Cortex AI, Cortex Search） | NAS データ上のガバナンス付き AI が必要な Snowflake 導入先。COPY INTO → Managed Iceberg でオープン形式共有。 |
+| **Snowflake External Stage on FSx for ONTAP S3 AP** | なし（ゼロコピー読み取り） | なし | 数時間 | Snowflake 管理（Tags, Row Policy, Masking） | あり（Cortex AI, Cortex Search） | NAS データ上のガバナンス付き AI が必要な Snowflake 利用者。COPY INTO → Managed Iceberg でオープン形式共有。 |
 | **Databricks on native S3** | あり（先に S3 へ） | なし | 数日 | Unity Catalog on S3 | あり | Databricks 中心、Delta 書き込み中心 |
 | **FabricPool tiering** | 部分的（コールドティア） | 最小限 | N/A（分析用途ではない） | ONTAP 管理 | なし | コスト最適化、分析用途ではない |
 | **オンプレミス分析** | なし | なし | 数週間（セットアップ） | オンプレミスツール | 限定的 | エアギャップ環境 |
@@ -195,25 +195,26 @@ Amazon FSx for ONTAP S3 Access Points により、FSx for ONTAP ボリューム�
 ### 判断フレームワーク
 
 ```
-Q1: Does the customer need to WRITE Lakehouse tables (Delta/Iceberg)?
-  → Yes: Use native S3 for write path; FSx for ONTAP S3 AP for read-only source data
-  → No: FSx for ONTAP S3 AP is ideal
+Q1: Lakehouse テーブル（Delta/Iceberg）への書き込みが必要か？
+  → はい: 書き込みパスはネイティブ S3。FSx for ONTAP S3 AP は読み取り専用のソースデータ用
+       （例外: Athena + Glue Data Catalog 経由の Iceberg は書き込み検証済み）
+  → いいえ: FSx for ONTAP S3 AP が適合
 
-Q2: Does the customer need sub-millisecond latency or unlimited concurrency?
-  → Yes: Use native S3
-  → No: FSx for ONTAP S3 AP (tens of ms latency, provisioned throughput)
+Q2: サブミリ秒のレイテンシ、または無制限の同時実行数が必要か？
+  → はい: ネイティブ S3
+  → いいえ: FSx for ONTAP S3 AP（数十 ms のレイテンシ、プロビジョンドスループット）
 
-Q3: Does the customer have existing NAS/ONTAP data they want to analyze?
-  → Yes: FSx for ONTAP S3 AP eliminates the copy
-  → No: Native S3 is simpler
+Q3: 分析したい既存の NAS/ONTAP データがあるか？
+  → はい: FSx for ONTAP S3 AP でコピーが不要になる
+  → いいえ: ネイティブ S3 のほうが単純
 
-Q4: Does the customer need NFS/SMB access alongside S3 analytics?
-  → Yes: FSx for ONTAP S3 AP (multi-protocol on same data)
-  → No: Native S3 may be sufficient
+Q4: S3 分析と併せて NFS/SMB アクセスが必要か？
+  → はい: FSx for ONTAP S3 AP（同一データへのマルチプロトコルアクセス）
+  → いいえ: ネイティブ S3 で足りる可能性がある
 
-Q5: Does the customer need AI/RAG on existing documents?
-  → Yes: FSx for ONTAP S3 AP + Bedrock Knowledge Bases
-  → No: Evaluate based on Q1-Q4
+Q5: 既存ドキュメントに対する AI/RAG が必要か？
+  → はい: FSx for ONTAP S3 AP + Bedrock Knowledge Bases
+  → いいえ: Q1〜Q4 に基づいて判断
 ```
 
 ---
@@ -229,13 +230,12 @@ Q5: Does the customer need AI/RAG on existing documents?
 
 ### 前提条件チェックリスト
 
-- [ ] 導入先が NAS/ONTAP 上に 10 TB 以上を保有
-- [ ] 導入先が VPC 付きのアクティブな AWS アカウントを保有
-- [ ] 導入先が分析ユースケースを特定済み
-- [ ] 導入先の予算オーナーを特定済み
-- [ ] 技術意思決定者がエンゲージ済み
-- [ ] ブロッカーなし: 導入先が ONTAP 9.17.1+ を実行可能
-- [ ] 同一リージョンデプロイが実現可能
+- [ ] コピーが実際に問題になる規模のファイルデータが NAS/ONTAP 上にある（目安 10 TB 以上）
+- [ ] ファイルシステムを接続できる VPC を持つ AWS アカウントがある
+- [ ] 「分析したい」ではなく、実行したい具体的なクエリやワークロードが決まっている
+- [ ] ファイルシステムが ONTAP 9.17.1 以降を実行できる
+- [ ] 分析エンジンとファイルシステムを同一リージョンに配置できる
+- [ ] 使用するエンジンが必要とする操作を[互換性マトリクス](../ja/compatibility-matrix.md)で確認済み
 
 ### よくある懸念と、検証結果に基づく回答
 

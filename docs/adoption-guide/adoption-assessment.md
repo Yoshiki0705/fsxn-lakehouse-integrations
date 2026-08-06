@@ -12,7 +12,7 @@
 | Segment | Profile | Pain Points |
 |---------|---------|-------------|
 | Enterprise NAS users | On-premises NetApp ONTAP / NAS users with 10TB+ file data | Data copy required for analytics, S3-native services inaccessible from NAS |
-| FSx for ONTAP adopters | AWS adopting organisations already running FSx for ONTAP for NFS/SMB workloads | Lakehouse/analytics platforms require S3, creating data silos |
+| FSx for ONTAP adopters | Teams already running FSx for ONTAP on AWS for NFS/SMB workloads | Lakehouse/analytics platforms require S3, creating data silos |
 | Hybrid cloud | Organizations with on-premises ONTAP + AWS, using SnapMirror for DR/migration | Want to leverage cloud analytics without re-architecting storage |
 
 ## The Problem Being Solved
@@ -167,13 +167,13 @@ Amazon FSx for ONTAP S3 Access Points enable S3 API access to file data stored o
 | Internet-origin AP as default for regulated industries | Regulated data requires network-level isolation; VPC-origin provides built-in explicit Deny for non-VPC traffic | VPC-origin AP for Confidential/Regulated data (note: Athena requires internet-origin) |
 | Claiming "S3 fully compatible" | FSx for ONTAP S3 AP supports a subset of S3 operations. No Object Versioning, no conditional writes, no presigned URLs, 5GB upload limit | Use precise language: "S3 API access for supported operations" with link to compatibility matrix |
 | Treating every Iceberg write path as equivalent | Iceberg via Athena and the Glue Data Catalog is verified for read and write (2026-08-06), because the commit pointer lives in Glue. Iceberg via EMR Serverless still fails, and Delta cannot commit at all | Name the engine. "Iceberg writes work" is only true for Athena here |
-| Ignoring FSx for ONTAP throughput provisioning | Customers expect S3-like unlimited throughput; FSx for ONTAP S3 AP throughput is bounded by provisioned capacity | Size FSx for ONTAP throughput to workload requirements; include in PoC validation |
+| Ignoring FSx for ONTAP throughput provisioning | Teams expect S3-like unlimited throughput; FSx for ONTAP S3 AP throughput is bounded by provisioned capacity | Size FSx for ONTAP throughput to workload requirements; include in PoC validation |
 | Proposing FSx for ONTAP S3 AP for high-concurrency, small-file workloads | Tens of milliseconds latency + provisioned throughput limits make this suboptimal vs native S3 | Use for large sequential scans, batch analytics, document retrieval; not for high-frequency API calls |
 
 ### Claims Not to Make
 
 1. **Never** claim FSx for ONTAP S3 AP is a drop-in replacement for S3 buckets
-2. **Never** propose Delta/Hudi write operations without explicit adopting organisations acknowledgment of limitations
+2. **Never** propose Delta/Hudi write operations without the adopting team explicitly acknowledging the limitations
 3. **Never** use real PHI/PII in PoC environments
 4. **Never** propose internet-origin AP for healthcare/financial without documenting the security trade-off
 5. **Always** include compatibility matrix reference in technical proposals
@@ -189,7 +189,7 @@ Amazon FSx for ONTAP S3 Access Points enable S3 API access to file data stored o
 | **FSx for ONTAP S3 AP (this solution)** | No | None | Hours | Unified (dual-layer) | Yes (Bedrock) | Existing NAS data, read-heavy analytics, AI on documents |
 | **Native S3 + DataSync** | Yes (full copy) | None | Days (initial sync) | Separate (S3 vs NAS) | Yes | Write-heavy Lakehouse, Delta/Iceberg managed tables |
 | **Native S3 + ETL pipeline** | Yes (transformed) | None | Days-weeks | Separate | Yes | Complex transformations, medallion architecture on S3 |
-| **Snowflake External Stage on FSx for ONTAP S3 AP** | No (zero-copy read) | None | Hours | Snowflake-managed (Tags, Row Policy, Masking) | Yes (Cortex AI, Cortex Search) | Snowflake adopting organisations needing governed AI on NAS data. COPY INTO → Managed Iceberg for open format sharing. |
+| **Snowflake External Stage on FSx for ONTAP S3 AP** | No (zero-copy read) | None | Hours | Snowflake-managed (Tags, Row Policy, Masking) | Yes (Cortex AI, Cortex Search) | Snowflake users needing governed AI on NAS data. COPY INTO → Managed Iceberg for open format sharing. |
 | **Databricks on native S3** | Yes (to S3 first) | None | Days | Unity Catalog on S3 | Yes | Databricks-centric, Delta write-heavy |
 | **FabricPool tiering** | Partial (cold tier) | Minimal | N/A (not analytics) | ONTAP-managed | No | Cost optimization, not analytics |
 | **On-premises analytics** | No | None | Weeks (setup) | On-prem tools | Limited | Air-gapped environments |
@@ -197,23 +197,24 @@ Amazon FSx for ONTAP S3 Access Points enable S3 API access to file data stored o
 ### Decision Framework
 
 ```
-Q1: Does the adopting organisations need to WRITE Lakehouse tables (Delta/Iceberg)?
-  → Yes: Use native S3 for write path; FSx for ONTAP S3 AP for read-only source data
-  → No: FSx for ONTAP S3 AP is ideal
+Q1: Do you need to WRITE Lakehouse tables (Delta/Iceberg)?
+  → Yes: Use native S3 for the write path; FSx for ONTAP S3 AP for read-only source data
+       (exception: Iceberg via Athena + Glue Data Catalog is verified for write)
+  → No: FSx for ONTAP S3 AP fits
 
-Q2: Does the adopting organisations need sub-millisecond latency or unlimited concurrency?
+Q2: Do you need sub-millisecond latency or unlimited concurrency?
   → Yes: Use native S3
   → No: FSx for ONTAP S3 AP (tens of ms latency, provisioned throughput)
 
-Q3: Does the adopting organisations have existing NAS/ONTAP data they want to analyze?
+Q3: Do you have existing NAS/ONTAP data you want to analyze?
   → Yes: FSx for ONTAP S3 AP eliminates the copy
   → No: Native S3 is simpler
 
-Q4: Does the adopting organisations need NFS/SMB access alongside S3 analytics?
+Q4: Do you need NFS/SMB access alongside S3 analytics?
   → Yes: FSx for ONTAP S3 AP (multi-protocol on same data)
   → No: Native S3 may be sufficient
 
-Q5: Does the adopting organisations need AI/RAG on existing documents?
+Q5: Do you need AI/RAG on existing documents?
   → Yes: FSx for ONTAP S3 AP + Bedrock Knowledge Bases
   → No: Evaluate based on Q1-Q4
 ```
@@ -231,13 +232,12 @@ Q5: Does the adopting organisations need AI/RAG on existing documents?
 
 ### Prerequisites Checklist
 
-- [ ] Customer has ≥ 10 TB on NAS/ONTAP
-- [ ] Customer has active AWS account with VPC
-- [ ] Customer has identified analytics use case
-- [ ] Customer budget owner identified
-- [ ] Technical decision maker engaged
-- [ ] No blocker: adopting organisations can run ONTAP 9.17.1+
-- [ ] Same-region deployment feasible
+- [ ] File data on NAS/ONTAP at a scale where copying it is the actual problem (roughly 10 TB and up)
+- [ ] An AWS account with a VPC you can attach the file system to
+- [ ] A specific analytics query or workload to run, not just "we want analytics"
+- [ ] The file system can run ONTAP 9.17.1 or later
+- [ ] The analytics engine and the file system can sit in the same region
+- [ ] Confirmed which operations the chosen engine needs, checked against the [compatibility matrix](../en/compatibility-matrix.md)
 
 ### Common Concerns, and What the Evidence Says
 
