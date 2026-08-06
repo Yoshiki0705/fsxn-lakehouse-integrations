@@ -32,7 +32,7 @@ On 2026-06-10, Databricks announced **OpenSharing** — the evolution of the Del
 
 The current compatibility matrix lists the Databricks + FSx for ONTAP S3 Access Point path as **blocked** (the platform's session policy does not recognize the S3 AP ARN format). OpenSharing is relevant because its sharing model is based on short-lived presigned URLs, where the sharing server handles only **metadata and access control** while data transfer happens directly between client and storage.
 
-**Architecture-Lens (Archetype) finding**: This separation could allow the S3 AP ARN recognition issue to be bypassed at the architecture level, because the consuming platform interacts with the sharing protocol rather than parsing the storage ARN directly. This is a hypothesis to be validated, not a confirmed result.
+**Architecture-level observation**: This separation could allow the S3 AP ARN recognition issue to be bypassed at the architecture level, because the consuming platform interacts with the sharing protocol rather than parsing the storage ARN directly. This is a hypothesis to be validated, not a confirmed result.
 
 ## Technical Note: Presigned URL Behavior on FSx for ONTAP
 
@@ -107,7 +107,7 @@ The OpenSharing protocol's `dir` access mode (where the server vends temporary A
 |-----------|---------|-----|
 | **Delta/Iceberg transactional writes to FSx for ONTAP S3 AP** | ❌ Still blocked | Conditional writes (`If-None-Match`) return 501; atomic rename not supported. This is a product-level FSx for ONTAP S3 AP limitation, unrelated to OpenSharing. |
 | **Foreign Iceberg reading S3 Tables from Databricks** | ❌ Still blocked | External Location validation rejects S3 Tables internal buckets (HeadBucket fails). Unrelated to this credential vending test. |
-| **Databricks UC read from FSx for ONTAP S3 AP** | ✅ Already solved (May 2026) | UC External Location with `access_point` field works. Today's STS test validates the *OpenSharing recipient* path, which is complementary. |
+| **Databricks UC read from FSx for ONTAP S3 AP** | ❌ Still blocked | The `access_point` field on a UC External Location produced partial reads in a 2026-05-24 test, but Databricks Support confirmed on 2026-05-26 that the field is not GA and S3 AP is not a supported UC target — the partial success is "a side effect of incomplete internal handling, not a supported code path" ([details](../../integrations/databricks/README.md#support-confirmation-2026-05-26)). Today's STS test validates the *OpenSharing recipient* path, which is a separate route. |
 
 ### Architectural clarity
 
@@ -115,9 +115,11 @@ The OpenSharing protocol's `dir` access mode (where the server vends temporary A
 FSx for ONTAP (source of truth for raw data: images, CSV, sensor logs, documents)
     │
     │ READ path (verified ✅):
-    │   • UC External Location (Databricks-internal, May 2026)
     │   • OpenSharing STS credential vending (any recipient, June 2026) ← NEW
     │   • Direct IAM (Athena, Glue, EMR — existing)
+    │
+    │ READ path (NOT supported ❌):
+    │   • UC External Location on S3 AP (not GA; Databricks Support, 2026-05-26)
     │
     │ WRITE path (NOT on FSx for ONTAP S3 AP):
     │   • Delta/Iceberg managed tables live on standard S3 or S3 Tables

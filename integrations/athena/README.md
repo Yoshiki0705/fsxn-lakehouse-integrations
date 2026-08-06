@@ -59,6 +59,25 @@ python scripts/validate_connectivity.py
 python scripts/execute_queries.py
 ```
 
+### Iceberg on the Access Point
+
+Iceberg read **and write** work here, unlike Delta Lake. The Glue Data Catalog
+holds the metadata pointer, so a commit never needs the conditional write that
+an FSx for ONTAP S3 Access Point does not implement. Verified 2026-08-06
+([evidence](../../verification-pack/athena-iceberg/evidence/2026-08-06/evidence-record.yaml)).
+
+```bash
+# see the statements first
+python scripts/iceberg_quickstart.py \
+  --access-point-alias <your-ap-alias> \
+  --athena-output s3://<your-athena-results>/ --dry-run
+
+# then run them: CREATE, INSERT, UPDATE, DELETE, time travel, OPTIMIZE, VACUUM
+python scripts/iceberg_quickstart.py \
+  --access-point-alias <your-ap-alias> \
+  --athena-output s3://<your-athena-results>/
+```
+
 ## Directory Structure
 
 ```

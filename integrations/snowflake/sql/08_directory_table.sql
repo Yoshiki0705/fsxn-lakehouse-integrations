@@ -42,9 +42,16 @@ USE SCHEMA MEDIA;
 -- NOTE: AUTO_REFRESH = FALSE because FSx for ONTAP S3 Access Points do NOT support
 -- S3 Event Notifications. Snowflake cannot receive automatic notifications
 -- when files are added/removed on FSx for ONTAP. Manual refresh is required.
+--
+-- AWS_ACCESS_POINT_ARN is mandatory. Without it the Directory Table can be
+-- refreshed and listed, but every attempt to read file bytes — which is what
+-- pre-signed URL retrieval and the Snowpark UDFs in 09/10 do — fails with
+-- "Failed to access remote file: access denied". Verified 2026-08-06; see
+-- integrations/snowflake/docs/en/snowpipe-verification-results.md
 CREATE OR REPLACE STAGE FSXN_MEDIA_STAGE
   STORAGE_INTEGRATION = fsxn_storage_integration
   URL = 's3://<AP_ALIAS>/media/'
+  AWS_ACCESS_POINT_ARN = '<AP_ARN>'
   DIRECTORY = (ENABLE = TRUE, AUTO_REFRESH = FALSE)
   COMMENT = 'FSx for ONTAP media files with Directory Table. AUTO_REFRESH=FALSE due to FSx for ONTAP S3 AP limitation (no S3 Event Notifications).';
 

@@ -47,7 +47,22 @@ AS SELECT * FROM parquet.`s3://<BUCKET>/fsxn-sync/sensor-data/`;
 
 ### 3. Configure Auto Loader (Incremental)
 
-See `auto-loader-notebook.py` for streaming ingestion from synced S3 data.
+For incremental ingestion of the synced S3 data, use Databricks Auto Loader
+(`cloudFiles`) against the destination S3 prefix:
+
+```python
+(spark.readStream.format("cloudFiles")
+    .option("cloudFiles.format", "parquet")
+    .option("cloudFiles.schemaLocation", "s3://<BUCKET>/_schema/sensor-data/")
+    .load("s3://<BUCKET>/fsxn-sync/sensor-data/")
+    .writeStream
+    .option("checkpointLocation", "s3://<BUCKET>/_checkpoint/sensor-data/")
+    .toTable("main.default.sensor_data"))
+```
+
+Auto Loader's file notification mode is not available here because FSx for ONTAP
+S3 Access Points do not emit S3 Event Notifications. Run it against the standard S3
+bucket that DataSync writes to, in directory listing mode.
 
 ## Cost
 

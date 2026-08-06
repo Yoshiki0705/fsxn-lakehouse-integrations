@@ -310,7 +310,7 @@ staged S3 ──▶ S3 Metadata (Iceberg) / business Iceberg tables
                      └── Athena / other engines (via Iceberg REST)
 ```
 
-> ⚠️ **Known constraints (recorded in this repo; Databricks Governance Architect findings)**:
+> ⚠️ **Known constraints (recorded in this repo)**:
 > - **Important distinction**: S3 Metadata's **system tables** (journal/inventory/annotation) live on **AWS-managed S3 Tables (table buckets)**; UC reference requires S3 Tables catalog federation (`s3tablescatalog` / `iceberg_rest`) → that path is **blocked** (a double blocker). The **realistic UC-reference target is "user-created business Iceberg tables (on general-purpose S3)"**, which Case 3 targets first.
 > - **Annotations are a parallel mechanism that does NOT integrate with UC tags/ABAC**. Annotations do not automatically contribute to UC governance (UC tags/ABAC must be set separately).
 > - **UC Row Filters / Column Masks are NOT enforced on external engines** (Athena/EMR via Iceberg REST) (source: [`docs/en/governance-and-compliance.md`](./governance-and-compliance.md)). UC governance works for UC-internal engines but is not enforced cross-engine.

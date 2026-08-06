@@ -113,7 +113,7 @@ LTAP model (Databricks' vision):
 2. **CDC pipeline simplification**: The two-stage Kafka → ClickHouse → Databricks ingestion could become single-stage Kafka → Lakebase
 3. **Easier agent integration**: Genie One / Agent Bricks access Lakebase data directly. Quality inspection agents can reason across both operational and analytical data
 
-> **⚠️ Validation Required (Architecture Review findings)**:
+> **⚠️ Validation Required**:
 > - **Ingestion mechanism unconfirmed**: The specific Kafka → Lakebase path is not yet validated. Candidates: Kafka Connect JDBC Sink / Lakeflow Streaming / Structured Streaming DLT. Recommended path requires Databricks documentation confirmation.
 > - **Propagation latency unmeasured**: Lakebase write → Lakehouse//RT queryable delay is not benchmarked. Delta Lake's write-audit-publish protocol may introduce hundreds of milliseconds to seconds of delay, meaning "immediate query" may not be truly instantaneous.
 > - **Edge → cloud failure mode**: If Kafka replication targets Lakebase direct writes, cloud outage data loss/replay design is needed. Define RPO using Kafka retention + replay controls.
@@ -138,12 +138,12 @@ LTAP/Lakebase unifies structured/operational data, but touchpoints with FSx for 
 | **SnapMirror read replicas** | Isolate agent read workloads from production FSx for ONTAP by creating SnapMirror read-only replicas. Agents read payloads via S3 AP on DP volumes without impacting production NFS/SMB workloads |
 | **FabricPool capacity pool tiering** | Manufacturing payloads (images, video) accumulate significantly. Since agents primarily access recent data, older payloads auto-tier to capacity pool (S3 Standard-IA) via FabricPool, optimizing storage cost |
 
-> **⚠️ Governance Gap (Governance Architect findings)**:
+> **⚠️ Governance Gap**:
 > - Unity Catalog governs Delta/Iceberg tables but **does NOT directly govern data at S3 AP URI destinations**. When an agent retrieves an S3 AP URI from a Lakebase record and reads the payload, Unity Catalog ACL does not control that payload read.
 > - **Mitigation**: Application-layer authorization check required on S3 AP URI follow-through. Control via IAM policies + S3 AP access point policies + agent IAM role separation.
 > - **Lakebase Search vector ACL**: Whether row-level security applies to vector search results when Document Intelligence extractions are stored in Lakebase Search is unconfirmed. A Permission-aware RAG chain design is needed (FSx for ONTAP ACL → extraction-time ACL metadata preservation → Lakebase table row filter → agent query-time filter).
 
-> **⚠️ S3 AP Latency Consideration (FSx for ONTAP Architect findings)**:
+> **⚠️ S3 AP Latency Consideration**:
 > - Even with Lakehouse//RT providing millisecond queries, if agents follow-fetch payloads via S3 AP, ONTAP S3 protocol overhead adds latency. P99 latency measurement is needed.
 > - Throughput limits for concurrent multi-agent payload reads via S3 AP also require validation.
 

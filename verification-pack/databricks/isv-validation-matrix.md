@@ -45,7 +45,14 @@ Standard S3:  arn:aws:s3:::bucket-name
 FSx for ONTAP S3 AP:    arn:aws:s3:<region>:<account>:accesspoint/<name>
 ```
 
-Applications or platforms that validate or restrict S3 ARN patterns may not recognize the FSx for ONTAP S3 AP format. This is the root cause of the Databricks Unity Catalog and Snowflake session policy failures documented in this repository.
+Applications or platforms that validate or restrict S3 ARN patterns may not recognize the FSx for ONTAP S3 AP format. This was the root cause of the session policy failures documented in this repository for both Databricks Unity Catalog and Snowflake.
+
+The two platforms then diverged:
+
+- **Snowflake — resolved.** Setting `AWS_ACCESS_POINT_ARN` on `CREATE STAGE` makes the session policy include the access point ARN. Verified 2026-05-24 ([evidence](../snowflake/evidence/2026-05-24/evidence-record.yaml)).
+- **Databricks Unity Catalog — not resolved.** An equivalent `access_point` field exists but was never released as GA, and Databricks Support confirmed on 2026-05-26 that S3 AP is not a supported UC External Location target ([details](../../integrations/databricks/README.md#support-confirmation-2026-05-26)).
+
+The lesson for ISVs is that exposing a way to declare the access point ARN explicitly is what makes the difference — the SDK-level compatibility is identical in both cases.
 
 ## References
 

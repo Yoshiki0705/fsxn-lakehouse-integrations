@@ -5,7 +5,7 @@
 ## Executive Summary
 
 - **Purpose**: Defines verified compatibility between FSx for ONTAP S3 Access Points and Lakehouse platforms/formats, clarifying support status from read-only analytics to write paths
-- **Key findings**: Read-only analytics (Athena/Glue/EMR/Snowflake/Bedrock) are verified and production-ready. Write paths (Delta Lake/Iceberg) are limited due to lack of conditional writes support
+- **Key findings**: Read-only analytics (Athena/Glue/EMR/Snowflake/Bedrock) are verified. Delta Lake writes are blocked by the absence of conditional writes. Iceberg writes via Athena + Glue Catalog are verified (2026-08-06) because the commit pointer is held in Glue rather than on the object store
 - **Critical constraints**: Conditional writes (`If-None-Match`) not supported, S3 Event Notifications not supported, SnapMirror S3 not available. ListObjectsV2 latency was re-measured 2026-08-05 at 1.3-1.4x native S3 for up to 5,000 objects — the previously quoted 30-80x did not reproduce ([BLK-006](./blocker-tracker.md))
 - **Recommended approach**: Implement read-only use cases via FSx for ONTAP S3 AP direct path. Use DataSync → standard S3 path when writes are required
 - **Verification levels**: 4-stage progression: API verified → Functionally verified → Security verified → Production verified. Most platforms currently at functional verification
@@ -169,6 +169,7 @@ IT VPC:
 
 ## Related Documents
 
+- [Unverified Item Inventory](./unverified-inventory.md) — every claim here that is not yet backed by a run
 - [FSx for ONTAP → Databricks UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) — UC integration overview
 - [DataSync: FSx for ONTAP → S3 Sync Guide](./datasync-to-s3-guide.md) — DataSync setup required for write paths
 - [S3 Annotations Governance Evaluation](./s3-annotations-governance-evaluation.md) — Metadata enhancement evaluation
@@ -226,7 +227,7 @@ Before reviewing the compatibility matrix, understand these fundamental constrai
 | Constraint | Detail | Source |
 |-----------|--------|--------|
 | No Rename operation | S3 API does not have a native rename. CopyObject is supported only within the same access point. | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
-| Max upload size: 5 GB | Single object upload limited to 5 GB (multipart upload supported) | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
+| Max upload size: 50 GB | Single object upload limited to 50 GB; larger objects can be downloaded but not uploaded. Multipart upload supported | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | No Object Versioning | S3 Object Versioning is not supported | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | No conditional writes | Conditional writes (`If-None-Match`) are not supported — returns HTTP 501 `NotImplemented`. This is a **product-level limitation** (confirmed by AWS Support, May 2026). Feature request submitted for parity with S3 native conditional writes (available since Aug 2024). Blocks Delta Lake, Iceberg, and Hudi transactional writes. | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | ListObjectsV2 latency | Re-measured 2026-08-05: **1.3-1.4x** native S3 for 10-5,000 objects (0.9x at 5,000), flat and nested layouts alike — inside the original target of <1s for <100 files and <3s for <1000 files. The previously quoted 30-80x did not reproduce and has been withdrawn. Behaviour above 5,000 objects per directory remains unmeasured. | Re-measured 2026-08-05 ([evidence](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml)) |
@@ -250,7 +251,7 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | Consistent list-after-write | Required | Required | Required | Supported (ONTAP provides consistency) |
 | PutObject | Required | Required | Required | Supported |
 | DeleteObject | Required for vacuum/cleanup | Required for expiration | Required | Supported |
-| Multipart upload | For large files | For large files | For large files | Supported (5 GB max per upload) |
+| Multipart upload | For large files | For large files | For large files | Supported (50 GB max per upload) |
 | Conditional writes (If-None-Match) | Used by some implementations | Used by some implementations | Used by some implementations | **Not supported** |
 
 ## Platform × Format × Mode Compatibility Matrix
@@ -273,28 +274,31 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **Amazon Athena** | JSON | Read-only | ✅ Verified | Same as Parquet | Same as above |
 | **Amazon Athena** | ORC | Read-only | ✅ Verified | Same as Parquet | Same as above |
 | **Amazon Athena** | Delta Lake | Read-only (symlink manifest) | ⚠️ Experimental | Athena Delta Lake connector, symlink_format_manifest generation required | No direct Delta log reading; requires pre-generated manifest. Write/MERGE not supported. |
-| **Amazon Athena** | Iceberg | Read-only | 🔲 Planned | Athena Iceberg connector, Glue Catalog as Iceberg catalog | Read path should work; write path untested. |
+| **Amazon Athena** | Iceberg | Read **and write** | ✅ Verified (2026-08-06) | Athena Iceberg table with `LOCATION` on the AP alias, Glue Catalog as Iceberg catalog | Full lifecycle verified: CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, time travel (`FOR VERSION AS OF`), `OPTIMIZE ... REWRITE DATA`, `VACUUM`, and two concurrent commits — all succeeded, with data and metadata both on the Access Point. This works where Delta Lake does not because Iceberg keeps the current-metadata pointer in Glue, so a commit needs no conditional write or atomic rename on the object store. Tested at small table size only. [Evidence](../../verification-pack/athena-iceberg/evidence/2026-08-06/evidence-record.yaml) |
 | **AWS Glue ETL** | Parquet | Read | ✅ Verified | Glue IAM role with AP permissions, AP alias in S3 path | — |
-| **AWS Glue ETL** | Parquet | Write (Append) | ✅ Verified | Read-write file system user on AP | 5 GB max per file upload |
+| **AWS Glue ETL** | Parquet | Write (Append) | ✅ Verified | Read-write file system user on AP | 50 GB max per file upload |
 | **AWS Glue ETL** | Parquet | Overwrite | ⚠️ Experimental | Read-write file system user | DeleteObject + PutObject pattern; no atomic overwrite guarantee |
 | **AWS Glue ETL** | Delta Lake | Read | ⚠️ Experimental | Glue 4.0+ with Delta Lake library | Delta log reading works; commit protocol untested for writes |
 | **AWS Glue ETL** | Iceberg | Read | ⚠️ Experimental | Glue 4.0+ native Iceberg support, Glue Catalog as Iceberg catalog | Glue 4.0 provides native Iceberg integration. Iceberg metadata reading on FSx for ONTAP S3 AP via external catalog (Glue) expected to work. Write commits limited by lack of conditional writes |
 | **AWS Glue ETL** | Delta Lake | Write | ❌ Not Supported | — | Delta commit protocol requires atomic rename of _delta_log JSON files; not natively supported |
 | **AWS Glue ETL** | Iceberg | Write | ⚠️ Experimental | Glue 4.0+ Iceberg native + Glue Catalog | Iceberg uses external catalog for pointer management (no rename needed). However, some implementations use conditional writes for concurrent writer conflict resolution, which may fail on FSx for ONTAP S3 AP. Single-writer configuration expected to work |
 | **Amazon EMR Serverless** | Parquet | Read | ✅ Verified | Spark with S3A connector, AP alias | — |
-| **Amazon EMR Serverless** | Parquet | Write (Append) | ✅ Verified | Read-write file system user | 5 GB max per file |
+| **Amazon EMR Serverless** | Parquet | Write (Append) | ✅ Verified | Read-write file system user | 50 GB max per file |
 | **Amazon EMR Serverless** | Iceberg | Read | ⚠️ Experimental | Iceberg Spark runtime, Glue Catalog | Metadata reading works; write commit untested |
 | **Amazon EMR Serverless** | Iceberg | Write | ❌ Not Supported | — | S3FileIO cannot handle S3 AP alias for metadata write/verify. NullPointerException during commit. |
 | **Amazon EMR Serverless** | Delta Lake | Read | ⚠️ Experimental | Delta Lake Spark library | Log reading works |
 | **Amazon EMR Serverless** | Delta Lake | Write/MERGE | ❌ Not Supported | — | Atomic rename required for commit protocol |
-| **Databricks** | Parquet/CSV | Read (External Location) | ✅ Verified | Unity Catalog External Location, instance profile/storage credential with AP permissions | — |
-| **Databricks** | Delta Lake | Read (External Table) | ⚠️ Experimental | Unity Catalog, Delta log on FSx for ONTAP volume | Read works if Delta log is pre-existing |
+| **Databricks** | Parquet/CSV | Read (External Location) | ❌ Not supported | — | Databricks Support confirmed 2026-05-26 that S3 AP is not a supported UC External Location target and the `access_point` field is not GA. A 2026-05-24 test listed the bucket root and read explicit file paths, but that is "a side effect of incomplete internal handling, not a supported code path"; subdirectory listing and CREATE TABLE failed. Read via Instance Profile + boto3 works but bypasses UC governance (PoC only). See [Databricks integration](../../integrations/databricks/README.md#support-confirmation-2026-05-26) |
+| **Databricks** | Delta Lake | Read (External Table) | ❌ Not supported | — | Requires a UC External Location on the S3 AP, which is not supported (see row above). `CREATE TABLE` against an S3 AP path fails with `UC_CLOUD_STORAGE_ACCESS_FAILURE` |
 | **Databricks** | Delta Lake | Write/MERGE/Compaction | ❌ Not Supported | — | Delta commit protocol requires rename; S3A rename emulation (copy+delete) may fail without conditional writes |
 | **Snowflake** | Parquet/CSV | Read (External Stage) | ✅ Verified | External Stage with AP alias, storage integration IAM role | — |
+| **Snowflake** | JSON/Avro/ORC | Read (External Stage) | ✅ Verified (2026-08-06) | Same stage and integration as Parquet/CSV, with a named `FILE FORMAT` per type | One file per format with identical content returned identical rows. An inline `FILE_FORMAT` is not accepted in the stage table-function form — a named FILE FORMAT object is required, which is Snowflake syntax rather than an AP limitation. [Evidence](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| **Snowflake** | Any staged file | Snowpark `SnowflakeFile.open` | ✅ Verified (2026-08-06) | Python UDF reading a file on the AP-backed stage | Returned the file contents. Useful for unstructured handling that SQL cannot express. [Evidence](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| **Snowflake** | Any | Dynamic Table over AP data | ✅ Verified (2026-08-06), with a constraint | `COPY INTO` a standard table, then a Dynamic Table over that table | `TARGET_LAG='60 seconds'` with `REFRESH_MODE=FULL` refreshed correctly; refresh history shows runs roughly every 48 s, `FULL` when data changed and `NO_DATA` when it had not. **Constraint**: a Dynamic Table cannot select from an EXTERNAL TABLE — `Object ref ... of type EXTERNAL_TABLE not supported in Dynamic Table definition`. The stage must be landed into a standard table first. [Evidence](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
 | **Snowflake** | Iceberg | Read (External Catalog) | ⚠️ Experimental | Snowflake Iceberg Tables with external catalog | Metadata pointer reading works. Write not applicable (Snowflake External Stage is read-only). |
-| **Snowflake** | Iceberg | Write (Managed Iceberg Table) | ✅ Confirmed (May 2026) | COPY INTO from FSx for ONTAP S3 AP External Stage → Managed Iceberg Table on customer S3 | Data written in open Iceberg format. Readable by Databricks/Athena/EMR via Horizon Iceberg REST Catalog. Dynamic Table source also confirmed (FULL refresh, min 60s TARGET_LAG). **COPY INTO 64-day deduplication confirmed** — same behavior as standard tables. Task + COPY INTO pattern is production-ready. Horizon Catalog enforces governance (Row Access Policies, Masking) on external engine access. |
-| **Snowflake** | Any | Write (to FSx for ONTAP S3 AP) | ❌ Not Supported | — | Snowflake External Stages are read-only by design. Write path is COPY INTO → Snowflake-managed storage (internal table or Managed Iceberg on S3). |
-| **Redshift Spectrum** | Parquet/CSV | Read-only | ✅ Verified | External schema via Glue Catalog, IAM role with AP permissions | Same pattern as Athena. Query results stay in Redshift. |
+| **Snowflake** | Iceberg | Write (Managed Iceberg Table) | ✅ Verified (2026-08-06) | COPY INTO from FSx for ONTAP S3 AP External Stage → Managed Iceberg Table on customer S3, via a Snowflake External Volume | End to end: External Volume created and `SYSTEM$VERIFY_EXTERNAL_VOLUME` passed write/read/list/delete, Managed Iceberg Table created, `COPY INTO` loaded from the AP-backed stage, `SELECT` returned the rows. Real Iceberg layout on the destination bucket (metadata JSON, manifest Avro, data Parquet). The External Volume needs the same two-phase IAM trust setup as a Storage Integration. Small-scale test. **Still unverified**: COPY INTO 64-day deduplication (needs 64 days) and Horizon Catalog enforcement on external engines. [Evidence](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| **Snowflake** | Any | Write (unload to FSx for ONTAP S3 AP) | ❌ Not usable — **partial-write hazard** | — | Measured 2026-08-06: `COPY INTO @stage` is **not** refused. The object is written to the Access Point and is intact, then Snowflake fails the statement with `Remote upload failed checksum validation` because FSx for ONTAP reports server-side encryption as `aws:fsx`, which is neither `AWS_SSE_S3` nor `AWS_SSE_KMS`. The statement reports failure while a complete object remains behind — check for orphaned objects if you have tried this. Setting `ENCRYPTION=(TYPE='AWS_SSE_S3')` on the stage makes it hang instead of failing fast. Earlier revisions of this repository said external stages are "read-only by design"; that explanation was wrong. Write path is COPY INTO → Snowflake-managed storage (internal table or Managed Iceberg on S3). [Evidence](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml) |
+| **Redshift Spectrum** | Parquet/CSV | Read-only | ✅ Verified (2026-05-23) | External schema via Glue Catalog, IAM role with AP permissions | Same pattern as Athena (internet-origin AP + Glue Catalog + IAM role). Query results stay in Redshift; nothing is written back to FSx for ONTAP. Redshift Serverless (8 RPU) counted 5M rows in 4,277 ms against the same data Athena counted in 2,196 ms — the gap is Serverless cold start. [Verification evidence](../../verification-pack/redshift-spectrum/evidence/2026-05-23/evidence-record.yaml) |
 | **Amazon Bedrock** | Documents (PDF, TXT, etc.) | Read (Knowledge Base) | ✅ Verified | Bedrock Knowledge Base with S3 data source pointing to AP | For RAG applications; documents indexed for retrieval |
 | **ClickHouse** | Parquet | Read (s3() table function) | 🔲 Planned | `s3('https://<AP-ALIAS>.s3.<REGION>.amazonaws.com/path/*.parquet')` + IAM auth | s3() table function against FSx for ONTAP S3 AP unverified. ListObjectsV2 latency impact needs assessment. Note: ClickHouse Cloud vs self-managed have different S3 credential mechanisms |
 | **ClickHouse** | Iceberg | Read (iceberg() table function) | 🔲 Planned | ClickHouse 23.8+ `iceberg()` table function. Glue Catalog integration needs verification | Annotation table (Iceberg on S3 Tables) reading mentioned in [S3 Annotations Evaluation](./s3-annotations-governance-evaluation.md). Version/config dependent |
@@ -340,7 +344,7 @@ ts_array = pa.array(df['timestamp'].values.astype('datetime64[us]'), type=pa.tim
 | Latency | Tens of milliseconds | Single-digit milliseconds |
 | Throughput | Limited by FSx for ONTAP provisioned throughput | Virtually unlimited (scales with prefixes) |
 | Requests/sec | Limited by FSx for ONTAP provisioned throughput | 5,500 GET/s per prefix, 3,500 PUT/s per prefix |
-| Max object size (upload) | 5 GB | 5 TB |
+| Max object size (upload) | 50 GB | 5 TB |
 | Concurrent readers | Limited by FSx for ONTAP throughput capacity | Highly parallel |
 
 Source: [Amazon FSx for NetApp ONTAP performance](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/performance.html), [Accessing your data via Amazon S3 access points](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)
@@ -383,16 +387,16 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | Platform | Access Method | Status | Error / Notes | Workaround |
 |----------|-------------|--------|---------------|-----------|
 | **Amazon Athena** | Glue Federated Catalog (`s3tablescatalog`) | ✅ Verified | Sub-2-second queries, Lake Formation governance applied | — (native support) |
-| **Amazon EMR Spark** | Iceberg REST Catalog (spark-defaults.conf) | ✅ Expected | Same Iceberg REST endpoint as PyIceberg | Configure `spark.sql.catalog.s3tables` |
-| **AWS Glue ETL** | Iceberg REST Catalog | ✅ Expected | Same mechanism as EMR | Configure catalog in job parameters |
+| **Amazon EMR Spark** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ Expected, not tested | Same Iceberg REST endpoint as PyIceberg | Configure `spark.sql.catalog.s3tables`. Inferred from the PyIceberg result on the same endpoint; no EMR run recorded |
+| **AWS Glue ETL** | Iceberg REST Catalog | ⚠️ Expected, not tested | Same mechanism as EMR | Configure catalog in job parameters. No Glue run recorded |
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE iceberg_rest` | ❌ Not Supported | `CONNECTION_TYPE_NOT_SUPPORTED` — iceberg_rest not in supported types | Use Spark cluster with manual catalog config |
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE GLUE` | ❌ Not Applicable | GLUE type requires host/httpPath/PAT (Databricks-to-Databricks only) | — |
 | **Databricks Spark Cluster** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ Expected | Not yet tested; technically same as EMR | Configure `spark.sql.catalog.s3tables` in cluster config |
 | **Snowflake** | External Iceberg Table (`CATALOG = 'ICEBERG_REST'`) | ❌ Not Supported | S3 Tables REST endpoint not a supported catalog type | Use Glue Iceberg REST instead |
 | **Snowflake** | Glue Iceberg REST + VENDED_CREDENTIALS | ✅ Verified (2026-06-05) | Explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` in REST_CONFIG; schema with no default External Volume | CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH all working. LF column-level not enforced. |
 | **Snowflake** | External Volume (direct S3 read) | ✅ Verified | External Volume `s3tables_metadata_vol` created successfully | Requires column schema for Managed Iceberg Table |
-| **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ Expected | Documented path: Export → Stage → COPY INTO | Production-ready pattern |
-| **Redshift Spectrum** | Glue Federated Catalog | ✅ Expected | Same as Athena (Glue Catalog backend) | — |
+| **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ Not verified | Documented path: Export → Stage → COPY INTO | Design only. Recorded as `workaround_superseded` in [cross-platform-compatibility.yaml](../../integrations/iceberg-metadata-catalog/verification-evidence/cross-platform-compatibility.yaml) — no execution evidence |
+| **Redshift Spectrum** | Glue Federated Catalog | ⚠️ Expected, not tested | Same as Athena (Glue Catalog backend) | Redshift Spectrum on a plain Glue table over the AP is verified (2026-05-23); the S3 Tables federated-catalog path is not |
 | **DuckDB** | PyIceberg REST Catalog | ✅ Verified | Same PyIceberg SDK used in Lambda | Direct Python access |
 
 ### Key Findings
@@ -542,7 +546,7 @@ No rename, no conditional writes, no concurrent writer conflicts.
 |----------|----------------|-----------|----------------------|-------------------|-------------|-------------------|
 | **Large sequential scan** (Athena full-table) | Few large reads, high throughput | FSx for ONTAP network throughput | ≥ 1 GB/s provisioned throughput | ≥ 128 MB per file (Parquet/ORC) | Low-medium (1-10 queries) | Functional Verified |
 | **Small file / metadata-heavy** (many small CSVs) | Many ListObjectsV2 + small GetObject | Request rate, latency | Higher throughput for IOPS headroom | Consolidate to ≥ 32 MB files | Low | API Verified |
-| **High-concurrency Athena** (many analysts) | Parallel scans on same data | FSx for ONTAP aggregate throughput | Scale throughput to concurrent load | Partition data for scan reduction | High (10-50 queries) | Not yet validated |
+| **High-concurrency Athena** (many analysts) | Parallel scans on same data | FSx for ONTAP aggregate throughput | Scale throughput to concurrent load | Partition data for scan reduction | High (10-50 queries) | ✅ Verified to 25 concurrent (2026-08-06) — 25/25 succeeded, full scans degraded ~2x, queue time under 200 ms. Cache-resident dataset, so not a throughput model. [Evidence](../../verification-pack/athena-concurrency/evidence/2026-08-06/evidence-record.yaml) |
 | **Glue ETL read-heavy** (batch transform) | Sequential large reads + write-back | FSx for ONTAP read throughput | ≥ 512 MB/s provisioned | ≥ 128 MB per file | Low (1-5 jobs) | Functional Verified |
 | **Spark write-heavy** (ETL output) | Many PutObject calls | FSx for ONTAP write throughput (2x bandwidth) | ≥ 1 GB/s for write-heavy | Target 128-256 MB output files | Low | Functional Verified |
 | **RAG document ingestion** (Bedrock) | Many small-medium GetObject | Latency per document | Standard throughput sufficient | N/A (document size varies) | Low (batch ingestion) | Functional Verified |
@@ -933,7 +937,7 @@ Explicit tests that MUST fail for security posture to be valid.
 | NEG-002 | Delete attempt by read-only file system user | AccessDenied | Critical |
 | NEG-003 | Cross-account access without explicit grant | AccessDenied | Critical |
 | NEG-004 | Internet-origin access when VPC-origin AP configured | AccessDenied | Critical |
-| NEG-005 | PutObject exceeding 5 GB limit | EntityTooLarge error | High |
+| NEG-005 | PutObject exceeding the 50 GB limit | EntityTooLarge error | High |
 | NEG-006 | Presigned URL generation | Not supported error | Medium |
 | NEG-007 | Object Versioning operations (ListObjectVersions) | Not supported | Medium |
 | NEG-008 | Access after IAM role revocation | AccessDenied | Critical |

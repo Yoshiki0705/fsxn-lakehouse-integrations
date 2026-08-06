@@ -1,0 +1,116 @@
+[
+  {
+    "step": "DROP TABLE (pre-clean)",
+    "state": "SUCCEEDED",
+    "duration_ms": 1633,
+    "data_scanned_bytes": 0,
+    "error": "",
+    "query_id": "09e85aaa-2d76-4cdd-9856-6cb33fcb92b4",
+    "sample_rows": []
+  },
+  {
+    "step": "CREATE TABLE (Iceberg) on S3 AP",
+    "state": "SUCCEEDED",
+    "duration_ms": 1607,
+    "data_scanned_bytes": 0,
+    "error": "",
+    "query_id": "8799ed6c-6370-475f-8762-a7b2d922bb8d",
+    "sample_rows": []
+  },
+  {
+    "step": "INSERT INTO (Iceberg write / commit)",
+    "state": "SUCCEEDED",
+    "duration_ms": 4766,
+    "data_scanned_bytes": 0,
+    "error": "",
+    "query_id": "35978bb1-785f-4e21-8a98-1816cb6b1e65",
+    "sample_rows": []
+  },
+  {
+    "step": "SELECT count(*) (Iceberg read)",
+    "state": "SUCCEEDED",
+    "duration_ms": 1606,
+    "data_scanned_bytes": 0,
+    "error": "",
+    "query_id": "19876ce8-bcf0-42e5-ae08-fda5114181f5",
+    "sample_rows": [
+      [
+        "n"
+      ],
+      [
+        "3"
+      ]
+    ]
+  },
+  {
+    "step": "SELECT * (Iceberg read)",
+    "state": "SUCCEEDED",
+    "duration_ms": 3215,
+    "data_scanned_bytes": 168,
+    "error": "",
+    "query_id": "4f36caf7-34f3-440d-a817-e01426845bcf",
+    "sample_rows": [
+      [
+        "sensor_id",
+        "reading",
+        "recorded"
+      ],
+      [
+        "1",
+        "21.5",
+        "2026-08-06 10:00:00.000000"
+      ],
+      [
+        "2",
+        "22.1",
+        "2026-08-06 10:01:00.000000"
+      ],
+      [
+        "3",
+        "23.7",
+        "2026-08-06 10:02:00.000000"
+      ]
+    ]
+  },
+  {
+    "step": "Iceberg metadata table ($snapshots)",
+    "state": "SUCCEEDED",
+    "duration_ms": 3218,
+    "data_scanned_bytes": 643,
+    "error": "",
+    "query_id": "ab8cc5d1-c1c5-41a0-bb3d-0acef3f0b9d6",
+    "sample_rows": [
+      [
+        "n"
+      ],
+      [
+        "1"
+      ]
+    ]
+  },
+  {
+    "step": "UPDATE (Iceberg row-level, needs conditional write)",
+    "state": "SUCCEEDED",
+    "duration_ms": 4733,
+    "data_scanned_bytes": 108,
+    "error": "",
+    "query_id": "13ef9c37-5ea0-48b5-8ff9-9eaee831a223",
+    "sample_rows": []
+  },
+  {
+    "step": "SELECT after UPDATE",
+    "state": "SUCCEEDED",
+    "duration_ms": 3205,
+    "data_scanned_bytes": 132,
+    "error": "",
+    "query_id": "f8eae342-d9d7-45da-997a-2294d35c265a",
+    "sample_rows": [
+      [
+        "reading"
+      ],
+      [
+        "99.9"
+      ]
+    ]
+  }
+]

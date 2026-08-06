@@ -179,7 +179,7 @@ S3 AP-attached volumes work as FlexCache Origin, validated in two scenarios:
 |------|---------|
 | **Classification** | `version_gated` — supported from ONTAP 9.18.1 |
 | **Current FSx for ONTAP (9.17.1)** | ❌ Not available |
-| **Future FSx for ONTAP (9.18.1+)** | ✅ Expected to be supported |
+| **Future FSx for ONTAP (9.18.1+)** | ⚠️ Unreleased — cannot be verified |
 
 ### What this enables
 

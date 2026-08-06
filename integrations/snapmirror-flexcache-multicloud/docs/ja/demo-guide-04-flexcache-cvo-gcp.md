@@ -105,8 +105,8 @@ export GCP_ZONE="us-central1-a"
 export GCP_VPC="cvo-vpc"
 export GCP_SUBNET="cvo-subnet"
 export GCP_CIDR="10.100.0.0/16"
-export CVO_CLUSTER_IP="10.100.1.10"    # CVO management IP (デプロイ後に確定)
-export CVO_IC_LIF="10.100.1.11"         # CVO Intercluster LIF
+export CVO_CLUSTER_IP="198.51.100.40"    # CVO management IP (デプロイ後に確定)
+export CVO_IC_LIF="198.51.100.41"         # CVO Intercluster LIF
 export CVO_SVM="svm-gcp-cache"
 
 # === 共通 ===
@@ -319,7 +319,7 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 gcloud compute ssh cvo-test-vm --zone "$GCP_ZONE" --project "$GCP_PROJECT"
 
 # CVO Data LIF の IP（デプロイ後に確認）
-CVO_DATA_LIF="10.100.1.20"
+CVO_DATA_LIF="198.51.100.42"
 
 # NFS マウント
 sudo mkdir -p /mnt/gcp_cache

@@ -1,0 +1,337 @@
+# =============================================================================
+# Snowpipe auto-ingest on FSx for ONTAP S3 Access Point — Snowflake-side results
+# =============================================================================
+# Companion to ../2026-08-05/aws-side-verification.yaml, which covered only the
+# AWS half of the pipeline (object write -> ListObjectsV2 detection -> SNS).
+# That record left one question open: whether Snowflake accepts a *synthesised*
+# S3 event notification and fires COPY. This record answers it.
+#
+# Outcome: YES, under four conditions. All four are stated in `required_conditions`.
+# One failure mode is silent (no error anywhere) and is recorded in test_09.
+#
+# Identifiers are masked: <ACCOUNT_ID>, <SF_AWS_ACCOUNT>, <AP_ALIAS>,
+# <SF_SQS_QUEUE>, <EXTERNAL_ID>. Reproduce by substituting your own.
+# =============================================================================
+
+metadata:
+  verification_date: "2026-08-06"
+  measured_at_utc: "2026-08-06T01:41Z .. 2026-08-06T02:00Z"
+  performed_via: "Snowsight worksheet (browser) + AWS CLI/boto3"
+  supersedes_open_question_in: "../2026-08-05/aws-side-verification.yaml"
+
+environment:
+  snowflake:
+    edition: "Trial"
+    region: "ap-northeast-1 (AWS)"
+    role_used: "ACCOUNTADMIN"
+    warehouse: "COMPUTE_WH"
+    database_schema: "FSXN_S3AP_VERIFY_DB.BRONZE (created for this test)"
+    note: >
+      Account/org identifiers intentionally omitted. Snowflake's own AWS account
+      (the one that owns the Snowpipe SQS queue and the IAM user that assumes the
+      customer role) is referred to as <SF_AWS_ACCOUNT>.
+  aws:
+    region: "ap-northeast-1"
+    fsx_deployment_type: "SINGLE_AZ_1"
+    fsx_storage: "SSD 1024 GiB, 128 MBps throughput capacity"
+    volume_security_style: "UNIX"
+    s3_access_point: "snowflake-verification-ap"
+    s3_access_point_network_origin: "Internet (no VpcConfiguration)"
+    s3_access_point_file_system_identity: "UNIX / root"
+    test_prefix: "sfverify/events/"
+
+# -----------------------------------------------------------------------------
+# The four conditions that must all hold. Remove any one and the path breaks.
+# -----------------------------------------------------------------------------
+required_conditions:
+  - id: COND-1
+    condition: "The external stage must set AWS_ACCESS_POINT_ARN."
+    why: >
+      Without it LIST succeeds but every object read fails with
+      "Failed to access remote file: access denied". Proven in test_02 / test_03.
+  - id: COND-2
+    condition: "The pipe must set AWS_SNS_TOPIC = '<your topic ARN>'."
+    why: >
+      This is what makes Snowflake subscribe its own managed SQS queue to your
+      topic. You cannot perform that subscription yourself. Proven in
+      test_06 (fails without) / test_07 (succeeds with).
+  - id: COND-3
+    condition: >
+      The SNS topic resource policy must grant sns:Subscribe to Snowflake's IAM
+      user ARN (the STORAGE_AWS_IAM_USER_ARN returned by
+      DESC STORAGE INTEGRATION), or to that account's root.
+    why: "Snowflake's subscribe call is authorised by the topic policy."
+  - id: COND-4
+    condition: >
+      In the synthesised payload, s3.bucket.name must be the S3 Access Point
+      *alias* — the same string used as the bucket in the stage URL. Not the
+      Access Point ARN.
+    why: >
+      With the ARN, Snowflake receives the message but never forwards it and
+      raises no error. Proven in test_09. This is a silent data-loss mode.
+
+# -----------------------------------------------------------------------------
+# Tests, in execution order
+# -----------------------------------------------------------------------------
+tests:
+
+  - id: test_01
+    name: "Storage integration + two-phase IAM trust via the repo template"
+    artifact_under_test: "integrations/snowflake/template.yaml"
+    steps:
+      - "Deployed the template with EnvironmentName=sf-verify, SnowflakeAccountId empty (Phase 1)."
+      - "CREATE STORAGE INTEGRATION with STORAGE_ALLOWED_LOCATIONS = ('s3://<AP_ALIAS>/')."
+      - "DESC STORAGE INTEGRATION -> collected STORAGE_AWS_IAM_USER_ARN and STORAGE_AWS_EXTERNAL_ID."
+      - "update-stack with SnowflakeAccountId=<SF_AWS_ACCOUNT> and SnowflakeExternalId=<EXTERNAL_ID> (Phase 2)."
+      - "Read back the role trust policy."
+    observed:
+      stack_phase1: "CREATE_COMPLETE"
+      stack_phase2: "UPDATE_COMPLETE"
+      trust_policy_principal: "arn:aws:iam::<SF_AWS_ACCOUNT>:root"
+      trust_policy_condition: "StringEquals sts:ExternalId = <EXTERNAL_ID>"
+    result: PASS
+    conclusion: >
+      The documented two-phase trust flow works exactly as written. No changes
+      needed to this template for the storage-integration path.
+
+  - id: test_02
+    name: "External stage WITHOUT AWS_ACCESS_POINT_ARN — LIST then read"
+    artifact_under_test: "integrations/snowflake/sql/02_external_stage.sql (its stage pattern)"
+    stage_definition: |
+      CREATE OR REPLACE STAGE STAGE_NO_APARN
+        STORAGE_INTEGRATION = FSXN_S3AP_VERIFY
+        URL = 's3://<AP_ALIAS>/sfverify/events/';
+    observed:
+      list_stage: "SUCCESS — 2 objects returned with correct sizes (260 B, 174 B)"
+      read_query: |
+        SELECT COUNT(*), LISTAGG($1:event_id::string, ',')
+        FROM @STAGE_NO_APARN (FILE_FORMAT => 'FF_JSON');
+      read_result: "FAILED after 19 s"
+      read_error: "Failed to access remote file: access denied. Please check your credentials"
+    result: FAIL
+    conclusion: >
+      Reproducible defect in the repository's main stage SQL. LIST passing gives
+      a false sense that the stage is working; the failure only appears when
+      bytes are actually read, which is what External Tables, COPY INTO and
+      Snowpipe all do.
+
+  - id: test_03
+    name: "External stage WITH AWS_ACCESS_POINT_ARN — read"
+    artifact_under_test: "poc-templates/03-snowflake-integration/ (its stage pattern)"
+    stage_definition: |
+      CREATE OR REPLACE STAGE STAGE_WITH_APARN
+        STORAGE_INTEGRATION = FSXN_S3AP_VERIFY
+        URL = 's3://<AP_ALIAS>/sfverify/events/'
+        AWS_ACCESS_POINT_ARN = 'arn:aws:s3:ap-northeast-1:<ACCOUNT_ID>:accesspoint/snowflake-verification-ap';
+    observed:
+      rows_read: 5
+      ids: "E-0001,E-0002,E-0003,E-0004,E-0005"
+      duration: "1.7 s"
+    result: PASS
+    conclusion: >
+      The PoC template's claim that AWS_ACCESS_POINT_ARN is required is correct.
+      Nothing else differed between test_02 and test_03.
+
+  - id: test_04
+    name: "COPY INTO from the S3 AP-backed stage"
+    observed:
+      loaded_rows: 5
+      distinct_source_files: 2
+      sum_amount: 6725
+      arithmetic_check: "1250 + 300 + 880 + 4200 + 95 = 6725 — matches"
+    result: PASS
+
+  - id: test_05
+    name: "Pipe with AUTO_INGEST = TRUE on an FSx for ONTAP S3 AP stage (no AWS_SNS_TOPIC)"
+    question: "Does Snowflake even accept AUTO_INGEST for this storage backend?"
+    observed:
+      create_pipe: "SUCCESS"
+      notification_channel: "arn:aws:sqs:ap-northeast-1:<SF_AWS_ACCOUNT>:<SF_SQS_QUEUE>"
+    result: PASS
+    conclusion: >
+      Snowflake treats the Access Point alias as an ordinary S3 bucket and issues
+      a managed SQS channel. Nothing about the FSx for ONTAP backing is rejected
+      at pipe-creation time.
+
+  - id: test_06
+    name: "NEGATIVE — subscribe Snowflake's SQS queue to our SNS topic ourselves"
+    why_tested: >
+      This is the mechanism the repository's Pattern A architecture assumes:
+      "FPolicy -> SQS -> Lambda -> SNS -> Snowflake SQS -> Snowpipe".
+    command: |
+      aws sns subscribe --topic-arn <our topic> \
+        --protocol sqs \
+        --notification-endpoint arn:aws:sqs:ap-northeast-1:<SF_AWS_ACCOUNT>:<SF_SQS_QUEUE>
+    observed:
+      immediate_response: "SubscriptionArn = 'pending confirmation'"
+      after_45s: "PendingConfirmation"
+      after_a_further_30s: "PendingConfirmation"
+    result: FAIL
+    conclusion: >
+      The subscription never confirms. Snowflake's queue is in Snowflake's own
+      AWS account and will not confirm a subscription it did not initiate. The
+      Pattern A architecture as drawn cannot deliver a message.
+
+  - id: test_07
+    name: "Pipe with AWS_SNS_TOPIC — Snowflake performs its own subscription"
+    setup:
+      - "Created SNS topic in our account."
+      - "Topic policy: owner statement + sns:Subscribe for arn:aws:iam::<SF_AWS_ACCOUNT>:user/<sf-iam-user>."
+      - "CREATE OR REPLACE PIPE ... AUTO_INGEST = TRUE AWS_SNS_TOPIC = '<topic ARN>'."
+    observed:
+      subscription_after_create_pipe: "confirmed subscription ARN present (not PendingConfirmation)"
+      pipe_status: "executionState=RUNNING, polling its channel (lastPulledFromChannelTimestamp advancing)"
+    result: PASS
+    gotcha:
+      description: >
+        A pre-existing PendingConfirmation subscription for the same
+        (protocol, endpoint) pair blocks Snowflake's own subscribe call — SNS
+        deduplicates by endpoint and protocol, so CREATE PIPE silently ends up
+        with no usable subscription.
+      symptom: "Topic shows exactly one subscription, stuck at PendingConfirmation."
+      remedy: >
+        Do not pre-subscribe. If a stuck pending subscription already exists,
+        delete and recreate the topic (a PendingConfirmation entry has no real
+        ARN, so it cannot be removed with sns unsubscribe).
+
+  - id: test_08
+    name: "DECISIVE — synthesised S3 notification with s3.bucket.name = AP alias"
+    question: "Does Snowpipe accept a notification that no S3 bucket produced?"
+    setup:
+      - "Uploaded sfverify/events/events_003.json (88 B) through the Access Point."
+      - "Published a synthesised ObjectCreated:Put payload to the SNS topic."
+      - "Payload carried the full real-S3 field set (see notes.payload_fields)."
+    observed:
+      last_received_message: "2026-08-06T01:55:30.721Z"
+      last_ingested: "2026-08-06T01:55:31.211Z"
+      notification_to_ingest_latency: "approximately 0.5 s"
+      last_ingested_file_path: "events_003.json"
+      last_forwarded_file_path: "<AP_ALIAS>/sfverify/events/events_003.json"
+      table_rows: "5 -> 6"
+      copy_history_row: "events_003.json | status=Loaded | rows=1 | pipe=EVENTS_PIPE_SNS | errors=0"
+    result: PASS
+    conclusion: >
+      Snowpipe does not verify that the notification originated from S3. A
+      correctly shaped synthetic notification triggers COPY, and COPY_HISTORY
+      attributes the load to the pipe. This resolves the question left open by
+      the AWS-side record.
+
+  - id: test_09
+    name: "NEGATIVE — synthesised notification with s3.bucket.name = Access Point ARN"
+    why_tested: >
+      The repository's poller Lambda puts whatever it was configured with into
+      s3.bucket.name. When configured with the Access Point ARN (which the
+      template's IAM policy is written against), the ARN string lands there.
+    setup:
+      - "Uploaded sfverify/events/events_004.json (85 B)."
+      - "Published the same payload shape, but s3.bucket.name = the AP ARN."
+    observed:
+      last_received_message: "2026-08-06T01:58:00.727Z (advanced — the message WAS received)"
+      last_forwarded_message: "unchanged at 2026-08-06T01:55:33.188Z (never forwarded)"
+      last_forwarded_file_path: "unchanged (still events_003.json)"
+      table_rows: "6 (unchanged)"
+      target_row_present: "no"
+      error_surfaced: "none — not in SYSTEM$PIPE_STATUS, not in COPY_HISTORY"
+    result: "FAIL — silent drop"
+    severity: HIGH
+    conclusion: >
+      The mismatch produces no error of any kind. Monitoring that watches for
+      pipe errors will report a healthy pipe while every file is discarded.
+      Detection requires comparing object counts on the Access Point against
+      rows or COPY_HISTORY entries in Snowflake.
+
+# -----------------------------------------------------------------------------
+# Defects this run confirms in repository artifacts
+# -----------------------------------------------------------------------------
+confirmed_defects:
+  - id: DEFECT-A
+    severity: HIGH
+    file: "integrations/snowflake/sql/02_external_stage.sql"
+    problem: >
+      Every stage is created without AWS_ACCESS_POINT_ARN. LIST works, so the
+      script appears to succeed, but all reads fail with access denied. Every
+      downstream object in the numbered SQL series (External Tables, Iceberg,
+      Directory Tables, Snowpipe) depends on these stages.
+    evidence: "test_02 vs test_03"
+    fix: "Add AWS_ACCESS_POINT_ARN to each stage definition."
+
+  - id: DEFECT-B
+    severity: HIGH
+    file: "integrations/snowflake/snowpipe-lambda/handler.py"
+    problem: >
+      s3.bucket.name is populated from the S3_ACCESS_POINT_ALIAS environment
+      variable without validation. If an Access Point ARN is supplied there —
+      which is natural, because the IAM policy in the companion template is
+      written against the ARN — notifications are silently discarded by Snowpipe.
+    evidence: "test_09"
+    fix: >
+      Reject ARN-shaped values for that variable, and populate s3.bucket.name
+      from the alias only.
+
+  - id: DEFECT-C
+    severity: MEDIUM
+    file: "shared/cloudformation/fpolicy-routing.yaml"
+    problem: >
+      The AllowSnowflakeSQSSubscription statement uses Principal AWS '*' gated
+      on Condition ArnEquals aws:SourceArn = <Snowflake SQS ARN>. aws:SourceArn
+      is only populated when an AWS service calls on a resource's behalf.
+      Snowflake calls sns:Subscribe directly as an IAM user, so the key is
+      absent, the condition never matches, and the statement grants nothing.
+    evidence: >
+      test_07 succeeded only with a statement that names Snowflake's IAM user
+      ARN as the principal.
+    fix: >
+      Rely on the AllowSnowflakeIAMUserSubscribe statement (which is already
+      present and correct) and drop the aws:SourceArn variant.
+
+  - id: DEFECT-D
+    severity: LOW
+    files:
+      - "shared/cloudformation/fpolicy-routing.yaml"
+      - "integrations/snowflake/template.yaml"
+    problem: >
+      Both policies list sns:Receive, which is not a valid SNS action in the
+      current action list. cfn-lint reports W3037 for it.
+    fix: "Remove sns:Receive."
+
+  - id: DEFECT-E
+    severity: MEDIUM
+    file: "integrations/snowflake/template.yaml"
+    problem: >
+      The Snowpipe SNS topic policy falls back to granting sns:Subscribe to the
+      deployer's own account root when SnowflakeAccountId is left empty. That
+      default silently produces a topic Snowflake cannot subscribe to.
+    fix: >
+      Make the Snowflake principal mandatory when EnableSnowpipe is true, or
+      state in the description that the stack must be updated after
+      DESC STORAGE INTEGRATION.
+
+notes:
+  payload_fields: >
+    The synthesised payload included eventVersion, eventSource, awsRegion,
+    eventTime, eventName, userIdentity, requestParameters, responseElements, and
+    an s3 block carrying s3SchemaVersion, configurationId, bucket
+    (name/ownerIdentity/arn) and object (key/size/eTag/sequencer). Which of
+    these Snowpipe actually requires was not isolated; only bucket.name was
+    varied deliberately (test_08 vs test_09).
+  what_remains_unmeasured:
+    - "Which individual payload fields Snowpipe requires versus ignores."
+    - "Behaviour when the same synthetic notification is delivered more than once (dedup window)."
+    - "Behaviour at notification volumes high enough to exercise the channel backlog."
+    - "Whether an EventBridge-based Snowpipe path would accept synthesised events equally."
+  cost_note: >
+    Run on a Snowflake trial account. Total consumption for the whole session was
+    well under one credit; the warehouse ran only for short COPY and SELECT
+    statements.
+
+reproduce:
+  aws_side: "shared/scripts/benchmark_list_objects.py is unrelated; see steps below."
+  steps:
+    - "Create an FSx for ONTAP S3 Access Point (Internet origin) over a UNIX-style volume."
+    - "Deploy integrations/snowflake/template.yaml; complete the two-phase trust as in test_01."
+    - "Create a stage WITH AWS_ACCESS_POINT_ARN (see test_03)."
+    - "Create an SNS topic; grant sns:Subscribe to STORAGE_AWS_IAM_USER_ARN in the topic policy."
+    - "CREATE PIPE ... AUTO_INGEST = TRUE AWS_SNS_TOPIC = '<topic ARN>'."
+    - "Confirm the topic has a confirmed (not PendingConfirmation) subscription."
+    - "Upload an object through the Access Point, then publish a synthesised ObjectCreated payload with s3.bucket.name = the AP alias."
+    - "Verify with SYSTEM$PIPE_STATUS and INFORMATION_SCHEMA.COPY_HISTORY."

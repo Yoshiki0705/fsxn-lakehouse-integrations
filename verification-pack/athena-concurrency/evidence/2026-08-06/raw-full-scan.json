@@ -1,0 +1,276 @@
+{
+  "query": "SELECT status, location, count(*) AS n, avg(temperature) AS t, avg(humidity) AS h, avg(pressure) AS p, avg(vibration) AS v, min(timestamp) AS t0, max(timestamp) AS t1, approx_distinct(sensor_id) AS sensors, max(batch_id) AS b, max(id) AS mid FROM fsxn_athena_verification.sensor_benchmark GROUP BY status, location",
+  "table": "fsxn_athena_verification.sensor_benchmark",
+  "runs": [
+    {
+      "label": "concurrency 1",
+      "requested": 1,
+      "succeeded": 1,
+      "failed": 0,
+      "wall_ms_p50": 3577,
+      "wall_ms_p95": 3577,
+      "wall_ms_max": 3577,
+      "engine_ms_p50": 2477,
+      "engine_ms_max": 2477,
+      "queue_ms_max": 96,
+      "scanned_bytes_each": 107986337,
+      "errors": [],
+      "batch_wall_ms": 3577
+    },
+    {
+      "label": "concurrency 25",
+      "requested": 25,
+      "succeeded": 25,
+      "failed": 0,
+      "wall_ms_p50": 5842,
+      "wall_ms_p95": 6928,
+      "wall_ms_max": 6935,
+      "engine_ms_p50": 5186,
+      "engine_ms_max": 5549,
+      "queue_ms_max": 151,
+      "scanned_bytes_each": 107986337,
+      "errors": [],
+      "batch_wall_ms": 6936
+    }
+  ],
+  "raw": {
+    "1": [
+      {
+        "i": 0,
+        "state": "SUCCEEDED",
+        "duration_ms": 3577,
+        "engine_ms": 2477,
+        "queue_ms": 96,
+        "scanned_bytes": 107986337,
+        "error": ""
+      }
+    ],
+    "25": [
+      {
+        "i": 0,
+        "state": "SUCCEEDED",
+        "duration_ms": 5550,
+        "engine_ms": 4331,
+        "queue_ms": 110,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 1,
+        "state": "SUCCEEDED",
+        "duration_ms": 6935,
+        "engine_ms": 5325,
+        "queue_ms": 124,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 2,
+        "state": "SUCCEEDED",
+        "duration_ms": 5837,
+        "engine_ms": 5137,
+        "queue_ms": 135,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 3,
+        "state": "SUCCEEDED",
+        "duration_ms": 6928,
+        "engine_ms": 5525,
+        "queue_ms": 128,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 4,
+        "state": "SUCCEEDED",
+        "duration_ms": 6929,
+        "engine_ms": 5474,
+        "queue_ms": 79,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 5,
+        "state": "SUCCEEDED",
+        "duration_ms": 6922,
+        "engine_ms": 5499,
+        "queue_ms": 74,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 6,
+        "state": "SUCCEEDED",
+        "duration_ms": 6927,
+        "engine_ms": 5461,
+        "queue_ms": 110,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 7,
+        "state": "SUCCEEDED",
+        "duration_ms": 5848,
+        "engine_ms": 4919,
+        "queue_ms": 132,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 8,
+        "state": "SUCCEEDED",
+        "duration_ms": 5840,
+        "engine_ms": 5186,
+        "queue_ms": 71,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 9,
+        "state": "SUCCEEDED",
+        "duration_ms": 5835,
+        "engine_ms": 5034,
+        "queue_ms": 69,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 10,
+        "state": "SUCCEEDED",
+        "duration_ms": 5833,
+        "engine_ms": 4312,
+        "queue_ms": 108,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 11,
+        "state": "SUCCEEDED",
+        "duration_ms": 6926,
+        "engine_ms": 5527,
+        "queue_ms": 132,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 12,
+        "state": "SUCCEEDED",
+        "duration_ms": 6925,
+        "engine_ms": 5515,
+        "queue_ms": 106,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 13,
+        "state": "SUCCEEDED",
+        "duration_ms": 6924,
+        "engine_ms": 5543,
+        "queue_ms": 105,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 14,
+        "state": "SUCCEEDED",
+        "duration_ms": 5838,
+        "engine_ms": 4794,
+        "queue_ms": 100,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 15,
+        "state": "SUCCEEDED",
+        "duration_ms": 6911,
+        "engine_ms": 5341,
+        "queue_ms": 99,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 16,
+        "state": "SUCCEEDED",
+        "duration_ms": 5831,
+        "engine_ms": 4223,
+        "queue_ms": 105,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 17,
+        "state": "SUCCEEDED",
+        "duration_ms": 5842,
+        "engine_ms": 5046,
+        "queue_ms": 95,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 18,
+        "state": "SUCCEEDED",
+        "duration_ms": 5840,
+        "engine_ms": 5087,
+        "queue_ms": 141,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 19,
+        "state": "SUCCEEDED",
+        "duration_ms": 6923,
+        "engine_ms": 5549,
+        "queue_ms": 103,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 20,
+        "state": "SUCCEEDED",
+        "duration_ms": 5841,
+        "engine_ms": 5074,
+        "queue_ms": 103,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 21,
+        "state": "SUCCEEDED",
+        "duration_ms": 5838,
+        "engine_ms": 5078,
+        "queue_ms": 151,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 22,
+        "state": "SUCCEEDED",
+        "duration_ms": 5838,
+        "engine_ms": 5247,
+        "queue_ms": 108,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 23,
+        "state": "SUCCEEDED",
+        "duration_ms": 5841,
+        "engine_ms": 4541,
+        "queue_ms": 106,
+        "scanned_bytes": 107986337,
+        "error": ""
+      },
+      {
+        "i": 24,
+        "state": "SUCCEEDED",
+        "duration_ms": 6914,
+        "engine_ms": 5499,
+        "queue_ms": 101,
+        "scanned_bytes": 107986337,
+        "error": ""
+      }
+    ]
+  }
+}

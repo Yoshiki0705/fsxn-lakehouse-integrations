@@ -2,6 +2,8 @@
 
 # ブロッカー追跡ダッシュボード
 
+> 本ページは動作**しない**ことが判明している事項を追跡します。単に未テストである主張については [未検証項目インベントリ](./unverified-inventory.md) を参照してください。同じブロッカーを起因レイヤー別に整理したものは [レイヤー別の既知の課題](./known-challenges.md)を参照してください。
+
 > **目的**: FSx for ONTAP × Lakehouse 統合における既知のブロッカーと制約のステータスを一元管理する Living Document。
 > **最終更新**: 2026-06-20
 > **更新頻度**: 四半期ごと、または重大なステータス変更時に随時更新
@@ -13,13 +15,14 @@
 | ID | ブロッカー | 影響範囲 | ステータス | 回避策有無 |
 |:---:|---|---|:---:|:---:|
 | BLK-001 | UC External Location が S3 AP を非サポート | Databricks UC ガバナンス | ❌ 未解決 | ✅ あり |
-| BLK-002 | Conditional writes 非サポート | Delta/Iceberg/Hudi 書き込み | ❌ 未解決 | ✅ あり |
+| BLK-002 | Conditional Writes 非サポート | Delta Lake 書き込み（Athena 経由の Iceberg は影響なし） | ❌ 未解決 | ✅ あり |
 | BLK-003 | S3 Event Notifications 非サポート | Auto Loader 通知モード / Snowpipe | ❌ 未解決 | ✅ あり |
 | BLK-004 | SnapMirror S3 が FSx for ONTAP で無効化 | ONTAP ネイティブ S3 レプリケーション | ❌ 未解決 | ✅ あり |
 | BLK-005 | `iceberg_rest` Connection Type 未サポート | UC Foreign Catalog × S3 Tables | ❌ 未解決 | ⚠️ 部分的 |
 | BLK-006 | ListObjectsV2 レイテンシ（30-80x は撤回、実測 1.3〜1.4 倍） | 大規模ディレクトリスキャン | ⚠️ 範囲縮小 | ✅ あり |
 | BLK-007 | NFS/SMB マウントが seccomp でブロック | Databricks からの直接ファイルシステムアクセス | ❌ 設計上不可 | ✅ あり |
 | BLK-008 | Lake Formation 列レベル制御が S3 Tables 非対応 | S3 Tables フェデレーテッドカタログのガバナンス | ❌ 未解決 | ⚠️ テーブルレベルのみ |
+| BLK-009 | S3 AP へのアンロードが checksum 検証で失敗し、オブジェクトが残る | Snowflake `COPY INTO @stage`（および AP への任意のアンロード） | ❌ 未解決 | ✅ あり |
 
 ---
 
@@ -53,19 +56,48 @@
 | 属性 | 値 |
 |------|---|
 | **影響サービス** | FSx for ONTAP S3 Access Points |
-| **影響機能** | Delta Lake / Iceberg / Hudi のトランザクショナル書き込み |
+| **影響機能** | Delta Lake のトランザクショナル書き込み。Hudi は未テスト。**カタログがポインタを管理する Iceberg は影響を受けない** — 下記スコープ参照 |
 | **根本原因** | FSx for ONTAP S3 AP が `If-None-Match` ヘッダーを実装していない（HTTP 501 返却） |
 | **確認日** | 2026-05-22（AWS Support 確認、プロダクトレベルの制限） |
 | **ステータス** | ❌ 未解決 — Feature Request 提出済み |
 | **解除条件** | AWS が FSx for ONTAP S3 AP に conditional writes を実装（S3 ネイティブ 2024-08 parity） |
-| **影響度** | **High** — Lakehouse テーブルフォーマットの書き込みが不可。読み取りは影響なし |
+| **影響度** | **Medium** — 2026-08-06 に範囲を縮小。Delta Lake の書き込みは不可だが、Athena 経由の Iceberg 書き込みは動作。読み取りは影響なし |
 
-**回避策**:
+**実測スコープ（2026-08-06）**
+
+| テーブルフォーマット / エンジン | 書き込み | 理由 |
+|---|:---:|---|
+| Delta Lake（エンジン問わず） | ❌ | コミットログがオブジェクトストア上の `_delta_log` に存在するため、コミット自体が conditional write を必要とする |
+| Iceberg（Athena + Glue Catalog） | ✅ | 現行メタデータのポインタを Glue が保持。コミットは S3 ではなく Glue 側の条件付き更新になる。INSERT、UPDATE、DELETE、タイムトラベル、`OPTIMIZE`、`VACUUM`、および 2 件の同時コミットがすべて成功 |
+| Iceberg（EMR Serverless） | ❌ | 別要因で失敗: メタデータ書き込み時に S3FileIO が Access Point エイリアスを処理できない（NullPointerException） |
+| Hudi | ❓ | 未テスト |
+
+「Iceberg の並行書き込みはデータ破損リスクがある」という従来の記述は実測ではなく推論であり、撤回します。
+
+**失敗した Delta 書き込みはデータファイルを残します。** 2026-08-06 に検証用 Access Point で
+確認: 4 つのプレフィックスに `_delta_log` を伴わない Delta データファイルが存在し、
+うち 1 つには 1 分間隔で書かれた 3 つのデータファイルが残っていました。Delta は先に
+Parquet を書き、後からコミットするため、コミットが 501 で失敗してもデータファイルは残ります。
+リトライごとに孤児が増えます。
+
+これは [BLK-009](#blk-009-s3-access-point-へのアンロードが-checksum-検証で失敗しオブジェクトが残る)
+と原因は異なりますが、残骸の形は同じです。以下で洗い出せます:
+
+```bash
+./shared/scripts/check_orphaned_unload_objects.py --access-point <alias>
+```
+
+このスクリプトは、エンジンの出力ファイルがあるのに完了マーカー
+（`_SUCCESS`、`_delta_log/`、`_committed_*`）が無いプレフィックスを報告します。
+ストレージ側から見た「中断された書き込み」の形です。
+Athena での 2 件の同時コミットは行数が正しく、ロストアップデートも発生しませんでした。ただし小規模なテストであり、並行性が原理的に危険ではないことを示すにとどまり、並行数の上限を示すものではありません。
+
+**Delta Lake の回避策**:
 1. **読み取り専用で利用** — Athena / Glue / Snowflake からの読み取りは正常動作
-2. **書き込み先は標準 S3** — DataSync → 標準 S3 → Delta/Iceberg 書き込み
-3. **Iceberg + 外部カタログ（単一ライター）** — Glue Catalog がポインタを管理するため、単一ライター構成では理論的に書き込み可能（実験的）。⚠️ **並行書き込みではデータ破損リスクがあるため本番利用禁止**
+2. **書き込み先は標準 S3** — DataSync → 標準 S3 → Delta 書き込み
+3. **Iceberg を使う** — Athena と Glue Catalog の組み合わせなら Access Point 上に直接書き込める
 
-**エビデンス**: [互換性マトリクス](./compatibility-matrix.md)（Lakehouse テーブルフォーマットへの影響セクション）
+**エビデンス**: [Athena Iceberg 検証](../../verification-pack/athena-iceberg/evidence/2026-08-06/evidence-record.yaml) · [互換性マトリクス](./compatibility-matrix.md)（Lakehouse テーブルフォーマットへの影響セクション）
 
 > **S3 parity ロードマップ**: S3 ネイティブに conditional writes が追加されたのは 2024-08 です。FSx for ONTAP S3 AP への追加は AWS の開発ロードマップ次第ですが、parity 達成は合理的な期待です。タイムラインは未公開。
 
@@ -209,6 +241,37 @@
 
 ---
 
+### BLK-009: S3 Access Point へのアンロードが checksum 検証で失敗し、オブジェクトが残る
+
+| 属性 | 値 |
+|------|---|
+| **影響サービス** | FSx for ONTAP S3 Access Points × アンロードを行う任意のエンジン |
+| **影響機能** | Snowflake `COPY INTO @stage`。返却された暗号化タイプに対して checksum を検証する他のアンロード処理も同様と考えられる |
+| **根本原因** | AWS はアップロード時のチェックサムの扱いが異なることを明記している。チェックサムは「オブジェクトメタデータおよびオブジェクト自体として FSx for NetApp ONTAP ボリュームに保存されない」ため「チェックサム値はレスポンスに返らない」。ETag も MD5 ダイジェストではないと明示されている（[Access point compatibility](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)）。計算したチェックサムをレスポンスと照合するクライアントはこの手順を完了できない。書き込み自体は先に成功する。エラー文は暗号化タイプ（`aws:fsx`、`AWS_SSE_S3` でも `AWS_SSE_KMS` でもない）を指すが、これはクライアントが提示する対処のヒントであり機構ではない |
+| **確認日** | 2026-08-06（実測） |
+| **ステータス** | ❌ 未解決 |
+| **解除条件** | FSx for ONTAP S3 AP がクライアントの受け付ける暗号化タイプを報告する、またはクライアントが `aws:fsx` を許容する |
+| **影響度** | **Medium** — 操作自体が利用不可であり、かつクリーンに拒否されず状態が残る形で失敗する |
+
+**実測内容**
+
+| 試行 | 結果 |
+|---|---|
+| 暗号化を明示しない `COPY INTO @stage` | 479 ms で `Remote upload failed checksum validation` により失敗。**それでもオブジェクトは書き込まれていた** — 25 バイト、gzip 正常、内容一致、`ServerSideEncryption: aws:fsx` |
+| ステージに `ENCRYPTION=(TYPE='AWS_SSE_S3')` を設定 | ハング。2 分 54 秒でキャンセル。書き込みなし |
+
+**単なる拒否より問題が大きい理由**: 文は失敗を報告するため、呼び出し側は何も書かれていないと考える。しかし完全なオブジェクトが Access Point 上に残る。AP 経由ステージへのアンロードを試したことがある場合は、対象プレフィックスを一覧して孤児オブジェクトを削除すること。
+
+**回避策**:
+1. **Access Point へアンロードしない。** 標準 S3 バケット、または Snowflake マネージドストレージ（内部テーブル、あるいは External Volume 上の Managed Iceberg Table— 2026-08-06 検証済み）へ書き込む
+2. 同一ボリュームへ NFS または SMB でアクセスできる場合はそちらへ書き込む。S3 レイヤーを経由しない
+
+**エビデンス**: [Snowflake 検証 2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml)
+
+> 本リポジトリの以前のリビジョンは、これを「Snowflake External Stage は設計上読み取り専用」と説明していました。これは誤りであり、部分書き込みの挙動を見えなくしていました。
+
+---
+
 ## ブロッカー解消時の影響マップ
 
 ```mermaid
@@ -216,7 +279,7 @@ graph TD
     BLK001[BLK-001 解消<br/>UC × S3 AP] --> Z1[ゼロコピー UC ガバナンス実現]
     BLK001 --> Z2[DataSync 不要化<br/>コスト削減]
     
-    BLK002[BLK-002 解消<br/>Conditional Writes] --> W1[FSx for ONTAP S3 AP に<br/>Delta/Iceberg 直接書き込み]
+    BLK002[BLK-002 解消<br/>Conditional Writes] --> W1[FSx for ONTAP S3 AP に<br/>Delta Lake 直接書き込み<br/>Iceberg は Athena 経由で既に可能]
     BLK002 --> W2[Lakehouse テーブル<br/>フォーマット完全対応]
     
     BLK003[BLK-003 解消<br/>Event Notifications] --> E1[Auto Loader 通知モード<br/>直接動作]
@@ -282,7 +345,7 @@ graph LR
 
 | シナリオ | 結果 |
 |---------|------|
-| BLK-002 のみ解消（BLK-001 未解消） | Athena/EMR/Glue から FSx for ONTAP S3 AP に直接 Delta/Iceberg 書き込み可能。**ただし Databricks UC からの恩恵はなし**（BLK-001 がゲート） |
+| BLK-002 のみ解消（BLK-001 未解消） | Athena/EMR/Glue から FSx for ONTAP S3 AP に直接 Delta Lake 書き込みが可能になる（Iceberg は Athena 経由で既に可能）。**ただし Databricks UC からの恩恵はなし**（BLK-001 がゲート） |
 | BLK-001 のみ解消（BLK-002 未解消） | UC External Location として S3 AP を登録可能 → **読み取り + UC ガバナンス**が実現。書き込みは引き続き標準 S3 経由 |
 | BLK-001 + BLK-002 同時解消 | **フル機能**: ゼロコピー + UC ガバナンス + Delta/Iceberg 書き込み。DataSync が「必須」→「オプション」に |
 | BLK-003 のみ解消（BLK-001 未解消） | Auto Loader 通知モードが FSx for ONTAP S3 AP で動作。ただし UC ガバナンスは引き続き標準 S3 経由が必要 |

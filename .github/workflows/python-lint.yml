@@ -18,7 +18,9 @@ jobs:
   python-check:
     name: Python Syntax & Import Check
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Raised from 5 to match the other workflows. Slow runners on this branch pushed
+    # several jobs past a 5-minute limit while every step passed.
+    timeout-minutes: 10
 
     steps:
       - name: Checkout

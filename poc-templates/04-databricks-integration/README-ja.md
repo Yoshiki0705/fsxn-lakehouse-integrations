@@ -47,7 +47,22 @@ AS SELECT * FROM parquet.`s3://<BUCKET>/fsxn-sync/sensor-data/`;
 
 ### 3. Auto Loader 設定（増分取り込み）
 
-同期済み S3 データからのストリーミング取り込みは `auto-loader-notebook.py` を参照。
+同期済み S3 データの増分取り込みには、宛先 S3 プレフィックスに対して Databricks Auto Loader
+（`cloudFiles`）を使用します:
+
+```python
+(spark.readStream.format("cloudFiles")
+    .option("cloudFiles.format", "parquet")
+    .option("cloudFiles.schemaLocation", "s3://<BUCKET>/_schema/sensor-data/")
+    .load("s3://<BUCKET>/fsxn-sync/sensor-data/")
+    .writeStream
+    .option("checkpointLocation", "s3://<BUCKET>/_checkpoint/sensor-data/")
+    .toTable("main.default.sensor_data"))
+```
+
+FSx for ONTAP S3 Access Points は S3 Event Notifications を発行しないため、Auto Loader の
+ファイル通知モードは利用できません。DataSync の書き込み先である標準 S3 バケットに対して、
+ディレクトリリストモードで実行してください。
 
 ## コスト
 

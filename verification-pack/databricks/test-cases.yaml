@@ -1,5 +1,18 @@
 # Databricks + FSx for ONTAP S3 AP Validation Test Cases
-# Use this matrix for reproducible validation runs
+#
+# STATUS: this is a reusable test PLAN, not a results record. Every
+# observed_result field below is intentionally blank — fill them in when you
+# run these cases in your own environment.
+#
+# Results already recorded in this repository:
+#   DBX-FSX-UC-001 / UC-002   -> uc-external-location/access-point-field-test-result.json
+#                                (2026-05-24; conclusion SUPERSEDED 2026-05-26 —
+#                                 S3 AP is not a supported UC External Location target)
+#   DBX-FSX-EXEC-001          -> instance-profile-boto3/executor-scale-managed-vpc-result.json
+#                                (2026-05-24; Databricks-managed VPC — egress to FSx blocked)
+# The remaining cases have no recorded run in this repository.
+#
+# Current overall position: ../../integrations/databricks/README.md
 
 test_cases:
   # --- Unity Catalog Path ---

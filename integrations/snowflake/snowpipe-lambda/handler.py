@@ -9,11 +9,22 @@ Architecture:
     EventBridge (every 1-5 min) → This Lambda → List new files → SNS → Snowpipe
 
 Environment Variables:
-    S3_ACCESS_POINT_ALIAS: S3 AP alias (bucket-style access)
-    SNS_TOPIC_ARN: SNS Topic ARN for Snowpipe notifications
+    S3_ACCESS_POINT_ALIAS: S3 AP alias, bucket-style. Must be the alias, NOT the
+        Access Point ARN. The alias is copied verbatim into s3.bucket.name of the
+        synthesized notification, and Snowpipe matches that string against the
+        bucket in its stage URL. An ARN there causes Snowpipe to accept the
+        message and then discard it with no error anywhere. Verified 2026-08-06.
+    SNS_TOPIC_ARN: SNS Topic ARN for Snowpipe notifications. The same topic must
+        be named in the pipe's AWS_SNS_TOPIC parameter, which is what makes
+        Snowflake subscribe its managed SQS queue to it. You cannot create that
+        subscription yourself.
     PREFIX: S3 key prefix to monitor (default: "bronze/events/")
-    POLLING_INTERVAL_MINUTES: How far back to look for new files (default: 5)
-    STATE_TABLE: DynamoDB table for tracking last-seen files (optional)
+    POLLING_INTERVAL_MINUTES: How far back to look for new files (default: 5).
+        Only used when STATE_TABLE is unset, and lossy — see
+        get_last_processed_time().
+    STATE_TABLE: DynamoDB table for tracking last-seen files. Strongly
+        recommended; without it objects older than the lookback window are never
+        notified.
 """
 
 import json
@@ -30,6 +41,25 @@ logger.setLevel(logging.INFO)
 # Configuration from environment
 S3_AP_ALIAS = os.environ["S3_ACCESS_POINT_ALIAS"]
 SNS_TOPIC_ARN = os.environ["SNS_TOPIC_ARN"]
+
+# Fail at init rather than silently dropping every notification.
+#
+# ListObjectsV2 accepts either the Access Point ARN or its alias as Bucket, so a
+# misconfigured ARN here would let the poller appear to work: it lists objects,
+# publishes to SNS, and reports success. Snowpipe then receives each message and
+# discards it because s3.bucket.name does not match the stage URL — without
+# raising an error in SYSTEM$PIPE_STATUS or COPY_HISTORY. An init failure is
+# loud; that silent mode is not. Verified 2026-08-06, see
+# integrations/snowflake/docs/en/snowpipe-verification-results.md
+if S3_AP_ALIAS.startswith("arn:"):
+    raise ValueError(
+        "S3_ACCESS_POINT_ALIAS must be the S3 Access Point alias, not its ARN. "
+        f"Received an ARN: {S3_AP_ALIAS}. The value is written verbatim into "
+        "s3.bucket.name of the synthesized notification and must match the bucket "
+        "portion of the pipe's stage URL (s3://<alias>/<path>). With an ARN, "
+        "Snowpipe silently discards every notification. Use the alias, which "
+        "looks like: <name>-<random>-ext-s3alias"
+    )
 PREFIX = os.environ.get("PREFIX", "bronze/events/")
 POLLING_INTERVAL = int(os.environ.get("POLLING_INTERVAL_MINUTES", "5"))
 STATE_TABLE = os.environ.get("STATE_TABLE", "")
@@ -94,10 +124,23 @@ def update_last_processed_time(timestamp: datetime) -> None:
             logger.warning(f"Failed to update state in DynamoDB: {e}")
 
 
+def _as_utc(value: datetime) -> datetime:
+    """Normalize a datetime to UTC.
+
+    Naive values are assumed to be UTC; aware values are converted. Using
+    ``replace(tzinfo=utc)`` on an aware non-UTC value would silently shift the
+    instant, which would move the polling cutoff and drop or duplicate files.
+    """
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def list_new_files(cutoff_time: datetime) -> list[dict]:
     """List files modified after cutoff_time via S3 AP."""
     new_files = []
     continuation_token = None
+    cutoff_utc = _as_utc(cutoff_time)
 
     while True:
         kwargs = {
@@ -111,15 +154,16 @@ def list_new_files(cutoff_time: datetime) -> list[dict]:
         response = s3.list_objects_v2(**kwargs)
 
         for obj in response.get("Contents", []):
-            last_modified = obj["LastModified"]
-            if last_modified.replace(tzinfo=timezone.utc) > cutoff_time.replace(
-                tzinfo=timezone.utc
-            ):
+            last_modified = _as_utc(obj["LastModified"])
+            if last_modified > cutoff_utc:
                 new_files.append(
                     {
                         "key": obj["Key"],
                         "size": obj["Size"],
                         "last_modified": last_modified.isoformat(),
+                        # ListObjectsV2 returns ETag quoted; strip to match the
+                        # unquoted form that real S3 event notifications carry.
+                        "etag": obj.get("ETag", "").strip('"'),
                     }
                 )
 
@@ -131,72 +175,118 @@ def list_new_files(cutoff_time: datetime) -> list[dict]:
     return new_files
 
 
+# SNS caps a single publish at 256 KiB. Stay under it with margin rather than
+# assuming a fixed record count, because object keys vary in length.
+SNS_MAX_MESSAGE_BYTES = 200_000
+SNS_MAX_RECORDS_PER_MESSAGE = 100
+
+
+def _synthesize_sequencer(last_modified_iso: str) -> str:
+    """Build a stand-in for the S3 `sequencer` field.
+
+    Real S3 supplies a hex token that increases monotonically for a given key, so
+    consumers can order overlapping events. There is no equivalent available when
+    the notification is synthesized from a listing, so this derives one from the
+    object's LastModified in milliseconds.
+
+    The value orders correctly for repeated writes to the same key at
+    millisecond-or-coarser granularity. It is not a substitute for the real thing:
+    two writes inside the same millisecond produce the same token.
+    """
+    ts = _as_utc(datetime.fromisoformat(last_modified_iso))
+    return format(int(ts.timestamp() * 1000), "X").zfill(16)
+
+
+def _build_record(file: dict) -> dict:
+    """Build one synthesized S3 ObjectCreated record.
+
+    Field set mirrors a genuine S3 event notification. Which fields Snowpipe
+    actually requires was not isolated during verification — only s3.bucket.name
+    was varied deliberately — so the full set is sent rather than guessing at a
+    minimum.
+    """
+    return {
+        "eventVersion": "2.1",
+        "eventSource": "aws:s3",
+        "awsRegion": AWS_REGION,
+        "eventTime": file["last_modified"],
+        "eventName": "ObjectCreated:Put",
+        "userIdentity": {"principalId": "AWS:fsx-ontap-s3ap-poller"},
+        "requestParameters": {"sourceIPAddress": "0.0.0.0"},
+        "responseElements": {
+            "x-amz-request-id": "synthesized",
+            "x-amz-id-2": "synthesized",
+        },
+        "s3": {
+            "s3SchemaVersion": "1.0",
+            "configurationId": "fsx-ontap-s3ap-poller",
+            "bucket": {
+                # Must be the Access Point alias. Enforced at module init.
+                "name": S3_AP_ALIAS,
+                "ownerIdentity": {"principalId": "synthesized"},
+                "arn": f"arn:aws:s3:::{S3_AP_ALIAS}",
+            },
+            "object": {
+                "key": file["key"],
+                "size": file["size"],
+                "eTag": file.get("etag", ""),
+                "sequencer": _synthesize_sequencer(file["last_modified"]),
+            },
+        },
+    }
+
+
+def _batch_records(records: list[dict]) -> list[list[dict]]:
+    """Split records into publishable batches bounded by count and byte size."""
+    batches: list[list[dict]] = []
+    current: list[dict] = []
+    current_bytes = 0
+
+    for record in records:
+        record_bytes = len(json.dumps(record))
+        too_many = len(current) >= SNS_MAX_RECORDS_PER_MESSAGE
+        too_big = current and (current_bytes + record_bytes) > SNS_MAX_MESSAGE_BYTES
+        if too_many or too_big:
+            batches.append(current)
+            current = []
+            current_bytes = 0
+        current.append(record)
+        current_bytes += record_bytes
+
+    if current:
+        batches.append(current)
+    return batches
+
+
 def publish_to_sns(new_files: list[dict]) -> int:
     """Publish synthesized S3-event-shaped notifications to SNS for Snowpipe.
 
-    !! UNVERIFIED AND INCOMPLETE (DEFECT-3 / DEFECT-4, reviewed 2026-08-05)
+    Verified working 2026-08-06: Snowpipe accepted a synthesized notification of
+    this shape and ran COPY, with COPY_HISTORY attributing the load to the pipe.
+    Notification-to-loaded-row latency was about half a second.
 
-    Whether Snowflake accepts a *synthesized* notification on a pipe's
-    notification_channel and triggers COPY has never been tested. That is the
-    deciding unknown for this whole pattern.
+    Three conditions outside this function must also hold:
 
-    Two known gaps in the payload built below:
-
-    * Missing fields that a genuine S3 event notification carries: awsRegion,
-      s3.s3SchemaVersion, s3.configurationId, s3.bucket.ownerIdentity,
-      s3.bucket.arn, s3.object.eTag, s3.object.sequencer. eTag and sequencer are
-      the ones most likely to matter, since a consumer would use them for
-      deduplication and ordering.
-
-    * s3.bucket.name is populated straight from S3_ACCESS_POINT_ALIAS. Supplying
-      the Access Point ARN therefore emits an ARN where a bucket name belongs,
-      which is unlikely to match a stage URL of the form s3://<bucket>/<path>.
-      Supply the Access Point *alias*, not the ARN.
+    1. The pipe's stage sets AWS_ACCESS_POINT_ARN. Without it every read fails
+       even though LIST succeeds.
+    2. The pipe sets AWS_SNS_TOPIC to SNS_TOPIC_ARN. That is what makes Snowflake
+       subscribe its managed SQS queue to the topic; the subscription cannot be
+       created from this side.
+    3. The topic policy grants sns:Subscribe to Snowflake's IAM user, the
+       STORAGE_AWS_IAM_USER_ARN from DESC STORAGE INTEGRATION.
 
     See integrations/snowflake/docs/en/snowpipe-verification-results.md.
     """
     if not new_files:
         return 0
 
-    if S3_AP_ALIAS.startswith("arn:"):
-        logger.warning(
-            "S3_ACCESS_POINT_ALIAS looks like an ARN (%s). Snowpipe matches "
-            "notifications against the pipe's stage location, so an ARN in "
-            "s3.bucket.name will probably not match. Supply the Access Point "
-            "alias instead (DEFECT-4).",
-            S3_AP_ALIAS,
-        )
-
-    # Snowpipe expects S3 event notification format
-    # Batch files into groups of 100 (SNS message size limit)
-    batch_size = 100
+    records = [_build_record(file) for file in new_files]
     published = 0
 
-    for i in range(0, len(new_files), batch_size):
-        batch = new_files[i : i + batch_size]
-
-        message = {
-            "Records": [
-                {
-                    "eventVersion": "2.1",
-                    "eventSource": "aws:s3",
-                    "eventName": "ObjectCreated:Put",
-                    "eventTime": file["last_modified"],
-                    "s3": {
-                        "bucket": {"name": S3_AP_ALIAS},
-                        "object": {
-                            "key": file["key"],
-                            "size": file["size"],
-                        },
-                    },
-                }
-                for file in batch
-            ]
-        }
-
+    for batch in _batch_records(records):
         sns.publish(
             TopicArn=SNS_TOPIC_ARN,
-            Message=json.dumps(message),
+            Message=json.dumps({"Records": batch}),
             Subject="FSx for ONTAP Snowpipe Notification",
         )
         published += len(batch)
@@ -224,7 +314,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         # Update state
         latest_time = max(
-            datetime.fromisoformat(f["last_modified"]) for f in new_files
+            _as_utc(datetime.fromisoformat(f["last_modified"])) for f in new_files
         )
         update_last_processed_time(latest_time)
 

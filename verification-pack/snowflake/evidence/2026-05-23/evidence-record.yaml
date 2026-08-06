@@ -4,7 +4,7 @@ date_tested: "2026-05-23"
 tester: "Yoshiki Fujiwara"
 
 environment:
-  snowflake_account: "VP28055 (MH89262, CVDRQJT)"
+  snowflake_account: "<SNOWFLAKE_ACCOUNT>"
   snowflake_region: "AWS_AP_NORTHEAST_1"
   snowflake_edition: "Standard"
   snowflake_role: "ACCOUNTADMIN"
@@ -70,3 +70,21 @@ alternative_architectures:
   - "Athena for read-only SQL analytics (verified, zero-copy)"
   - "Glue ETL → S3 bucket → Snowflake External Stage (data copy)"
   - "SnapMirror → S3 → Snowflake (automated data copy)"
+
+record_status: "SUPERSEDED"
+
+superseded_by:
+  date: "2026-05-24"
+  record: "../2026-05-24/evidence-record.yaml"
+  finding: |
+    The AWS_ACCESS_POINT_ARN stage parameter resolves the session policy ARN
+    mismatch recorded above. With it set on CREATE STAGE, SELECT, External Table,
+    COPY INTO, Directory Table and governance tags all succeed.
+  effect_on_this_record: |
+    The failures recorded above are what was observed on 2026-05-23 without
+    AWS_ACCESS_POINT_ARN, and are unchanged. The root_cause analysis remains an
+    accurate description of the mechanism. The "workaround: None available" line
+    is wrong and is retained only as history — a workaround does exist. Do not
+    cite this record as evidence that Snowflake cannot read FSx for ONTAP S3
+    Access Points.
+  current_position: "../../../../integrations/snowflake/README.md"

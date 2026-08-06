@@ -22,7 +22,11 @@ jobs:
   doc-quality:
     name: Documentation Quality Checks
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # The checks themselves take about 2 seconds locally across 445 markdown files.
+    # 5 minutes was still exceeded once (6m26s) on a slow runner, cancelling a job
+    # whose every step had passed. Raised for headroom against runner variance, not
+    # because the work grew expensive.
+    timeout-minutes: 10
 
     steps:
       - name: Checkout

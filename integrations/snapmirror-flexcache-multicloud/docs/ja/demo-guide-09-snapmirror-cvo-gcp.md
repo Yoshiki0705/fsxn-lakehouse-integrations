@@ -95,7 +95,7 @@ export SVM_NAME_AWS="svm-source"
 export SECRET_ARN="arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:fsxn-admin-XXXXXX"
 
 # === GCP CVO 側 ===
-export CVO_CLUSTER_IP="10.100.1.10"
+export CVO_CLUSTER_IP="198.51.100.40"
 export CVO_SVM="svm-gcp-dest"
 
 # === 共通 ===
@@ -242,7 +242,7 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ```bash
 # GCE インスタンスから NFS マウント
-CVO_DATA_LIF="10.100.1.20"
+CVO_DATA_LIF="198.51.100.42"
 
 sudo mkdir -p /mnt/sm_gcp_dest
 sudo mount -t nfs -o vers=3 ${CVO_DATA_LIF}:/${DEST_VOL} /mnt/sm_gcp_dest

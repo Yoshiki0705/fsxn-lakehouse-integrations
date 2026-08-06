@@ -287,7 +287,7 @@ test_S1_snowflake_external_iceberg:
   status: "PARTIALLY_VERIFIED"
   description: "Snowflake External Iceberg Table read from S3 Tables"
   verified:
-    - "Snowflake workspace accessible (MH89262, CVDRQJT)"
+    - "Snowflake workspace accessible (<SNOWFLAKE_ACCOUNT>)"
     - "SHOW EXTERNAL VOLUMES: 0 rows (no External Volume configured yet) → NOW CREATED"
     - "S3 Tables warehouse location identified: s3://4fbd5e7c-8e8c-43a1-gs7cqcjhrd5bmfh7tpafuoyin9mq6apn1b--table-s3"
     - "SHOW STORAGE INTEGRATIONS: 2 integrations (FSXN_STORAGE_INTEGRATION, FSXN_VERIFICATION_INTEGRATION)"

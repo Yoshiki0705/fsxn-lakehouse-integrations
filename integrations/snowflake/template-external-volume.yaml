@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  Snowflake External Volume backing store for Managed Iceberg Tables. Separate
+  from template.yaml because a Storage Integration (read from an FSx for ONTAP S3
+  Access Point) and an External Volume (write Iceberg tables) get different
+  Snowflake principals and external ids, so they cannot share one IAM role.
+
+  The destination is a standard S3 bucket, not the Access Point: Iceberg writes to
+  an Access Point are not usable today (BLK-002, BLK-009). Read source files
+  through the Access Point, write governed tables to standard S3.
+
+  Three-phase setup, because Snowflake only reveals its principal and external id
+  after the external volume exists. Phase 1 deploy with defaults; Phase 2 CREATE
+  EXTERNAL VOLUME using the RoleArn output; Phase 3 re-deploy with the two values
+  DESC EXTERNAL VOLUME returns. scripts/setup_external_volume.sh prints the SQL.
+
+  Verified end to end 2026-08-06. See docs/en/snowflake-iceberg-setup.md
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Naming
+        Parameters:
+          - EnvironmentName
+      - Label:
+          default: Destination bucket
+        Parameters:
+          - BucketName
+          - BucketPrefix
+          - CreateBucket
+      - Label:
+          default: Snowflake trust (leave as-is for Phase 1)
+        Parameters:
+          - SnowflakeIamUserArn
+          - SnowflakeExternalId
+    ParameterLabels:
+      EnvironmentName:
+        default: Resource name prefix
+      BucketName:
+        default: Destination S3 bucket name
+      BucketPrefix:
+        default: Prefix inside the bucket
+      CreateBucket:
+        default: Create the bucket in this stack?
+      SnowflakeIamUserArn:
+        default: STORAGE_AWS_IAM_USER_ARN from DESC EXTERNAL VOLUME
+      SnowflakeExternalId:
+        default: STORAGE_AWS_EXTERNAL_ID from DESC EXTERNAL VOLUME
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: fsxn-lakehouse
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$'
+    Description: >
+      Lowercase prefix for resource names. Example: fsxn-lakehouse
+
+  BucketName:
+    Type: String
+    AllowedPattern: '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$'
+    Description: >
+      S3 bucket that will hold the Iceberg tables. Bucket names are globally
+      unique, so include something specific to you. Example:
+      acme-lakehouse-iceberg-apne1
+
+  BucketPrefix:
+    Type: String
+    Default: iceberg/
+    AllowedPattern: '^[a-zA-Z0-9!_.*''()/-]*$'
+    Description: >
+      Prefix inside the bucket. Keep the trailing slash. Snowflake writes one
+      folder per table underneath it.
+
+  CreateBucket:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: >
+      true creates the bucket here. Set false if the bucket already exists, for
+      example when it is managed by another stack or team.
+
+  SnowflakeIamUserArn:
+    Type: String
+    Default: ''
+    Description: >
+      Phase 1: leave empty. The role then trusts only this account, which is a
+      safe placeholder that Snowflake cannot assume.
+      Phase 3: paste STORAGE_AWS_IAM_USER_ARN from DESC EXTERNAL VOLUME.
+
+  SnowflakeExternalId:
+    Type: String
+    Default: ''
+    Description: >
+      Phase 1: leave empty.
+      Phase 3: paste STORAGE_AWS_EXTERNAL_ID from DESC EXTERNAL VOLUME. It looks
+      like ACCOUNT_SFCRole=2_base64string= and is required, since without the
+      external id condition the role would be assumable by any Snowflake account.
+
+Conditions:
+  ShouldCreateBucket: !Equals [!Ref CreateBucket, 'true']
+  HasSnowflakeTrust: !And
+    - !Not [!Equals [!Ref SnowflakeIamUserArn, '']]
+    - !Not [!Equals [!Ref SnowflakeExternalId, '']]
+
+Resources:
+  IcebergBucket:
+    Type: AWS::S3::Bucket
+    Condition: ShouldCreateBucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Ref BucketName
+      # Iceberg keeps its own history; object versioning on top of that mostly
+      # multiplies storage. Enable it if your retention rules require it.
+      VersioningConfiguration:
+        Status: Suspended
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-iceberg'
+        - Key: Purpose
+          Value: snowflake-external-volume
+
+  ExternalVolumeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-sf-external-volume-role'
+      Description: >
+        Assumed by Snowflake to read and write Iceberg tables in the destination
+        bucket. Scoped to one prefix.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !If
+                - HasSnowflakeTrust
+                - !Ref SnowflakeIamUserArn
+                - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action: sts:AssumeRole
+            Condition: !If
+              - HasSnowflakeTrust
+              - StringEquals:
+                  sts:ExternalId: !Ref SnowflakeExternalId
+              - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-sf-external-volume-role'
+
+  ExternalVolumePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${EnvironmentName}-sf-external-volume-policy'
+      Roles:
+        - !Ref ExternalVolumeRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Snowflake needs delete as well as put: Iceberg maintenance such as
+          # OPTIMIZE and snapshot expiry removes superseded data files.
+          - Sid: ObjectAccessWithinPrefix
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${BucketName}/${BucketPrefix}*'
+          - Sid: ListOnlyThePrefix
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetBucketLocation
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${BucketName}'
+            Condition:
+              StringLike:
+                s3:prefix:
+                  - !Sub '${BucketPrefix}*'
+
+Outputs:
+  RoleArn:
+    Description: Pass this as STORAGE_AWS_ROLE_ARN in CREATE EXTERNAL VOLUME
+    Value: !GetAtt ExternalVolumeRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-RoleArn'
+
+  StorageBaseUrl:
+    Description: Pass this as STORAGE_BASE_URL in CREATE EXTERNAL VOLUME
+    Value: !Sub 's3://${BucketName}/${BucketPrefix}'
+    Export:
+      Name: !Sub '${AWS::StackName}-StorageBaseUrl'
+
+  TrustPolicyPhase:
+    Description: Which phase the role's trust policy is currently in
+    Value: !If
+      - HasSnowflakeTrust
+      - 'Phase 3 complete - trusts the Snowflake principal with an external id condition'
+      - 'Phase 1 placeholder - trusts this account only. Snowflake cannot assume it yet.'
+
+  CreateExternalVolumeSql:
+    Description: Run this in Snowflake, then run DESC EXTERNAL VOLUME
+    Value: !Sub >-
+      CREATE OR REPLACE EXTERNAL VOLUME ${EnvironmentName}_iceberg_vol
+      STORAGE_LOCATIONS = ((NAME='loc1' STORAGE_PROVIDER='S3'
+      STORAGE_BASE_URL='s3://${BucketName}/${BucketPrefix}'
+      STORAGE_AWS_ROLE_ARN='${ExternalVolumeRole.Arn}'));
+
+  VerifySql:
+    Description: Run this after Phase 3 to confirm Snowflake can write, read, list and delete
+    Value: !Sub "SELECT SYSTEM$VERIFY_EXTERNAL_VOLUME('${EnvironmentName}_iceberg_vol');"

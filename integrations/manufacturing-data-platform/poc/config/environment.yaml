@@ -34,9 +34,9 @@ kafka:
   # See: docs/support-inquiries/clickhouse-msk-connectivity.md
   phase_a:
     type: msk-provisioned
-    bootstrap_servers_iam: "b-1.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9098,b-2.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9098"
-    bootstrap_servers_scram: "b-1.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9096,b-2.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:9096"
-    bootstrap_servers_multi_vpc_scram: "b-1.scram.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:14001,b-2.scram.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:14002"
+    bootstrap_servers_iam: "b-1.msk-cluster.xxxxx.kafka.ap-northeast-1.amazonaws.com:9098,b-2.msk-cluster.xxxxx.kafka.ap-northeast-1.amazonaws.com:9098"
+    bootstrap_servers_scram: "b-1.msk-cluster.xxxxx.kafka.ap-northeast-1.amazonaws.com:9096,b-2.msk-cluster.xxxxx.kafka.ap-northeast-1.amazonaws.com:9096"
+    bootstrap_servers_multi_vpc_scram: "b-1.scram.msk-cluster.xxxxx.kafka.ap-northeast-1.amazonaws.com:14001,b-2.scram.msk-cluster.xxxxx.kafka.ap-northeast-1.amazonaws.com:14002"
     cluster_arn: "arn:aws:kafka:ap-northeast-1:<ACCOUNT_ID>:cluster/manufacturing-poc-msk-prov/f3a0fc3c-e4df-4a62-86ea-c8478657d898-3"
     instance_type: kafka.m5.large  # Required for Multi-VPC connectivity
     broker_count: 2

@@ -113,7 +113,7 @@ LTAP モデル（Databricks のビジョン）:
 2. **CDC パイプラインの簡素化**: Kafka → ClickHouse → Databricks の 2 段インジェストが、Kafka → Lakebase の 1 段になる可能性
 3. **エージェント統合の容易化**: Lakebase 上のデータに Genie One / Agent Bricks が直接アクセス。品質検査エージェントが operational データと analytical データを横断して推論
 
-> **⚠️ 検証必要事項（Architecture Review findings）**:
+> **⚠️ 検証必要事項**:
 > - **インジェスト機構未確認**: Kafka → Lakebase の具体的パスは未検証。候補: Kafka Connect JDBC Sink / Lakeflow Streaming / Structured Streaming DLT。推奨パスは Databricks ドキュメント公開後に確認要。
 > - **伝搬遅延未計測**: Lakebase write → Lakehouse//RT queryable の遅延は未ベンチマーク。Delta Lake の write-audit-publish プロトコルにより、「即クエリ」が数百ミリ秒〜数秒の遅延を含む可能性あり。
 > - **エッジ→クラウド障害時**: Kafka レプリケーション先が Lakebase 直接書き込みの場合、クラウド障害時のデータ損失/再送設計が必要。Kafka リテンション + 再送制御で RPO を定義すること。
@@ -138,12 +138,12 @@ LTAP/Lakebase は structured/operational データの統合だが、FSx for ONTA
 | **SnapMirror 読み取りレプリカ** | エージェントワークロードの読み取り負荷を本番 FSx for ONTAP から分離するため、SnapMirror で読み取り専用レプリカを作成。エージェントは DP ボリュームの S3 AP 経由でペイロードを読み取り、本番 NFS/SMB ワークロードに影響しない |
 | **FabricPool 容量プール階層化** | 製造ペイロード（画像・動画）は蓄積が大きい。エージェントが主にアクセスするのは直近データであるため、古いペイロードは FabricPool で容量プール（S3 Standard-IA）に自動階層化し、ストレージコストを最適化 |
 
-> **⚠️ ガバナンスギャップ（Governance Architect findings）**:
+> **⚠️ ガバナンスギャップ**:
 > - Unity Catalog は Delta/Iceberg テーブルをガバナンスするが、**S3 AP URI 先のデータを直接ガバナンスしない**。エージェントが Lakebase レコードから S3 AP URI を取得し、ペイロードを読み取る場合、Unity Catalog ACL はそのペイロード読み取りを制御しない。
 > - **対策**: アプリケーション層で S3 AP URI フォロースルー時の認可チェックを実装する必要がある。IAM ポリシー + S3 AP access point policy + エージェント IAM ロール分離で制御。
 > - **Lakebase Search ベクトルの ACL**: Document Intelligence で抽出した情報が Lakebase Search に格納された場合、行レベルセキュリティがベクトル検索結果に適用されるかは未確認。Permission-aware RAG チェーン（FSx for ONTAP ACL → 抽出時 ACL メタデータ保持 → Lakebase テーブル行フィルタ → エージェントクエリ時フィルタ）の設計が必要。
 
-> **⚠️ S3 AP レイテンシ考慮（FSx for ONTAP Architect findings）**:
+> **⚠️ S3 AP レイテンシ考慮**:
 > - Lakehouse//RT がミリ秒クエリを提供しても、エージェントが S3 AP 経由でペイロードをフォローフェッチする場合、ONTAP S3 プロトコルのオーバーヘッドが加算される。P99 レイテンシの実測が必要。
 > - 大量ペイロードの同時読み取り（マルチエージェント並列）時の S3 AP スループット上限も検証要。
 

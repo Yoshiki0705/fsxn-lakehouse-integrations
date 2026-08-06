@@ -348,12 +348,12 @@ aws datasync update-task --task-arn <TASK> \
 
 > **Note**: `rate(5 minutes)` is for small environments. In high-file-count environments, task overlap risk exists (next invocation starts before previous completes). For production, recommend `rate(15 minutes)` to `rate(1 hour)`. If file counts exceed tens of thousands, split targets with includes/excludes filters across multiple tasks.
 
-> **Bandwidth estimation** (Network Fabric Specialist findings): DataSync transfer time is constrained by FSx for ONTAP throughput capacity + VPC network bandwidth. Estimate before implementation:
+> **Bandwidth estimation**: DataSync transfer time is constrained by FSx for ONTAP throughput capacity + VPC network bandwidth. Estimate before implementation:
 > - Example: 100GB data, 1Gbps bandwidth → theoretical ~13 min (effective 60-70% → ~20 min)
 > - Enable VPC jumbo frames (MTU 9001) for significant NFS throughput improvement
 > - FSx for ONTAP throughput capacity (128MB/s–4GB/s) may be the bottleneck
 
-> **IAM least privilege** (IAM Security Architect findings): Restrict the DataSync execution IAM Role to:
+> **IAM least privilege**: Restrict the DataSync execution IAM Role to:
 > - S3 destination: `s3:PutObject`, `s3:DeleteObject`, `s3:GetBucketLocation` only (resource ARN constrained to specific bucket/prefix)
 > - FSx for ONTAP source: `fsx:DescribeFileSystems`, `datasync:*` minimum required
 > - Wildcard permissions (`s3:*`, `fsx:*`) are prohibited
@@ -372,7 +372,7 @@ AS SELECT * FROM parquet.`s3://<BUCKET>/fsxn-sync/sensor-data/`;
 
 **Applicable scenarios**: Periodic analytics on structured data, ML training data, reporting
 
-> **Recommendation: Sync from Snapshot** (FSx for ONTAP Architect findings): Syncing directly from a production volume risks data inconsistency if files change during the sync. The recommended pattern is "Snapshot → FlexClone → DataSync":
+> **Recommendation: Sync from Snapshot**: Syncing directly from a production volume risks data inconsistency if files change during the sync. The recommended pattern is "Snapshot → FlexClone → DataSync":
 > 1. Take a Snapshot (point-in-time consistent copy)
 > 2. Create a FlexClone (instant, zero-copy)
 > 3. Run DataSync against the FlexClone
@@ -394,14 +394,14 @@ AS SELECT * FROM parquet.`s3://<BUCKET>/fsxn-sync/sensor-data/`;
 >     )
 > ```
 
-> **Medallion architecture mapping** (DLT Pipeline Architect findings): DataSync → S3 is the **Bronze layer** (raw data). Silver (cleansed) / Gold (business aggregates) transformations are defined in DLT:
+> **Medallion architecture mapping**: DataSync → S3 is the **Bronze layer** (raw data). Silver (cleansed) / Gold (business aggregates) transformations are defined in DLT:
 > ```
 > Bronze: DataSync → S3 (raw files) → Auto Loader → streaming_table
 > Silver: DLT quality checks (expectations: null/range/referential integrity) + schema normalization
 > Gold:   DLT aggregation + business logic + Liquid Clustering + OPTIMIZE (BI query optimization)
 > ```
 
-> **Auto Loader mode selection** (Cost Optimization Specialist findings): The DataSync target S3 bucket supports **S3 Event Notifications** (unlike FSx for ONTAP S3 AP). Use Auto Loader's **file notification mode** (via SQS) — significantly reduces scan costs compared to directory listing mode.
+> **Auto Loader mode selection**: The DataSync target S3 bucket supports **S3 Event Notifications** (unlike FSx for ONTAP S3 AP). Use Auto Loader's **file notification mode** (via SQS) — significantly reduces scan costs compared to directory listing mode.
 
 ---
 
@@ -443,20 +443,20 @@ df = (spark.readStream
 
 **Applicable scenarios**: Event-driven ingestion, near-real-time quality inspection, streaming ETL
 
-> **Note: FPolicy delivers metadata events only** (Edge Data Architect findings): FPolicy detects file **operation events** (create, update, delete, rename) but does not transfer file **content**. Typical design pattern:
+> **Note: FPolicy delivers metadata events only**: FPolicy detects file **operation events** (create, update, delete, rename) but does not transfer file **content**. Typical design pattern:
 > - **Kafka messages**: Metadata only (file path, size, operation type, timestamp)
 > - **Payload reads**: Databricks Spark reads file content directly via S3 AP (outside UC path), or reads from DataSync-synced S3 copy
 >
 > For large files (video, etc.), note Lambda's 15-minute timeout and 10GB memory limit. For large payloads, combine with the DataSync path.
 
-> **Manufacturing data flow origin** (Manufacturing DX Specialist findings): PLCs / SCADA systems typically cannot act as Kafka Producers directly. The typical manufacturing data flow is:
+> **Manufacturing data flow origin**: PLCs / SCADA systems typically cannot act as Kafka Producers directly. The typical manufacturing data flow is:
 > ```
 > PLC / SCADA → NFS/SMB write → FSx for ONTAP → FPolicy detection → Lambda → Kafka
 > ```
 > FPolicy detects events "after a file is written", not direct streaming from PLCs.
 > In environments where OT networks (FSx for ONTAP) and IT networks (Databricks / MSK) are separated, design Lambda / DataSync communication paths via Transit Gateway / VPC Peering.
 
-> **Industrial protocol data flows** (Industrial Protocol / AWS IoT Specialist findings): In real manufacturing environments, intermediate layers are more common than direct PLC file output:
+> **Industrial protocol data flows**: In real manufacturing environments, intermediate layers are more common than direct PLC file output:
 > ```
 > Pattern A: PLC → OPC UA Server → Historian → CSV/Parquet export → FSx for ONTAP (NFS)
 > Pattern B: PLC → MQTT Broker (Sparkplug B) → Kafka Bridge → MSK → UC Delta
@@ -465,18 +465,18 @@ df = (spark.readStream
 > ```
 > PLC output may be in proprietary binary format (.dat, .bin), requiring custom parser development for CSV/JSON conversion.
 
-> **OT/IT security boundary** (OT Network Security / Industrial Cybersecurity Specialist findings):
+> **OT/IT security boundary**:
 > - **Purdue Level 3.5 (IDMZ)**: FPolicy Lambda and DataSync agents should be placed in Level 3.5 (Industrial DMZ), avoiding direct OT (Level 0-3) to IT (Level 4-5) connections
 > - **IDMZ allowed ports**: NFS 2049 (FSx for ONTAP → DataSync), HTTPS 443 (Lambda → MSK IAM / DataSync → S3), Kafka 9094-9098 (Lambda → MSK TLS/IAM)
 > - **IEC 62443 compliant environments**: NFS communication should use `krb5p` (Kerberos encryption), with traffic routed through IDMZ conduits meeting channel security requirements
-> - **Encryption** (Compliance Specialist findings): DataSync uses TLS (in-transit) + S3 SSE-KMS (at-rest). FSx for ONTAP uses volume encryption (at-rest) + NFS krb5p (in-transit). Regulated industries (GxP, ITAR) require documentation of this encryption chain
+> - **Encryption**: DataSync uses TLS (in-transit) + S3 SSE-KMS (at-rest). FSx for ONTAP uses volume encryption (at-rest) + NFS krb5p (in-transit). Regulated industries (GxP, ITAR) require documentation of this encryption chain
 > - **Data diode environments** (high-security): FSx for ONTAP → S3 one-way DataSync flow serves as a logical alternative to physical data diodes
 > - **Audit log 4 layers** (Security Audit Analyst findings): Four layers of audit logs are generated across the data flow. Design correlation analysis for incident response:
 >   1. ONTAP FPolicy / audit log (file operations)
 >   2. DataSync CloudTrail (transfer operations)
 >   3. S3 access logs / CloudTrail data events (object operations)
 >   4. UC audit logs (table access, queries)
-> - **Evidence preservation** (Incident Response Specialist findings): During security incidents, FSx for ONTAP **SnapLock** preserves tamper-proof Snapshots. Ensures forensic data integrity via WORM (Write Once Read Many)
+> - **Evidence preservation**: During security incidents, FSx for ONTAP **SnapLock** preserves tamper-proof Snapshots. Ensures forensic data integrity via WORM (Write Once Read Many)
 > - **Secrets management**: Passwords for Lakehouse Federation external DB connections must be managed via **Databricks Secrets** (`secret('scope', 'key')` function). Plaintext in code is prohibited. AWS Secrets Manager integration also available
 
 > **DLT / CDC patterns** (Data Engineering SA findings):
@@ -487,7 +487,7 @@ df = (spark.readStream
 >   ```
 >   Applicable for real-time replication of manufacturing master data (product masters, equipment registries) to the analytics platform.
 
-> **Delivery guarantees and deduplication** (Data Reliability Engineer findings): The FPolicy → Lambda → Kafka path provides **at-least-once** delivery. Network retries and Lambda retries may produce duplicate events. Design **event_id-based deduplication (MERGE / dedup)** on the UC Delta table side:
+> **Delivery guarantees and deduplication**: The FPolicy → Lambda → Kafka path provides **at-least-once** delivery. Network retries and Lambda retries may produce duplicate events. Design **event_id-based deduplication (MERGE / dedup)** on the UC Delta table side:
 > ```sql
 > MERGE INTO catalog.schema.fsxn_events AS target
 > USING (SELECT * FROM stream_batch) AS source
@@ -495,7 +495,7 @@ df = (spark.readStream
 > WHEN NOT MATCHED THEN INSERT *;
 > ```
 
-> **Zerobus Ingest vs Kafka selection criteria** (Zerobus Specialist findings):
+> **Zerobus Ingest vs Kafka selection criteria**:
 >
 > | Dimension | Zerobus Ingest | Kafka (MSK) |
 > |---|---|---|
@@ -544,7 +544,7 @@ UC Foreign Catalog (read-only)
 
 **Status**: ❌ **Blocked confirmed (2026-06-21)**. `iceberg_rest` connection type not available in ap-northeast-1 workspace. S3 Tables managed bucket UC External Location registration also fails. ([Validation results](../../integrations/iceberg-metadata-catalog/databricks/uc-foreign-iceberg-validation.md#validation-execution-results-2026-06-21))
 
-> **Operational note** (Iceberg Specialist findings): `REFRESH FOREIGN TABLE` does not execute automatically (Databricks does not auto-detect external Iceberg metadata updates). If periodic refresh is needed, configure a **Databricks Workflow** scheduled job.
+> **Operational note**: `REFRESH FOREIGN TABLE` does not execute automatically (Databricks does not auto-detect external Iceberg metadata updates). If periodic refresh is needed, configure a **Databricks Workflow** scheduled job.
 
 ---
 
@@ -575,7 +575,7 @@ SELECT * FROM uc_delta.catalog.schema.sensor_data LIMIT 10;
 | ONTAP S3 → UC External Location | ❌ **Not supported confirmed** | 2026-05 | 02_research_findings.md |
 | NFS mount from Databricks | ❌ **Blocked** | 2026-05 | seccomp restriction |
 | DataSync → S3 → UC | ✅ **Verified** | 2026-05 | datasync-to-s3-guide.md |
-| Kafka → Structured Streaming → UC | ✅ **Design verified** | 2026-06 | kafka-clickhouse-uc-connectivity.md |
+| Kafka → Structured Streaming → UC | ✅ **Design verified** | 2026-06 | [kafka-clickhouse-unity-catalog-connectivity.md](./kafka-clickhouse-unity-catalog-connectivity.md) |
 | Glue/EMR → S3 → UC | ✅ **Official tutorial** | — | AWS official documentation |
 | Foreign Iceberg (Glue REST) | ❌ **Blocked confirmed** | 2026-06-21 | `iceberg_rest` type not supported + S3 Tables bucket EL creation fails |
 | boto3 PoC (no governance) | ✅ **Working confirmed** | 2026-05 | ai-demo-guide.md |
@@ -793,7 +793,7 @@ Pattern D: Reverse read (external engine → UC)
 
 ### ClickHouse × FSx for ONTAP Details
 
-**storage_policy tiered design** (ClickHouse Specialist findings):
+**storage_policy tiered design**:
 
 ```xml
 <!-- ClickHouse storage_policy configuration example -->
@@ -858,7 +858,7 @@ PostgreSQL and MySQL are the **most recommended** combinations with FSx for ONTA
 
 > **MySQL-specific note**: On NFS, use `innodb_flush_method = fsync`. `O_DIRECT` may not function correctly on NFS.
 
-> **Lakebase migration option** (Databricks Lakebase Specialist findings): If PostgreSQL workloads prioritize UC governance integration, **Databricks Lakebase** (managed PostgreSQL-compatible DB, GA) is an alternative. Lakebase offers native UC integration + Lakehouse//RT queries + Private Link. Note: not available in ap-northeast-1 (as of 2026-06-18).
+> **Lakebase migration option**: If PostgreSQL workloads prioritize UC governance integration, **Databricks Lakebase** (managed PostgreSQL-compatible DB, GA) is an alternative. Lakebase offers native UC integration + Lakehouse//RT queries + Private Link. Note: not available in ap-northeast-1 (as of 2026-06-18).
 
 **UC connection**:
 ```sql
@@ -893,7 +893,7 @@ WHERE timestamp > '2026-06-01';
 
 ### AI/ML Data Access Paths
 
-Paths for using FSx for ONTAP data with Databricks AI/ML features (AI/GenAI Specialist findings):
+Paths for using FSx for ONTAP data with Databricks AI/ML features :
 
 | AI/ML Feature | Required Data Form | Path from FSx for ONTAP |
 |---|---|---|
@@ -904,13 +904,13 @@ Paths for using FSx for ONTAP data with Databricks AI/ML features (AI/GenAI Spec
 | **Bedrock KB (RAG)** | S3 AP direct | FSx for ONTAP S3 AP → Bedrock KB (outside UC, official tutorial) |
 | **Document Intelligence** | Via S3 | DataSync → S3 → Lakeflow → structured table |
 
-> **Edge AI image inspection path** (Edge AI Vision Engineer findings): Path for managing inspection images (with inference results) from NVIDIA Jetson / AWS Panorama edge AI cameras in UC:
+> **Edge AI image inspection path**: Path for managing inspection images (with inference results) from NVIDIA Jetson / AWS Panorama edge AI cameras in UC:
 > ```
 > Edge AI camera → local NVMe buffer → batch transfer → FSx for ONTAP (NFS) → DataSync → S3 → UC Volume
 > ```
 > High-speed capture (10-100 images/sec/line) requires local buffering. Direct NFS write is not recommended due to bandwidth constraints.
 
-> **RAG / AI Search pipeline** (RAG Pipeline Engineer findings): Concrete flow to make FSx for ONTAP documents searchable via AI Search:
+> **RAG / AI Search pipeline**: Concrete flow to make FSx for ONTAP documents searchable via AI Search:
 > ```
 > FSx for ONTAP (documents) → DataSync → S3 → UC Volume
 >   → Spark UDF (chunking: RecursiveCharacterTextSplitter etc.)
@@ -919,7 +919,7 @@ Paths for using FSx for ONTAP data with Databricks AI/ML features (AI/GenAI Spec
 >   → Agent retriever tool (RAG query)
 > ```
 
-> **Image embedding pipeline** (Multimodal Vision Architect findings): To enable similarity search on inspection images via AI Search:
+> **Image embedding pipeline**: To enable similarity search on inspection images via AI Search:
 > ```
 > UC Volume (inspection images) → Spark UDF (CLIP / ViT embedding generation) → AI Search Index → similar image search
 > ```
@@ -936,7 +936,7 @@ Paths for using FSx for ONTAP data with Databricks AI/ML features (AI/GenAI Spec
 | Athena (outside UC) | FSx for ONTAP only | Query scan-based billing | Low (serverless) |
 | boto3 PoC | FSx for ONTAP only | Databricks cluster | Low (no governance) ⚠️ Data exfiltration risk |
 
-> **boto3 PoC security warning** (Data Exfiltration Prevention Engineer findings): The boto3 PoC path completely bypasses UC governance, creating risk of users downloading data locally and exfiltrating externally. If used:
+> **boto3 PoC security warning**: The boto3 PoC path completely bypasses UC governance, creating risk of users downloading data locally and exfiltrating externally. If used:
 > - Enable Databricks workspace **egress controls** (S3 bucket policy + VPC endpoint policy to restrict destinations)
 > - Apply **IP ACL** for source access restriction
 > - Enable **audit logging** (CloudTrail + UC audit logs)
