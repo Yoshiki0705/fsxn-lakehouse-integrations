@@ -1,6 +1,6 @@
 # Industry Use Cases — Iceberg Metadata Catalog
 
-🌐 [日本語](README-ja.md) | English
+🌐 English
 
 ## Quick Selection: Find Your Use Case
 
@@ -66,7 +66,7 @@
 | Resource | Location | Purpose |
 |----------|----------|---------|
 | Base Iceberg schema | [_shared/base-schema.yaml](_shared/base-schema.yaml) | Common fields all industries share |
-| AI classification prompt | [_shared/classification-prompt.py](_shared/classification-prompt.py) | Bedrock prompt template |
+| AI classification prompt | `_shared/base-schema.yaml` | Bedrock prompt template |
 | Demo runner framework | [_shared/demo-runner.sh](_shared/demo-runner.sh) | Common demo execution logic |
 | Prerequisites check | [../demo/scripts/check-prerequisites.sh](../demo/scripts/check-prerequisites.sh) | Environment validation |
 | Infrastructure request | [../docs/infrastructure-request-template.md](../docs/infrastructure-request-template.md) | For platform team |

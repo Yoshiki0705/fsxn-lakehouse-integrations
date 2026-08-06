@@ -2230,8 +2230,8 @@ SnapMirror と FlexCache は**競合する技術ではなく、異なるユー�
 
 | ガイド | パターン | ネットワーク |
 |--------|---------|:----------:|
-| [Guide 03: FlexCache オンプレミス](docs/ja/demo-guide-03-flexcache-on-premises.md) | FSx for ONTAP → オンプレ ONTAP（FlexCache） | Direct Connect / VPN |
-| [Guide 08: SnapMirror オンプレミス](docs/ja/demo-guide-08-snapmirror-on-premises.md) | FSx for ONTAP → オンプレ ONTAP（SnapMirror DR） | Direct Connect / VPN |
+| [Guide 03: FlexCache オンプレミス](demo-guide-03-flexcache-on-premises.md) | FSx for ONTAP → オンプレ ONTAP（FlexCache） | Direct Connect / VPN |
+| [Guide 08: SnapMirror オンプレミス](demo-guide-08-snapmirror-on-premises.md) | FSx for ONTAP → オンプレ ONTAP（SnapMirror DR） | Direct Connect / VPN |
 
 > これらのガイドは現在手順レベル（コマンド文書化済み、物理ハードウェアでの E2E 検証は未実施）。オンプレミスラボ環境が利用可能になり次第検証を実施予定。
 

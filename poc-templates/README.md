@@ -164,6 +164,6 @@ See [templates/](templates/) for customer-facing materials:
 - [PoC ↔ Documentation Mapping](MAPPING.md) — Module-to-guide-to-blog correspondence table
 - [Zero-Copy Unstructured Data Governance](../docs/en/zero-copy-media-governance.md) — S3 cost reduction + multi-platform governance + FlexCache S3 AP roadmap
 - [Compatibility Matrix](../docs/en/compatibility-matrix.md) — Which operations work on which engine
-- [Blog Series](../README.md#blog-series--ブログシリーズ) — Detailed validation articles (Part 0-7)
+- [Blog Series](../README.md#get-started) — Detailed validation articles (Part 0-7)
 - [Verification Pack](../verification-pack/) — Evidence records from validation
 - [Observability Integrations](https://github.com/Yoshiki0705/fsxn-observability-integrations) — Audit log shipping (Datadog, Splunk, Grafana, Elastic)

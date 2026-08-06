@@ -1,6 +1,6 @@
 # Manufacturing — Iceberg Metadata Catalog
 
-🌐 [日本語](README-ja.md) | English
+🌐 English
 
 ## Business Problem
 
@@ -80,6 +80,6 @@ See [queries/named-queries.sql](queries/named-queries.sql) for:
 ## Related
 
 - [Industry Use Cases Overview](../../docs/industry-use-cases.md#manufacturing)
-- [Base Schema](_shared/base-schema.yaml)
+- [Base Schema](../_shared/base-schema.yaml)
 - [Manufacturing Schema Extension](../../schema/extensions/manufacturing_metadata.yaml)
 - [Serverless Patterns: UC3](https://github.com/Yoshiki0705/FSx-for-ONTAP-S3AccessPoints-Serverless-Patterns/tree/main/manufacturing-analytics)

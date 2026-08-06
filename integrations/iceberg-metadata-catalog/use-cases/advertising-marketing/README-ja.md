@@ -58,6 +58,6 @@ ORDER BY campaign_id, channel;
 
 ## 関連リンク
 
-- [業界ユースケース — 広告・マーケティング](../../docs/industry-use-cases.md#advertising--marketing)
+- [業界ユースケース — 広告・マーケティング](../../docs/industry-use-cases.md)
 - [デモシナリオ](../../demo/scenarios/industry-advertising-marketing-ja.md)
 - [ベーススキーマ](../_shared/base-schema.yaml)

@@ -402,7 +402,7 @@ These operations work directly on FSx for ONTAP S3 AP External Tables — no dat
 
 ## Next Steps
 
-1. **Create your first External Table**: Follow the [Configuration Guide](../../README.md#configuration-guide) — set `AWS_ACCESS_POINT_ARN` on your stage and create an External Table
+1. **Create your first External Table**: Follow the [Configuration Guide](../../README.md#internal-table-vs-external-table--design-guide) — set `AWS_ACCESS_POINT_ARN` on your stage and create an External Table
 2. **For RAG / Cortex Search**: Set up a Dynamic Table with `TARGET_LAG = '1 hour'` on your External Table source, then create a Cortex Search Service
 3. **For event-driven ingestion**: Deploy FPolicy → Lambda → Snowpipe REST API ([Snowpipe Integration Guide](snowpipe-integration.md))
 4. **For multi-platform sharing (Iceberg)**: Use Snowflake Managed Iceberg Tables to write curated datasets in open Iceberg format to customer-owned S3 — accessible by Databricks, Athena, EMR, and Trino without additional copies
@@ -453,4 +453,4 @@ Snowflake Managed Iceberg Table (curated, governed)
 
 - [Snowflake README](../../README.md) — Full integration status
 - [Analytics & AI Demo Guide](ai-demo-guide.md) — AI/ML capabilities and validation results
-- [Support Case Summary (private)](../../.private/s3ap-resolution-summary-en.md) — S3 AP resolution details (private)
+- [Blocker Tracker](../../../../docs/en/blocker-tracker.md) — BLK-009 records the unload behaviour on an Access Point, including the partial-write hazard

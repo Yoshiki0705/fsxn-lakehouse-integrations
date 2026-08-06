@@ -169,5 +169,5 @@ poc-templates/
 ## 関連
 
 - [メイン README](../README.md) — プロジェクト概要と互換性マトリクス
-- [ブログシリーズ](../README.md#blog-series--ブログシリーズ) — 詳細な検証記事 (Part 0-7)
+- [ブログシリーズ](../README.md#get-started) — 詳細な検証記事 (Part 0-7)
 - [検証パック](../verification-pack/) — 検証からのエビデンスレコード

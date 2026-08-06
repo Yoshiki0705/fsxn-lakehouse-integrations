@@ -304,7 +304,7 @@ curl -sk -u "${USER_B}:${PASS_B}" \
 
 ## Step 4: Create Origin Volume + Attach S3 AP (Region A)
 
-> This procedure is  [Demo Guide 01 Step 4](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ)  — identical procedure.
+> This procedure is  [Demo Guide 01 Step 4](../en/demo-guide-01-flexcache-same-region.md#step-4-create-origin-volume--attach-s3-ap)  — identical procedure.
 
 ```bash
 # Create Origin Volume
@@ -339,7 +339,7 @@ aws fsx create-and-attach-s3-access-point \
 
 ## Step 5-6: Lambda Writer デプロイ & データ書き込み
 
-> [Demo Guide 01 Step 5-6](../en/demo-guide-01-flexcache-same-region.md#step-5-lambda-writer-関数のデプロイ) . Refer to this guide.Region A で Lambda をデプロイし、S3 AP 経由でテストデータを書き込みます。
+> [Demo Guide 01 Step 5-6](../en/demo-guide-01-flexcache-same-region.md#step-5-deploy-lambda-writer-function) . Refer to this guide.Region A で Lambda をデプロイし、S3 AP 経由でテストデータを書き込みます。
 
 ---
 

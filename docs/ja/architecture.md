@@ -208,6 +208,6 @@ FSx for ONTAP と Lakehouse プラットフォーム間の接続レイヤーで�
 ## 次のステップ
 
 - [クイックスタート](getting-started.md) — 最初のデプロイ
-- [S3 AP 基礎](s3ap-fundamentals.md) — S3 Access Points × FSx for ONTAP の詳細
+- S3 AP の基礎 — S3 Access Points × FSx for ONTAP の詳細
 - [ベンダー比較](vendor-comparison.md) — プラットフォーム選定ガイド
-- [データフォーマット](data-formats.md) — フォーマット別の推奨構成
+- データフォーマット — フォーマット別の推奨構成

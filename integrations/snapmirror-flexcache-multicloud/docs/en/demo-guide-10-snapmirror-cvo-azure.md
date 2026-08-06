@@ -118,7 +118,7 @@ export S3AP_NAME="fsxn-sm-azure"
 
 ## Step 1: Source Volume + S3 AP + Lambda Writer（AWS  side）
 
-> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Refer to this guide.
+> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-create-origin-volume--attach-s3-ap) . Refer to this guide.
 
 ---
 
@@ -129,7 +129,7 @@ export S3AP_NAME="fsxn-sm-azure"
 
 ## Step 2: VPN + Cluster Peering + SVM Peering
 
-> [Demo Guide 05 Step 1-3](../en/demo-guide-05-flexcache-cvo-azure.md#step-1-azure-vpn-gateway-の作成) . Refer to this guide.SVM Peering の `applications` に `snapmirror`  flag。
+> [Demo Guide 05 Step 1-3](../en/demo-guide-05-flexcache-cvo-azure.md#step-1-create-azure-vpn-gateway) . Refer to this guide.SVM Peering の `applications` に `snapmirror`  flag。
 
 ```bash
 # Create SVM Peer時（AWS  side）

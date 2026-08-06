@@ -1,6 +1,6 @@
 # Construction / BIM — Iceberg Metadata Catalog
 
-🌐 [日本語](README-ja.md) | English
+🌐 English
 
 ## Business Problem
 

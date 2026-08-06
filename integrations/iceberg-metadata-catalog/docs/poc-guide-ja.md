@@ -551,4 +551,4 @@ python scripts/initial-metadata-scan.py \
 4. **Phase 5**: ベクトル類似検索追加 (OpenSearch Serverless)
 5. **Phase 6**: PII 含有ファイルの匿名化パイプライン実装
 
-詳細な設計は [アーキテクチャドキュメント](../../docs/ja/iceberg-metadata-catalog.md) を参照。
+詳細な設計は [アーキテクチャドキュメント](../../../docs/ja/iceberg-metadata-catalog.md) を参照。

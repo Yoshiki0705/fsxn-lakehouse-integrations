@@ -57,6 +57,6 @@ ORDER BY property_id, room_category;
 
 ## 関連リンク
 
-- [業界ユースケース — 旅行・ホスピタリティ](../../docs/industry-use-cases.md#travel--hospitality)
+- [業界ユースケース — 旅行・ホスピタリティ](../../docs/industry-use-cases.md)
 - [デモシナリオ](../../demo/scenarios/industry-travel-hospitality-ja.md)
 - [ベーススキーマ](../_shared/base-schema.yaml)

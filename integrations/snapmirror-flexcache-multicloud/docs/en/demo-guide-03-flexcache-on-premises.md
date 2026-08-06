@@ -242,7 +242,7 @@ curl -sk -u "${ONTAP_USER}:${ONTAP_PASS}" \
 
 ## Step 4: Origin Volume + S3 AP（AWS  side）
 
-> [Demo Guide 01 Step 4](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ)  — same procedure.
+> [Demo Guide 01 Step 4](../en/demo-guide-01-flexcache-same-region.md#step-4-create-origin-volume--attach-s3-ap)  — same procedure.
 
 ---
 
@@ -253,7 +253,7 @@ curl -sk -u "${ONTAP_USER}:${ONTAP_PASS}" \
 
 ## Step 5-6: Lambda Writer & データ書き込み
 
-> [Demo Guide 01 Step 5-6](../en/demo-guide-01-flexcache-same-region.md#step-5-lambda-writer-関数のデプロイ) . Refer to this guide.
+> [Demo Guide 01 Step 5-6](../en/demo-guide-01-flexcache-same-region.md#step-5-deploy-lambda-writer-function) . Refer to this guide.
 
 ---
 

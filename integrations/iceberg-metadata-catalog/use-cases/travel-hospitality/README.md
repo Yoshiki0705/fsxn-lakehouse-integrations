@@ -60,6 +60,6 @@ ORDER BY property_id, room_category;
 
 ## Related
 
-- [Industry Use Cases — Travel & Hospitality](../../docs/industry-use-cases.md#travel--hospitality)
+- [Industry Use Cases — Travel & Hospitality](../../docs/industry-use-cases.md)
 - [Demo Scenario](../../demo/scenarios/industry-travel-hospitality.md)
 - [Base Schema](../_shared/base-schema.yaml)

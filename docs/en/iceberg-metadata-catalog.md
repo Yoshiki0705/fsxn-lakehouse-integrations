@@ -866,5 +866,5 @@ ORDER BY created_at DESC;
 | Phase 4 → 5 | 2+ platforms successfully query metadata | Session policy issues → switch to Lambda API Gateway proxy |
 | Phase 5 → 6 | Similar files appear in top-5 search results | Embedding quality insufficient → model change or chunking strategy revision |
 
-See [Tasks](../../.kiro/specs/iceberg-unstructured-metadata-catalog/tasks.md) for detailed implementation plan.
+See [Tasks](../../tasks.md) for detailed implementation plan.
 
