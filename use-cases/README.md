@@ -19,7 +19,7 @@ Industry-specific reference architectures for FSx for ONTAP Lakehouse integratio
 
 > These use cases are planned for future phases. Each will include architecture diagrams,
 > CloudFormation templates, sample data, and verification results.
-> See [Partner Offering Guide](../docs/en/partner-offering.md) for implementation timelines per use case.
+> See the [Adoption Assessment Guide](../docs/adoption-guide/adoption-assessment.md) for implementation timelines per use case.
 
 ---
 
@@ -38,4 +38,4 @@ FSx for ONTAP Lakehouse 統合の業界別リファレンスアーキテクチ�
 
 > これらのユースケースは将来のフェーズで実装予定です。各ユースケースにはアーキテクチャ図、
 > CloudFormation テンプレート、サンプルデータ、検証結果が含まれます。
-> ユースケース別の実装タイムラインは[パートナーオファリングガイド](../docs/ja/partner-offering.md)を参照してください。
+> ユースケース別の実装タイムラインは[導入評価ガイド](../docs/adoption-guide/adoption-assessment-ja.md)を参照してください。

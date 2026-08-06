@@ -38,7 +38,7 @@ graph TD
     
     EXEC --> IND
     EXEC --> ARCH
-    EXEC --> PARTNER[partner-offering]
+    EXEC --> PARTNER[adoption-assessment]
     
     style START fill:#f9f9f9
     style DE fill:#cce5ff
@@ -139,7 +139,7 @@ graph TD
 
 > Snowflake は FSx for ONTAP S3 AP に直接アクセス可能（External Stage）。DataSync は AUTO_REFRESH / Cortex Search が必要な場合のみ。
 
-**スキップ可能**: governance-and-compliance（セキュリティチームが担当）、partner-offering（パートナー向け）
+**スキップ可能**: governance-and-compliance（セキュリティチームが担当）
 
 ---
 
@@ -157,7 +157,7 @@ graph TD
 | 6 | [DataSync → S3 ガイド](./datasync-to-s3-guide.md) | 推奨パスの技術詳細 | 20分 |
 | 7 | [リカバリセマンティクス](./recovery-semantics.md) | Snapshot vs Time Travel の比較 | 10分 |
 | 8 | [OpenSharing 統合分析](./opensharing-integration-analysis.md) | DAIS 2026 新機能の影響評価 | 15分 |
-| 9 | [パートナーオファリング](./partner-offering.md) | SI/ISV 向けパッケージ設計 | 10分 |
+| 9 | [導入評価ガイド](../adoption-guide/adoption-assessment-ja.md) | 適用条件と構成の選定 | 10分 |
 
 **追加参照**: vendor-comparison（代替比較が必要な場合）、region-design-guide（グローバル展開時）、[アーキテクチャ比較](../adoption-guide/architecture-comparison-ja.md)（アプローチ選定）、[コスト見積もり](../adoption-guide/cost-estimation-ja.md)（キャパシティプランニング）
 
@@ -197,16 +197,16 @@ graph TD
 
 ---
 
-### パートナー SI / ISV
+### 他チームへの導入を担当する場合
 
-**目的**: 顧客向けソリューション構築、リセル/実装パートナーとしての技術理解を得たい
+**目的**: 接続パス全体とその制約を把握し、構築して引き渡せる状態にする
 
 | 順序 | ドキュメント | 読む理由 | 所要時間 |
 |:---:|---|---|:---:|
-| 1 | [パートナーオファリング](./partner-offering.md) | パートナー向けパッケージ概要 | 10分 |
-| 2 | [業界別ソリューションカタログ](./industry-solution-catalog.md) | 顧客提案に使える業界パターン | 20分 |
+| 1 | [導入評価ガイド](../adoption-guide/adoption-assessment-ja.md) | 適用条件・アンチパターン・判断フレームワーク | 10分 |
+| 2 | [業界別ソリューションカタログ](./industry-solution-catalog.md) | 業界別のパターン | 20分 |
 | 3 | [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) | 技術的な全パスの理解 | 30分 |
-| 4 | [互換性マトリクス](./compatibility-matrix.md) | 提案時の制約事項の把握 | 15分 |
+| 4 | [互換性マトリクス](./compatibility-matrix.md) | 検証済みの操作と未検証の操作の区別 | 15分 |
 | 5 | [DataSync → S3 ガイド](./datasync-to-s3-guide.md) | 実装手順の理解 | 20分 |
 | 6 | [PoC 実行ガイド](../implementation-guide/poc-execution-guide-ja.md) | PoC チェックリストとトラブルシューティング | 15分 |
 | 7 | [リージョン設計ガイド](./region-design-guide.md) | グローバル展開設計 | 10分 |
@@ -260,7 +260,7 @@ graph TD
 | | [AWS Context vs UC](./aws-context-vs-unity-catalog.md) | AWS vs Databricks ガバナンス比較 |
 | | [Vendor Comparison](./vendor-comparison.md) | プラットフォーム比較 |
 | **ビジネス** | [Industry Solution Catalog](./industry-solution-catalog.md) | 業界別ソリューション |
-| | [Partner Offering](./partner-offering.md) | パートナー向けパッケージ |
+| | [導入評価ガイド](../adoption-guide/adoption-assessment-ja.md) | 適用条件とアンチパターン |
 | | [Cross-repo Strategy](./cross-repo-integration-strategy.md) | リポジトリ間連携 |
 | **採用ガイド** | [テクニカルオーバービュー](../adoption-guide/technical-overview-ja.md) | アーキテクチャとメトリクス概要 |
 | | [アーキテクチャ比較](../adoption-guide/architecture-comparison-ja.md) | アプローチ選定フレームワーク |
@@ -303,7 +303,7 @@ graph LR
 | リアルタイムでデータを取り込みたい | [Kafka-ClickHouse-UC](./kafka-clickhouse-unity-catalog-connectivity.md) | [Event-driven Architecture](./event-driven-architecture.md) |
 | 非構造化データ（画像/PDF）を AI で活用したい | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | [Unstructured Data Access](./unstructured-data-access.md) |
 | セキュリティ/コンプライアンスを確認したい | [Governance and Compliance](./governance-and-compliance.md) | [互換性マトリクス](./compatibility-matrix.md)（OT/IT セキュリティ） |
-| 提案資料を作りたい | [業界別ソリューションカタログ](./industry-solution-catalog.md) | [Partner Offering](./partner-offering.md) |
+| このパターンが適合するか判断したい | [業界別ソリューションカタログ](./industry-solution-catalog.md) | [導入評価ガイド](../adoption-guide/adoption-assessment-ja.md) |
 | ブロックされている機能を確認したい | [互換性マトリクス](./compatibility-matrix.md)（制約テーブル） | [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md)（今後の展望） |
 | Snapshot / DR / リカバリを理解したい | [Recovery Semantics](./recovery-semantics.md) | [DataSync ガイド](./datasync-to-s3-guide.md)（Phase 5） |
 

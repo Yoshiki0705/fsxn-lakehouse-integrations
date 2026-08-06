@@ -27,7 +27,7 @@
 |---------|-----------|------------|
 | 互換性マトリクス | [docs/ja/compatibility-matrix.md](../docs/ja/compatibility-matrix.md) | どのエンジンでどの操作が動作するか |
 | ベンダー比較 | [docs/ja/vendor-comparison.md](../docs/ja/vendor-comparison.md) | エンジン選択ガイダンス |
-| パートナーオファリング | [docs/ja/partner-offering.md](../docs/ja/partner-offering.md) | 営業ポジショニングとアンチパターン |
+| 導入評価 | [docs/adoption-guide/adoption-assessment-ja.md](../docs/adoption-guide/adoption-assessment-ja.md) | 適用条件・アンチパターン・主張してはいけないこと |
 | DataSync ガイド | [docs/ja/datasync-to-s3-guide.md](../docs/ja/datasync-to-s3-guide.md) | モジュール 04 (Databricks) 同期メカニズム |
 | 非構造化データ | [docs/ja/unstructured-data-access.md](../docs/ja/unstructured-data-access.md) | 画像/PDF/動画アクセスパターン |
 | リージョン設計 | [docs/ja/region-design-guide.md](../docs/ja/region-design-guide.md) | 同一リージョン要件 |

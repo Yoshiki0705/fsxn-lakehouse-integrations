@@ -38,7 +38,7 @@ graph TD
     
     EXEC --> IND
     EXEC --> ARCH
-    EXEC --> PARTNER[partner-offering]
+    EXEC --> PARTNER[adoption-assessment]
     
     style START fill:#f9f9f9
     style DE fill:#cce5ff
@@ -139,7 +139,7 @@ graph TD
 
 > Snowflake can access FSx for ONTAP S3 AP directly (External Stage). DataSync is only needed for AUTO_REFRESH / Cortex Search.
 
-**Can skip**: governance-and-compliance (security team handles), partner-offering (partner-facing)
+**Can skip**: governance-and-compliance (security team handles)
 
 ---
 
@@ -157,7 +157,7 @@ graph TD
 | 6 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | Recommended path technical details | 20 min |
 | 7 | [Recovery Semantics](./recovery-semantics.md) | Snapshot vs Time Travel comparison | 10 min |
 | 8 | [OpenSharing Integration Analysis](./opensharing-integration-analysis.md) | DAIS 2026 new feature impact | 15 min |
-| 9 | [Partner Offering](./partner-offering.md) | SI/ISV package design | 10 min |
+| 9 | [Adoption Assessment](../adoption-guide/adoption-assessment.md) | Fit criteria and configuration scoping | 10 min |
 
 **Also see**: vendor-comparison (when alternatives needed), region-design-guide (global deployments), [Architecture Comparison](../adoption-guide/architecture-comparison.md) (approach selection), [Cost Estimation](../adoption-guide/cost-estimation.md) (capacity planning)
 
@@ -197,16 +197,16 @@ graph TD
 
 ---
 
-### Partner SI / ISV
+### Implementing for Another Team
 
-**Goal**: Build customer solutions, gain technical understanding as a resell/implementation partner
+**Goal**: Understand the full set of connection paths and their constraints well enough to build and hand over a deployment
 
 | Order | Document | Why to read | Time |
 |:---:|---|---|:---:|
-| 1 | [Partner Offering](./partner-offering.md) | Partner package overview | 10 min |
-| 2 | [Industry Solution Catalog](./industry-solution-catalog.md) | Industry patterns for proposals | 20 min |
+| 1 | [Adoption Assessment](../adoption-guide/adoption-assessment.md) | Fit criteria, anti-patterns, decision framework | 10 min |
+| 2 | [Industry Solution Catalog](./industry-solution-catalog.md) | Industry-specific patterns | 20 min |
 | 3 | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) | Technical understanding of all paths | 30 min |
-| 4 | [Compatibility Matrix](./compatibility-matrix.md) | Constraint awareness for proposals | 15 min |
+| 4 | [Compatibility Matrix](./compatibility-matrix.md) | Which operations are verified, and which are not | 15 min |
 | 5 | [DataSync → S3 Guide](./datasync-to-s3-guide.md) | Implementation procedure understanding | 20 min |
 | 6 | [PoC Execution Guide](../implementation-guide/poc-execution-guide.md) | PoC checklist and troubleshooting | 15 min |
 | 7 | [Region Design Guide](./region-design-guide.md) | Global deployment design | 10 min |
@@ -260,7 +260,7 @@ graph TD
 | | [AWS Context vs UC](./aws-context-vs-unity-catalog.md) | AWS vs Databricks governance |
 | | [Vendor Comparison](./vendor-comparison.md) | Platform comparison |
 | **Business** | [Industry Solution Catalog](./industry-solution-catalog.md) | Industry solutions |
-| | [Partner Offering](./partner-offering.md) | Partner packages |
+| | [Adoption Assessment](../adoption-guide/adoption-assessment.md) | Fit criteria and anti-patterns |
 | | [Cross-repo Strategy](./cross-repo-integration-strategy.md) | Cross-repository integration |
 | **Adoption Guide** | [Technical Overview](../adoption-guide/technical-overview.md) | Architecture and metrics summary |
 | | [Architecture Comparison](../adoption-guide/architecture-comparison.md) | Approach selection framework |
@@ -303,7 +303,7 @@ graph LR
 | Ingest data in real-time | [Kafka-ClickHouse-UC](./kafka-clickhouse-unity-catalog-connectivity.md) | [Event-driven Architecture](./event-driven-architecture.md) |
 | Use unstructured data (images/PDFs) with AI | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | [Unstructured Data Access](./unstructured-data-access.md) |
 | Verify security/compliance | [Governance and Compliance](./governance-and-compliance.md) | [Compatibility Matrix](./compatibility-matrix.md) (OT/IT security) |
-| Create customer proposal materials | [Industry Solution Catalog](./industry-solution-catalog.md) | [Partner Offering](./partner-offering.md) |
+| Decide whether this pattern fits | [Industry Solution Catalog](./industry-solution-catalog.md) | [Adoption Assessment](../adoption-guide/adoption-assessment.md) |
 | Check blocked features | [Compatibility Matrix](./compatibility-matrix.md) (constraints table) | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) (future outlook) |
 | Understand Snapshot / DR / recovery | [Recovery Semantics](./recovery-semantics.md) | [DataSync Guide](./datasync-to-s3-guide.md) (Phase 5) |
 
