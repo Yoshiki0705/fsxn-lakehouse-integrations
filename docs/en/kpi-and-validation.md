@@ -173,7 +173,7 @@ For CxO reporting, distill to 4-5 headline metrics:
 
 ### Cross-Platform Benchmark Comparison
 
-> **Kobayashi-san review note**: These measurements enable partners to set realistic PoC expectations. They are sizing references from a specific test environment, not service limits or production guarantees.
+> **How to read these numbers**: they set realistic PoC expectations, and they are sizing references from one specific test environment — not service limits and not production guarantees.
 
 | Platform | Operation | Data Size | Latency | Throughput | Cost/Query |
 |----------|-----------|-----------|---------|-----------|-----------|
@@ -196,7 +196,7 @@ For CxO reporting, distill to 4-5 headline metrics:
 | **delta-rs** | DeltaTable.open | 10K rows | 0.91s | — | $0 |
 | **delta-rs** | to_pyarrow_table | 10K rows | 1.38s | — | $0 |
 
-**Key takeaways for PoC planning** (Kawahara-san review):
+**Key takeaways for PoC planning**:
 - **Lowest cost**: DuckDB Lambda ($0 idle, ~$0.00001/query) — best for ad-hoc lightweight analytics
 - **Fastest large scan**: Athena (54.8 MB/s) — best for serverless SQL on large datasets
 - **Most flexible**: EMR Spark (read + write + Iceberg read) — best for ETL pipelines

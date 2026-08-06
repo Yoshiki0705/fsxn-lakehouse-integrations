@@ -79,7 +79,7 @@ flowchart LR
 | Direct Connect or VPN | 両拠点 | Intercluster communication |
 | Cluster + SVM Peering | Both clusters | SnapMirror prerequisite |
 
-> **Cluster Peering の構成**: [Demo Guide 03 Step 2-3](../en/demo-guide-03-flexcache-on-premises.md#step-2-cluster-peeringオンプレミス-ontap-cli) . Refer to this guide.
+> **Cluster Peering の構成**: [Demo Guide 03 Step 2-3](../en/demo-guide-03-flexcache-on-premises.md#step-2-cluster-peering-on-premises-ontap-cli) . Refer to this guide.
 
 ---
 
@@ -117,7 +117,7 @@ export S3AP_NAME="fsxn-sm-onprem"
 
 ## Step 1: Source Volume + S3 AP + Lambda Writer（AWS  side）
 
-> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Replace volume name with `$SOURCE_VOL` .
+> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-create-origin-volume--attach-s3-ap) . Replace volume name with `$SOURCE_VOL` .
 
 ---
 

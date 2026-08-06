@@ -77,8 +77,8 @@ ontap_api() {
 
 - [AWS Docs: FSx for ONTAP](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/)
 - [NetApp Docs: ONTAP REST API](https://docs.netapp.com/us-en/ontap-automation/)
-- [Research Document (EN)](./en/research.md)
-- [Research Document (JA)](./ja/research.md)
+- [Research Document (EN)](./research.md)
+- [Research Document (JA)](../ja/research.md)
 
 
 ---

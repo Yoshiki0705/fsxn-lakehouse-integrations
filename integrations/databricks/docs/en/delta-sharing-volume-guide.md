@@ -845,4 +845,4 @@ The [OSS OpenSharing server](https://github.com/delta-io/delta-sharing) supports
 
 - [Databricks README](../../README.md) — Full integration status and architecture
 - [Analytics & AI Demo Guide](ai-demo-guide.md) — AI/ML capabilities and current status
-- [Support Case Summary (private)](../../.private/uc-s3ap-limitation-summary-en.md) — UC + S3 AP limitation details (private)
+- [Blocker Tracker](../../../../docs/en/blocker-tracker.md) — BLK-001 records the Unity Catalog / S3 Access Point limitation, its confirmation date and the available workarounds

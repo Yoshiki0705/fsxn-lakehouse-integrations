@@ -844,4 +844,4 @@ OpenSharing
 
 - [Databricks README](../../README.md) — 統合ステータスとアーキテクチャ全体
 - [Analytics & AI デモガイド](ai-demo-guide.md) — AI/ML 機能と現在のステータス
-- [サポートケースサマリー（プライベート）](../../.private/uc-s3ap-limitation-summary-ja.md) — UC + S3 AP 制限の詳細（プライベート）
+- [ブロッカートラッカー](../../../../docs/ja/blocker-tracker.md) — BLK-001 に Unity Catalog / S3 Access Point の制約、確認日、利用可能な回避策を記載

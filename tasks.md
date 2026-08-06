@@ -61,7 +61,7 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task D: Demo Scenario Execution
 
-> ⚠️ **BLOCKED**: Unity Catalog session policy does not recognize S3 AP ARN format. All object-level operations fail with AccessDenied. Support case filed. See [Known Limitations](../../docs/en/compatibility-matrix.md#known-limitations--platform-session-policy-issues).
+> ⚠️ **BLOCKED**: Unity Catalog session policy does not recognize S3 AP ARN format. All object-level operations fail with AccessDenied. Support case filed. See [Known Limitations](docs/en/compatibility-matrix.md).
 
 **Scenario 1: External Table Query (Pattern A)**
 - [ ] Upload sample Parquet data to FSx for ONTAP via NFS
@@ -133,7 +133,7 @@ Each vendor follows the same 5-phase structure to ensure consistent quality.
 
 #### Task D: Demo Scenario Execution
 
-> ⚠️ **BLOCKED**: Snowflake session policy does not recognize S3 AP ARN format for GetObject. LIST succeeds but SELECT fails. Vendor support case filed. See [Known Limitations](../../docs/en/compatibility-matrix.md#known-limitations--platform-session-policy-issues).
+> ⚠️ **BLOCKED**: Snowflake session policy does not recognize S3 AP ARN format for GetObject. LIST succeeds but SELECT fails. Vendor support case filed. See [Known Limitations](docs/en/compatibility-matrix.md).
 
 **Scenario 1: External Table Query (Pattern A)**
 - [x] Create External Table on Parquet data

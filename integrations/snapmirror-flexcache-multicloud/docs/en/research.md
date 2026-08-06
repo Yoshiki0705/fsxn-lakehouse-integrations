@@ -742,8 +742,8 @@ For organizations with data residency requirements:
 
 | Guide | Pattern | Network |
 |-------|---------|---------|
-| [Guide 03: FlexCache On-Premises](docs/en/demo-guide-03-flexcache-on-premises.md) | FSx for ONTAP → On-prem ONTAP (FlexCache) | Direct Connect / VPN |
-| [Guide 08: SnapMirror On-Premises](docs/en/demo-guide-08-snapmirror-on-premises.md) | FSx for ONTAP → On-prem ONTAP (SnapMirror DR) | Direct Connect / VPN |
+| [Guide 03: FlexCache On-Premises](demo-guide-03-flexcache-on-premises.md) | FSx for ONTAP → On-prem ONTAP (FlexCache) | Direct Connect / VPN |
+| [Guide 08: SnapMirror On-Premises](demo-guide-08-snapmirror-on-premises.md) | FSx for ONTAP → On-prem ONTAP (SnapMirror DR) | Direct Connect / VPN |
 
 > These guides are currently at procedure-level (commands documented, not yet E2E validated on physical hardware). Validation will be performed when on-premises lab access is available.
 

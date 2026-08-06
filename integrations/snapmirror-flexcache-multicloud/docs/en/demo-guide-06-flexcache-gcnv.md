@@ -124,7 +124,7 @@ export ORIGIN_VOL="vol_gcnv_origin"
 
 ## Step 1: GCP HA VPN 設定
 
-> The VPN setup procedure follows [Demo Guide 04 Step 1](../en/demo-guide-04-flexcache-cvo-gcp.md#step-1-gcp-ha-vpn-の作成) . Configure HA VPN between AWS and GCP.
+> The VPN setup procedure follows [Demo Guide 04 Step 1](../en/demo-guide-04-flexcache-cvo-gcp.md#step-1-create-gcp-ha-vpn) . Configure HA VPN between AWS and GCP.
 
 ```bash
 # VPN 接続Verify
@@ -228,7 +228,7 @@ gcloud netapp volumes create gcnv-cache-vol \
 
 ## Step 4: Origin Volume + S3 AP + Lambda Writer（AWS  side）
 
-> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-origin-volume-作成--s3-ap-アタッチ) . Refer to this guide.
+> [Demo Guide 01 Step 4-6](../en/demo-guide-01-flexcache-same-region.md#step-4-create-origin-volume--attach-s3-ap) . Refer to this guide.
 
 ---
 

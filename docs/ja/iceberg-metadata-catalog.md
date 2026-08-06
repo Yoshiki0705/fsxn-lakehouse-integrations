@@ -1025,5 +1025,5 @@ ORDER BY created_at DESC;
 | Phase 4 → 5 | 2+ プラットフォームからメタデータクエリ成功 | Session policy 問題 → Lambda API Gateway 経由に変更 |
 | Phase 5 → 6 | 類似検索で関連ファイルが top-5 に含まれる | embedding 品質不足 → モデル変更 or チャンク戦略見直し |
 
-詳細な実装計画は [タスク一覧](../../.kiro/specs/iceberg-unstructured-metadata-catalog/tasks.md) を参照。
+詳細な実装計画は [タスク一覧](../../tasks.md) を参照。
 

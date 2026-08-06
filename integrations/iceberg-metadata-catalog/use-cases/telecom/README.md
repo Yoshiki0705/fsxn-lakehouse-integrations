@@ -60,6 +60,6 @@ ORDER BY modified_at DESC;
 
 ## Related
 
-- [Industry Use Cases — Telecommunications](../../docs/industry-use-cases.md#telecommunications)
+- [Industry Use Cases — Telecommunications](../../docs/industry-use-cases.md)
 - [Demo Scenario](../../demo/scenarios/industry-telecom.md)
 - [Base Schema](../_shared/base-schema.yaml)

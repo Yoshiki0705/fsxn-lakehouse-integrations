@@ -79,7 +79,7 @@ flowchart LR
 | VPC Peering | Both regions | for Intercluster communication |
 | Cluster Peering + SVM Peering | Both clusters | SnapMirror prerequisite |
 
-> **VPC Peering / Cluster Peering**: [Demo Guide 02 Step 1-3](../en/demo-guide-02-flexcache-cross-region.md#step-1-vpc-peering-の作成)  procedure. Refer to this guide.
+> **VPC Peering / Cluster Peering**: [Demo Guide 02 Step 1-3](../en/demo-guide-02-flexcache-cross-region.md#step-1-create-vpc-peering)  procedure. Refer to this guide.
 
 ---
 
@@ -151,7 +151,7 @@ aws fsx create-and-attach-s3-access-point \
 
 ## Step 2: Write Data with Lambda
 
-> [Demo Guide 01 Step 5-6](../en/demo-guide-01-flexcache-same-region.md#step-5-lambda-writer-関数のデプロイ) . Refer to this guide.Use Lambda in Region A to write test data.
+> [Demo Guide 01 Step 5-6](../en/demo-guide-01-flexcache-same-region.md#step-5-deploy-lambda-writer-function) . Refer to this guide.Use Lambda in Region A to write test data.
 
 ---
 

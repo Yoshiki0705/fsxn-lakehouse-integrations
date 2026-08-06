@@ -57,6 +57,6 @@ ORDER BY modified_at DESC;
 
 ## 関連リンク
 
-- [業界ユースケース — 通信](../../docs/industry-use-cases.md#telecommunications)
+- [業界ユースケース — 通信](../../docs/industry-use-cases.md)
 - [デモシナリオ](../../demo/scenarios/industry-telecom-ja.md)
 - [ベーススキーマ](../_shared/base-schema.yaml)
