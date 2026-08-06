@@ -1,0 +1,43 @@
+# Ruff configuration for the synthetic data generator.
+#
+# This file exists because the CI gate broke without any code change. The workflow
+# installed ruff unpinned and there was no configuration, so the gate enforced
+# whatever default rule set the current release happened to ship. Ruff 0.16.1
+# widened those defaults well beyond the historical `E4, E7, E9, F`, and ten
+# findings appeared in code that had passed since 2026-07-22.
+#
+# Declaring the rule set here means a ruff release can no longer change what this
+# gate enforces. The workflow pins the version; this file pins the rules.
+
+target-version = "py312"
+# line-length is deliberately left at ruff's default (88). The existing files are
+# formatted to it, and setting a different value here would reformat them for no
+# reason beyond the setting itself.
+
+[lint]
+# Explicit, not inherited. Ruff 0.16 defaults are broader than this and may widen
+# again; adopting new rules should be a deliberate edit to this list.
+select = [
+    "E4",     # pycodestyle: import placement
+    "E7",     # pycodestyle: statement/comparison issues
+    "E9",     # pycodestyle: syntax and IO errors
+    "F",      # pyflakes
+    "UP",     # pyupgrade
+    "TRY",    # tryceratops
+    "RUF",    # ruff-specific
+    "EXE",    # flake8-executable
+    "BLE",    # flake8-blind-except
+]
+
+[lint.per-file-ignores]
+# Kafka topic creation and per-payload upload deliberately catch broadly: a topic
+# that already exists is an expected outcome, and one failed payload should not
+# abort a batch of hundreds. Both log the exception rather than swallowing it.
+# The narrow alternative would be to enumerate every driver and botocore error
+# these calls can raise, which is a larger surface than the behaviour warrants.
+"generate_events.py" = ["BLE001"]
+"generate_payloads.py" = ["BLE001"]
+
+# The test module manipulates sys.path and installs mocks before importing the
+# module under test, so its imports cannot sit at the top of the file.
+"tests/*" = ["E402"]
