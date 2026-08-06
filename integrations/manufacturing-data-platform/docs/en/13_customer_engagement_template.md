@@ -4,7 +4,7 @@
 
 ---
 
-> Addresses P1-#7 from SA Persona Review Board (Persona 1: Partner/SI Reviewer).
+> Addresses P1-#7 from [design concern checklist](08_design_concern_checklist.md) (partner reusability).
 > Provides a reusable template for positioning this architecture in customer conversations.
 
 ---
@@ -121,9 +121,11 @@
 
 ---
 
-## Persona Review Notes
+## Design Review Notes
 
-- **Persona 1 (Partner/SI)**: This template directly addresses all P1 findings. Partners can use discovery questions in customer meetings. PoC success criteria template is reusable. Delivery checklist maps to project assets.
-- **Persona 4 (Outcome)**: Business outcome mapped to stakeholders. Success criteria include measurable targets with owners.
-- **Persona 10 (Product)**: Go/No-Go checklist with clear decision points. Next-phase scope required for GO decision.
-- **Confidentiality**: ✅ Pass — Template is generic. No customer-specific information. Industry examples are public knowledge.
+> Notes recorded while checking this decision against the design concerns listed in [design concern checklist](08_design_concern_checklist.md). Self-review, not external review.
+
+- **Partner reusability**: This template directly addresses all P1 findings. Partners can use discovery questions in customer meetings. PoC success criteria template is reusable. Delivery checklist maps to project assets.
+- **Business outcome**: Business outcome mapped to stakeholders. Success criteria include measurable targets with owners.
+- **Product decision**: Go/No-Go checklist with clear decision points. Next-phase scope required for GO decision.
+- **Confidentiality check**: Template is generic. No customer-specific information. Industry examples are public knowledge.

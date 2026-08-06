@@ -1,0 +1,8 @@
+[
+  {"ParameterKey": "EnvironmentName", "ParameterValue": "fsxn-lakehouse"},
+  {"ParameterKey": "BucketName", "ParameterValue": "REPLACE-ME-lakehouse-iceberg-apne1"},
+  {"ParameterKey": "BucketPrefix", "ParameterValue": "iceberg/"},
+  {"ParameterKey": "CreateBucket", "ParameterValue": "true"},
+  {"ParameterKey": "SnowflakeIamUserArn", "ParameterValue": ""},
+  {"ParameterKey": "SnowflakeExternalId", "ParameterValue": ""}
+]

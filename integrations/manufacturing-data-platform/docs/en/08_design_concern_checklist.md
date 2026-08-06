@@ -1,19 +1,20 @@
-# SA Persona Review Board — Manufacturing Data Platform Architecture
+# 08: Design Concern Checklist — Manufacturing Data Platform Architecture
 
-🌐 **English** | [日本語](../ja/08_sa_persona_review.md)
+🌐 **English** | [日本語](../ja/08_design_concern_checklist.md)
 
 ---
 
-## Review Metadata
+## Scope
 
-- **Review Date:** 2026-06-07
+> Each numbered section below covers one design concern, checked against a checklist derived from AWS Well-Architected and industry practice. This is a structured self-review of our own design — not an interview, survey, or review by external experts, and not an approval by any body.
+
+- **Analysis date:** 2026-06-07
 - **Scope:** All 13 ADRs (ADR-001 through ADR-013), PoC plan, synthetic data generator, infrastructure templates
-- **Deliverable Type:** Architecture + PoC Plan + Code (→ Personas 1–10 all applicable)
-- **Evidence Classification:** Per global-sa-persona-review-board.md rules
+- **Deliverable Type:** Architecture + PoC Plan + Code (all ten concerns apply)
 
 ---
 
-## Persona 1: Partner/SI and Methodology Reviewer Lens
+## 1. Partner Reusability and Methodology
 
 ### Assessment
 
@@ -38,7 +39,7 @@
 
 ---
 
-## Persona 2: Storage Specialist Reviewer Lens
+## 2. Storage
 
 ### Assessment
 
@@ -66,7 +67,7 @@
 
 ---
 
-## Persona 3: Public Sector / Governance / Privacy Reviewer Lens
+## 3. Governance and Privacy
 
 ### Assessment
 
@@ -92,7 +93,7 @@
 
 ---
 
-## Persona 4: Outcome / Adoption / Business Value Reviewer Lens
+## 4. Business Outcome and Adoption
 
 ### Assessment
 
@@ -123,7 +124,7 @@
 
 ---
 
-## Persona 5: Security Reviewer Lens
+## 5. Security
 
 ### Assessment
 
@@ -149,7 +150,7 @@
 
 ---
 
-## Persona 6: Reliability / Operations Reviewer Lens
+## 6. Reliability and Operations
 
 ### Assessment
 
@@ -182,7 +183,7 @@
 
 ---
 
-## Persona 7: Cost Optimization / FinOps Reviewer Lens
+## 7. Cost
 
 ### Assessment
 
@@ -206,7 +207,7 @@
 
 ---
 
-## Persona 8: Docs / DevRel Editor Lens
+## 8. Documentation
 
 ### Assessment
 
@@ -233,7 +234,7 @@
 
 ---
 
-## Persona 9: QA / Test Automation Lead Lens
+## 9. Test Automation
 
 ### Assessment
 
@@ -259,7 +260,7 @@
 
 ---
 
-## Persona 10: Product / Outcome Owner Lens
+## 10. Product Decision
 
 ### Assessment
 
@@ -295,36 +296,36 @@
 
 | # | Item | Source Persona | Effort |
 |---|------|---------------|--------|
-| 1 | Define SLOs and operational ownership | Persona 6 | Medium |
-| 2 | Create dependency failure mode table | Persona 6 | Low |
+| 1 | Define SLOs and operational ownership | Reliability and operations | Medium |
+| 2 | Create dependency failure mode table | Reliability and operations | Low |
 
 ### P1 (Should address before external sharing)
 
 | # | Item | Source Persona | Effort |
 |---|------|---------------|--------|
-| 3 | Define P99 latency targets and throughput budget | Persona 2 | Medium |
-| 4 | Define business success metrics (not just technical) | Persona 4, 10 | Low |
-| 5 | Tighten security: secrets management, deny policies, audit | Persona 5 | Medium |
-| 6 | Add unit tests + CI workflow | Persona 9 | Medium |
-| 7 | Create customer engagement template | Persona 1 | Medium |
-| 8 | Add Go/No-Go decision framework | Persona 10 | Low |
-| 9 | Complete ONTAP S3 authorization chain | Persona 2 | Low |
-| 10 | Add auto-restart for Databricks streaming | Persona 6 | Low |
+| 3 | Define P99 latency targets and throughput budget | Storage | Medium |
+| 4 | Define business success metrics (not just technical) | Business outcome, Product decision | Low |
+| 5 | Tighten security: secrets management, deny policies, audit | Security | Medium |
+| 6 | Add unit tests + CI workflow | Test automation | Medium |
+| 7 | Create customer engagement template | Partner reusability | Medium |
+| 8 | Add Go/No-Go decision framework | Product decision | Low |
+| 9 | Complete ONTAP S3 authorization chain | Storage | Low |
+| 10 | Add auto-restart for Databricks streaming | Reliability and operations | Low |
 
 ### P2 (Can defer to later iteration)
 
 | # | Item | Source Persona | Effort |
 |---|------|---------------|--------|
-| 11 | Add data classification and ownership | Persona 3 | Medium |
-| 12 | Add business-hours scheduling for cost | Persona 7 | Low |
-| 13 | Create visual architecture diagram | Persona 8 | Low |
-| 14 | Add reader path guide in README | Persona 8 | Low |
-| 15 | Add FlexCache audit strategy | Persona 3 | Medium |
-| 16 | Define data retention/disposal policy | Persona 3 | Medium |
+| 11 | Add data classification and ownership | Governance and privacy | Medium |
+| 12 | Add business-hours scheduling for cost | Cost | Low |
+| 13 | Create visual architecture diagram | Documentation | Low |
+| 14 | Add reader path guide in README | Documentation | Low |
+| 15 | Add FlexCache audit strategy | Governance and privacy | Medium |
+| 16 | Define data retention/disposal policy | Governance and privacy | Medium |
 
 ---
 
-## Final Assessment
+## Overall Assessment
 
 | Dimension | Rating | Notes |
 |-----------|--------|-------|
@@ -337,9 +338,9 @@
 | Test coverage | ❌ Gaps | No automated tests, no CI, no benchmark repeatability |
 | Documentation quality | ✅ Good | Bilingual, well-structured, language switchers, clear IDs |
 | Cost management | ✅ Good | Estimates present, production projection included |
-| Confidentiality | ✅ Pass | All content safe for public repository |
+| Confidentiality | ✅ Clear | No sensitive content found; safe for public repository |
 
-### Overall Verdict: **APPROVE WITH CONDITIONS**
+### Overall: **feasible, conditional on the P0 and P1 items above**
 
 Architecture is technically sound and well-documented. Before PoC execution:
 1. Define SLOs (P0)

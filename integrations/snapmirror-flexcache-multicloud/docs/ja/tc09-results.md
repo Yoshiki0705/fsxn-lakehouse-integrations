@@ -38,7 +38,7 @@
 | Lambda Runtime | Python 3.12 (arm64) |
 | S3 AP | fsxn-tc09-flexcache (UNIX/root, internet-origin) |
 | S3 AP Alias | fsxn-tc09-flexca-irbzszsfzi34wu67yx1itq63ry1qnapn1b-ext-s3alias |
-| NFS Data LIF | 10.0.12.7 |
+| NFS Data LIF | 198.51.100.60 |
 | Test Client | i-0ba1bdc87aa8349f3 (Amazon Linux, SSM) |
 
 ---
@@ -80,7 +80,7 @@
 
 ```
 Filesystem                 Size  Used Avail Use% Mounted on
-10.0.12.7:/vol_tc09_cache  9.5G  513M  9.0G   6% /mnt/tc09_cache
+198.51.100.60:/vol_tc09_cache  9.5G  513M  9.0G   6% /mnt/tc09_cache
 ```
 
 ### C2: File Listing
@@ -111,7 +111,7 @@ sha256: 0ed3f3650319cda7ed7e2335c559c36a71e95a7a5e42755033facd70f045fb63
 ### D1: SMB Connection + File Listing
 
 ```
-smbclient //10.0.12.7/tc09_cache -U TC09\Admin -m SMB3
+smbclient //198.51.100.60/tc09_cache -U TC09\Admin -m SMB3
 
   .                                   D        0  Tue Jul 21 12:29:02 2026
   ..                                  D        0  Tue Jul 21 12:28:59 2026

@@ -346,12 +346,12 @@ aws datasync update-task --task-arn <TASK> \
 
 > **注意**: `rate(5 minutes)` は小規模環境向け。大量ファイル環境ではタスク重複（前回未完了のまま次回起動）のリスクがあるため、実環境では `rate(15 minutes)` 〜 `rate(1 hour)` を推奨。ファイル数が数万件を超える場合はフィルタで対象を分割し、複数タスクに分離すること。
 
-> **帯域見積もり** (Network Fabric Specialist findings): DataSync の同期時間は FSx for ONTAP のスループットキャパシティ + VPC ネットワーク帯域で制約されます。事前に見積もりを実施してください:
+> **帯域見積もり**: DataSync の同期時間は FSx for ONTAP のスループットキャパシティ + VPC ネットワーク帯域で制約されます。事前に見積もりを実施してください:
 > - 例: 100GB のデータ、1Gbps 帯域 → 理論値 ~13 分（実効 60-70% で ~20 分）
 > - VPC のジャンボフレーム（MTU 9001）を有効化することで NFS スループットが大幅改善
 > - FSx for ONTAP のスループットキャパシティ（128MB/s〜4GB/s）がボトルネックになる場合あり
 
-> **IAM 最小権限** (IAM Security Architect findings): DataSync の実行 IAM Role は以下に制限してください:
+> **IAM 最小権限**: DataSync の実行 IAM Role は以下に制限してください:
 > - S3 宛先: `s3:PutObject`, `s3:DeleteObject`, `s3:GetBucketLocation` のみ（リソース ARN を特定バケット/プレフィックスに制約）
 > - FSx for ONTAP ソース: `fsx:DescribeFileSystems`, `datasync:*` の必要最小限
 > - `s3:*` や `fsx:*` のワイルドカード権限は使用禁止
@@ -370,7 +370,7 @@ AS SELECT * FROM parquet.`s3://<BUCKET>/fsxn-sync/sensor-data/`;
 
 **適用シナリオ**: 構造化データの定期分析、ML 訓練データ、レポーティング
 
-> **推奨: Snapshot からの同期** (FSx for ONTAP Architect findings): 本番ボリュームから直接 DataSync すると、同期中のファイル変更でデータ不整合が生じるリスクがあります。推奨は「Snapshot → FlexClone → DataSync」パターン:
+> **推奨: Snapshot からの同期**: 本番ボリュームから直接 DataSync すると、同期中のファイル変更でデータ不整合が生じるリスクがあります。推奨は「Snapshot → FlexClone → DataSync」パターン:
 > 1. Snapshot を取得（一貫性のある時点コピー）
 > 2. FlexClone を作成（瞬時・ゼロコピー）
 > 3. FlexClone に対して DataSync を実行
@@ -392,14 +392,14 @@ AS SELECT * FROM parquet.`s3://<BUCKET>/fsxn-sync/sensor-data/`;
 >     )
 > ```
 
-> **Medallion アーキテクチャ対応** (DLT Pipeline Architect findings): DataSync → S3 は **Bronze 層**（raw データ）として位置づけ。Silver（クレンジング済み）/ Gold（ビジネス集計）への変換は DLT で定義します:
+> **Medallion アーキテクチャ対応**: DataSync → S3 は **Bronze 層**（raw データ）として位置づけ。Silver（クレンジング済み）/ Gold（ビジネス集計）への変換は DLT で定義します:
 > ```
 > Bronze: DataSync → S3 (raw files) → Auto Loader → streaming_table
 > Silver: DLT 品質チェック (expectations: null/範囲/参照整合性) + スキーマ正規化
 > Gold:   DLT 集計 + ビジネスロジック + Liquid Clustering + OPTIMIZE (BI クエリ高速化)
 > ```
 
-> **Auto Loader モード選択** (Cost Optimization Specialist findings): DataSync 先の S3 バケットでは **S3 Event Notifications** が利用可能（FSx for ONTAP S3 AP では不可だが、標準 S3 バケットでは対応）。Auto Loader は **ファイル通知モード**（SQS 経由）を推奨 — ディレクトリリスティングモード比でスキャンコストを大幅削減。
+> **Auto Loader モード選択**: DataSync 先の S3 バケットでは **S3 Event Notifications** が利用可能（FSx for ONTAP S3 AP では不可だが、標準 S3 バケットでは対応）。Auto Loader は **ファイル通知モード**（SQS 経由）を推奨 — ディレクトリリスティングモード比でスキャンコストを大幅削減。
 
 ---
 
@@ -441,20 +441,20 @@ df = (spark.readStream
 
 **適用シナリオ**: イベント駆動インジェスト、ニアリアルタイム品質検査、ストリーミング ETL
 
-> **注意: FPolicy はメタデータイベントのみ** (Edge Data Architect findings): FPolicy はファイル**操作イベント**（作成・更新・削除・リネーム）を検出しますが、ファイル**内容**を転送しません。典型的な設計パターン:
+> **注意: FPolicy はメタデータイベントのみ**: FPolicy はファイル**操作イベント**（作成・更新・削除・リネーム）を検出しますが、ファイル**内容**を転送しません。典型的な設計パターン:
 > - **Kafka メッセージ**: メタデータのみ（ファイルパス、サイズ、操作タイプ、タイムスタンプ）
 > - **ペイロード読み取り**: Databricks Spark が S3 AP 経由で直接ファイル内容を読み取り（UC 外パス）、または DataSync で S3 に同期済みのコピーを読み取り
 >
 > 大容量ファイル（動画等）の場合、Lambda の 15 分タイムアウト / 10GB メモリ上限に注意。大容量ペイロードは DataSync パスとの併用を推奨。
 
-> **製造現場でのデータ起点** (Manufacturing DX Specialist findings): PLC / SCADA は通常 Kafka Producer としてデータを送信する機能を持ちません。典型的な製造環境のデータフローは:
+> **製造現場でのデータ起点**: PLC / SCADA は通常 Kafka Producer としてデータを送信する機能を持ちません。典型的な製造環境のデータフローは:
 > ```
 > PLC / SCADA → NFS/SMB 書き込み → FSx for ONTAP → FPolicy 検出 → Lambda → Kafka
 > ```
 > FPolicy は「ファイルが書かれた後」のイベント検出であり、PLC からの直接ストリーミングではありません。
 > OT ネットワーク（FSx for ONTAP 配置）と IT ネットワーク（Databricks / MSK 配置）が分離されている場合、Transit Gateway / VPC Peering 経由で Lambda / DataSync の通信パスを設計する必要があります。
 
-> **産業プロトコル経由のデータフロー** (Industrial Protocol / AWS IoT Specialist findings): 実際の製造現場では、PLC がファイルを直接書き出すよりも、中間層を経由するパターンが一般的です:
+> **産業プロトコル経由のデータフロー**: 実際の製造現場では、PLC がファイルを直接書き出すよりも、中間層を経由するパターンが一般的です:
 > ```
 > パターン A: PLC → OPC UA サーバー → ヒストリアン → CSV/Parquet エクスポート → FSx for ONTAP (NFS)
 > パターン B: PLC → MQTT ブローカー (Sparkplug B) → Kafka Bridge → MSK → UC Delta
@@ -463,18 +463,18 @@ df = (spark.readStream
 > ```
 > PLC 出力はバイナリ独自フォーマット（.dat, .bin）の場合もあり、CSV/JSON への変換パーサーの開発が必要な場合があります。
 
-> **OT/IT セキュリティ境界** (OT Network Security / Industrial Cybersecurity Specialist findings):
+> **OT/IT セキュリティ境界**:
 > - **Purdue Level 3.5 (IDMZ)**: FPolicy Lambda や DataSync エージェントは Level 3.5（Industrial DMZ）に配置し、OT (Level 0-3) と IT (Level 4-5) を直接接続しない設計を推奨
 > - **IDMZ 許可ポート**: NFS 2049 (FSx for ONTAP → DataSync)、HTTPS 443 (Lambda → MSK IAM / DataSync → S3)、Kafka 9094-9098 (Lambda → MSK TLS/IAM)
 > - **IEC 62443 準拠環境**: NFS 通信は `krb5p`（Kerberos 暗号化）を使用し、IDMZ 経由のコンジットで通信チャネル要件を満たすこと
-> - **暗号化** (Compliance Specialist findings): DataSync は TLS (in-transit) + S3 SSE-KMS (at-rest)。FSx for ONTAP 側は volume encryption (at-rest) + NFS krb5p (in-transit)。規制産業（GxP, ITAR）ではこの暗号化チェーンの文書化が必要
+> - **暗号化**: DataSync は TLS (in-transit) + S3 SSE-KMS (at-rest)。FSx for ONTAP 側は volume encryption (at-rest) + NFS krb5p (in-transit)。規制産業（GxP, ITAR）ではこの暗号化チェーンの文書化が必要
 > - **データダイオード環境**（高セキュリティ要件時）: FSx for ONTAP → S3 への片方向 DataSync フローはデータダイオードの論理的代替として機能する
 > - **監査ログ 4 層** (Security Audit Analyst findings): データフロー全体で 4 層の監査ログが発生。インシデント時の相関分析を事前設計すること:
 >   1. ONTAP FPolicy / audit log（ファイル操作）
 >   2. DataSync CloudTrail（転送操作）
 >   3. S3 access logs / CloudTrail data events（オブジェクト操作）
 >   4. UC audit logs（テーブルアクセス、クエリ）
-> - **証拠保全** (Incident Response Specialist findings): セキュリティインシデント発生時、FSx for ONTAP の **SnapLock** で改ざん不可能な Snapshot を保全可能。フォレンジック用データの完全性を WORM (Write Once Read Many) で保証
+> - **証拠保全**: セキュリティインシデント発生時、FSx for ONTAP の **SnapLock** で改ざん不可能な Snapshot を保全可能。フォレンジック用データの完全性を WORM (Write Once Read Many) で保証
 > - **Secrets 管理**: Lakehouse Federation で外部 DB に接続する際のパスワードは **Databricks Secrets** (`secret('scope', 'key')` 関数) で管理。コード内平文記載禁止。AWS Secrets Manager 連携も可
 
 > **DLT / CDC パターン** (Data Engineering SA findings):
@@ -485,7 +485,7 @@ df = (spark.readStream
 >   ```
 >   製造マスタデータ（製品マスタ、設備台帳）の変更をリアルタイムに分析基盤に反映するユースケースに適用。
 
-> **配信保証と重複排除** (Data Reliability Engineer findings): FPolicy → Lambda → Kafka パスは **at-least-once** 配信です。ネットワーク再送やLambdaリトライにより重複イベントが発生する可能性があるため、UC Delta テーブル側で **event_id による重複排除（MERGE / dedup）** を設計してください:
+> **配信保証と重複排除**: FPolicy → Lambda → Kafka パスは **at-least-once** 配信です。ネットワーク再送やLambdaリトライにより重複イベントが発生する可能性があるため、UC Delta テーブル側で **event_id による重複排除（MERGE / dedup）** を設計してください:
 > ```sql
 > MERGE INTO catalog.schema.fsxn_events AS target
 > USING (SELECT * FROM stream_batch) AS source
@@ -493,7 +493,7 @@ df = (spark.readStream
 > WHEN NOT MATCHED THEN INSERT *;
 > ```
 
-> **Zerobus Ingest vs Kafka 選定基準** (Zerobus Specialist findings):
+> **Zerobus Ingest vs Kafka 選定基準**:
 >
 > | 軸 | Zerobus Ingest | Kafka (MSK) |
 > |---|---|---|
@@ -542,7 +542,7 @@ UC Foreign Catalog (読み取り専用)
 
 **ステータス**: ❌ **ブロック確認済み（2026-06-21）**。`iceberg_rest` connection type が ap-northeast-1 ワークスペースで非対応。S3 Tables マネージドバケットの UC External Location 登録も不可。([検証結果](../../integrations/iceberg-metadata-catalog/databricks/uc-foreign-iceberg-validation.md#validation-execution-results-2026-06-21))
 
-> **運用注記** (Iceberg Specialist findings): `REFRESH FOREIGN TABLE` は自動実行されません（Databricks は外部 Iceberg のメタデータ更新を自動検知しない）。定期的なリフレッシュが必要な場合は **Databricks Workflow** でスケジュールジョブを設定してください。
+> **運用注記**: `REFRESH FOREIGN TABLE` は自動実行されません（Databricks は外部 Iceberg のメタデータ更新を自動検知しない）。定期的なリフレッシュが必要な場合は **Databricks Workflow** でスケジュールジョブを設定してください。
 
 ---
 
@@ -573,7 +573,7 @@ SELECT * FROM uc_delta.catalog.schema.sensor_data LIMIT 10;
 | ONTAP S3 → UC External Location | ❌ **非サポート確認** | 2026-05 | 02_research_findings.md |
 | NFS mount from Databricks | ❌ **ブロック** | 2026-05 | seccomp 制限 |
 | DataSync → S3 → UC | ✅ **検証済み** | 2026-05 | datasync-to-s3-guide.md |
-| Kafka → Structured Streaming → UC | ✅ **設計検証済み** | 2026-06 | kafka-clickhouse-uc-connectivity.md |
+| Kafka → Structured Streaming → UC | ✅ **設計検証済み** | 2026-06 | [kafka-clickhouse-unity-catalog-connectivity.md](./kafka-clickhouse-unity-catalog-connectivity.md) |
 | Glue/EMR → S3 → UC | ✅ **公式チュートリアル** | — | AWS 公式ドキュメント |
 | Foreign Iceberg (Glue REST) | ❌ **ブロック確認** | 2026-06-21 | `iceberg_rest` type 非対応 + S3 Tables バケット EL 登録不可 |
 | boto3 PoC (ガバナンスなし) | ✅ **動作確認** | 2026-05 | ai-demo-guide.md |
@@ -791,7 +791,7 @@ UC Lakehouse Federation は JDBC 経由で外部 DB に対して**プッシュ�
 
 ### ClickHouse × FSx for ONTAP の詳細
 
-**storage_policy による階層化設計** (ClickHouse Specialist findings):
+**storage_policy による階層化設計**:
 
 ```xml
 <!-- ClickHouse storage_policy 設定例 -->
@@ -856,7 +856,7 @@ PostgreSQL と MySQL は FSx for ONTAP NFS 上で**最も推奨度が高い**組
 
 > **MySQL 固有注記**: NFS 上では `innodb_flush_method = fsync` を推奨。`O_DIRECT` は NFS で正しく動作しない場合があります。
 
-> **Lakebase 移行オプション** (Databricks Lakebase Specialist findings): PostgreSQL ワークロードが UC ガバナンスと統合を最優先する場合、**Databricks Lakebase**（マネージド PostgreSQL 互換 DB、GA）への移行も選択肢です。Lakebase は UC ネイティブ統合 + Lakehouse//RT クエリ + Private Link を提供しますが、ap-northeast-1 非対応（2026-06-18 現在）に注意。
+> **Lakebase 移行オプション**: PostgreSQL ワークロードが UC ガバナンスと統合を最優先する場合、**Databricks Lakebase**（マネージド PostgreSQL 互換 DB、GA）への移行も選択肢です。Lakebase は UC ネイティブ統合 + Lakehouse//RT クエリ + Private Link を提供しますが、ap-northeast-1 非対応（2026-06-18 現在）に注意。
 
 **UC 接続**:
 ```sql
@@ -891,7 +891,7 @@ WHERE timestamp > '2026-06-01';
 
 ### AI/ML データアクセスパス
 
-FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路（AI/GenAI Specialist findings）:
+FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路:
 
 | AI/ML 機能 | 必要なデータ形態 | FSx for ONTAP からの経路 |
 |---|---|---|
@@ -902,13 +902,13 @@ FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路（
 | **Bedrock KB (RAG)** | S3 AP 直接 | FSx for ONTAP S3 AP → Bedrock KB（UC 外パス、公式チュートリアル） |
 | **Document Intelligence** | S3 経由 | DataSync → S3 → Lakeflow → 構造化テーブル |
 
-> **エッジ AI 画像検査パス** (Edge AI Vision Engineer findings): NVIDIA Jetson / AWS Panorama 等のエッジ AI カメラで検査した画像（推論結果付き）を UC で管理するパス:
+> **エッジ AI 画像検査パス**: NVIDIA Jetson / AWS Panorama 等のエッジ AI カメラで検査した画像（推論結果付き）を UC で管理するパス:
 > ```
 > Edge AI カメラ → ローカル NVMe バッファ → バッチ転送 → FSx for ONTAP (NFS) → DataSync → S3 → UC Volume
 > ```
 > 高速連写（10-100 枚/秒/ライン）ではローカルバッファが必須。NFS 直接書き込みは帯域制約のため非推奨。
 
-> **RAG / AI Search パイプライン** (RAG Pipeline Engineer findings): FSx for ONTAP 上のドキュメントを AI Search で検索可能にする具体フロー:
+> **RAG / AI Search パイプライン**: FSx for ONTAP 上のドキュメントを AI Search で検索可能にする具体フロー:
 > ```
 > FSx for ONTAP (ドキュメント) → DataSync → S3 → UC Volume
 >   → Spark UDF (チャンキング: RecursiveCharacterTextSplitter 等)
@@ -917,7 +917,7 @@ FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路（
 >   → Agent retriever tool (RAG クエリ)
 > ```
 
-> **画像 embedding パイプライン** (Multimodal Vision Architect findings): 検査画像を AI Search で類似検索可能にする場合:
+> **画像 embedding パイプライン**: 検査画像を AI Search で類似検索可能にする場合:
 > ```
 > UC Volume (検査画像) → Spark UDF (CLIP / ViT embedding 生成) → AI Search Index → 類似画像検索
 > ```
@@ -934,7 +934,7 @@ FSx for ONTAP 上のデータを Databricks AI/ML 機能で活用する経路（
 | Athena (UC 外) | FSx for ONTAP のみ | クエリスキャン量課金 | 低（サーバーレス） |
 | boto3 PoC | FSx for ONTAP のみ | Databricks クラスター | 低（ガバナンスなし）⚠️ データ流出リスク |
 
-> **boto3 PoC セキュリティ警告** (Data Exfiltration Prevention Engineer findings): boto3 PoC パスは UC ガバナンスを完全にバイパスするため、ユーザーがデータをローカルにダウンロードし外部に持ち出す流出リスクがあります。使用する場合は:
+> **boto3 PoC セキュリティ警告**: boto3 PoC パスは UC ガバナンスを完全にバイパスするため、ユーザーがデータをローカルにダウンロードし外部に持ち出す流出リスクがあります。使用する場合は:
 > - Databricks workspace の **egress 制御**（S3 bucket policy + VPC endpoint policy で宛先制限）
 > - **IP ACL** によるアクセス元制限
 > - **監査ログ** の有効化（CloudTrail + UC audit logs）

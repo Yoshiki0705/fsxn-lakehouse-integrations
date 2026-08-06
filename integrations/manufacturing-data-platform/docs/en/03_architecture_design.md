@@ -16,9 +16,12 @@ This design is governed by the following ADRs (see [docs/adr/](../adr/README.md)
 | [ADR-004](../adr/ADR-004.md) | Avoid direct dependency on S3 Access Points for Databricks integration |
 | [ADR-005](../adr/ADR-005.md) | Use metadata/payload separation for large files |
 
-## Open Design Items (from Persona Review)
+## Open Design Items (from the Design Analysis)
 
-The following items were identified as **Must Fix** during the initial persona review and will be addressed in the PoC design phase:
+The following items were identified as **Must Fix** by the
+[initial design analysis](07_initial_design_analysis.md) — a structured self-review
+against role-based archetype checklists, not a review by external experts — and
+will be addressed in the PoC design phase:
 
 | Item | Status | Task |
 |------|--------|------|

@@ -63,7 +63,7 @@ governance_value: |
   - Centralized audit (who accessed what table, when)
   - Cross-account sharing (share tables without sharing S3 AP)
   
-  This enables the "Best" tier in partner-offering:
+  This enables the "Best" configuration in the adoption assessment guide:
   - Healthcare: Column-level masking of PHI
   - Finance: Table-level segregation of duties per domain
   - Public sector: Tag-based classification enforcement

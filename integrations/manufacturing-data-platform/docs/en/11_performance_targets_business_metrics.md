@@ -4,9 +4,9 @@
 
 ---
 
-> Addresses P1 items from SA Persona Review Board:
-> - Persona 2: P99 latency targets and throughput budget
-> - Persona 4/10: Business success metrics and Go/No-Go criteria
+> Addresses P1 items from [design concern checklist](08_design_concern_checklist.md):
+> - Storage: P99 latency targets and throughput budget
+> - Business outcome and product decision: Business success metrics and Go/No-Go criteria
 
 ---
 
@@ -207,10 +207,12 @@ Data Access (Read/Write)
 
 ---
 
-## Persona Review Notes
+## Design Review Notes
 
-- **Persona 2 (Storage)**: P99 latency targets defined per segment. Throughput contention model documented. ONTAP S3 auth chain complete.
-- **Persona 4 (Outcome)**: Business metrics mapped to technical SLOs. Before/after narrative provides stakeholder context.
-- **Persona 7 (FinOps)**: Throughput budget quantified. Upgrade path clear (128→256→512 MB/s).
-- **Persona 10 (Product)**: Go/No-Go framework with measurable criteria. Decision authority defined.
-- **Confidentiality**: ✅ Pass — All metrics, targets, and narratives are generic. No customer-specific baselines.
+> Notes recorded while checking this decision against the design concerns listed in [design concern checklist](08_design_concern_checklist.md). Self-review, not external review.
+
+- **Storage**: P99 latency targets defined per segment. Throughput contention model documented. ONTAP S3 auth chain complete.
+- **Business outcome**: Business metrics mapped to technical SLOs. Before/after narrative provides stakeholder context.
+- **Cost**: Throughput budget quantified. Upgrade path clear (128→256→512 MB/s).
+- **Product decision**: Go/No-Go framework with measurable criteria. Decision authority defined.
+- **Confidentiality check**: All metrics, targets, and narratives are generic. No customer-specific baselines.

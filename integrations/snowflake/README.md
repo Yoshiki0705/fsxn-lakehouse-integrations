@@ -7,8 +7,25 @@
 > Snowflake can query FSx for ONTAP S3 Access Point data when the external stage is configured with `AWS_ACCESS_POINT_ARN`.
 >
 > **Verified**: LIST, SELECT, External Table, COPY INTO load, Directory Table, Governance Tags.
+> Added 2026-08-06: JSON/Avro/ORC reads, Snowpark `SnowflakeFile.open`, a Dynamic Table
+> over data landed from the Access Point, and `COPY INTO` a Managed Iceberg Table on an
+> External Volume — end to end
+> ([evidence](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml)).
 >
-> **Not validated or not suitable**: Snowpipe AUTO_REFRESH, Iceberg write-back, transactional table writes, presigned URL as a governed production path.
+> **Not validated or not suitable**: Snowpipe AUTO_REFRESH, Iceberg write-back to the
+> Access Point, transactional table writes, presigned URL as a governed production path,
+> COPY INTO 64-day deduplication (needs 64 days of elapsed time), Horizon Catalog
+> enforcement on external engines, PrivateLink (needs Business Critical).
+>
+> **Unload is a trap, not a no-op.** `COPY INTO @stage` against an AP-backed stage is not
+> refused: the object is written and is intact, then the statement fails with
+> `Remote upload failed checksum validation` because FSx for ONTAP reports encryption as
+> `aws:fsx`. A complete object is left behind while the caller is told the write failed.
+> If you have tried this, list the target prefix and remove orphans. See
+> [BLK-009](../../docs/en/blocker-tracker.md).
+>
+> **Dynamic Table constraint**: a Dynamic Table cannot select from an EXTERNAL TABLE, so
+> the stage has to be landed into a standard table first.
 >
 > **Ingestion, specifically**: Snowpipe is event-driven and cannot be scheduled.
 > For scheduled ingestion use a **Snowflake Task running COPY INTO** — a
@@ -21,6 +38,18 @@
 > quoted 30-80x native S3. Re-measured 2026-08-05 at **1.3-1.4x** for up to 5,000
 > objects; the 30-80x figure did not reproduce and has been withdrawn
 > ([BLK-006](../../docs/en/blocker-tracker.md)).
+
+## Start here
+
+[Reading FSx for ONTAP files from Snowflake and writing Iceberg tables](../../docs/en/snowflake-iceberg-setup.md) walks through the whole path with
+the parameters explained, common failures, and teardown. It is the fastest way
+to a working setup if this is your first time.
+
+| Task | Where |
+|---|---|
+| Read access to an Access Point | [`template.yaml`](./template.yaml), then [`scripts/update_trust_policy.sh`](./scripts/update_trust_policy.sh) |
+| Write Iceberg tables | [`template-external-volume.yaml`](./template-external-volume.yaml), driven by [`scripts/setup_external_volume.sh`](./scripts/setup_external_volume.sh) |
+| Check for objects a failed unload left behind | [`shared/scripts/check_orphaned_unload_objects.py`](../../shared/scripts/check_orphaned_unload_objects.py) |
 
 ## Observed Results
 
@@ -132,7 +161,7 @@ External Stages, using them as the storage layer for External Tables and Iceberg
 |-----------|-----------|-------|
 | ListObjectsV2 | ✅ | High latency (tens of seconds to minutes) |
 | GetObject | ✅ | |
-| PutObject | ✅ | Max 5GB |
+| PutObject | ✅ | Max 50 GB |
 | DeleteObject | ✅ | |
 | HeadObject | ✅ | |
 | **Pre-signed URL** | ✅ | AWS docs say unsupported, but works in practice |
@@ -451,6 +480,6 @@ The following limitations are observed when using FSx for ONTAP S3 AP as a Snowf
 1. **FSx for ONTAP S3 AP listing latency**: measured at 1.3-1.4x native S3 for up to 5,000 objects (2026-08-05), so listing is not a practical constraint at that scale. Behaviour above 5,000 objects per directory is unmeasured — consolidate files and partition the key space for large datasets. The earlier "tens of seconds to minutes" and "30-80x" claims did not reproduce ([evidence](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml))
 2. **Pre-signed URL (FSx for ONTAP S3 AP limitation)**: AWS FSx for ONTAP S3 AP documentation states Pre-signed URLs are "Not supported," but Snowflake's `GET_PRESIGNED_URL()` function generates working download URLs in practice. Use at own risk as this is outside official FSx for ONTAP S3 AP support
 3. **S3 Event Notifications not supported (FSx for ONTAP S3 AP limitation)**: FSx for ONTAP S3 AP does not support S3 Event Notifications, so Snowpipe auto-ingest trigger is not possible (use FPolicy + Lambda as alternative)
-4. **Max upload size**: 5GB (Multipart Upload supported)
+4. **Max upload size**: 50 GB (Multipart Upload supported)
 5. **AUTO_REFRESH unavailable**: Depends on S3 Event Notifications which are not supported. Use manual `ALTER STAGE REFRESH` or schedule via Snowflake Task
 6. **TO_FILE / FILE data type (Snowflake limitation)**: `TO_FILE()` returns "Remote file not found" on FSx for ONTAP S3 AP external stages — Vision AI cannot be used directly. Workaround: `COPY FILES` to unencrypted internal stage (SNOWFLAKE_SSE), then use `TO_FILE(BUILD_SCOPED_FILE_URL(@internal_stage, path))`

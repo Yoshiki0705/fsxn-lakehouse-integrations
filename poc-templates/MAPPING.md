@@ -27,7 +27,7 @@ This file maps each PoC template module to the corresponding detailed documentat
 |-------|----------|-----------------|
 | Compatibility Matrix | [docs/en/compatibility-matrix.md](../docs/en/compatibility-matrix.md) | Which operations work on which engine |
 | Vendor Comparison | [docs/en/vendor-comparison.md](../docs/en/vendor-comparison.md) | Engine selection guidance |
-| Partner Offering | [docs/en/partner-offering.md](../docs/en/partner-offering.md) | Sales positioning and anti-patterns |
+| Adoption Assessment | [docs/adoption-guide/adoption-assessment.md](../docs/adoption-guide/adoption-assessment.md) | Fit criteria, anti-patterns, and claims not to make |
 | DataSync Guide | [docs/en/datasync-to-s3-guide.md](../docs/en/datasync-to-s3-guide.md) | Module 04 (Databricks) sync mechanism |
 | Unstructured Data | [docs/en/unstructured-data-access.md](../docs/en/unstructured-data-access.md) | Image/PDF/video access patterns |
 | Region Design | [docs/en/region-design-guide.md](../docs/en/region-design-guide.md) | Same-region requirement |
@@ -79,9 +79,9 @@ After running a PoC module, record evidence in the same format as [verification-
 
 ```yaml
 # Example: verification-pack/<engine>/evidence/<date>/evidence-record.yaml
-verification_id: poc-<customer>-<engine>-<date>
+verification_id: poc-<environment>-<engine>-<date>
 date: "YYYY-MM-DD"
-engineer: <name>
+engineer: <operator>
 platform: <engine>
 results:
   read_test:

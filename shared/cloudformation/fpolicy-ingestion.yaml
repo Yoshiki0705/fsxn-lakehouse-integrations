@@ -172,7 +172,7 @@ Resources:
             "volume": "vol1",
             "svm": "svm-name",
             "timestamp": "2026-05-17T10:00:00Z",
-            "client_ip": "10.0.1.100",
+            "client_ip": "198.51.100.10",
             "protocol": "nfs",
             "size": 1024
           }

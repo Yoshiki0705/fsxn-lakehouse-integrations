@@ -45,7 +45,21 @@
       "interpretation": "Instance Profile IAM policy (databricks-fsxn-access-profile) does not have the correct S3 AP permissions. This is an IAM policy issue, not a platform boundary. The UC path works because the Storage Credential role has broader permissions."
     }
   },
-  "conclusion": {
+  "record_status": "SUPERSEDED",
+  "superseded_by": {
+    "date": "2026-05-26",
+    "source": "Databricks Support response",
+    "finding": [
+      "Unity Catalog External Locations do not support S3 Access Points as storage targets.",
+      "The access_point field was never released as GA and has been removed from documentation.",
+      "The partial success recorded below is 'a side effect of incomplete internal handling, not a supported code path'.",
+      "CREATE TABLE and write operations on S3 AP paths are not supported."
+    ],
+    "effect_on_this_record": "The measurements below (286 objects listed) are what was observed on 2026-05-24 and are unchanged. The conclusion drawn from them was wrong and is retained only as history. Do not cite this record as evidence that Unity Catalog supports FSx for ONTAP S3 Access Points.",
+    "current_position": "../../../integrations/databricks/README.md#support-confirmation-2026-05-26"
+  },
+  "conclusion_as_recorded_2026_05_24": {
+    "note": "Superseded on 2026-05-26 — see superseded_by above. Retained verbatim for traceability.",
     "uc_external_location_with_access_point_field": "WORKS",
     "key_finding": "Setting the access_point field on the External Location resolves the session policy issue. Unity Catalog can now govern access to FSx for ONTAP S3 Access Points.",
     "requirements": [

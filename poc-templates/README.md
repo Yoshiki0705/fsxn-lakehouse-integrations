@@ -42,28 +42,19 @@ Deploy base infrastructure and run your first query in 30 minutes:
 ```
 poc-templates/
 ├── README.md                         # This file
-├── 01-base-infrastructure/           # CloudFormation: FSx + S3 AP + IAM
-│   ├── template.yaml                 # Main CFn template
-│   ├── parameters-example.json       # Parameter file template
-│   └── README.md                     # Deployment guide
 ├── 02-athena-quickstart/             # Fastest validation path
-│   ├── create-glue-table.sql         # Glue table DDL
 │   ├── sample-queries.sql            # Validation queries
-│   └── run-first-query.sh            # One-click first query
+│   └── README.md                     # Athena quickstart guide
 ├── 03-snowflake-integration/         # Snowflake External Table + Cortex AI
 │   ├── 01-storage-integration.sql    # Storage Integration setup
 │   ├── 02-stage-and-table.sql        # Stage + External Table
 │   ├── 03-cortex-ai-demo.sql         # Cortex AI functions demo
-│   ├── 04-dynamic-table.sql          # Dynamic Table example
 │   └── README.md                     # Snowflake setup guide
 ├── 04-databricks-integration/        # DataSync → S3 → UC
 │   ├── datasync-task.yaml            # DataSync CFn template
-│   ├── uc-setup.sql                  # Unity Catalog table creation
-│   ├── auto-loader-notebook.py       # Auto Loader configuration
-│   └── README.md                     # Databricks setup guide
+│   └── README.md                     # Databricks setup guide (UC DDL inline)
 ├── 05-emr-spark-etl/                 # EMR Serverless write-back
 │   ├── spark-job.py                  # PySpark ETL script
-│   ├── emr-app.yaml                  # EMR Serverless CFn
 │   └── README.md                     # EMR setup guide
 ├── 06-duckdb-lambda/                 # Cheapest path
 │   ├── handler.py                    # Lambda handler
@@ -71,8 +62,6 @@ poc-templates/
 │   └── README.md                     # DuckDB Lambda guide
 ├── 07-governance/                    # Lake Formation fine-grained
 │   ├── lakeformation-setup.sh        # LF admin + grants
-│   ├── column-level-demo.sql         # Column permission demo
-│   ├── row-filter-demo.sql           # Row filter demo
 │   └── README.md                     # Governance guide
 ├── templates/                        # Partner-facing templates
 │   ├── poc-proposal.md               # PoC proposal for customer
@@ -80,16 +69,31 @@ poc-templates/
 │   ├── cost-estimate.md              # Cost calculator
 │   ├── discovery-questions.md        # First meeting questions
 │   ├── regulated-workload-checklist.md # Healthcare/Finance checklist
-│   └── post-poc-report.md            # Results report template
+│   ├── post-poc-report.md            # Results report template
+│   └── ja/                           # Japanese versions
 ├── sample-data/                      # Sample datasets
-│   ├── generate-sensor-data.py       # 10K row sensor data generator
-│   └── generate-documents.py         # Sample document generator
+│   └── generate-sensor-data.py       # 10K row sensor data generator
 └── scripts/
     ├── deploy.sh                     # One-click deploy
-    ├── upload-sample-data.sh         # Upload to FSx via S3 AP
-    ├── validate.sh                   # Connectivity validation
-    └── cleanup.sh                    # Resource cleanup
+    └── validate.sh                   # Connectivity validation
 ```
+
+Each numbered directory has both `README.md` and `README-ja.md`.
+
+**Not yet included.** Earlier revisions of this README listed the following as
+present. They were never added, so they have been removed from the tree above
+rather than left as broken references:
+
+| Not present | Use instead |
+|---|---|
+| `01-base-infrastructure/` (CFn for FSx + S3 AP + IAM) | [`shared/cloudformation/`](../shared/cloudformation/) |
+| `02-athena-quickstart/create-glue-table.sql`, `run-first-query.sh` | DDL and query steps are inline in that directory's README |
+| `03-snowflake-integration/04-dynamic-table.sql` | [`integrations/snowflake/sql/`](../integrations/snowflake/sql/) |
+| `04-databricks-integration/uc-setup.sql`, `auto-loader-notebook.py` | Both are inline in that directory's README |
+| `05-emr-spark-etl/emr-app.yaml` | [`integrations/`](../integrations/) EMR templates |
+| `07-governance/column-level-demo.sql`, `row-filter-demo.sql` | Steps are inline in `lakeformation-setup.sh` and the README |
+| `sample-data/generate-documents.py` | Not implemented |
+| `scripts/upload-sample-data.sh`, `cleanup.sh` | Upload steps are in each README; delete the CFn stacks to clean up |
 
 ---
 

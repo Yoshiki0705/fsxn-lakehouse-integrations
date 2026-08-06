@@ -33,6 +33,10 @@ DESC STORAGE INTEGRATION metadata_sync_integration;
 -- =========================================================================
 -- Step 2: Create external stage
 -- =========================================================================
+-- This stage points at a standard S3 bucket, so AWS_ACCESS_POINT_ARN is
+-- deliberately absent. Stages that point at an FSx for ONTAP S3 Access Point
+-- must set it — omitting it there lets LIST succeed while every read fails.
+-- See integrations/snowflake/sql/02_external_stage.sql for that case.
 CREATE OR REPLACE STAGE metadata_export_stage
   STORAGE_INTEGRATION = metadata_sync_integration
   URL = 's3://your-metadata-export-bucket/exports/latest/'

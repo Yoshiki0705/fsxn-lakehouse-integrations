@@ -41,24 +41,58 @@
 
 ```
 poc-templates/
-├── README.md / README-ja.md          # このファイル
-├── 01-base-infrastructure/           # CloudFormation: FSx + S3 AP + IAM
+├── README.md                         # 本ファイル
 ├── 02-athena-quickstart/             # 最速の検証パス
+│   ├── sample-queries.sql            # 検証クエリ
+│   └── README.md                     # Athena クイックスタートガイド
 ├── 03-snowflake-integration/         # Snowflake External Table + Cortex AI
+│   ├── 01-storage-integration.sql    # Storage Integration 設定
+│   ├── 02-stage-and-table.sql        # Stage + External Table
+│   ├── 03-cortex-ai-demo.sql         # Cortex AI 関数デモ
+│   └── README.md                     # Snowflake セットアップガイド
 ├── 04-databricks-integration/        # DataSync → S3 → UC
+│   ├── datasync-task.yaml            # DataSync CFn テンプレート
+│   └── README.md                     # Databricks セットアップガイド（UC DDL は本文内）
 ├── 05-emr-spark-etl/                 # EMR Serverless 書き戻し
+│   ├── spark-job.py                  # PySpark ETL スクリプト
+│   └── README.md                     # EMR セットアップガイド
 ├── 06-duckdb-lambda/                 # 最安パス
-├── 07-governance/                    # Lake Formation 細粒度制御
+│   ├── handler.py                    # Lambda ハンドラ
+│   ├── template.yaml                 # Lambda CFn
+│   └── README.md                     # DuckDB Lambda ガイド
+├── 07-governance/                    # Lake Formation きめ細かな制御
+│   ├── lakeformation-setup.sh        # LF 管理者 + grant
+│   └── README.md                     # ガバナンスガイド
 ├── templates/                        # パートナー向けテンプレート
-│   ├── discovery-questions.md        # 初回ミーティング質問集
-│   ├── poc-proposal.md               # PoC 提案書
+│   ├── poc-proposal.md               # 顧客向け PoC 提案書
 │   ├── success-criteria.md           # Go/No-Go チェックリスト
-│   ├── cost-estimate.md              # コスト計算シート
-│   ├── regulated-workload-checklist.md # 規制ワークロードチェックリスト
-│   └── post-poc-report.md            # 結果レポートテンプレート
+│   ├── cost-estimate.md              # コスト計算
+│   ├── discovery-questions.md        # 初回ミーティング質問集
+│   ├── regulated-workload-checklist.md # ヘルスケア/金融チェックリスト
+│   ├── post-poc-report.md            # 結果レポートテンプレート
+│   └── ja/                           # 日本語版
 ├── sample-data/                      # サンプルデータセット
-└── scripts/                          # デプロイ・検証スクリプト
+│   └── generate-sensor-data.py       # 1万行センサーデータ生成
+└── scripts/
+    ├── deploy.sh                     # ワンクリックデプロイ
+    └── validate.sh                   # 接続性検証
 ```
+
+各番号付きディレクトリには `README.md` と `README-ja.md` の両方があります。
+
+**未収録。** 以前のリビジョンではこの README が以下を収録済みとして記載していました。
+実際には追加されておらず、壊れた参照として残すのではなく上記ツリーから削除しました:
+
+| 不在 | 代替 |
+|---|---|
+| `01-base-infrastructure/`（FSx + S3 AP + IAM の CFn） | [`shared/cloudformation/`](../shared/cloudformation/) |
+| `02-athena-quickstart/create-glue-table.sql`, `run-first-query.sh` | DDL とクエリ手順は当該ディレクトリの README 本文内 |
+| `03-snowflake-integration/04-dynamic-table.sql` | [`integrations/snowflake/sql/`](../integrations/snowflake/sql/) |
+| `04-databricks-integration/uc-setup.sql`, `auto-loader-notebook.py` | いずれも当該ディレクトリの README 本文内 |
+| `05-emr-spark-etl/emr-app.yaml` | [`integrations/`](../integrations/) の EMR テンプレート |
+| `07-governance/column-level-demo.sql`, `row-filter-demo.sql` | 手順は `lakeformation-setup.sh` と README 内 |
+| `sample-data/generate-documents.py` | 未実装 |
+| `scripts/upload-sample-data.sh`, `cleanup.sh` | アップロード手順は各 README 内。クリーンアップは CFn スタックを削除 |
 
 ---
 

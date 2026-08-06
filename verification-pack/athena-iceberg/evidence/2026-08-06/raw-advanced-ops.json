@@ -1,0 +1,116 @@
+[
+  {
+    "step": "glue catalog entry",
+    "table_type": "ICEBERG",
+    "location": "s3://verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias/athena-iceberg-probe",
+    "metadata_location": "s3://verification-tes-fpg5t76dgh3xchkrudk6yc4jhgzz1apn1b-ext-s3alias/athena-iceberg-probe/metadata/00002-c4b3944b-23b5-49a6-96f6-b8c9937006ee.metadata.json",
+    "confirmed_on_access_point": true
+  },
+  {
+    "step": "objects on access point",
+    "total": 11,
+    "data_files": 3,
+    "metadata_files": 8,
+    "sample": [
+      "athena-iceberg-probe/data/5d5ffg/20260806_072838_00025_gxwia-5b55962b-ba9c-45b8-8889-1218cf5b48d5.parquet",
+      "athena-iceberg-probe/data/BOeRsQ/20260806_072838_00025_gxwia-e508760b-3bc8-41a7-aed2-8db7a11583e3.parquet",
+      "athena-iceberg-probe/data/P6bs7A/20260806_072824_00142_q5uiu-346b67d6-8f08-4145-8b0b-a32a1ccf1a93.parquet",
+      "athena-iceberg-probe/metadata/00000-4de9d81c-dbff-4088-b809-8e93cca66f7e.metadata.json",
+      "athena-iceberg-probe/metadata/00001-98d0c848-89a2-4c46-a28a-99faa7318679.metadata.json",
+      "athena-iceberg-probe/metadata/00002-c4b3944b-23b5-49a6-96f6-b8c9937006ee.metadata.json",
+      "athena-iceberg-probe/metadata/5e760f86-d121-4cf1-998f-f9ce4e889c7b-m0.avro",
+      "athena-iceberg-probe/metadata/fdbdce54-c6ac-452e-95f5-c02d723206b7-m0.avro"
+    ]
+  },
+  {
+    "step": "DELETE (row-level)",
+    "state": "SUCCEEDED",
+    "duration_ms": 6323,
+    "error": "",
+    "rows": []
+  },
+  {
+    "step": "count after DELETE",
+    "state": "SUCCEEDED",
+    "duration_ms": 1635,
+    "error": "",
+    "rows": [
+      [
+        "n"
+      ],
+      [
+        "2"
+      ]
+    ]
+  },
+  {
+    "step": "snapshot count (history accrues)",
+    "state": "SUCCEEDED",
+    "duration_ms": 1647,
+    "error": "",
+    "rows": [
+      [
+        "n"
+      ],
+      [
+        "3"
+      ]
+    ]
+  },
+  {
+    "step": "time travel to first snapshot",
+    "state": "SUCCEEDED",
+    "duration_ms": 3194,
+    "error": "",
+    "rows": [
+      [
+        "n"
+      ],
+      [
+        "3"
+      ]
+    ]
+  },
+  {
+    "step": "OPTIMIZE (compaction)",
+    "state": "SUCCEEDED",
+    "duration_ms": 4748,
+    "error": "",
+    "rows": []
+  },
+  {
+    "step": "VACUUM (expire snapshots)",
+    "state": "SUCCEEDED",
+    "duration_ms": 4773,
+    "error": "",
+    "rows": []
+  },
+  {
+    "step": "concurrent INSERT #1",
+    "state": "SUCCEEDED",
+    "duration_ms": 4781,
+    "error": "",
+    "rows": []
+  },
+  {
+    "step": "concurrent INSERT #2",
+    "state": "SUCCEEDED",
+    "duration_ms": 3199,
+    "error": "",
+    "rows": []
+  },
+  {
+    "step": "count after concurrent inserts",
+    "state": "SUCCEEDED",
+    "duration_ms": 3198,
+    "error": "",
+    "rows": [
+      [
+        "n"
+      ],
+      [
+        "4"
+      ]
+    ]
+  }
+]

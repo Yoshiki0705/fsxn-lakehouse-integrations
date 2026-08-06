@@ -355,19 +355,21 @@ GROUP BY checksum HAVING COUNT(*) > 1;
 
 ---
 
-## 役割別レンズサマリー
+## 論点別の推奨サマリー
 
-> 以下は役割ベースのレンズによる推奨の要約です(個人名ではなく役割で表記)。
+> 各行は1つの論点についての推奨をまとめたものです。本ドキュメント内の選択肢を
+> 分析して導いたものであり、特定の役割に就いている個人から収集した見解では
+> ありません。
 
-| レンズ(役割) | 主要推奨 |
+| 論点 | 主要推奨 |
 |---------|---------|
-| **Snowflake PMM レンズ** | Databricks 決定事項でも、Snowflake Horizon で同じデータに対して外部エンジンへのガバナンス強制が可能。他のコンシューマー向けに Horizon を併用する選択肢あり。 |
-| **Databricks SA レンズ** | UC Volumes +  OpenSharing が有効。S3 コスト削減には即時対応として S3 Intelligent-Tiering、戦略的には FSx for ONTAP を推奨。 |
-| **AWS Iceberg SA レンズ** | FSx for ONTAP S3 AP で S3 コピーの必要性を排除。FlexCache S3 AP(ロードマップ)でさらにコスト削減。 |
-| **Storage Specialist レンズ** | ONTAP 重複排除がストレージ効率に有効(S3 にはネイティブ dedup なし)。FSx for ONTAP への移行が根本原因の解決に寄与。 |
-| **Partner SA レンズ** | Amazon CloudWatch と ONTAP REST API で運用を統合管理。DataSync による FSx for ONTAP への移行はサポートされたパス。FlexCache S3 AP(ロードマップ)はハイブリッド構成で有効な選択肢。 |
-| **Public Sector SA レンズ** | データ主権要件によりオンプレ ONTAP + SnapMirror(Option C)が必須の場合あり。FlexCache S3 AP でフルレプリケーションなしにクラウド分析を実現。 |
-| **Outcome SA レンズ** | 顧客のゴールは「コスト削減 + ガバナンス付き共有」。FlexCache S3 AP(ロードマップ)が最小データ移動で両立に寄与。 |
+| **複数エンジンにまたがるガバナンス** | Databricks 決定事項でも、Snowflake Horizon で同じデータに対して外部エンジンへのガバナンス強制が可能。他のコンシューマー向けに Horizon を併用する選択肢あり。 |
+| **カタログ統合と S3 コスト** | UC Volumes + OpenSharing が有効。S3 コスト削減には即時対応として S3 Intelligent-Tiering、戦略的には FSx for ONTAP を推奨。 |
+| **データコピーの回避** | FSx for ONTAP S3 AP で S3 コピーの必要性を排除。FlexCache S3 AP(ロードマップ)でさらにコスト削減。 |
+| **ストレージ効率** | ONTAP 重複排除がストレージ効率に有効(S3 にはネイティブ dedup なし)。FSx for ONTAP への移行が根本原因の解決に寄与。 |
+| **運用と監視** | Amazon CloudWatch と ONTAP REST API で運用を統合管理。DataSync による FSx for ONTAP への移行はサポートされたパス。FlexCache S3 AP(ロードマップ)はハイブリッド構成で有効な選択肢。 |
+| **データ主権** | データ主権要件によりオンプレ ONTAP + SnapMirror(Option C)が必須の場合あり。FlexCache S3 AP でフルレプリケーションなしにクラウド分析を実現。 |
+| **ビジネス成果との整合** | 顧客のゴールは「コスト削減 + ガバナンス付き共有」。FlexCache S3 AP(ロードマップ)が最小データ移動で両立に寄与。 |
 
 
 ---

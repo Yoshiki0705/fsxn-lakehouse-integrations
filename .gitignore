@@ -50,8 +50,14 @@ terraform.tfvars
 *-params.json
 *-parameters.json
 **/params.json
+**/params-*.json
 !*-params.example.json
 !**/params.example.json
+!**/params-*.example.json
+
+# Local state written by setup scripts so a later phase needs fewer arguments.
+# No secrets, but environment-specific.
+**/.external-volume-state
 
 # AWS credentials and config
 .aws/

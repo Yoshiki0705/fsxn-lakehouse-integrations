@@ -19,17 +19,17 @@ Architecture:
 
 Usage:
     python configure_fpolicy.py \\
-        --management-lif 10.0.1.100 \\
+        --management-lif 198.51.100.10 \\
         --svm-name FSxN_OnPre \\
-        --fargate-ip 10.0.2.50 \\
+        --fargate-ip 198.51.100.20 \\
         --username fsxadmin \\
         --password <password>
 
     # Certificate-based authentication:
     python configure_fpolicy.py \\
-        --management-lif 10.0.1.100 \\
+        --management-lif 198.51.100.10 \\
         --svm-name FSxN_OnPre \\
-        --fargate-ip 10.0.2.50 \\
+        --fargate-ip 198.51.100.20 \\
         --cert /path/to/client.pem
 
 Environment Variables:
@@ -97,16 +97,16 @@ def create_parser():
 Examples:
   # Basic usage with username/password:
   python configure_fpolicy.py \\
-      --management-lif 10.0.1.100 \\
+      --management-lif 198.51.100.10 \\
       --svm-name FSxN_OnPre \\
-      --fargate-ip 10.0.2.50 \\
+      --fargate-ip 198.51.100.20 \\
       --username fsxadmin \\
       --password MyPassword123
 
   # Using environment variables:
-  export ONTAP_MANAGEMENT_LIF=10.0.1.100
+  export ONTAP_MANAGEMENT_LIF=198.51.100.10
   export ONTAP_PASSWORD=MyPassword123
-  export FARGATE_TASK_IP=10.0.2.50
+  export FARGATE_TASK_IP=198.51.100.20
   python configure_fpolicy.py --svm-name FSxN_OnPre
 
 NFSv4.1 Requirement:

@@ -2,6 +2,8 @@
 
 # Blocker Tracking Dashboard
 
+> This page tracks what is known **not** to work. For claims that are simply untested, see the [Unverified Item Inventory](./unverified-inventory.md). For the same blockers grouped by which layer they originate in, see [Known Challenges by Layer](./known-challenges.md).
+
 > **Purpose**: A living document that centrally manages the status of known blockers and constraints for FSx for ONTAP × Lakehouse integration.
 > **Last updated**: 2026-06-20
 > **Update frequency**: Quarterly, or ad-hoc when significant status changes occur
@@ -13,13 +15,14 @@
 | ID | Blocker | Impact Area | Status | Workaround |
 |:---:|---|---|:---:|:---:|
 | BLK-001 | UC External Location does not support S3 AP | Databricks UC governance | ❌ Unresolved | ✅ Available |
-| BLK-002 | Conditional writes not supported | Delta/Iceberg/Hudi writes | ❌ Unresolved | ✅ Available |
+| BLK-002 | Conditional writes not supported | Delta Lake writes (Iceberg via Athena unaffected) | ❌ Unresolved | ✅ Available |
 | BLK-003 | S3 Event Notifications not supported | Auto Loader notification / Snowpipe | ❌ Unresolved | ✅ Available |
 | BLK-004 | SnapMirror S3 disabled on FSx for ONTAP | ONTAP-native S3 replication | ❌ Unresolved | ✅ Available |
 | BLK-005 | `iceberg_rest` Connection Type not supported | UC Foreign Catalog × S3 Tables | ❌ Unresolved | ⚠️ Partial |
 | BLK-006 | ListObjectsV2 latency (30-80x withdrawn; 1.3-1.4x measured) | Large directory scans | ⚠️ Scope reduced | ✅ Available |
 | BLK-007 | NFS/SMB mount blocked by seccomp | Databricks direct filesystem access | ❌ By design | ✅ Available |
 | BLK-008 | Lake Formation column-level control unsupported on S3 Tables | S3 Tables federated catalog governance | ❌ Unresolved | ⚠️ Table-level only |
+| BLK-009 | Unload to an S3 AP fails checksum validation, leaving the object behind | Snowflake `COPY INTO @stage` (and any unload to an AP) | ❌ Unresolved | ✅ Available |
 
 ---
 
@@ -53,19 +56,48 @@
 | Attribute | Value |
 |-----------|-------|
 | **Affected service** | FSx for ONTAP S3 Access Points |
-| **Affected features** | Delta Lake / Iceberg / Hudi transactional writes |
+| **Affected features** | Delta Lake transactional writes. Hudi untested. **Iceberg is not affected when the catalog holds the pointer** — see scope below |
 | **Root cause** | FSx for ONTAP S3 AP does not implement `If-None-Match` header (returns HTTP 501) |
 | **Confirmed** | 2026-05-22 (AWS Support, product-level limitation) |
 | **Status** | ❌ Unresolved — Feature Request filed |
 | **Resolution criteria** | AWS implements conditional writes on FSx for ONTAP S3 AP (parity with S3 native Aug 2024) |
-| **Severity** | **High** — Lakehouse table format writes impossible. Read path unaffected |
+| **Severity** | **Medium** — narrowed 2026-08-06. Delta Lake writes are impossible; Iceberg writes via Athena work. Read path unaffected |
 
-**Workarounds**:
+**Scope, measured 2026-08-06**
+
+| Table format / engine | Write | Why |
+|---|:---:|---|
+| Delta Lake (any engine) | ❌ | The commit log lives in `_delta_log` on the object store, so the commit itself needs the conditional write |
+| Iceberg via Athena + Glue Catalog | ✅ | Glue holds the current-metadata pointer. The commit is a conditional update in Glue, not on S3. INSERT, UPDATE, DELETE, time travel, `OPTIMIZE`, `VACUUM` and two concurrent commits all succeeded |
+| Iceberg via EMR Serverless | ❌ | Fails for an unrelated reason: S3FileIO does not handle the Access Point alias during metadata write (NullPointerException) |
+| Hudi | ❓ | Not tested |
+
+The earlier note that concurrent Iceberg writes risk corruption was an inference, not a measurement, and is withdrawn.
+
+**Failed Delta writes leave their data files behind.** Observed 2026-08-06 on the
+verification Access Point: four prefixes hold Delta data files with no
+`_delta_log`, and one holds three data files written a minute apart. Delta writes
+the Parquet first and commits second, so when the commit hits the 501 the data
+files stay. Each retry adds another orphan.
+
+This is the same residue shape as [BLK-009](#blk-009-unload-to-an-s3-access-point-fails-checksum-validation-and-leaves-the-object)
+from a different cause. Sweep for it with:
+
+```bash
+./shared/scripts/check_orphaned_unload_objects.py --access-point <alias>
+```
+
+The script reports prefixes that hold engine output but no completion marker
+(`_SUCCESS`, `_delta_log/`, `_committed_*`), which is what an interrupted write
+looks like from the storage side.
+ Two concurrent Athena commits produced the correct row count with no lost update. That is a small test — it establishes that concurrency is not categorically unsafe here, not a concurrency limit.
+
+**Workarounds for Delta Lake**:
 1. **Use read-only** — Athena / Glue / Snowflake reads work normally
-2. **Write to standard S3** — DataSync → standard S3 → Delta/Iceberg writes
-3. **Iceberg + external catalog (single writer)** — Glue Catalog manages pointers; theoretically writable in single-writer config (experimental). ⚠️ **Concurrent writes risk data corruption — DO NOT USE IN PRODUCTION**
+2. **Write to standard S3** — DataSync → standard S3 → Delta writes
+3. **Use Iceberg instead** — with Athena and the Glue Catalog, writes work directly on the Access Point
 
-**Evidence**: [Compatibility Matrix](./compatibility-matrix.md) (Lakehouse Table Formats section)
+**Evidence**: [Athena Iceberg verification](../../verification-pack/athena-iceberg/evidence/2026-08-06/evidence-record.yaml) · [Compatibility Matrix](./compatibility-matrix.md) (Lakehouse Table Formats section)
 
 > **S3 parity roadmap**: S3 native received conditional writes in Aug 2024. Addition to FSx for ONTAP S3 AP depends on the AWS development roadmap, but parity is a reasonable expectation. Timeline undisclosed.
 
@@ -221,6 +253,37 @@ platform changes since.
 
 ---
 
+### BLK-009: Unload to an S3 Access Point Fails Checksum Validation and Leaves the Object
+
+| Attribute | Value |
+|-----------|-------|
+| **Affected service** | FSx for ONTAP S3 Access Points × any engine that unloads to them |
+| **Affected features** | Snowflake `COPY INTO @stage`; likely any unload that validates a checksum against the returned encryption type |
+| **Root cause** | AWS documents that upload checksums are handled differently here: the checksum "is not stored in the FSx for NetApp ONTAP volume as object metadata and the object itself", so "the checksum values are not returned in the response", and the ETag is explicitly not an MD5 digest ([access point compatibility](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)). A client that validates its computed checksum against the response cannot complete that step. The write itself succeeds first. The error text points at the encryption type (`aws:fsx`, neither `AWS_SSE_S3` nor `AWS_SSE_KMS`), which is the remediation hint the client offers rather than the mechanism |
+| **Confirmed** | 2026-08-06 (measured) |
+| **Status** | ❌ Unresolved |
+| **Resolution criteria** | FSx for ONTAP S3 AP reports an encryption type that clients accept, or clients tolerate `aws:fsx` |
+| **Severity** | **Medium** — the operation is unusable, and it fails in a way that leaves state behind rather than rejecting cleanly |
+
+**What was measured**
+
+| Attempt | Result |
+|---|---|
+| `COPY INTO @stage` with no explicit encryption | Failed in 479 ms with `Remote upload failed checksum validation`. **The object was written anyway** — 25 bytes, valid gzip, correct content, `ServerSideEncryption: aws:fsx` |
+| Stage with `ENCRYPTION=(TYPE='AWS_SSE_S3')` | Hung. Cancelled after 2 m 54 s. Nothing written |
+
+**Why this matters more than a plain rejection**: the statement reports failure, so a caller will assume nothing was written. A complete object remains on the Access Point. Anyone who has attempted unload against an AP-backed stage should list the target prefix and remove orphans.
+
+**Workarounds**:
+1. **Do not unload to an Access Point.** Write to a standard S3 bucket, or to Snowflake-managed storage (internal table, or a Managed Iceberg Table on an External Volume — verified 2026-08-06)
+2. If NFS or SMB access to the same volume is available, write there instead; the S3 layer is not involved
+
+**Evidence**: [Snowflake verification 2026-08-06](../../verification-pack/snowflake/evidence/2026-08-06/evidence-record.yaml)
+
+> Earlier revisions of this repository explained this as "Snowflake external stages are read-only by design". That was wrong, and it hid the partial-write behaviour.
+
+---
+
 ## Blocker Resolution Impact Map
 
 ```mermaid
@@ -228,7 +291,7 @@ graph TD
     BLK001[BLK-001 Resolved<br/>UC × S3 AP] --> Z1[Zero-copy UC governance achieved]
     BLK001 --> Z2[DataSync no longer required<br/>Cost reduction]
     
-    BLK002[BLK-002 Resolved<br/>Conditional Writes] --> W1[Delta/Iceberg direct writes<br/>on FSx for ONTAP S3 AP]
+    BLK002[BLK-002 Resolved<br/>Conditional Writes] --> W1[Delta Lake direct writes<br/>on FSx for ONTAP S3 AP<br/>Iceberg already works via Athena]
     BLK002 --> W2[Full Lakehouse table<br/>format support]
     
     BLK003[BLK-003 Resolved<br/>Event Notifications] --> E1[Auto Loader notification mode<br/>works directly]
@@ -294,7 +357,7 @@ graph LR
 
 | Scenario | Result |
 |----------|--------|
-| BLK-002 only resolved (BLK-001 unresolved) | Athena/EMR/Glue can write Delta/Iceberg directly to FSx for ONTAP S3 AP. **But no Databricks UC benefit** (BLK-001 is the gate) |
+| BLK-002 only resolved (BLK-001 unresolved) | Athena/EMR/Glue could write Delta Lake directly to FSx for ONTAP S3 AP; Iceberg via Athena already can. **But no Databricks UC benefit** (BLK-001 is the gate) |
 | BLK-001 only resolved (BLK-002 unresolved) | UC External Location can register S3 AP → **read + UC governance** achieved. Writes still via standard S3 |
 | BLK-001 + BLK-002 both resolved | **Full capability**: zero-copy + UC governance + Delta/Iceberg writes. DataSync changes from "required" to "optional" |
 | BLK-003 only resolved (BLK-001 unresolved) | Auto Loader notification mode works on FSx for ONTAP S3 AP. But UC governance still requires standard S3 path |

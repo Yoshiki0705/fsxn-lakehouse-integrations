@@ -16,7 +16,7 @@ Usage:
   export SNOWFLAKE_PASSWORD=your_password
   python run-snowflake-verifications.py
 
-Snowflake Account: MH89262 (CVDRQJT, ap-northeast-1)
+Snowflake Account: <SNOWFLAKE_ACCOUNT> (ap-northeast-1)
 """
 
 import os
