@@ -202,4 +202,3 @@ The three that most affect how the verified results should be read:
 | The status and workaround for a specific known failure | [Blocker tracker](./blocker-tracker.md) |
 | What has not been tested, and what it would take | [Unverified inventory](./unverified-inventory.md) |
 | Whether the pattern fits at all | [Adoption assessment](../adoption-guide/adoption-assessment.md) |
-| What has been raised with each vendor | [Vendor feedback](../vendor-feedback/README.md) |

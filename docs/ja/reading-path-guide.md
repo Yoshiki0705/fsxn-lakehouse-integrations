@@ -248,7 +248,6 @@ graph TD
 | | [Supported Regions](./supported-regions.md) | リージョン対応状況 |
 | **検証** | [互換性マトリクス](./compatibility-matrix.md) | プラットフォーム/フォーマット互換性 |
 | | [レイヤー別の既知の課題](./known-challenges.md) | 全制約を起因レイヤー別に整理 |
-| | [ベンダーフィードバック](../vendor-feedback/README-ja.md) | 各ベンダーに提起している内容 |
 | | [KPI and Validation](./kpi-and-validation.md) | 検証 KPI と進捗 |
 | | [ClickHouse UC 検証計画](./verification-plan-clickhouse-uc-connectivity.md) | ClickHouse 検証計画 |
 | **ガバナンス** | [Governance and Compliance](./governance-and-compliance.md) | セキュリティ/コンプライアンス |

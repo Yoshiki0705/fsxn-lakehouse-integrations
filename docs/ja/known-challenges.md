@@ -200,4 +200,3 @@ Access Point エイリアスをどう扱うか、あるいはストレージと�
 | 特定の既知の失敗のステータスと回避策 | [ブロッカートラッカー](./blocker-tracker.md) |
 | 何がテストされていないか、実施に何が必要か | [未検証項目インベントリ](./unverified-inventory.md) |
 | そもそもこのパターンが適合するか | [導入評価ガイド](../adoption-guide/adoption-assessment-ja.md) |
-| 各ベンダーに何を提起しているか | [ベンダーフィードバック](../vendor-feedback/README-ja.md) |

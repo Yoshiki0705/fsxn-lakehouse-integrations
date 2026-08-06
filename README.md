@@ -18,7 +18,6 @@
 | Compare architecture options & trade-offs | [Architecture Comparison](docs/adoption-guide/architecture-comparison.md) | 15 min |
 | Understand S3 AP directory design & performance | [S3 AP Design Considerations](docs/en/s3ap-design-considerations.md) | 15 min |
 | See every known constraint, grouped by originating layer | [Known Challenges by Layer](docs/en/known-challenges.md) | 15 min |
-| See what has been raised with each vendor | [Vendor Feedback](docs/vendor-feedback/README.md) | 10 min |
 | Run a PoC end-to-end | [PoC Execution Guide](docs/implementation-guide/poc-execution-guide.md) | 15 min |
 | Deploy base infrastructure | [Deployment Guide](docs/en/deployment-guide.md) | 30 min |
 | Distribute data with FlexCache / SnapMirror | [FlexCache/SnapMirror Considerations](docs/en/s3ap-flexcache-snapmirror-considerations.md) | 15 min |

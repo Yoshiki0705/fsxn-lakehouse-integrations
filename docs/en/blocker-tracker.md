@@ -2,7 +2,7 @@
 
 # Blocker Tracking Dashboard
 
-> This page tracks what is known **not** to work. For claims that are simply untested, see the [Unverified Item Inventory](./unverified-inventory.md). For the same blockers grouped by which layer they originate in, see [Known Challenges by Layer](./known-challenges.md), and for what has been raised with each vendor see [Vendor Feedback](../vendor-feedback/README.md).
+> This page tracks what is known **not** to work. For claims that are simply untested, see the [Unverified Item Inventory](./unverified-inventory.md). For the same blockers grouped by which layer they originate in, see [Known Challenges by Layer](./known-challenges.md).
 
 > **Purpose**: A living document that centrally manages the status of known blockers and constraints for FSx for ONTAP × Lakehouse integration.
 > **Last updated**: 2026-06-20
