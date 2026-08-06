@@ -19,7 +19,7 @@ import os
 import random
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 # confluent_kafka is imported lazily (only when actually producing to Kafka)
@@ -97,7 +97,7 @@ def generate_sensor_event(
 
     return {
         "event_id": str(uuid.uuid4()),
-        "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
+        "timestamp": int(datetime.now(UTC).timestamp() * 1000),
         "factory_id": factory_id,
         "device_id": device_id,
         "line_id": line_id,
@@ -130,7 +130,7 @@ def generate_quality_event(
     checksum = None
 
     if has_payload:
-        ts_path = datetime.now(timezone.utc).strftime("%Y/%m/%d")
+        ts_path = datetime.now(UTC).strftime("%Y/%m/%d")
         filename = f"quality_{uuid.uuid4().hex[:12]}.jpg"
         payload_ref = f"{PAYLOAD_BASE_URI}/{factory_id}/{line_id}/{ts_path}/{filename}"
         content_type = "image/jpeg"
@@ -140,7 +140,7 @@ def generate_quality_event(
 
     return {
         "event_id": str(uuid.uuid4()),
-        "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
+        "timestamp": int(datetime.now(UTC).timestamp() * 1000),
         "factory_id": factory_id,
         "device_id": device_id,
         "line_id": line_id,
@@ -160,7 +160,7 @@ def generate_status_event(
     """Generate a synthetic equipment status event."""
     return {
         "event_id": str(uuid.uuid4()),
-        "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
+        "timestamp": int(datetime.now(UTC).timestamp() * 1000),
         "factory_id": factory_id,
         "device_id": device_id,
         "line_id": line_id,
