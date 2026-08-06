@@ -20,9 +20,8 @@ import os
 import random
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
-from typing import Optional
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -100,12 +99,12 @@ def generate_synthetic_image(target_size_mb: float) -> tuple[bytes, str]:
 
     # Add synthetic overlay text
     draw = ImageDraw.Draw(img)
-    timestamp_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    timestamp_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     overlay_text = f"SYNTHETIC DATA - Quality Inspection\n{timestamp_str}\nEvent: {uuid.uuid4().hex[:8]}"
 
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 36)
-    except (OSError, IOError):
+    except OSError:
         font = ImageFont.load_default()
 
     draw.multiline_text((50, 50), overlay_text, fill=(255, 255, 0), font=font)
@@ -155,7 +154,7 @@ def generate_synthetic_pdf(target_size_mb: float) -> tuple[bytes, str]:
 
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
+        _width, height = A4
 
         # Title
         c.setFont("Helvetica-Bold", 18)
@@ -166,7 +165,7 @@ def generate_synthetic_pdf(target_size_mb: float) -> tuple[bytes, str]:
         y = height - 120
         metadata = [
             f"Report ID: {uuid.uuid4()}",
-            f"Date: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"Date: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
             f"Factory: {random.choice(FACTORIES)}",
             f"Line: {random.choice(['line-A1', 'line-A2', 'line-B1'])}",
             f"Result: {'PASS' if random.random() > 0.2 else 'FAIL'}",
@@ -296,13 +295,16 @@ def upload_via_s3(data: bytes, key: str, content_type: str) -> dict[str, str]:
                 UploadId=upload_id,
                 MultipartUpload={"Parts": parts},
             )
-        except Exception as e:
+        except Exception:
+            # Abort so the incomplete upload does not linger: its parts are excluded
+            # from FSx for ONTAP volume backups and are invisible in the volume's
+            # StorageUsed metric, so an abandoned upload is hard to notice later.
             client.abort_multipart_upload(
                 Bucket=ONTAP_S3_BUCKET,
                 Key=key,
                 UploadId=upload_id,
             )
-            raise e
+            raise
     else:
         # Simple put
         client.put_object(
@@ -351,7 +353,7 @@ def upload_via_nfs(
 def run_payload_generator(
     count: int = 10,
     image_ratio: float = 0.7,
-    output_manifest: Optional[str] = None,
+    output_manifest: str | None = None,
 ):
     """Generate and upload synthetic payloads."""
     logger.info("Starting synthetic payload generator")
@@ -371,7 +373,7 @@ def run_payload_generator(
     for i in range(count):
         factory = random.choice(FACTORIES)
         line = random.choice(LINES[factory])
-        ts_path = datetime.now(timezone.utc).strftime("%Y/%m/%d")
+        ts_path = datetime.now(UTC).strftime("%Y/%m/%d")
 
         if random.random() < image_ratio:
             # Generate image
@@ -397,8 +399,11 @@ def run_payload_generator(
                 f"  [{i + 1}/{count}] Uploaded: {result['uri']} "
                 f"({result['size_bytes'] / 1024 / 1024:.1f} MB)"
             )
-        except Exception as e:
-            logger.error(f"  [{i + 1}/{count}] Failed: {relative_path} — {e}")
+        except Exception:
+            # exception() rather than error() so the traceback is captured: an upload
+            # failure here is the thing you need to diagnose, and the loop continues
+            # to the next payload rather than aborting the batch.
+            logger.exception(f"  [{i + 1}/{count}] Failed: {relative_path}")
 
     elapsed = time.time() - start_time
     logger.info(

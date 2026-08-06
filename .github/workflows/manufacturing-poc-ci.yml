@@ -32,7 +32,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest ruff mypy
+          # Pinned exactly. These were unpinned, and ruff 0.16.1 widened its default
+          # rule set enough to fail code that had passed since 2026-07-22 with no
+          # change to the code. The rule set itself is declared in ruff.toml, so
+          # neither the tool version nor the rules can now drift on their own.
+          pip install "pytest==9.1.1" "ruff==0.16.1" "mypy==2.3.0"
 
       - name: Lint with ruff
         run: ruff check .

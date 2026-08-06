@@ -15,7 +15,7 @@ sys.modules["confluent_kafka.admin"] = unittest.mock.MagicMock()
 # Add parent to path for import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from generate_events import (  # noqa: E402  (import after sys.path/mock setup)
+from generate_events import (
     FACTORIES,
     LINES,
     SENSOR_TYPES,
