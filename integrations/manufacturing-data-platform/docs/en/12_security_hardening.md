@@ -4,7 +4,7 @@
 
 ---
 
-> Addresses P1-#5 from SA Persona Review Board (Persona 5: Security Reviewer).
+> Addresses P1-#5 from [design concern checklist](08_design_concern_checklist.md) (security).
 > Covers: secrets management, explicit deny policies, audit trail, encryption configuration.
 
 ---
@@ -318,9 +318,11 @@ vserver audit enable -vserver svm-factory-poc
 
 ---
 
-## Persona Review Notes
+## Design Review Notes
 
-- **Persona 5 (Security)**: All P1 security findings addressed. Secrets managed in Secrets Manager. Deny policies explicit. Audit trail covers all components. Encryption enforced at rest and in transit.
-- **Persona 2 (Storage)**: ONTAP export policy and S3 auth chain documented. Audit logging for file access enabled.
-- **Persona 6 (Reliability)**: Audit log rotation and retention defined. CloudTrail log validation prevents tampering.
-- **Confidentiality**: ✅ Pass — All ARNs use placeholder account IDs. No real CIDR blocks. No real credentials.
+> Notes recorded while checking this decision against the design concerns listed in [design concern checklist](08_design_concern_checklist.md). Self-review, not external review.
+
+- **Security**: All P1 security findings addressed. Secrets managed in Secrets Manager. Deny policies explicit. Audit trail covers all components. Encryption enforced at rest and in transit.
+- **Storage**: ONTAP export policy and S3 auth chain documented. Audit logging for file access enabled.
+- **Reliability and operations**: Audit log rotation and retention defined. CloudTrail log validation prevents tampering.
+- **Confidentiality check**: All ARNs use placeholder account IDs. No real CIDR blocks. No real credentials.

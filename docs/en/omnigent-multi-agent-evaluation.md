@@ -162,7 +162,7 @@ FSx for ONTAP (design docs, specifications, inspection reports)
 
 **Design principle**: Agent sandbox execution environments use a two-layer approach — structured data = Lakebase branching, unstructured data = FlexClone. Omnigent's Omnibox (OS-level isolation) remains valid for filesystem access restriction.
 
-> **⚠️ Governance Gap (Governance Architect findings)**:
+> **⚠️ Governance Gap**:
 > - Unity Catalog governs Delta/Iceberg tables but does NOT directly govern payload data at S3 AP URI destinations. When an agent retrieves an S3 AP URI from Lakebase and reads the payload, payload read authorization must be designed at the application layer.
 > - Whether row-level security applies to vectors stored in Lakebase Search is unconfirmed. A Permission-aware RAG chain design is needed for documents extracted via Document Intelligence.
 
@@ -238,7 +238,7 @@ Omnigent (multi-agent orchestration)
             └── S3 Vectors (cost-optimized, ACL metadata filter)
 ```
 
-> **Governance boundary note (Governance Architect findings)**:
+> **Governance boundary note**:
 > - **AgentCore Gateway**: Handles AWS-side authorization, routing, and MCP tool exposure. IAM-based access control.
 > - **Unity AI Gateway**: Handles Databricks-side model/agent/MCP governance. Cost control, guardrails, tracing.
 > - **Responsibility split**: AgentCore Gateway controls access authorization to Managed KB. Unity AI Gateway controls governance when Omnigent accesses Databricks resources (Lakebase, Delta tables). The two gateways govern different resource domains and do not directly conflict.
@@ -308,7 +308,7 @@ policies:
 
 > ⚠️ **Validation Required**: Managed KB accesses data sources at the S3 connector level. To apply per-user file-level ACLs (NTFS ACL / UNIX perms) at search time, the following design approaches are needed:
 
-> ⚠️ **Critical prerequisite note (FSx for ONTAP Architect findings)**: The AWS official RAG tutorial documents S3 AP connectivity for **traditional Bedrock KB**. **Whether Managed KB's S3 connector recognizes S3 AP URIs is unconfirmed** and is the top-priority validation item in Phase 4.6.1. If unsupported, fallback paths (described below) apply.
+> ⚠️ **Critical prerequisite note**: The AWS official RAG tutorial documents S3 AP connectivity for **traditional Bedrock KB**. **Whether Managed KB's S3 connector recognizes S3 AP URIs is unconfirmed** and is the top-priority validation item in Phase 4.6.1. If unsupported, fallback paths (described below) apply.
 
 | Approach | Overview | Applicable Scenario |
 |----------|----------|---------------------|
@@ -319,7 +319,7 @@ policies:
 
 **Recommendation**: Prioritize Approach A validation. If unavailable, evaluate B → D in order. Approach C is a last resort due to inefficiency.
 
-**S3 AP fallback if unsupported** (Cloud Data Architect findings):
+**S3 AP fallback if unsupported**:
 - **Fallback 1**: S3 AP → regular S3 bucket periodic sync (DataSync or Lambda). Managed KB references the regular S3 bucket
 - **Fallback 2**: Continue using traditional Bedrock KB (S3 AP support confirmed) and limit Managed KB to data sources that don't require S3 AP
 - In either case, existing paths (OpenSearch Serverless / S3 Vectors) are unaffected
@@ -329,9 +329,9 @@ policies:
 2. Metadata filter API schema and constraints
 3. Whether file ACL metadata can be stored as custom attributes during sync
 4. Whether metadata filters are maintained during Agentic Retrieval multi-hop
-5. Whether data access via Managed KB is recorded in Unity Catalog lineage (Governance Architect findings: may be invisible to UC as a Bedrock-side service)
+5. Whether data access via Managed KB is recorded in Unity Catalog lineage (may be invisible to UC as a Bedrock-side service)
 
-**FlexClone × Managed KB validation pattern** (FSx for ONTAP Architect findings):
+**FlexClone × Managed KB validation pattern**:
 - Snapshot production volume → create FlexClone (instant, zero-copy)
 - Connect FlexClone via S3 AP as Managed KB data source
 - Delete FlexClone after validation

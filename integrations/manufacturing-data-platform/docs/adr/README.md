@@ -9,16 +9,23 @@
 - Each major architecture decision must be recorded as an ADR.
 - Use sequential IDs: ADR-001, ADR-002, etc.
 - Each ADR contains bilingual sections (English primary, Japanese summary).
-- Each ADR must include: Status, Context, Decision, Options Considered, Consequences, Risks, Evidence and References, Persona Review Notes, Confidentiality Review Status.
+- Each ADR must include: Status, Context, Decision, Options Considered, Consequences, Risks, Evidence and References, Design Review Notes, Confidentiality Review Status.
 - ADRs are immutable once accepted. To change a decision, create a new ADR that supersedes the previous one.
+- **Design Review Notes** records what checking the decision against the
+  [design concern checklist](../en/08_design_concern_checklist.md) surfaced. Each bullet
+  is labelled with the concern it covers. These are self-review notes; no external
+  review or approval is implied.
 
 ### ADR ルール / 運用方針
 
 - 主要なアーキテクチャ決定は ADR として記録すること。
 - 連番 ID を使用: ADR-001、ADR-002 等。
 - 各 ADR はバイリンガルセクションを含む（英語が主、日本語サマリー付き）。
-- 各 ADR は以下を含むこと: ステータス、コンテキスト、決定、検討オプション、結果、リスク、エビデンスと参照、ペルソナレビューノート、機密性レビューステータス。
+- 各 ADR は以下を含むこと: ステータス、コンテキスト、決定、検討オプション、結果、リスク、エビデンスと参照、設計レビューノート、機密性レビューステータス。
 - ADR は承認後は不変。決定を変更するには、前の ADR を置き換える新しい ADR を作成する。
+- **設計レビューノート**は[設計論点チェックリスト](../en/08_design_concern_checklist.md)に
+  照らして決定を確認した結果を記録する節。各項目は扱う論点でラベル付けする。
+  セルフレビューのメモであり、外部レビューや承認を意味しない。
 
 ---
 

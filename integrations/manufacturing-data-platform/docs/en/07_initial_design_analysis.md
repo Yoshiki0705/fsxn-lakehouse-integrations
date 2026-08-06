@@ -1,23 +1,25 @@
-# 07: Initial Architecture Persona Review
+# 07: Initial Architecture Design Analysis
 
-🌐 **English** | [日本語](../ja/07_persona_review_initial.md)
+🌐 **English** | [日本語](../ja/07_initial_design_analysis.md)
 
-> This document applies the 5-persona architecture review framework to the manufacturing data platform PoC concept as defined in [00_project_overview](00_project_overview.md) and [01_requirements](01_requirements.md).
+> This document analyses the manufacturing data platform PoC concept against five design concerns as defined in [00_project_overview](00_project_overview.md) and [01_requirements](01_requirements.md).
+
+> Each numbered section below covers one design concern, using a checklist derived from AWS Well-Architected and industry practice. This is a structured self-review of our own design — not an interview, survey, or review by external experts.
 
 ---
 
-## Persona Review Summary
+## Analysis Summary
 
-### Review Metadata
+### Scope
 
-- **Review Date**: 2026-06-07
-- **Reviewed Documents**: OVR-000 (Project Overview), REQ-F001–F007, REQ-N001–N007, references.md, glossary
-- **Review Scope**: Full architecture concept — edge ingestion, streaming, real-time analytics, payload storage, governed lakehouse, public repository readiness
+- **Analysis date**: 2026-06-07
+- **Documents analysed**: OVR-000 (Project Overview), REQ-F001–F007, REQ-N001–N007, references.md, glossary
+- **Scope**: Full architecture concept — edge ingestion, streaming, real-time analytics, payload storage, governed lakehouse, public repository readiness
 - **Evidence Classification**: Each finding is tagged as `[Confirmed]`, `[Assumption]`, `[Hypothesis]`, or `[Open Question]`
 
 ---
 
-## Persona 1: Principal Cloud Data Architect
+## 1. Architecture Soundness
 
 ### Strengths
 
@@ -57,13 +59,13 @@
 - Will the PoC use Amazon MSK or MSK Serverless?
 - Is Confluent Tableflow (REF-005, REF-061) a candidate to replace custom Structured Streaming?
 
-### Production-Readiness Rating
+### Production-Readiness Assessment
 
 **PoC-Ready with gaps** — Core data flow is technically validated via references. Deployment model and operational design require specification before PoC execution.
 
 ---
 
-## Persona 2: Manufacturing Edge Data Architect
+## 2. Edge and Factory Fit
 
 ### Strengths
 
@@ -130,7 +132,7 @@ The following fields are confirmed (REQ-F001, REQ-F002):
 
 ---
 
-## Persona 3: Databricks Governance Architect
+## 3. Catalog Governance
 
 ### Strengths
 
@@ -174,13 +176,13 @@ The following fields are confirmed (REQ-F001, REQ-F002):
 | 3 | Direct Unity Catalog governance over payload files | UC governs tables, not arbitrary file stores |
 | 4 | Use S3 Access Points in UC storage credential | Session policy limitation (SHARED-KNOWLEDGE.md) |
 
-### Governance Risk Rating
+### Governance Risk Assessment
 
 **Low risk** — The architecture correctly separates governed data (Delta tables on S3) from unstructured payloads (FSx for ONTAP). UC governs the structured metadata layer. Payload governance requires a separate mechanism (IAM, export policies, application-level controls).
 
 ---
 
-## Persona 4: NetApp FSx for ONTAP Architect
+## 4. Storage Fit
 
 ### Strengths
 
@@ -240,9 +242,9 @@ The following fields are confirmed (REQ-F001, REQ-F002):
 
 ---
 
-## Persona 5: Public Repository Confidentiality Reviewer
+## 5. Confidentiality Check
 
-### Status: ✅ Pass
+### Result
 
 ### Review Checklist
 
@@ -269,17 +271,20 @@ None.
 
 None.
 
-### Public Repository Readiness Rating
+### Public Repository Readiness Assessment
 
 **Ready** — All content is generic, uses public technology names only where required for accuracy, and contains no confidential information.
 
 ---
 
-## Final Recommendation
+## Conclusions
 
 ### Feasibility Assessment
 
-**APPROVE WITH COMMENTS** — The architecture concept is sound, technically validated by references, and correctly avoids known limitations. The core data flow (Kafka → ClickHouse / Databricks / FSx for ONTAP) is feasible for a PoC. Comments below must be addressed before PoC execution.
+**Feasible, with open items** — The architecture concept is sound, technically
+validated by references, and correctly avoids known limitations. The core data flow
+(Kafka → ClickHouse / Databricks / FSx for ONTAP) is feasible for a PoC. The items
+below need to be resolved before PoC execution.
 
 ### Required Next Actions
 

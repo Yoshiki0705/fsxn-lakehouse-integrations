@@ -4,11 +4,14 @@
 
 ---
 
-## Persona Review-Identified Risks
+## Risks Identified by the Design Analysis
 
-The following risks were specifically identified during the 5-persona architecture review (see [07_persona_review_initial.md](07_persona_review_initial.md)):
+The following risks were identified by the design analysis in 07
+(see [initial design analysis](07_initial_design_analysis.md)). The persona
+numbers are **role-based archetypes** used to organise the analysis — not people
+who reviewed this design.
 
-### RSK-014: Edge Buffering Not Designed (Persona 2)
+### RSK-014: Edge Buffering Not Designed (edge and factory fit)
 
 - **Description:** No store-and-forward or local buffering mechanism is designed for edge devices when Kafka is unreachable. Factory networks can be intermittent.
 - **Impact:** High — Data loss during network partitions between edge and cloud
@@ -17,7 +20,7 @@ The following risks were specifically identified during the 5-persona architectu
 - **Mitigation:** Design edge buffering (local MQTT persistence, filesystem queue, or embedded Kafka). Addressed in TSK-002.
 - **Status:** Not yet designed — Must Fix before PoC execution
 
-### RSK-015: ClickHouse/Databricks Data Divergence (Persona 1)
+### RSK-015: ClickHouse/Databricks Data Divergence (architecture soundness)
 
 - **Description:** Both ClickHouse and Databricks consume from the same Kafka topics but process independently. Data counts and states may diverge due to different processing semantics (at-least-once vs exactly-once), timing, or failures.
 - **Impact:** Medium — Inconsistent analytics results across real-time and governed views
@@ -26,7 +29,7 @@ The following risks were specifically identified during the 5-persona architectu
 - **Mitigation:** (1) Define data reconciliation strategy. (2) Accept divergence for real-time (ClickHouse) vs governed (Databricks) as intentional. (3) Periodic reconciliation check in PoC validation.
 - **Status:** Accepted trade-off; needs monitoring strategy
 
-### RSK-016: Payload Integrity Verification Gap (Persona 2)
+### RSK-016: Payload Integrity Verification Gap (edge and factory fit)
 
 - **Description:** No automated mechanism to verify that payload files on FSx for ONTAP are complete, uncorrupted, and match the checksums recorded in Kafka metadata events.
 - **Impact:** Medium — Corrupted or incomplete payloads referenced from Delta tables
@@ -35,7 +38,7 @@ The following risks were specifically identified during the 5-persona architectu
 - **Mitigation:** (1) Checksum verification after upload. (2) Kafka metadata event published only after payload upload confirmed. (3) Periodic integrity scan job. (4) PoC validates with TSK-012.
 - **Status:** Requires design and PoC validation
 
-### RSK-017: FSx for ONTAP Over-Positioning Risk (Persona 4)
+### RSK-017: FSx for ONTAP Over-Positioning Risk (storage fit)
 
 - **Description:** FSx for ONTAP may be positioned for roles where native S3 would be simpler and cheaper. Risk of over-engineering the payload storage layer for a PoC.
 - **Impact:** Low for PoC (manageable cost); Medium for production credibility
@@ -178,7 +181,7 @@ The following risks were specifically identified during the 5-persona architectu
 - **Impact:** High — Reputation damage, NDA violations
 - **Likelihood:** Low (with proper review process)
 - **Severity:** High
-- **Mitigation:** (1) Confidentiality review checklist for every document. (2) No real customer/partner names. (3) Synthetic data only. (4) Pre-commit hooks for secret detection. (5) Persona 5 review.
+- **Mitigation:** (1) Confidentiality review checklist for every document. (2) No real customer/partner names. (3) Synthetic data only. (4) Pre-commit hooks for secret detection. (5) Confidentiality check per 07.
 - **Status:** Active mitigation; requires ongoing vigilance
 
 ---

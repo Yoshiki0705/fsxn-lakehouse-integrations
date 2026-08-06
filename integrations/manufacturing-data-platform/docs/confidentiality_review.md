@@ -2,14 +2,18 @@
 
 🌐 **English** | This document is maintained in English only (audit log format).
 
-> This document records all confidentiality findings from persona reviews and content audits.
+> This document records all confidentiality findings from design analyses and content audits.
 > Any detected sensitive content is logged here with remediation status.
+>
+> These are self-review results against the confidentiality checklist in
+> [08: Design Concern Checklist](en/08_design_concern_checklist.md). No independent
+> reviewer signed off on them.
 
 ---
 
 ## Review History
 
-### 2026-06-07 — Initial Architecture Persona Review
+### 2026-06-07 — Initial Architecture Design Analysis
 
 | # | Document Reviewed | Finding | Status |
 |---|-------------------|---------|--------|
@@ -17,12 +21,13 @@
 | 2 | 01_requirements (en/ja) | No sensitive content | ✅ Pass |
 | 3 | references.md | All URLs are public documentation | ✅ Pass |
 | 4 | glossary_ja_en.md | No sensitive content | ✅ Pass |
-| 5 | 07_persona_review_initial (en/ja) | No sensitive content | ✅ Pass |
+| 5 | 07_initial_design_analysis (en/ja) | No sensitive content | ✅ Pass |
 | 6 | ADR-001 through ADR-005 | No sensitive content | ✅ Pass |
 
 **Overall Status**: ✅ All content safe for public repository.
 
-**Reviewer**: Public Repository Confidentiality Reviewer (Persona 5)
+**Checklist applied**: public-repository confidentiality checks (see
+[08: Design Concern Checklist](en/08_design_concern_checklist.md), section 3)
 
 ---
 

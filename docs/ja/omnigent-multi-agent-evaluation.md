@@ -162,7 +162,7 @@ FSx for ONTAP (設計文書・仕様書・検査レポート)
 
 **設計指針**: エージェントのサンドボックス実行環境は、structured data = Lakebase branching、unstructured data = FlexClone の 2 層で構成する。Omnigent の Omnibox（OS レベル分離）はファイルシステムアクセス制限として引き続き有効。
 
-> **⚠️ ガバナンスギャップ（Governance Architect findings）**:
+> **⚠️ ガバナンスギャップ**:
 > - Unity Catalog は Delta/Iceberg テーブルをガバナンスするが、S3 AP URI 先のペイロードデータを直接ガバナンスしない。エージェントが Lakebase から S3 AP URI を取得してペイロードを読む場合、ペイロード読み取りの認可はアプリケーション層で設計する必要がある。
 > - Lakebase Search に格納されたベクトルに対して行レベルセキュリティが適用されるかは未確認。Document Intelligence で抽出した文書データの Permission-aware RAG チェーン設計が必要。
 
@@ -238,7 +238,7 @@ Omnigent (マルチエージェントオーケストレーション)
             └── S3 Vectors (コスト最適化、ACL メタデータフィルタ)
 ```
 
-> **ガバナンス境界注記 (Governance Architect findings)**:
+> **ガバナンス境界注記**:
 > - **AgentCore Gateway**: AWS 側の認可・ルーティング・MCP ツール公開を担当。IAM ベースのアクセス制御。
 > - **Unity AI Gateway**: Databricks 側のモデル/エージェント/MCP ガバナンスを担当。コスト制御、ガードレール、トレーシング。
 > - **責務分担**: AgentCore Gateway が Managed KB へのアクセス認可を制御。Unity AI Gateway は Omnigent が Databricks リソース（Lakebase, Delta テーブル）にアクセスする際のガバナンスを制御。両者は異なるリソース領域を担当し、直接競合しない。
@@ -308,7 +308,7 @@ policies:
 
 > ⚠️ **Validation Required**: Managed KB は S3 コネクタレベルでデータソースにアクセスする。ユーザー単位のファイルレベル ACL（NTFS ACL / UNIX perms）を検索時に適用するには、以下の設計が必要:
 
-> ⚠️ **重要な前提注記 (FSx for ONTAP Architect findings)**: AWS 公式 RAG チュートリアルは**従来型 Bedrock KB** での S3 AP 接続を文書化している。**Managed KB の S3 コネクタが S3 AP URI を認識するかは未確認**であり、Phase 4.6.1 の最優先検証事項である。非対応の場合はフォールバックパス（後述）を適用する。
+> ⚠️ **重要な前提注記**: AWS 公式 RAG チュートリアルは**従来型 Bedrock KB** での S3 AP 接続を文書化している。**Managed KB の S3 コネクタが S3 AP URI を認識するかは未確認**であり、Phase 4.6.1 の最優先検証事項である。非対応の場合はフォールバックパス（後述）を適用する。
 
 | アプローチ | 概要 | 適用シナリオ |
 |-----------|------|-------------|
@@ -319,7 +319,7 @@ policies:
 
 **推奨**: アプローチ A を優先検証。不可の場合は B → D の順で検討。アプローチ C は非効率のため最終手段。
 
-**S3 AP 非対応時のフォールバック** (Cloud Data Architect findings):
+**S3 AP 非対応時のフォールバック**:
 - **フォールバック 1**: S3 AP → 通常 S3 バケットへの定期同期（DataSync or Lambda）。Managed KB は通常 S3 バケットを参照
 - **フォールバック 2**: 従来型 Bedrock KB（S3 AP 対応確認済み）を継続使用し、Managed KB は S3 AP 不要なデータソースのみ対象
 - いずれの場合も、既存パス（OpenSearch Serverless / S3 Vectors）は影響を受けない
@@ -329,9 +329,9 @@ policies:
 2. メタデータフィルタ API のスキーマと制約
 3. 同期時にファイルの ACL メタデータをカスタム属性として格納可能か
 4. Agentic Retrieval のマルチホップ中にメタデータフィルタが維持されるか
-5. Managed KB 経由のデータアクセスが Unity Catalog lineage に記録されるか（Governance Architect findings: Bedrock 側サービスとして扱われ UC からは不可視の可能性）
+5. Managed KB 経由のデータアクセスが Unity Catalog lineage に記録されるか（Bedrock 側サービスとして扱われ UC からは不可視の可能性）
 
-**FlexClone × Managed KB 検証パターン** (FSx for ONTAP Architect findings):
+**FlexClone × Managed KB 検証パターン**:
 - 本番ボリュームの Snapshot → FlexClone 作成（瞬時・ゼロコピー）
 - FlexClone を S3 AP 経由で Managed KB のデータソースとして接続
 - 検証完了後に FlexClone 削除

@@ -4,7 +4,7 @@
 
 ---
 
-> Addresses P0 items from SA Persona Review Board (Persona 6: Reliability/Operations Reviewer).
+> Addresses P0 items from [design concern checklist](08_design_concern_checklist.md) (reliability and operations).
 > Defines Service Level Objectives, operational ownership, dependency failure modes, and runbook index.
 
 ---
@@ -323,9 +323,11 @@ ORDER BY hour;
 
 ---
 
-## Persona Review Notes
+## Design Review Notes
 
-- **Persona 6 (Reliability/Ops)**: This document directly addresses all P0 findings. SLOs, ownership, failure modes, monitoring, and runbooks are defined.
-- **Persona 5 (Security)**: Monitoring includes security-relevant metrics (unauthorized access attempts should be added to CloudTrail monitoring in production).
-- **Persona 2 (Storage)**: FSx monitoring covers capacity and throughput. FlexCache metrics included for Phase B.
-- **Confidentiality**: ✅ Pass — All thresholds, names, and configurations are generic.
+> Notes recorded while checking this decision against the design concerns listed in [design concern checklist](08_design_concern_checklist.md). Self-review, not external review.
+
+- **Reliability and operations**: This document directly addresses all P0 findings. SLOs, ownership, failure modes, monitoring, and runbooks are defined.
+- **Security**: Monitoring includes security-relevant metrics (unauthorized access attempts should be added to CloudTrail monitoring in production).
+- **Storage**: FSx monitoring covers capacity and throughput. FlexCache metrics included for Phase B.
+- **Confidentiality check**: All thresholds, names, and configurations are generic.

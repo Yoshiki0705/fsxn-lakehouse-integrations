@@ -310,7 +310,7 @@ staged S3 ──▶ S3 Metadata (Iceberg) / 業務 Iceberg テーブル
                      └── Athena / 他エンジン（Iceberg REST 経由）
 ```
 
-> ⚠️ **既知制約（本リポジトリ記録、Databricks Governance Architect findings）**:
+> ⚠️ **既知制約（本リポジトリ記録）**:
 > - **重要な区別**: S3 Metadata の **system テーブル**（journal/inventory/annotation）は **AWS マネージドの S3 Tables（table bucket）** 上にあり、UC からの参照には S3 Tables カタログ連携（`s3tablescatalog` / `iceberg_rest`）が必要 → 本パスは**ブロック中**（二重ブロッカー）。**現実的な UC 参照ターゲットは「業務用にユーザーが作成する通常 Iceberg テーブル（汎用 S3 上）」**であり、Case 3 はまず後者を対象とする。
 > - **annotation は UC の tags/ABAC とは統合されない並行メカニズム**。annotation が UC ガバナンスに自動で寄与することはない（UC 側は別途 tag/ABAC を設定する必要がある）。
 > - **UC の Row Filters / Column Masks は外部エンジン（Athena/EMR が Iceberg REST 経由）では適用されない**（出典: [`docs/ja/governance-and-compliance.md`](./governance-and-compliance.md)）。UC ガバナンスは「UC 内エンジン」では効くが、クロスエンジンでは強制されない。
