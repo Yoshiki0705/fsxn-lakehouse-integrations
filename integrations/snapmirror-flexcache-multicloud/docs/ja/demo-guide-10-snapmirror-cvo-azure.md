@@ -100,7 +100,7 @@ export SVM_NAME_AWS="svm-source"
 export SECRET_ARN="arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:fsxn-admin-XXXXXX"
 
 # === Azure CVO 側 ===
-export CVO_CLUSTER_IP="10.200.1.10"
+export CVO_CLUSTER_IP="198.51.100.50"
 export CVO_SVM="svm-azure-dest"
 
 # === 共通 ===
@@ -247,7 +247,7 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 
 ```bash
 # Azure VM から NFS マウント
-CVO_DATA_LIF="10.200.1.20"
+CVO_DATA_LIF="198.51.100.52"
 
 sudo mkdir -p /mnt/sm_azure_dest
 sudo mount -t nfs -o vers=3 ${CVO_DATA_LIF}:/${DEST_VOL} /mnt/sm_azure_dest

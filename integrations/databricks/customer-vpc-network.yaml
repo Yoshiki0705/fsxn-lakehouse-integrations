@@ -51,12 +51,12 @@ Parameters:
 
   FsxNfsIp:
     Type: String
-    Default: '10.0.3.133'
+    Default: '198.51.100.30'
     Description: FSx for ONTAP NFS data LIF IP address
 
   FsxMgmtIp:
     Type: String
-    Default: '10.0.3.72'
+    Default: '198.51.100.31'
     Description: FSx for ONTAP management endpoint IP address
 
   S3VpcEndpointId:

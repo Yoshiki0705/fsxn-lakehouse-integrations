@@ -19,7 +19,7 @@ MSK Provisioned (kafka.m5.large) is deployed with Multi-VPC connectivity enabled
 
 Without Reverse Private Endpoint:
 ```
-dial tcp: lookup b-2.scram.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com on 172.20.0.10:53: no such host
+dial tcp: lookup b-2.scram.msk-cluster.xxxxx.kafka.ap-northeast-1.amazonaws.com on 198.51.100.53:53: no such host
 ```
 
 With Reverse Private Endpoint enabled:
@@ -34,7 +34,7 @@ MSK manufacturing-poc Multi-VPC endpoint | Ready | Incompatible
 |-----------|---------|
 | ClickHouse Cloud | Service ID: 81dbfcdc-1127-48d5-9d11-8833db8cebb1, Region: ap-northeast-1, Version: 25.12 |
 | MSK Provisioned | Cluster: manufacturing-poc-msk-prov, kafka.m5.large × 2, Kafka 3.6.0 |
-| Multi-VPC Bootstrap (SCRAM) | `b-1.scram.manufacturingpocm.ahas42.c3.kafka.ap-northeast-1.amazonaws.com:14001` |
+| Multi-VPC Bootstrap (SCRAM) | `b-1.scram.msk-cluster.xxxxx.kafka.ap-northeast-1.amazonaws.com:14001` |
 | SASL/SCRAM Secret | `AmazonMSK_manufacturing-poc/clickhouse-user-v3` (custom KMS key) |
 | Authentication | SASL/SCRAM-SHA-512 |
 | auto.create.topics | Enabled |

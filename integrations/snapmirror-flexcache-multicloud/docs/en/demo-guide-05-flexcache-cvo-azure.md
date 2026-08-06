@@ -104,8 +104,8 @@ export AZ_LOCATION="eastus"
 export AZ_VNET="cvo-vnet"
 export AZ_SUBNET="cvo-subnet"
 export AZ_CIDR="10.200.0.0/16"
-export CVO_CLUSTER_IP="10.200.1.10"
-export CVO_IC_LIF="10.200.1.11"
+export CVO_CLUSTER_IP="198.51.100.50"
+export CVO_IC_LIF="198.51.100.51"
 export CVO_SVM="svm-azure-cache"
 
 # === Common ===
@@ -350,7 +350,7 @@ curl -sk -u "admin:<CVO_PASSWORD>" \
 az ssh vm --resource-group "$AZ_RESOURCE_GROUP" --name cvo-test-vm
 
 # NFS Mount
-CVO_DATA_LIF="10.200.1.20"
+CVO_DATA_LIF="198.51.100.52"
 sudo mkdir -p /mnt/azure_cache
 sudo mount -t nfs -o vers=3 ${CVO_DATA_LIF}:/${CACHE_VOL} /mnt/azure_cache
 
