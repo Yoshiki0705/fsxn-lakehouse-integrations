@@ -5,7 +5,7 @@
 ## Executive Summary
 
 - **Purpose**: Defines verified compatibility between FSx for ONTAP S3 Access Points and Lakehouse platforms/formats, clarifying support status from read-only analytics to write paths
-- **Key findings**: Read-only analytics (Athena/Glue/EMR/Snowflake/Bedrock) are verified and production-ready. Write paths (Delta Lake/Iceberg) are limited due to lack of conditional writes support
+- **Key findings**: Read-only analytics (Athena/Glue/EMR/Snowflake/Bedrock) are verified. Delta Lake writes are blocked by the absence of conditional writes. Iceberg writes via Athena + Glue Catalog are verified (2026-08-06) because the commit pointer is held in Glue rather than on the object store
 - **Critical constraints**: Conditional writes (`If-None-Match`) not supported, S3 Event Notifications not supported, SnapMirror S3 not available. ListObjectsV2 latency was re-measured 2026-08-05 at 1.3-1.4x native S3 for up to 5,000 objects — the previously quoted 30-80x did not reproduce ([BLK-006](./blocker-tracker.md))
 - **Recommended approach**: Implement read-only use cases via FSx for ONTAP S3 AP direct path. Use DataSync → standard S3 path when writes are required
 - **Verification levels**: 4-stage progression: API verified → Functionally verified → Security verified → Production verified. Most platforms currently at functional verification
@@ -169,6 +169,7 @@ IT VPC:
 
 ## Related Documents
 
+- [Unverified Item Inventory](./unverified-inventory.md) — every claim here that is not yet backed by a run
 - [FSx for ONTAP → Databricks UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) — UC integration overview
 - [DataSync: FSx for ONTAP → S3 Sync Guide](./datasync-to-s3-guide.md) — DataSync setup required for write paths
 - [S3 Annotations Governance Evaluation](./s3-annotations-governance-evaluation.md) — Metadata enhancement evaluation
@@ -273,7 +274,7 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **Amazon Athena** | JSON | Read-only | ✅ Verified | Same as Parquet | Same as above |
 | **Amazon Athena** | ORC | Read-only | ✅ Verified | Same as Parquet | Same as above |
 | **Amazon Athena** | Delta Lake | Read-only (symlink manifest) | ⚠️ Experimental | Athena Delta Lake connector, symlink_format_manifest generation required | No direct Delta log reading; requires pre-generated manifest. Write/MERGE not supported. |
-| **Amazon Athena** | Iceberg | Read-only | 🔲 Planned | Athena Iceberg connector, Glue Catalog as Iceberg catalog | Read path should work; write path untested. |
+| **Amazon Athena** | Iceberg | Read **and write** | ✅ Verified (2026-08-06) | Athena Iceberg table with `LOCATION` on the AP alias, Glue Catalog as Iceberg catalog | Full lifecycle verified: CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, time travel (`FOR VERSION AS OF`), `OPTIMIZE ... REWRITE DATA`, `VACUUM`, and two concurrent commits — all succeeded, with data and metadata both on the Access Point. This works where Delta Lake does not because Iceberg keeps the current-metadata pointer in Glue, so a commit needs no conditional write or atomic rename on the object store. Tested at small table size only. [Evidence](../../verification-pack/athena-iceberg/evidence/2026-08-06/evidence-record.yaml) |
 | **AWS Glue ETL** | Parquet | Read | ✅ Verified | Glue IAM role with AP permissions, AP alias in S3 path | — |
 | **AWS Glue ETL** | Parquet | Write (Append) | ✅ Verified | Read-write file system user on AP | 5 GB max per file upload |
 | **AWS Glue ETL** | Parquet | Overwrite | ⚠️ Experimental | Read-write file system user | DeleteObject + PutObject pattern; no atomic overwrite guarantee |
@@ -383,8 +384,8 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | Platform | Access Method | Status | Error / Notes | Workaround |
 |----------|-------------|--------|---------------|-----------|
 | **Amazon Athena** | Glue Federated Catalog (`s3tablescatalog`) | ✅ Verified | Sub-2-second queries, Lake Formation governance applied | — (native support) |
-| **Amazon EMR Spark** | Iceberg REST Catalog (spark-defaults.conf) | ✅ Expected | Same Iceberg REST endpoint as PyIceberg | Configure `spark.sql.catalog.s3tables` |
-| **AWS Glue ETL** | Iceberg REST Catalog | ✅ Expected | Same mechanism as EMR | Configure catalog in job parameters |
+| **Amazon EMR Spark** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ Expected, not tested | Same Iceberg REST endpoint as PyIceberg | Configure `spark.sql.catalog.s3tables`. Inferred from the PyIceberg result on the same endpoint; no EMR run recorded |
+| **AWS Glue ETL** | Iceberg REST Catalog | ⚠️ Expected, not tested | Same mechanism as EMR | Configure catalog in job parameters. No Glue run recorded |
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE iceberg_rest` | ❌ Not Supported | `CONNECTION_TYPE_NOT_SUPPORTED` — iceberg_rest not in supported types | Use Spark cluster with manual catalog config |
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE GLUE` | ❌ Not Applicable | GLUE type requires host/httpPath/PAT (Databricks-to-Databricks only) | — |
 | **Databricks Spark Cluster** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ Expected | Not yet tested; technically same as EMR | Configure `spark.sql.catalog.s3tables` in cluster config |
@@ -392,7 +393,7 @@ See [Recovery Semantics](recovery-semantics.md) for detailed comparison.
 | **Snowflake** | Glue Iceberg REST + VENDED_CREDENTIALS | ✅ Verified (2026-06-05) | Explicit `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS` in REST_CONFIG; schema with no default External Volume | CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH all working. LF column-level not enforced. |
 | **Snowflake** | External Volume (direct S3 read) | ✅ Verified | External Volume `s3tables_metadata_vol` created successfully | Requires column schema for Managed Iceberg Table |
 | **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ Not verified | Documented path: Export → Stage → COPY INTO | Design only. Recorded as `workaround_superseded` in [cross-platform-compatibility.yaml](../../integrations/iceberg-metadata-catalog/verification-evidence/cross-platform-compatibility.yaml) — no execution evidence |
-| **Redshift Spectrum** | Glue Federated Catalog | ✅ Expected | Same as Athena (Glue Catalog backend) | — |
+| **Redshift Spectrum** | Glue Federated Catalog | ⚠️ Expected, not tested | Same as Athena (Glue Catalog backend) | Redshift Spectrum on a plain Glue table over the AP is verified (2026-05-23); the S3 Tables federated-catalog path is not |
 | **DuckDB** | PyIceberg REST Catalog | ✅ Verified | Same PyIceberg SDK used in Lambda | Direct Python access |
 
 ### Key Findings
@@ -542,7 +543,7 @@ No rename, no conditional writes, no concurrent writer conflicts.
 |----------|----------------|-----------|----------------------|-------------------|-------------|-------------------|
 | **Large sequential scan** (Athena full-table) | Few large reads, high throughput | FSx for ONTAP network throughput | ≥ 1 GB/s provisioned throughput | ≥ 128 MB per file (Parquet/ORC) | Low-medium (1-10 queries) | Functional Verified |
 | **Small file / metadata-heavy** (many small CSVs) | Many ListObjectsV2 + small GetObject | Request rate, latency | Higher throughput for IOPS headroom | Consolidate to ≥ 32 MB files | Low | API Verified |
-| **High-concurrency Athena** (many analysts) | Parallel scans on same data | FSx for ONTAP aggregate throughput | Scale throughput to concurrent load | Partition data for scan reduction | High (10-50 queries) | Not yet validated |
+| **High-concurrency Athena** (many analysts) | Parallel scans on same data | FSx for ONTAP aggregate throughput | Scale throughput to concurrent load | Partition data for scan reduction | High (10-50 queries) | Verified to 25 concurrent (2026-08-06) — 25/25 succeeded, full scans degraded ~2x, queue time under 200 ms. Cache-resident dataset, so not a throughput model. [Evidence](../../verification-pack/athena-concurrency/evidence/2026-08-06/evidence-record.yaml) |
 | **Glue ETL read-heavy** (batch transform) | Sequential large reads + write-back | FSx for ONTAP read throughput | ≥ 512 MB/s provisioned | ≥ 128 MB per file | Low (1-5 jobs) | Functional Verified |
 | **Spark write-heavy** (ETL output) | Many PutObject calls | FSx for ONTAP write throughput (2x bandwidth) | ≥ 1 GB/s for write-heavy | Target 128-256 MB output files | Low | Functional Verified |
 | **RAG document ingestion** (Bedrock) | Many small-medium GetObject | Latency per document | Standard throughput sufficient | N/A (document size varies) | Low (batch ingestion) | Functional Verified |

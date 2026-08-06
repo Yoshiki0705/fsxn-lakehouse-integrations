@@ -1,0 +1,111 @@
+# Verification Evidence Record — Athena concurrency on FSx for ONTAP S3 Access Point
+test_id: "ATHENA-CONCURRENCY-S3AP-001"
+date_tested: "2026-08-06"
+tester: "Yoshiki Fujiwara"
+
+purpose: |
+  The compatibility matrix listed the high-concurrency Athena scenario (many
+  analysts scanning the same data, 10-50 queries) as unverified. This run
+  measures latency spread and error rate at 1, 10 and 25 concurrent queries.
+
+environment:
+  region: "ap-northeast-1"
+  glue_database: "fsxn_athena_verification"
+  glue_table: "sensor_benchmark"
+  rows: 5000000
+  object_count: 1
+  object_size_mib: 103
+  format: "Parquet"
+  s3_access_point: "verification-test-ap"
+  fsx_deployment_type: "SINGLE_AZ_1"
+  fsx_throughput_capacity_mbps: 128
+
+# Round A: two-column aggregate. Parquet column pruning limits each query to
+# a fraction of the object, which is the common case for well-shaped queries.
+round_a_column_pruned:
+  query: "SELECT count(*) AS n, avg(CAST(temperature AS double)) AS avg_t FROM fsxn_athena_verification.sensor_benchmark"
+  scanned_bytes_each: 7666381
+  measurements:
+    - concurrency: 1
+      succeeded: 1
+      failed: 0
+      wall_ms_p50: 2415
+      wall_ms_p95: 2415
+      engine_ms_p50: 1314
+      engine_ms_max: 1314
+      queue_ms_max: 91
+    - concurrency: 10
+      succeeded: 10
+      failed: 0
+      wall_ms_p50: 2450
+      wall_ms_p95: 3515
+      engine_ms_p50: 1955
+      engine_ms_max: 2654
+      queue_ms_max: 128
+    - concurrency: 25
+      succeeded: 25
+      failed: 0
+      wall_ms_p50: 2448
+      wall_ms_p95: 2483
+      engine_ms_p50: 1252
+      engine_ms_max: 2164
+      queue_ms_max: 172
+
+# Round B: aggregate touching all 10 columns, so each query reads the whole
+# object. This is the heavier, less favourable shape.
+round_b_full_scan:
+  query: "SELECT status, location, count(*) AS n, avg(temperature) AS t, avg(humidity) AS h, avg(pressure) AS p, avg(vibration) AS v, min(timestamp) AS t0, max(timestamp) AS t1, approx_distinct(sensor_id) AS sensors, max(batch_id) AS b, max(id) AS mid FROM fsxn_athena_verification.sensor_benchmark GROUP BY status, location"
+  scanned_bytes_each: 107986337
+  measurements:
+    - concurrency: 1
+      succeeded: 1
+      failed: 0
+      wall_ms_p50: 3577
+      wall_ms_p95: 3577
+      engine_ms_p50: 2477
+      engine_ms_max: 2477
+      queue_ms_max: 96
+      batch_wall_ms: 3577
+    - concurrency: 25
+      succeeded: 25
+      failed: 0
+      wall_ms_p50: 5842
+      wall_ms_p95: 6928
+      engine_ms_p50: 5186
+      engine_ms_max: 5549
+      queue_ms_max: 151
+      batch_wall_ms: 6936
+
+findings: |
+  No failures at any concurrency level tested: 10/10 and
+  25/25 succeeded in round A, 25/25 in round B.
+  Athena queue time stayed under 200 ms throughout, so the default workgroup's
+  concurrency limit was never the constraint.
+
+  Column-pruned queries (round A) showed no degradation: p50 2415 ms
+  at concurrency 1 versus 2448 ms at 25.
+
+  Full scans (round B) degraded about 2x: engine time p50 2477 ms
+  at concurrency 1 versus 5186 ms at 25, with p95 wall
+  6928 ms. That is a throughput effect, not an error condition.
+
+caveat_cache: |
+  Round B at concurrency 25 moved roughly 2575 MiB of logical reads in
+  6936 ms, about 389 MB/s aggregate, against a file
+  system provisioned at 128 MBps. Provisioned throughput alone does not account
+  for that, so caching on the ONTAP side is doing significant work. The single
+  103 MiB object is small enough to stay resident.
+
+  This run therefore does not characterise steady-state behaviour for working
+  sets larger than cache. Treat it as evidence that concurrency itself is not a
+  failure mode up to 25 queries, not as a throughput model.
+
+not_established_by_this_run:
+  - "Concurrency above 25."
+  - "Working sets larger than the ONTAP cache."
+  - "Multiple distinct tables or mixed query shapes at the same time."
+  - "Sustained load over minutes or hours."
+  - "Deployment types other than SINGLE_AZ_1, or throughput above 128 MBps."
+
+cost: |
+  About 2.9 GiB scanned across both rounds, roughly USD 0.014 at 5 USD/TB.

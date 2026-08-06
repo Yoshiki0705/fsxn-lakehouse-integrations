@@ -2,6 +2,8 @@
 
 # ブロッカー追跡ダッシュボード
 
+> 本ページは動作**しない**ことが判明している事項を追跡します。単に未テストである主張については [未検証項目インベントリ](./unverified-inventory.md) を参照してください。
+
 > **目的**: FSx for ONTAP × Lakehouse 統合における既知のブロッカーと制約のステータスを一元管理する Living Document。
 > **最終更新**: 2026-06-20
 > **更新頻度**: 四半期ごと、または重大なステータス変更時に随時更新
@@ -13,7 +15,7 @@
 | ID | ブロッカー | 影響範囲 | ステータス | 回避策有無 |
 |:---:|---|---|:---:|:---:|
 | BLK-001 | UC External Location が S3 AP を非サポート | Databricks UC ガバナンス | ❌ 未解決 | ✅ あり |
-| BLK-002 | Conditional writes 非サポート | Delta/Iceberg/Hudi 書き込み | ❌ 未解決 | ✅ あり |
+| BLK-002 | Conditional Writes 非サポート | Delta Lake 書き込み（Athena 経由の Iceberg は影響なし） | ❌ 未解決 | ✅ あり |
 | BLK-003 | S3 Event Notifications 非サポート | Auto Loader 通知モード / Snowpipe | ❌ 未解決 | ✅ あり |
 | BLK-004 | SnapMirror S3 が FSx for ONTAP で無効化 | ONTAP ネイティブ S3 レプリケーション | ❌ 未解決 | ✅ あり |
 | BLK-005 | `iceberg_rest` Connection Type 未サポート | UC Foreign Catalog × S3 Tables | ❌ 未解決 | ⚠️ 部分的 |
@@ -53,19 +55,30 @@
 | 属性 | 値 |
 |------|---|
 | **影響サービス** | FSx for ONTAP S3 Access Points |
-| **影響機能** | Delta Lake / Iceberg / Hudi のトランザクショナル書き込み |
+| **影響機能** | Delta Lake のトランザクショナル書き込み。Hudi は未テスト。**カタログがポインタを管理する Iceberg は影響を受けない** — 下記スコープ参照 |
 | **根本原因** | FSx for ONTAP S3 AP が `If-None-Match` ヘッダーを実装していない（HTTP 501 返却） |
 | **確認日** | 2026-05-22（AWS Support 確認、プロダクトレベルの制限） |
 | **ステータス** | ❌ 未解決 — Feature Request 提出済み |
 | **解除条件** | AWS が FSx for ONTAP S3 AP に conditional writes を実装（S3 ネイティブ 2024-08 parity） |
-| **影響度** | **High** — Lakehouse テーブルフォーマットの書き込みが不可。読み取りは影響なし |
+| **影響度** | **Medium** — 2026-08-06 に範囲を縮小。Delta Lake の書き込みは不可だが、Athena 経由の Iceberg 書き込みは動作。読み取りは影響なし |
 
-**回避策**:
+**実測スコープ（2026-08-06）**
+
+| テーブルフォーマット / エンジン | 書き込み | 理由 |
+|---|:---:|---|
+| Delta Lake（エンジン問わず） | ❌ | コミットログがオブジェクトストア上の `_delta_log` に存在するため、コミット自体が conditional write を必要とする |
+| Iceberg（Athena + Glue Catalog） | ✅ | 現行メタデータのポインタを Glue が保持。コミットは S3 ではなく Glue 側の条件付き更新になる。INSERT、UPDATE、DELETE、タイムトラベル、`OPTIMIZE`、`VACUUM`、および 2 件の同時コミットがすべて成功 |
+| Iceberg（EMR Serverless） | ❌ | 別要因で失敗: メタデータ書き込み時に S3FileIO が Access Point エイリアスを処理できない（NullPointerException） |
+| Hudi | ❓ | 未テスト |
+
+「Iceberg の並行書き込みはデータ破損リスクがある」という従来の記述は実測ではなく推論であり、撤回します。Athena での 2 件の同時コミットは行数が正しく、ロストアップデートも発生しませんでした。ただし小規模なテストであり、並行性が原理的に危険ではないことを示すにとどまり、並行数の上限を示すものではありません。
+
+**Delta Lake の回避策**:
 1. **読み取り専用で利用** — Athena / Glue / Snowflake からの読み取りは正常動作
-2. **書き込み先は標準 S3** — DataSync → 標準 S3 → Delta/Iceberg 書き込み
-3. **Iceberg + 外部カタログ（単一ライター）** — Glue Catalog がポインタを管理するため、単一ライター構成では理論的に書き込み可能（実験的）。⚠️ **並行書き込みではデータ破損リスクがあるため本番利用禁止**
+2. **書き込み先は標準 S3** — DataSync → 標準 S3 → Delta 書き込み
+3. **Iceberg を使う** — Athena と Glue Catalog の組み合わせなら Access Point 上に直接書き込める
 
-**エビデンス**: [互換性マトリクス](./compatibility-matrix.md)（Lakehouse テーブルフォーマットへの影響セクション）
+**エビデンス**: [Athena Iceberg 検証](../../verification-pack/athena-iceberg/evidence/2026-08-06/evidence-record.yaml) · [互換性マトリクス](./compatibility-matrix.md)（Lakehouse テーブルフォーマットへの影響セクション）
 
 > **S3 parity ロードマップ**: S3 ネイティブに conditional writes が追加されたのは 2024-08 です。FSx for ONTAP S3 AP への追加は AWS の開発ロードマップ次第ですが、parity 達成は合理的な期待です。タイムラインは未公開。
 
@@ -216,7 +229,7 @@ graph TD
     BLK001[BLK-001 解消<br/>UC × S3 AP] --> Z1[ゼロコピー UC ガバナンス実現]
     BLK001 --> Z2[DataSync 不要化<br/>コスト削減]
     
-    BLK002[BLK-002 解消<br/>Conditional Writes] --> W1[FSx for ONTAP S3 AP に<br/>Delta/Iceberg 直接書き込み]
+    BLK002[BLK-002 解消<br/>Conditional Writes] --> W1[FSx for ONTAP S3 AP に<br/>Delta Lake 直接書き込み<br/>Iceberg は Athena 経由で既に可能]
     BLK002 --> W2[Lakehouse テーブル<br/>フォーマット完全対応]
     
     BLK003[BLK-003 解消<br/>Event Notifications] --> E1[Auto Loader 通知モード<br/>直接動作]
@@ -282,7 +295,7 @@ graph LR
 
 | シナリオ | 結果 |
 |---------|------|
-| BLK-002 のみ解消（BLK-001 未解消） | Athena/EMR/Glue から FSx for ONTAP S3 AP に直接 Delta/Iceberg 書き込み可能。**ただし Databricks UC からの恩恵はなし**（BLK-001 がゲート） |
+| BLK-002 のみ解消（BLK-001 未解消） | Athena/EMR/Glue から FSx for ONTAP S3 AP に直接 Delta Lake 書き込みが可能になる（Iceberg は Athena 経由で既に可能）。**ただし Databricks UC からの恩恵はなし**（BLK-001 がゲート） |
 | BLK-001 のみ解消（BLK-002 未解消） | UC External Location として S3 AP を登録可能 → **読み取り + UC ガバナンス**が実現。書き込みは引き続き標準 S3 経由 |
 | BLK-001 + BLK-002 同時解消 | **フル機能**: ゼロコピー + UC ガバナンス + Delta/Iceberg 書き込み。DataSync が「必須」→「オプション」に |
 | BLK-003 のみ解消（BLK-001 未解消） | Auto Loader 通知モードが FSx for ONTAP S3 AP で動作。ただし UC ガバナンスは引き続き標準 S3 経由が必要 |

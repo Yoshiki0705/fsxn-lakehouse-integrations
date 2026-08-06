@@ -359,7 +359,7 @@ policies:
 |------|------|------|
 | macOS (Intel x86_64) | ❌ 非対応 | `cel-expr-python` 依存パッケージが x86_64 macOS wheel を提供していない |
 | Ubuntu 24.04 (x86_64 Linux) | ✅ 成功 | Omnigent 0.1.0、全 CLI コマンド動作確認 |
-| macOS (Apple Silicon ARM64) | ✅ 動作想定 | wheel あり、本プロジェクトでは未テスト |
+| macOS (Apple Silicon ARM64) | ⚠️ 未テスト | wheel あり、本プロジェクトでは未テスト |
 
 ### システム要件
 

@@ -2,6 +2,8 @@
 
 # Blocker Tracking Dashboard
 
+> This page tracks what is known **not** to work. For claims that are simply untested, see the [Unverified Item Inventory](./unverified-inventory.md).
+
 > **Purpose**: A living document that centrally manages the status of known blockers and constraints for FSx for ONTAP × Lakehouse integration.
 > **Last updated**: 2026-06-20
 > **Update frequency**: Quarterly, or ad-hoc when significant status changes occur
@@ -13,7 +15,7 @@
 | ID | Blocker | Impact Area | Status | Workaround |
 |:---:|---|---|:---:|:---:|
 | BLK-001 | UC External Location does not support S3 AP | Databricks UC governance | ❌ Unresolved | ✅ Available |
-| BLK-002 | Conditional writes not supported | Delta/Iceberg/Hudi writes | ❌ Unresolved | ✅ Available |
+| BLK-002 | Conditional writes not supported | Delta Lake writes (Iceberg via Athena unaffected) | ❌ Unresolved | ✅ Available |
 | BLK-003 | S3 Event Notifications not supported | Auto Loader notification / Snowpipe | ❌ Unresolved | ✅ Available |
 | BLK-004 | SnapMirror S3 disabled on FSx for ONTAP | ONTAP-native S3 replication | ❌ Unresolved | ✅ Available |
 | BLK-005 | `iceberg_rest` Connection Type not supported | UC Foreign Catalog × S3 Tables | ❌ Unresolved | ⚠️ Partial |
@@ -53,19 +55,30 @@
 | Attribute | Value |
 |-----------|-------|
 | **Affected service** | FSx for ONTAP S3 Access Points |
-| **Affected features** | Delta Lake / Iceberg / Hudi transactional writes |
+| **Affected features** | Delta Lake transactional writes. Hudi untested. **Iceberg is not affected when the catalog holds the pointer** — see scope below |
 | **Root cause** | FSx for ONTAP S3 AP does not implement `If-None-Match` header (returns HTTP 501) |
 | **Confirmed** | 2026-05-22 (AWS Support, product-level limitation) |
 | **Status** | ❌ Unresolved — Feature Request filed |
 | **Resolution criteria** | AWS implements conditional writes on FSx for ONTAP S3 AP (parity with S3 native Aug 2024) |
-| **Severity** | **High** — Lakehouse table format writes impossible. Read path unaffected |
+| **Severity** | **Medium** — narrowed 2026-08-06. Delta Lake writes are impossible; Iceberg writes via Athena work. Read path unaffected |
 
-**Workarounds**:
+**Scope, measured 2026-08-06**
+
+| Table format / engine | Write | Why |
+|---|:---:|---|
+| Delta Lake (any engine) | ❌ | The commit log lives in `_delta_log` on the object store, so the commit itself needs the conditional write |
+| Iceberg via Athena + Glue Catalog | ✅ | Glue holds the current-metadata pointer. The commit is a conditional update in Glue, not on S3. INSERT, UPDATE, DELETE, time travel, `OPTIMIZE`, `VACUUM` and two concurrent commits all succeeded |
+| Iceberg via EMR Serverless | ❌ | Fails for an unrelated reason: S3FileIO does not handle the Access Point alias during metadata write (NullPointerException) |
+| Hudi | ❓ | Not tested |
+
+The earlier note that concurrent Iceberg writes risk corruption was an inference, not a measurement, and is withdrawn. Two concurrent Athena commits produced the correct row count with no lost update. That is a small test — it establishes that concurrency is not categorically unsafe here, not a concurrency limit.
+
+**Workarounds for Delta Lake**:
 1. **Use read-only** — Athena / Glue / Snowflake reads work normally
-2. **Write to standard S3** — DataSync → standard S3 → Delta/Iceberg writes
-3. **Iceberg + external catalog (single writer)** — Glue Catalog manages pointers; theoretically writable in single-writer config (experimental). ⚠️ **Concurrent writes risk data corruption — DO NOT USE IN PRODUCTION**
+2. **Write to standard S3** — DataSync → standard S3 → Delta writes
+3. **Use Iceberg instead** — with Athena and the Glue Catalog, writes work directly on the Access Point
 
-**Evidence**: [Compatibility Matrix](./compatibility-matrix.md) (Lakehouse Table Formats section)
+**Evidence**: [Athena Iceberg verification](../../verification-pack/athena-iceberg/evidence/2026-08-06/evidence-record.yaml) · [Compatibility Matrix](./compatibility-matrix.md) (Lakehouse Table Formats section)
 
 > **S3 parity roadmap**: S3 native received conditional writes in Aug 2024. Addition to FSx for ONTAP S3 AP depends on the AWS development roadmap, but parity is a reasonable expectation. Timeline undisclosed.
 
@@ -228,7 +241,7 @@ graph TD
     BLK001[BLK-001 Resolved<br/>UC × S3 AP] --> Z1[Zero-copy UC governance achieved]
     BLK001 --> Z2[DataSync no longer required<br/>Cost reduction]
     
-    BLK002[BLK-002 Resolved<br/>Conditional Writes] --> W1[Delta/Iceberg direct writes<br/>on FSx for ONTAP S3 AP]
+    BLK002[BLK-002 Resolved<br/>Conditional Writes] --> W1[Delta Lake direct writes<br/>on FSx for ONTAP S3 AP<br/>Iceberg already works via Athena]
     BLK002 --> W2[Full Lakehouse table<br/>format support]
     
     BLK003[BLK-003 Resolved<br/>Event Notifications] --> E1[Auto Loader notification mode<br/>works directly]
@@ -294,7 +307,7 @@ graph LR
 
 | Scenario | Result |
 |----------|--------|
-| BLK-002 only resolved (BLK-001 unresolved) | Athena/EMR/Glue can write Delta/Iceberg directly to FSx for ONTAP S3 AP. **But no Databricks UC benefit** (BLK-001 is the gate) |
+| BLK-002 only resolved (BLK-001 unresolved) | Athena/EMR/Glue could write Delta Lake directly to FSx for ONTAP S3 AP; Iceberg via Athena already can. **But no Databricks UC benefit** (BLK-001 is the gate) |
 | BLK-001 only resolved (BLK-002 unresolved) | UC External Location can register S3 AP → **read + UC governance** achieved. Writes still via standard S3 |
 | BLK-001 + BLK-002 both resolved | **Full capability**: zero-copy + UC governance + Delta/Iceberg writes. DataSync changes from "required" to "optional" |
 | BLK-003 only resolved (BLK-001 unresolved) | Auto Loader notification mode works on FSx for ONTAP S3 AP. But UC governance still requires standard S3 path |

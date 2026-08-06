@@ -5,7 +5,7 @@
 ## エグゼクティブサマリー
 
 - **目的**: FSx for ONTAP S3 Access Points と各 Lakehouse プラットフォーム/フォーマットの検証済み互換性を定義し、読み取り専用分析から書き込みパスまでの対応状況を明確化
-- **主要知見**: 読み取り専用分析（Athena/Glue/EMR/Snowflake/Bedrock）は検証済みで本番利用可能。書き込みパス（Delta Lake/Iceberg）は条件付き書き込み非サポートにより制限あり
+- **主要知見**: 読み取り専用分析（Athena/Glue/EMR/Snowflake/Bedrock）は検証済み。Delta Lake の書き込みは条件付き書き込み非サポートによりブロックされる。一方 Athena + Glue Catalog 経由の Iceberg 書き込みは検証済み（2026-08-06）— コミットのポインタをオブジェクトストアではなく Glue が保持するため
 - **重要制約**: conditional writes（`If-None-Match`）非サポート、S3 Event Notifications 非サポート、SnapMirror S3 非対応。ListObjectsV2 レイテンシは 2026-08-05 に再測定し、5,000 オブジェクトまでネイティブ S3 比 1.3〜1.4 倍でした。従来引用していた 30-80x は再現しませんでした（[BLK-006](./blocker-tracker.md)）
 - **推奨アプローチ**: 読み取り専用ユースケースは FSx for ONTAP S3 AP 直接パスで実装。書き込みが必要な場合は DataSync → 標準 S3 パスを使用
 - **検証レベル**: API 検証 → 機能検証 → セキュリティ検証 → 本番検証の 4 段階。現在ほとんどのプラットフォームが機能検証済み
@@ -161,6 +161,7 @@ IT VPC:
 
 ## 関連ドキュメント
 
+- [未検証項目インベントリ](./unverified-inventory.md) — 本書の主張のうち実行記録に裏付けられていないもの一覧
 - [FSx for ONTAP → Databricks UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md) — UC 統合の全体像
 - [DataSync: FSx for ONTAP → S3 同期ガイド](./datasync-to-s3-guide.md) — 書き込みパスに必要な DataSync 設定
 - [S3 Annotations ガバナンス評価](./s3-annotations-governance-evaluation.md) — メタデータ強化の評価
@@ -265,7 +266,7 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **Amazon Athena** | JSON | 読み取り専用 | ✅ 検証済み | Parquet と同じ | 同上 |
 | **Amazon Athena** | ORC | 読み取り専用 | ✅ 検証済み | Parquet と同じ | 同上 |
 | **Amazon Athena** | Delta Lake | 読み取り専用（symlink manifest） | ⚠️ 実験的 | Athena Delta Lake コネクタ、symlink_format_manifest の事前生成が必要 | Delta ログの直接読み取り不可。事前生成マニフェストが必要。Write/MERGE 非サポート。 |
-| **Amazon Athena** | Iceberg | 読み取り専用 | 🔲 計画中 | Athena Iceberg コネクタ、Glue Catalog を Iceberg カタログとして使用 | 読み取りパスは動作見込み。書き込みパスは未テスト。 |
+| **Amazon Athena** | Iceberg | 読み取り **および書き込み** | ✅ 検証済み（2026-08-06） | AP エイリアスを `LOCATION` に指定した Athena Iceberg テーブル、Glue Catalog を Iceberg カタログとして使用 | ライフサイクル全体を検証: CREATE TABLE、INSERT、SELECT、UPDATE、DELETE、タイムトラベル（`FOR VERSION AS OF`）、`OPTIMIZE ... REWRITE DATA`、`VACUUM`、および 2 件の同時コミット — すべて成功し、データとメタデータの双方が Access Point 上に配置された。Delta Lake が失敗するのに対し動作する理由は、Iceberg が現行メタデータのポインタを Glue で管理するため、コミット時にオブジェクトストア側の条件付き書き込みやアトミック rename を必要としない点にある。検証は小規模テーブルのみ。[エビデンス](../../verification-pack/athena-iceberg/evidence/2026-08-06/evidence-record.yaml) |
 | **AWS Glue ETL** | Parquet | 読み取り | ✅ 検証済み | AP 権限付き Glue IAM ロール、S3 パスに AP エイリアス | — |
 | **AWS Glue ETL** | Parquet | 書き込み（Append） | ✅ 検証済み | AP に読み書きファイルシステムユーザー | ファイルあたり最大 5 GB |
 | **AWS Glue ETL** | Parquet | 上書き (Overwrite) | ⚠️ 実験的 | 読み書きファイルシステムユーザー | DeleteObject + PutObject パターン。アトミックな上書き保証なし |
@@ -375,8 +376,8 @@ FSx for ONTAP S3 Access Points 上の分析ワークロードを計画する際�
 | プラットフォーム | アクセス方式 | 状態 | エラー / 備考 | 回避策 |
 |---------------|-----------|------|-------------|--------|
 | **Amazon Athena** | Glue Federated Catalog (`s3tablescatalog`) | ✅ 検証済み | サブ2秒クエリ、Lake Formation ガバナンス適用 | — (ネイティブサポート) |
-| **Amazon EMR Spark** | Iceberg REST Catalog (spark-defaults.conf) | ✅ 想定動作 | PyIceberg と同じ REST endpoint | `spark.sql.catalog.s3tables` を設定 |
-| **AWS Glue ETL** | Iceberg REST Catalog | ✅ 想定動作 | EMR と同じメカニズム | ジョブパラメータでカタログ設定 |
+| **Amazon EMR Spark** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ 想定動作、未テスト | PyIceberg と同じ REST endpoint | `spark.sql.catalog.s3tables` を設定。同一エンドポイントに対する PyIceberg の結果からの推定であり、EMR での実行記録はない |
+| **AWS Glue ETL** | Iceberg REST Catalog | ⚠️ 想定動作、未テスト | EMR と同じメカニズム | ジョブパラメータでカタログ設定。Glue での実行記録はない |
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE iceberg_rest` | ❌ 未サポート | `CONNECTION_TYPE_NOT_SUPPORTED` — iceberg_rest がサポートタイプに含まれない | Spark クラスターで手動カタログ設定 |
 | **Databricks SQL Warehouse** | `CREATE CONNECTION TYPE GLUE` | ❌ 非該当 | GLUE タイプは host/httpPath/PAT が必要 (Databricks-to-Databricks 用) | — |
 | **Databricks Spark クラスター** | Iceberg REST Catalog (spark-defaults.conf) | ⚠️ 想定動作 | 未テスト; 技術的には EMR と同じ | クラスター設定で `spark.sql.catalog.s3tables` を設定 |
@@ -384,7 +385,7 @@ FSx for ONTAP S3 Access Points 上の分析ワークロードを計画する際�
 | **Snowflake** | Glue Iceberg REST + VENDED_CREDENTIALS | ✅ 検証済み (2026-06-05) | REST_CONFIG に明示的 `ACCESS_DELEGATION_MODE = VENDED_CREDENTIALS`; デフォルト External Volume なしのスキーマ | CREATE TABLE + SELECT + COUNT + DESCRIBE + AUTO_REFRESH 全動作。LF カラムレベル非適用。 |
 | **Snowflake** | External Volume (直接 S3 読み取り) | ✅ 検証済み | External Volume `s3tables_metadata_vol` 作成成功 | Managed Iceberg Table にはカラムスキーマ指定が必要 |
 | **Snowflake** | Managed Iceberg Table (COPY INTO) | ⚠️ 未検証 | 設計ドキュメント記載のパス: エクスポート → Stage → COPY INTO | 設計のみ。[cross-platform-compatibility.yaml](../../integrations/iceberg-metadata-catalog/verification-evidence/cross-platform-compatibility.yaml) では `workaround_superseded` として記録。実行エビデンスなし |
-| **Redshift Spectrum** | Glue Federated Catalog | ✅ 想定動作 | Athena と同じ (Glue Catalog バックエンド) | — |
+| **Redshift Spectrum** | Glue Federated Catalog | ⚠️ 想定動作、未テスト | Athena と同じ (Glue Catalog バックエンド) | AP 上の通常の Glue テーブルに対する Redshift Spectrum は検証済み（2026-05-23）だが、S3 Tables の federated catalog 経路は未検証 |
 | **DuckDB** | PyIceberg REST Catalog | ✅ 検証済み | Lambda で使用した同じ PyIceberg SDK | Python 直接アクセス |
 
 ### 主要な発見事項
@@ -529,7 +530,7 @@ No rename, no conditional writes, no concurrent writer conflicts.
 |------------|----------------|------------|--------------|---------------------|-----------|--------------|
 | **大規模シーケンシャルスキャン**（Athena フルテーブル） | 少数の大きな読み取り、高スループット | FSx for ONTAP ネットワークスループット | プロビジョンドスループット ≥ 1 GB/s | ファイルあたり ≥ 128 MB（Parquet/ORC） | 低〜中（1-10 クエリ） | 機能検証済み |
 | **小ファイル / メタデータ多用**（多数の小さな CSV） | 多数の ListObjectsV2 + 小さな GetObject | リクエストレート、レイテンシ | IOPS ヘッドルーム用に高スループット | ≥ 32 MB に統合 | 低 | API 検証済み |
-| **高同時実行 Athena**（多数のアナリスト） | 同一データへの並列スキャン | FSx for ONTAP 集約スループット | 同時負荷に合わせてスループットをスケール | スキャン削減のためデータをパーティション化 | 高（10-50 クエリ） | 未検証 |
+| **高同時実行 Athena**（多数のアナリスト） | 同一データへの並列スキャン | FSx for ONTAP 集約スループット | 同時負荷に合わせてスループットをスケール | スキャン削減のためデータをパーティション化 | 高（10-50 クエリ） | ✅ 25 並列まで検証（2026-08-06）[エビデンス](../../verification-pack/athena-concurrency/evidence/2026-08-06/evidence-record.yaml) |
 | **Glue ETL 読み取り多用**（バッチ変換） | シーケンシャルな大量読み取り + 書き戻し | FSx for ONTAP 読み取りスループット | プロビジョンド ≥ 512 MB/s | ファイルあたり ≥ 128 MB | 低（1-5 ジョブ） | 機能検証済み |
 | **Spark 書き込み多用**（ETL 出力） | 多数の PutObject 呼び出し | FSx for ONTAP 書き込みスループット（帯域幅 2 倍） | 書き込み多用には ≥ 1 GB/s | 出力ファイル 128-256 MB を目標 | 低 | 機能検証済み |
 | **RAG ドキュメントインジェスト**（Bedrock） | 多数の小〜中 GetObject | ドキュメントあたりのレイテンシ | 標準スループットで十分 | N/A（ドキュメントサイズは様々） | 低（バッチインジェスト） | 機能検証済み |
