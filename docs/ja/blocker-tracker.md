@@ -247,7 +247,7 @@ Athena での 2 件の同時コミットは行数が正しく、ロストアッ�
 |------|---|
 | **影響サービス** | FSx for ONTAP S3 Access Points × アンロードを行う任意のエンジン |
 | **影響機能** | Snowflake `COPY INTO @stage`。返却された暗号化タイプに対して checksum を検証する他のアンロード処理も同様と考えられる |
-| **根本原因** | FSx for ONTAP がサーバーサイド暗号化を `aws:fsx` と報告し、これが `AWS_SSE_S3` でも `AWS_SSE_KMS` でもない。書き込み自体は成功し、その後クライアント側の アップロード後 checksum 検証が失敗する |
+| **根本原因** | AWS はアップロード時のチェックサムの扱いが異なることを明記している。チェックサムは「オブジェクトメタデータおよびオブジェクト自体として FSx for NetApp ONTAP ボリュームに保存されない」ため「チェックサム値はレスポンスに返らない」。ETag も MD5 ダイジェストではないと明示されている（[Access point compatibility](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)）。計算したチェックサムをレスポンスと照合するクライアントはこの手順を完了できない。書き込み自体は先に成功する。エラー文は暗号化タイプ（`aws:fsx`、`AWS_SSE_S3` でも `AWS_SSE_KMS` でもない）を指すが、これはクライアントが提示する対処のヒントであり機構ではない |
 | **確認日** | 2026-08-06（実測） |
 | **ステータス** | ❌ 未解決 |
 | **解除条件** | FSx for ONTAP S3 AP がクライアントの受け付ける暗号化タイプを報告する、またはクライアントが `aws:fsx` を許容する |

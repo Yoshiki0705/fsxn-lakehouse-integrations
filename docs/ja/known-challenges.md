@@ -44,10 +44,10 @@ Access Point の実装と Amazon S3 の実装との差分です。エンジン�
 | # | 差分 | 観測された挙動 | 下流への影響 | 回避策 |
 |---|---|---|---|---|
 | 1.1 | 条件付き書き込み（`If-None-Match`） | HTTP 501 `NotImplemented`。製品レベルの制約として確認（2026-05-22） | Delta Lake と Hudi のコミットが不可能。カタログがポインタを保持する場合の Iceberg は影響を受けない | Athena + Glue 経由の Iceberg、または標準 S3 への書き込み |
-| 1.2 | サーバーサイド暗号化が `aws:fsx` として報告される | `AWS_SSE_S3` でも `AWS_SSE_KMS` でもない。返却された暗号化タイプに対してチェックサム検証を行うクライアントは、**書き込みが完了した後に**レスポンスを拒否する | Snowflake `COPY INTO @stage` が、完全なオブジェクトを残したまま失敗する（[BLK-009](./blocker-tracker.md)） | Access Point へアンロードしない |
+| 1.2 | アップロードのチェックサムがレスポンスに返らない | AWS が明記している挙動。汎用バケットと異なり、チェックサム値は「オブジェクトメタデータおよびオブジェクト自体として FSx for NetApp ONTAP ボリュームに保存されない」ため「チェックサム値はレスポンスに返らない」。ETag も MD5 ダイジェスト**ではない**と明記されている。計算したチェックサムをレスポンスと照合するクライアントはこの手順を完了できず、**書き込みが完了した後に**失敗する | Snowflake `COPY INTO @stage` が、完全なオブジェクトを残したまま失敗する（[BLK-009](./blocker-tracker.md)）。エラー文は暗号化タイプ（`aws:fsx` は `AWS_SSE_S3` でも `AWS_SSE_KMS` でもない）を指すが、これは機構ではなく対処のヒント | Access Point へアンロードしない |
 | 1.3 | S3 Event Notifications | 発行されない | Snowpipe 自動取り込み不可、Auto Loader 通知モード不可、EventBridge トリガー不可 | FPolicy → Lambda、または DataSync → 標準 S3、またはスケジュールポーリング |
 | 1.4 | オブジェクトバージョニング | 非対応。`ListObjectVersions` は `VersionId="null"` を返す | S3 ネイティブのバージョン履歴がない | ポイントインタイム復旧には ONTAP Snapshot |
-| 1.5 | 単一アップロード上限 5 GB | マルチパートは ONTAP 9.16.1+ で対応 | 大容量オブジェクトの書き込みにはマルチパートが必要 | 出力ファイルを分割。スキャン効率の観点でも 128〜256 MB を目標にする |
+| 1.5 | 単一アップロード上限 50 GB | これを超えるオブジェクトはダウンロードは可能だがアップロードは不可。マルチパートは対応 | 大容量オブジェクトの書き込みにはマルチパートが必要 | 出力ファイルを分割。スキャン効率の観点でも 128〜256 MB を目標にする |
 | 1.6 | Lifecycle ポリシー、Object Lock、S3 Select、クロスリージョンレプリケーションなし | 非対応 | 保持期間や階層化を S3 の語彙で表現できない | FabricPool 階層化、SnapLock、S3 Select の代わりにクエリエンジン |
 | 1.7 | 同一リージョン・同一アカウント必須 | Access Point はファイルシステムと同居する必要がある | クロスアカウント／クロスリージョンの Access Point 構成が組めない | ストレージ層ではなく分析層で共有する |
 | 1.8 | 署名付き URL は公式には非対応 | 実際には動作する。署名付与はクライアント側の計算であり、サーバーには通常の署名付きリクエストとして見えるため。AWS は非対応と記載しており、安定性を保証していない | これに依存した実装はサポート外 | 本番で依存しない |
@@ -80,12 +80,44 @@ ONTAP は実装しています。FSx for ONTAP が公開していません。機
 | フォーマット | コミット機構 | Access Point 上での結果 | ステータス |
 |---|---|:---:|---|
 | Apache Iceberg | 現行メタデータのポインタをカタログが保持。コミットは Glue 内のアトミック更新 | ✅ 動作 | 2026-08-06 に Athena + Glue で検証: CREATE、INSERT、UPDATE、DELETE、タイムトラベル、`OPTIMIZE`、`VACUUM`、同時2コミットがすべて成功。データとメタデータの双方が Access Point 上 |
-| Delta Lake | コミットログをオブジェクトストア上の `_delta_log/` に保持。アトミックリネームか条件付き書き込みが必要 | ❌ 失敗 | 初回コミットファイルで `Server returned non-2xx status code: 501 Not Implemented`（delta-rs 1.2.1、2026-05-23）。読み取りパスは正常に動作 |
+| Delta Lake | コミットログをオブジェクトストア上の `_delta_log/` に保持。put-if-absent が必要 — ログファイルは未存在の場合にのみ作成されなければならない | ❌ **既定構成では**失敗 | 初回コミットファイルで `Server returned non-2xx status code: 501 Not Implemented`（delta-rs 1.2.1、2026-05-23）。読み取りパスは正常に動作。後述の `S3DynamoDBLogStore` に関する注記（本プロジェクトでは未検証）を参照 |
 | Apache Hudi | タイムラインがアトミックリネーム（`.inflight` → `.commit`）を要求 | ❓ **未テスト** | 記録されている結論は、Delta の結果と Hudi のアーキテクチャからの推論であり、実測ではない。EMR での実行を試みたが、EMR 7.1.0 の既定構成に Hudi カタログプラグインがなく実行に至っていない。UNV-023 として管理 |
 
 > Hudi は、本ドキュメント内で実測していない結論を記載している唯一の項目です。同じ
 > アトミックリネーム要件、同じ欠落プリミティブという論理は妥当ですが、推論です。
 > 推論として明記しています。
+
+### Delta Lake: 要件は put-if-absent であり、外部化できる
+
+「Delta はここに書き込めない」は過大に読まれやすいため、節を分けて記載します。
+
+Delta が必要としているのは S3 の条件付き書き込みそのものではありません。コミットファイルに
+対する put-if-absent です。Delta プロジェクトは 2019 年からこの要件を示しています。
+[delta-io/delta#39](https://github.com/delta-io/delta/issues/39) は、S3 ファイルシステムが
+「put if absent を実行する手段を提供しないため、複数の同時ライターが同一バージョンファイルを
+容易に複数回コミットしうる」と記録しています。
+[マルチクラスタ書き込みの記事](https://delta.io/blog/2022-05-18-multi-cluster-writes-to-delta-lake-storage-in-s3/)は、
+コミットを「既に存在しない場合にのみ」ログファイルを作成する操作として説明しています。
+
+Amazon S3 は
+[2024年8月](https://aws.amazon.com/about-aws/whats-new/2024/11/amazon-s3-functionality-conditional-writes/)に
+`If-None-Match` の条件付き書き込みを獲得し、FSx for ONTAP S3 Access Points はパリティに
+達していません。しかし Delta は同じ問題に対する別の答えを2年早く出しています。
+**`S3DynamoDBLogStore`** です。Delta Lake 1.2 で追加され、put-if-absent の判定を
+オブジェクトストアに依存せず DynamoDB の条件付き書き込みへ移します
+（[ストレージ構成](https://docs.delta.io/latest/delta-storage.html)）。
+
+これは Iceberg が Glue Data Catalog で使っているのと構造的に同じ手法であり、だからこそ
+ここで Iceberg の書き込みが動作します。したがって正確な記述は次のとおりです。
+
+| 構成 | 本プロジェクトでの状態 |
+|---|---|
+| `s3a://` 上の既定 `LogStore` | ❌ 失敗を実測 — コミットファイルで 501 |
+| DynamoDB コミットテーブルを用いた `S3DynamoDBLogStore` | ❓ **未検証。** 機構上は Access Point への条件付き書き込みを必要としないはず。未実行のため主張しない |
+| `AWS_S3_ALLOW_UNSAFE_RENAME=true` を設定した `delta-rs` | ❓ 未検証。かつ "unsafe" と名付けられている理由がある。同時実行の保護を提供するのではなく取り除くもの。使うとしても単一ライターのみ |
+
+中段が実測されるまで、Access Point 上の Delta 書き込みは実務上利用不可として扱ってください。
+これを記録する意図は、上限が未試行の構成であって、証明された不可能性ではないという点にあります。
 
 ---
 

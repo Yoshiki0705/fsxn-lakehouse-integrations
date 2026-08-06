@@ -45,10 +45,10 @@ implements. No amount of engine configuration works around them.
 | # | Gap | Observed behaviour | Downstream effect | Workaround |
 |---|---|---|---|---|
 | 1.1 | Conditional writes (`If-None-Match`) | HTTP 501 `NotImplemented`. Confirmed as a product-level limitation, 2026-05-22 | Delta Lake and Hudi commits impossible. Iceberg unaffected when the catalog holds the pointer | Iceberg via Athena + Glue, or write to standard S3 |
-| 1.2 | Server-side encryption reported as `aws:fsx` | Neither `AWS_SSE_S3` nor `AWS_SSE_KMS`. Clients that validate a checksum against the returned encryption type reject the response **after the write has landed** | Snowflake `COPY INTO @stage` fails while leaving a complete object behind ([BLK-009](./blocker-tracker.md)) | Do not unload to an Access Point |
+| 1.2 | Upload checksums are not returned in the response | AWS documents this: unlike a general purpose bucket, the checksum value "is not stored in the FSx for NetApp ONTAP volume as object metadata and the object itself", so "checksum values are not returned in the response". The ETag is also documented as **not** an MD5 digest. A client that validates its computed checksum against the response cannot complete that step, and fails **after the write has landed** | Snowflake `COPY INTO @stage` fails while leaving a complete object behind ([BLK-009](./blocker-tracker.md)). Its error text points at encryption type (`aws:fsx` is neither `AWS_SSE_S3` nor `AWS_SSE_KMS`), which is the remediation hint rather than the mechanism | Do not unload to an Access Point |
 | 1.3 | S3 Event Notifications | Not emitted | No Snowpipe auto-ingest, no Auto Loader notification mode, no EventBridge trigger | FPolicy → Lambda, or DataSync → standard S3, or scheduled polling |
 | 1.4 | Object Versioning | Not supported. `ListObjectVersions` returns `VersionId="null"` | No S3-native version history | ONTAP Snapshot for point-in-time recovery |
-| 1.5 | Max single upload 5 GB | Multipart supported from ONTAP 9.16.1+ | Large-object writes need multipart | Chunk output files; target 128–256 MB anyway for scan efficiency |
+| 1.5 | Max single upload 50 GB | Objects larger than this can be downloaded but not uploaded. Multipart supported | Large-object writes need multipart | Chunk output files; target 128–256 MB anyway for scan efficiency |
 | 1.6 | No Lifecycle policies, Object Lock, S3 Select, Cross-Region Replication | Not supported | Retention and tiering cannot be expressed in S3 terms | FabricPool tiering, SnapLock, query engines instead of S3 Select |
 | 1.7 | Same region and same account required | Access Point must sit with the file system | No cross-account or cross-region Access Point topology | Share at the analytics layer instead of the storage layer |
 | 1.8 | Presigned URLs officially unsupported | They work in practice, because presigning is a client-side signature and the server sees an ordinary signed request. AWS documents them as unsupported and does not guarantee stability | Anything built on them is unsupported | Do not depend on them in production |
@@ -81,12 +81,45 @@ defines a commit, interacting with gap 1.1.
 | Format | Commit mechanism | Result on an Access Point | Status |
 |---|---|:---:|---|
 | Apache Iceberg | Current-metadata pointer held in the catalog. Commit is an atomic update in Glue | ✅ Works | Verified 2026-08-06 via Athena + Glue: CREATE, INSERT, UPDATE, DELETE, time travel, `OPTIMIZE`, `VACUUM`, and two concurrent commits all succeeded, with data and metadata both on the Access Point |
-| Delta Lake | Commit log in `_delta_log/` on the object store. Needs atomic rename, or a conditional write | ❌ Fails | `Server returned non-2xx status code: 501 Not Implemented` on the initial commit file (delta-rs 1.2.1, 2026-05-23). Read path works normally |
+| Delta Lake | Commit log in `_delta_log/` on the object store. Needs put-if-absent — the log file must be created only if not already present | ❌ Fails **in the default configuration** | `Server returned non-2xx status code: 501 Not Implemented` on the initial commit file (delta-rs 1.2.1, 2026-05-23). Read path works normally. See the note below on `S3DynamoDBLogStore`, which is untested here |
 | Apache Hudi | Timeline requires atomic rename (`.inflight` → `.commit`) | ❓ **Not tested** | The recorded conclusion is a deduction from the Delta result plus Hudi's architecture, not a measurement. An attempted EMR run did not proceed because the Hudi catalog plugin was absent from the default EMR 7.1.0 configuration. Tracked as UNV-023 |
 
 > Hudi is the one entry in this document where the repository states a conclusion it
 > did not measure. The reasoning is sound — the same atomic-rename requirement, the
 > same missing primitive — but it is inference. It is listed here as inference.
+
+### Delta Lake: the requirement is put-if-absent, and it can be externalised
+
+Worth separating, because "Delta cannot write here" is easy to over-read.
+
+What Delta needs is not specifically an S3 conditional write. It is put-if-absent on
+the commit file. The Delta project has stated this requirement since 2019:
+[delta-io/delta#39](https://github.com/delta-io/delta/issues/39) records that the S3
+filesystem "does not provide a way to perform 'put if absent', hence multiple
+concurrent writers can easily commit the same version file multiple times". The
+[multi-cluster writes post](https://delta.io/blog/2022-05-18-multi-cluster-writes-to-delta-lake-storage-in-s3/)
+describes the commit as creating a log file "only if it is not already present".
+
+Amazon S3 gained `If-None-Match` conditional writes in
+[August 2024](https://aws.amazon.com/about-aws/whats-new/2024/11/amazon-s3-functionality-conditional-writes/),
+and FSx for ONTAP S3 Access Points have not received parity. But Delta shipped a
+different answer to the same problem two years earlier: **`S3DynamoDBLogStore`**,
+added in Delta Lake 1.2, moves the put-if-absent decision into a DynamoDB conditional
+write instead of relying on the object store
+([storage configuration](https://docs.delta.io/latest/delta-storage.html)).
+
+That is structurally the same trick Iceberg uses with the Glue Data Catalog, which is
+why Iceberg writes work here. So the honest statement is:
+
+| Configuration | Status here |
+|---|---|
+| Default `LogStore` on `s3a://` | ❌ Measured failing — 501 on the commit file |
+| `S3DynamoDBLogStore` with a DynamoDB commit table | ❓ **Untested.** Mechanically it should not need a conditional write on the Access Point. Not run, so not claimed |
+| `delta-rs` with `AWS_S3_ALLOW_UNSAFE_RENAME=true` | ❓ Untested, and it is named "unsafe" for a reason — it removes the concurrency protection rather than providing it. Single-writer only, if at all |
+
+Until the middle row is measured, treat Delta writes on an Access Point as unavailable
+in practice. The point of recording this is that the ceiling is a configuration that
+has not been tried, not a proven impossibility.
 
 ---
 

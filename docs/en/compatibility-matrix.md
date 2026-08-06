@@ -227,7 +227,7 @@ Before reviewing the compatibility matrix, understand these fundamental constrai
 | Constraint | Detail | Source |
 |-----------|--------|--------|
 | No Rename operation | S3 API does not have a native rename. CopyObject is supported only within the same access point. | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
-| Max upload size: 5 GB | Single object upload limited to 5 GB (multipart upload supported) | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
+| Max upload size: 50 GB | Single object upload limited to 50 GB; larger objects can be downloaded but not uploaded. Multipart upload supported | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | No Object Versioning | S3 Object Versioning is not supported | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | No conditional writes | Conditional writes (`If-None-Match`) are not supported — returns HTTP 501 `NotImplemented`. This is a **product-level limitation** (confirmed by AWS Support, May 2026). Feature request submitted for parity with S3 native conditional writes (available since Aug 2024). Blocks Delta Lake, Iceberg, and Hudi transactional writes. | [API support](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | ListObjectsV2 latency | Re-measured 2026-08-05: **1.3-1.4x** native S3 for 10-5,000 objects (0.9x at 5,000), flat and nested layouts alike — inside the original target of <1s for <100 files and <3s for <1000 files. The previously quoted 30-80x did not reproduce and has been withdrawn. Behaviour above 5,000 objects per directory remains unmeasured. | Re-measured 2026-08-05 ([evidence](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml)) |
@@ -251,7 +251,7 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | Consistent list-after-write | Required | Required | Required | Supported (ONTAP provides consistency) |
 | PutObject | Required | Required | Required | Supported |
 | DeleteObject | Required for vacuum/cleanup | Required for expiration | Required | Supported |
-| Multipart upload | For large files | For large files | For large files | Supported (5 GB max per upload) |
+| Multipart upload | For large files | For large files | For large files | Supported (50 GB max per upload) |
 | Conditional writes (If-None-Match) | Used by some implementations | Used by some implementations | Used by some implementations | **Not supported** |
 
 ## Platform × Format × Mode Compatibility Matrix
@@ -276,14 +276,14 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **Amazon Athena** | Delta Lake | Read-only (symlink manifest) | ⚠️ Experimental | Athena Delta Lake connector, symlink_format_manifest generation required | No direct Delta log reading; requires pre-generated manifest. Write/MERGE not supported. |
 | **Amazon Athena** | Iceberg | Read **and write** | ✅ Verified (2026-08-06) | Athena Iceberg table with `LOCATION` on the AP alias, Glue Catalog as Iceberg catalog | Full lifecycle verified: CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, time travel (`FOR VERSION AS OF`), `OPTIMIZE ... REWRITE DATA`, `VACUUM`, and two concurrent commits — all succeeded, with data and metadata both on the Access Point. This works where Delta Lake does not because Iceberg keeps the current-metadata pointer in Glue, so a commit needs no conditional write or atomic rename on the object store. Tested at small table size only. [Evidence](../../verification-pack/athena-iceberg/evidence/2026-08-06/evidence-record.yaml) |
 | **AWS Glue ETL** | Parquet | Read | ✅ Verified | Glue IAM role with AP permissions, AP alias in S3 path | — |
-| **AWS Glue ETL** | Parquet | Write (Append) | ✅ Verified | Read-write file system user on AP | 5 GB max per file upload |
+| **AWS Glue ETL** | Parquet | Write (Append) | ✅ Verified | Read-write file system user on AP | 50 GB max per file upload |
 | **AWS Glue ETL** | Parquet | Overwrite | ⚠️ Experimental | Read-write file system user | DeleteObject + PutObject pattern; no atomic overwrite guarantee |
 | **AWS Glue ETL** | Delta Lake | Read | ⚠️ Experimental | Glue 4.0+ with Delta Lake library | Delta log reading works; commit protocol untested for writes |
 | **AWS Glue ETL** | Iceberg | Read | ⚠️ Experimental | Glue 4.0+ native Iceberg support, Glue Catalog as Iceberg catalog | Glue 4.0 provides native Iceberg integration. Iceberg metadata reading on FSx for ONTAP S3 AP via external catalog (Glue) expected to work. Write commits limited by lack of conditional writes |
 | **AWS Glue ETL** | Delta Lake | Write | ❌ Not Supported | — | Delta commit protocol requires atomic rename of _delta_log JSON files; not natively supported |
 | **AWS Glue ETL** | Iceberg | Write | ⚠️ Experimental | Glue 4.0+ Iceberg native + Glue Catalog | Iceberg uses external catalog for pointer management (no rename needed). However, some implementations use conditional writes for concurrent writer conflict resolution, which may fail on FSx for ONTAP S3 AP. Single-writer configuration expected to work |
 | **Amazon EMR Serverless** | Parquet | Read | ✅ Verified | Spark with S3A connector, AP alias | — |
-| **Amazon EMR Serverless** | Parquet | Write (Append) | ✅ Verified | Read-write file system user | 5 GB max per file |
+| **Amazon EMR Serverless** | Parquet | Write (Append) | ✅ Verified | Read-write file system user | 50 GB max per file |
 | **Amazon EMR Serverless** | Iceberg | Read | ⚠️ Experimental | Iceberg Spark runtime, Glue Catalog | Metadata reading works; write commit untested |
 | **Amazon EMR Serverless** | Iceberg | Write | ❌ Not Supported | — | S3FileIO cannot handle S3 AP alias for metadata write/verify. NullPointerException during commit. |
 | **Amazon EMR Serverless** | Delta Lake | Read | ⚠️ Experimental | Delta Lake Spark library | Log reading works |
@@ -344,7 +344,7 @@ ts_array = pa.array(df['timestamp'].values.astype('datetime64[us]'), type=pa.tim
 | Latency | Tens of milliseconds | Single-digit milliseconds |
 | Throughput | Limited by FSx for ONTAP provisioned throughput | Virtually unlimited (scales with prefixes) |
 | Requests/sec | Limited by FSx for ONTAP provisioned throughput | 5,500 GET/s per prefix, 3,500 PUT/s per prefix |
-| Max object size (upload) | 5 GB | 5 TB |
+| Max object size (upload) | 50 GB | 5 TB |
 | Concurrent readers | Limited by FSx for ONTAP throughput capacity | Highly parallel |
 
 Source: [Amazon FSx for NetApp ONTAP performance](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/performance.html), [Accessing your data via Amazon S3 access points](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/accessing-data-via-s3-access-points.html)
@@ -937,7 +937,7 @@ Explicit tests that MUST fail for security posture to be valid.
 | NEG-002 | Delete attempt by read-only file system user | AccessDenied | Critical |
 | NEG-003 | Cross-account access without explicit grant | AccessDenied | Critical |
 | NEG-004 | Internet-origin access when VPC-origin AP configured | AccessDenied | Critical |
-| NEG-005 | PutObject exceeding 5 GB limit | EntityTooLarge error | High |
+| NEG-005 | PutObject exceeding the 50 GB limit | EntityTooLarge error | High |
 | NEG-006 | Presigned URL generation | Not supported error | Medium |
 | NEG-007 | Object Versioning operations (ListObjectVersions) | Not supported | Medium |
 | NEG-008 | Access after IAM role revocation | AccessDenied | Critical |

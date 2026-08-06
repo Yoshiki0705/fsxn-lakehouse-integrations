@@ -259,7 +259,7 @@ platform changes since.
 |-----------|-------|
 | **Affected service** | FSx for ONTAP S3 Access Points × any engine that unloads to them |
 | **Affected features** | Snowflake `COPY INTO @stage`; likely any unload that validates a checksum against the returned encryption type |
-| **Root cause** | FSx for ONTAP reports server-side encryption as `aws:fsx`, which is neither `AWS_SSE_S3` nor `AWS_SSE_KMS`. The write itself succeeds; the client then fails its post-upload checksum validation |
+| **Root cause** | AWS documents that upload checksums are handled differently here: the checksum "is not stored in the FSx for NetApp ONTAP volume as object metadata and the object itself", so "the checksum values are not returned in the response", and the ETag is explicitly not an MD5 digest ([access point compatibility](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)). A client that validates its computed checksum against the response cannot complete that step. The write itself succeeds first. The error text points at the encryption type (`aws:fsx`, neither `AWS_SSE_S3` nor `AWS_SSE_KMS`), which is the remediation hint the client offers rather than the mechanism |
 | **Confirmed** | 2026-08-06 (measured) |
 | **Status** | ❌ Unresolved |
 | **Resolution criteria** | FSx for ONTAP S3 AP reports an encryption type that clients accept, or clients tolerate `aws:fsx` |
