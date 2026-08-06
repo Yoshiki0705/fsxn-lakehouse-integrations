@@ -188,7 +188,7 @@ The following fields are confirmed (REQ-F001, REQ-F002):
 
 1. **Clear technical positioning** `[Confirmed]` — FSx for ONTAP is positioned specifically for large unstructured payloads where multiprotocol access, Snapshot, and enterprise data protection are needed.
 2. **Not over-extended** `[Confirmed]` — The architecture does NOT attempt to use FSx for ONTAP as Delta Lake storage (which would fail due to atomic rename limitations).
-3. **Multiprotocol access valuable for manufacturing** `[Confirmed]` — Factory systems may write via NFS/SMB while analytics consumers read via S3 protocol. This is a genuine differentiator.
+3. **Multiprotocol access valuable for manufacturing** `[Confirmed]` — Factory systems may write via NFS/SMB while analytics consumers read via S3 protocol. This is a property the architecture depends on.
 4. **Metadata/payload pattern preserves FSx for ONTAP value** `[Confirmed]` — Payloads remain on FSx for ONTAP with full ONTAP data services (Snapshot, SnapMirror, dedup, compression) while metadata flows through Kafka/Delta.
 
 ### Concerns

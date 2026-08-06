@@ -1,0 +1,28 @@
+{
+  "_comment": "Copy to params-external-volume.json and fill in. That file is gitignored.",
+  "_what_this_is": "Backing store for Snowflake Managed Iceberg Tables. Separate from params.example.json, which configures read access to an FSx for ONTAP S3 Access Point.",
+  "_setup": "scripts/setup_external_volume.sh --bucket <your-bucket> walks through the three phases and prints the SQL.",
+
+  "EnvironmentName": "fsxn-lakehouse",
+
+  "_BucketName_help": "Globally unique across all of AWS. Include your org and region, e.g. acme-lakehouse-iceberg-apne1. This is a STANDARD S3 bucket, not the Access Point - Iceberg writes to an Access Point are not usable (BLK-002, BLK-009).",
+  "BucketName": "<YOUR_ICEBERG_BUCKET_NAME>",
+
+  "_BucketPrefix_help": "Keep the trailing slash. Snowflake creates one folder per table underneath.",
+  "BucketPrefix": "iceberg/",
+
+  "_CreateBucket_help": "true to create it here. false if it already exists or another team owns it.",
+  "CreateBucket": "true",
+
+  "_phase_note": "Leave the next two empty on the first deploy. Snowflake only issues them after CREATE EXTERNAL VOLUME, so the trust policy cannot be correct until phase 3.",
+  "_SnowflakeIamUserArn_help": "STORAGE_AWS_IAM_USER_ARN from DESC EXTERNAL VOLUME. An IAM *user* ARN in a Snowflake-owned account - if what you copied contains ':role/', you copied the wrong field.",
+  "SnowflakeIamUserArn": "",
+  "_SnowflakeExternalId_help": "STORAGE_AWS_EXTERNAL_ID from DESC EXTERNAL VOLUME. Looks like ACCOUNT_SFCRole=2_base64string= and ends with '='. Truncating it is the most common cause of Access Denied.",
+  "SnowflakeExternalId": "",
+
+  "_outputs_comment": "Filled in by the setup script after deployment. Not inputs.",
+  "RoleArn": "",
+  "StorageBaseUrl": "",
+  "StackName": "",
+  "Region": ""
+}

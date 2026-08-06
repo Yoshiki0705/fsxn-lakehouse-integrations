@@ -72,7 +72,25 @@
 | Iceberg via EMR Serverless | ❌ | Fails for an unrelated reason: S3FileIO does not handle the Access Point alias during metadata write (NullPointerException) |
 | Hudi | ❓ | Not tested |
 
-The earlier note that concurrent Iceberg writes risk corruption was an inference, not a measurement, and is withdrawn. Two concurrent Athena commits produced the correct row count with no lost update. That is a small test — it establishes that concurrency is not categorically unsafe here, not a concurrency limit.
+The earlier note that concurrent Iceberg writes risk corruption was an inference, not a measurement, and is withdrawn.
+
+**Failed Delta writes leave their data files behind.** Observed 2026-08-06 on the
+verification Access Point: four prefixes hold Delta data files with no
+`_delta_log`, and one holds three data files written a minute apart. Delta writes
+the Parquet first and commits second, so when the commit hits the 501 the data
+files stay. Each retry adds another orphan.
+
+This is the same residue shape as [BLK-009](#blk-009-unload-to-an-s3-access-point-fails-checksum-validation-and-leaves-the-object)
+from a different cause. Sweep for it with:
+
+```bash
+./shared/scripts/check_orphaned_unload_objects.py --access-point <alias>
+```
+
+The script reports prefixes that hold engine output but no completion marker
+(`_SUCCESS`, `_delta_log/`, `_committed_*`), which is what an interrupted write
+looks like from the storage side.
+ Two concurrent Athena commits produced the correct row count with no lost update. That is a small test — it establishes that concurrency is not categorically unsafe here, not a concurrency limit.
 
 **Workarounds for Delta Lake**:
 1. **Use read-only** — Athena / Glue / Snowflake reads work normally

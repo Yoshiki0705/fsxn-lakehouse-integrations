@@ -39,6 +39,18 @@
 > objects; the 30-80x figure did not reproduce and has been withdrawn
 > ([BLK-006](../../docs/en/blocker-tracker.md)).
 
+## Start here
+
+[Reading FSx for ONTAP files from Snowflake and writing Iceberg tables](../../docs/en/snowflake-iceberg-setup.md) walks through the whole path with
+the parameters explained, common failures, and teardown. It is the fastest way
+to a working setup if this is your first time.
+
+| Task | Where |
+|---|---|
+| Read access to an Access Point | [`template.yaml`](./template.yaml), then [`scripts/update_trust_policy.sh`](./scripts/update_trust_policy.sh) |
+| Write Iceberg tables | [`template-external-volume.yaml`](./template-external-volume.yaml), driven by [`scripts/setup_external_volume.sh`](./scripts/setup_external_volume.sh) |
+| Check for objects a failed unload left behind | [`shared/scripts/check_orphaned_unload_objects.py`](../../shared/scripts/check_orphaned_unload_objects.py) |
+
 ## Observed Results
 
 | Operation | Without `AWS_ACCESS_POINT_ARN` | With `AWS_ACCESS_POINT_ARN` |

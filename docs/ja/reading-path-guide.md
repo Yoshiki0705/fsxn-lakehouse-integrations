@@ -303,7 +303,7 @@ graph LR
 | リアルタイムでデータを取り込みたい | [Kafka-ClickHouse-UC](./kafka-clickhouse-unity-catalog-connectivity.md) | [Event-driven Architecture](./event-driven-architecture.md) |
 | 非構造化データ（画像/PDF）を AI で活用したい | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | [Unstructured Data Access](./unstructured-data-access.md) |
 | セキュリティ/コンプライアンスを確認したい | [Governance and Compliance](./governance-and-compliance.md) | [互換性マトリクス](./compatibility-matrix.md)（OT/IT セキュリティ） |
-| 顧客に提案資料を作りたい | [業界別ソリューションカタログ](./industry-solution-catalog.md) | [Partner Offering](./partner-offering.md) |
+| 提案資料を作りたい | [業界別ソリューションカタログ](./industry-solution-catalog.md) | [Partner Offering](./partner-offering.md) |
 | ブロックされている機能を確認したい | [互換性マトリクス](./compatibility-matrix.md)（制約テーブル） | [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md)（今後の展望） |
 | Snapshot / DR / リカバリを理解したい | [Recovery Semantics](./recovery-semantics.md) | [DataSync ガイド](./datasync-to-s3-guide.md)（Phase 5） |
 
