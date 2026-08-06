@@ -1,5 +1,10 @@
 # Cleanup notes — Snowflake verification 2026-08-06
 
+> **Status: done.** Everything listed here was removed on 2026-08-06 and the
+> removal was verified: `SHOW EXTERNAL VOLUMES` returns 0 rows, the S3 bucket
+> returns `NoSuchBucket`, and the IAM role returns `NoSuchEntity`. The commands
+> are kept so the same setup can be torn down again if the verification is repeated.
+
 Objects created during `SNOWFLAKE-S3AP-003`.
 
 ## Snowflake (database `FSXN_S3AP_VERIFY_DB`, schema `BRONZE`)
@@ -41,6 +46,12 @@ DROP EXTERNAL VOLUME IF EXISTS EV_ICEBERG_VERIFY;
 
 The orphaned unload object `sfverify/formats/unload_probe_1/data_0_0_0.csv.gz`
 was deleted during the session.
+
+`sfverify/events/` was **not** touched — those four files belong to the earlier
+Snowpipe verification recorded under
+[`verification-pack/snowpipe-pattern-a/evidence/2026-08-06/`](../../../snowpipe-pattern-a/evidence/2026-08-06/),
+as do the `RAW_EVENTS` table and the `STAGE_NO_APARN` / `STAGE_WITH_APARN` stages
+that remain in `FSXN_S3AP_VERIFY_DB.BRONZE`.
 
 ```bash
 aws s3 rm --recursive s3://fsxn-sf-iceberg-verify-20260806/
