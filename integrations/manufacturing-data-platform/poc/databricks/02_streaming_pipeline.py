@@ -41,9 +41,7 @@ from pyspark.sql.functions import (
     col,
     current_timestamp,
     from_json,
-    get_json_object,
     to_timestamp,
-    expr,
 )
 from pyspark.sql.types import (
     StructType,
@@ -52,7 +50,6 @@ from pyspark.sql.types import (
     DoubleType,
     LongType,
     BooleanType,
-    TimestampType,
 )
 from delta.tables import DeltaTable
 

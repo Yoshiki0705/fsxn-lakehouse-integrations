@@ -44,6 +44,14 @@ jobs:
       - name: Format check with ruff
         run: ruff format --check .
 
+      # The Databricks notebooks were outside the lint scope entirely, because this
+      # job's working-directory is the generator. They now carry their own ruff.toml
+      # declaring the runtime-injected globals, so they can be checked here.
+      # check only, not format: see the note in that ruff.toml for why.
+      - name: Lint Databricks notebooks with ruff
+        working-directory: integrations/manufacturing-data-platform/poc/databricks
+        run: ruff check .
+
       - name: Type check with mypy
         run: mypy generate_events.py --ignore-missing-imports --no-strict-optional
         continue-on-error: true  # Advisory for PoC

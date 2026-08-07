@@ -35,7 +35,6 @@
 # COMMAND ----------
 
 from pyspark.sql.functions import (
-    col,
     current_timestamp,
     input_file_name,
     expr,
@@ -136,7 +135,7 @@ def run_streaming_import():
 
 # COMMAND ----------
 
-def run_batch_import(date_filter: str = None):
+def run_batch_import(date_filter: str | None = None):
     """
     Batch import — reads all Parquet files (or filtered by date partition).
     Use for initial load or backfill scenarios.
