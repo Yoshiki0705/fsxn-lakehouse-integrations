@@ -1,0 +1,73 @@
+# Ruff configuration for the Databricks notebooks in this directory.
+#
+# These files are notebooks, not modules. Each starts with
+# `# Databricks notebook source` and is divided into cells by `# COMMAND ----------`.
+# Two consequences drive everything below:
+#
+#   1. The runtime injects globals. `spark`, `display`, `dbutils`, `sc` and
+#      `sqlContext` are never imported because Databricks provides them. Ruff sees
+#      undefined names; declaring them as builtins tells it the truth rather than
+#      scattering `# noqa: F821` over 23 lines.
+#
+#   2. Cells alternate between configuration and imports. A notebook reads top to
+#      bottom in cell order, so imports legitimately appear after executable code.
+#      Rules that assume a module layout do not apply.
+#
+# The directory is currently outside the CI lint scope: the manufacturing workflow
+# sets working-directory to poc/synthetic-data-generator. This file makes the
+# directory lintable so it can be brought into scope, and so that running ruff here
+# by hand produces signal rather than 23 false positives.
+
+target-version = "py312"
+
+# Note on formatting: `ruff format` is deliberately NOT applied to this directory,
+# and the workflow runs `ruff check` here without a format gate. The formatter wants
+# to expand the StructType literals - which are written one StructField per line
+# specifically so a schema change is a one-line diff - into a nested call spanning
+# twice the lines. That is a large stylistic rewrite of working notebook code for no
+# correctness gain. `ruff check` catches the things that matter; formatting here
+# stays as the author wrote it.
+
+# Globals the Databricks runtime injects into every notebook. Declared here rather
+# than as 23 separate `# noqa: F821` comments.
+builtins = [
+    "spark",        # SparkSession
+    "display",      # Databricks display()
+    "dbutils",      # Databricks utilities
+    "sc",           # SparkContext
+    "sqlContext",   # legacy SQLContext
+    "displayHTML",  # Databricks HTML renderer
+]
+
+[lint]
+# Same explicit set as the sibling synthetic-data-generator configuration, so both
+# directories are held to one standard. Ruff's defaults widen between releases;
+# adopting a new rule should be a deliberate edit here.
+select = [
+    "E4",     # pycodestyle: import placement
+    "E7",     # pycodestyle: statement/comparison issues
+    "E9",     # pycodestyle: syntax and IO errors
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "TRY",    # tryceratops
+    "RUF",    # ruff-specific
+    "BLE",    # flake8-blind-except
+]
+
+[lint.per-file-ignores]
+# Notebook cells interleave configuration and imports, so an import block after
+# executable code is the normal shape here rather than a mistake. isort would also
+# reorder across cell boundaries, which changes execution order.
+"*.py" = ["E402", "I001"]
+
+# The MERGE path catches broadly on purpose: DeltaTable.forName raises when the
+# target table does not yet exist, and the first run of a stream is exactly that
+# case. The handler falls back to an append, which is the correct behaviour for an
+# empty target. Narrowing this would mean naming the Delta and Spark analysis
+# exceptions that signal "table absent", which differ across runtime versions.
+"02_streaming_pipeline.py" = ["E402", "I001", "BLE001"]
+
+[lint.isort]
+# Kept for when a future notebook has a single import block worth sorting.
+known-first-party = []

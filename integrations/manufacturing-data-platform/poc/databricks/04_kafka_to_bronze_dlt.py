@@ -44,9 +44,7 @@ from pyspark.sql.types import (
     StructField,
     StringType,
     LongType,
-    DoubleType,
     BooleanType,
-    TimestampType,
 )
 
 # COMMAND ----------
