@@ -173,7 +173,7 @@ SELECT snapshot_id FROM glue_metadata.metadata.unstructured_files.history LIMIT 
 | SQL Warehouse | Serverless Starter Warehouse (Small) |
 | S3 Tables bucket | `fsxn-metadata-catalog` (arn:aws:s3tables:ap-northeast-1:<ACCOUNT_ID>:bucket/fsxn-metadata-catalog) |
 | S3 Tables table | `metadata.unstructured_files` |
-| S3 Tables data bucket | `s3://<TABLE_BUCKET_ID>--table-s3` |
+| S3 Tables data bucket | `s3://<TABLE_BUCKET_ID>--table-s3` (internal, S3 Tables-managed) |
 | IAM Role | `fsxn-databricks-executor-validation-role` (Glue + S3 Tables + S3 permissions) |
 
 ### Pre-existing Resources
