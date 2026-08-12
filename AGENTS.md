@@ -154,3 +154,37 @@ When exposing lakehouse data operations (query, catalog browse) as MCP tools via
 | PoC Quick-Start | `poc-templates/` | 2 | DuckDB Lambda, DataSync |
 
 Deployment guide: `docs/en/deployment-guide.md` (EN) / `docs/ja/deployment-guide.md` (JA)
+
+## Browser Automation and Credentials
+
+A browser accessibility snapshot includes the **values** of input fields. When a password
+manager autofills a sign-in form, the password is in that tree — and the tree is both
+returned to the caller and written to disk as a snapshot file. This happened on
+2026-08-12 with an AWS console password, and earlier with a Databricks personal access
+token.
+
+**Rules**
+
+1. **Never snapshot a page that has a password field.** Do not call snapshot/find/verbose
+   accessibility dumps on a sign-in page. If you need to know whether the form is ready,
+   check for the submit button by selector, not by dumping the tree.
+2. **Fill credentials without reading them back.** Use a code-execution browser tool to
+   set the value and submit. Never return the value from the evaluated function.
+3. **Never return a freshly created secret.** When a UI generates a token, relay it
+   straight to its destination inside the same evaluated function — for example POST it to
+   a short-lived `127.0.0.1` listener that writes the config file — and return only a
+   length and a prefix. See the token-creation pattern used for the 2026-08 Databricks
+   verification.
+4. **A leaked value is not fixed by masking alone.** Masking removes disk persistence, not
+   the conversation record. Rotate the credential.
+
+**Enforcement**
+
+| Layer | Mechanism |
+|-------|-----------|
+| Disk persistence | `.kiro/hooks/redact-browser-snapshots.json` (PostToolUse on `browser_`/`devtool_`) runs `shared/scripts/redact_browser_snapshots.py` |
+| Audit on demand | `python3 shared/scripts/redact_browser_snapshots.py --check` — exit 1 if any unredacted credential shape remains |
+| Conversation record | Rules 1–3 above. No tooling can retract what was already returned |
+
+The redactor covers Databricks PATs, AWS access key IDs, STS session tokens, bearer
+tokens, and password-field values. It is idempotent and leaves ordinary prose alone.
