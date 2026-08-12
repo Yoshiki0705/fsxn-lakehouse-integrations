@@ -56,6 +56,23 @@ cd demo/scripts
 | **Phase 5** | ✅ Verified | OpenSearch Serverless NextGen (scale-to-zero, kNN) | Score 0.67, cold start 10-30s |
 | **Phase 6** | ✅ Verified | PII anonymization (Comprehend EN + Bedrock Claude JA) | 7/7 entities detected |
 
+## Relation to the Databricks FILE type (Beta, 2026-08)
+
+Databricks' [FILE type](https://www.databricks.com/blog/introducing-file-type-native-column-type-multimodal-data) puts a governed file reference in a Delta column next to AI-derived columns — the same shape as this catalog's metadata table. The convergence is a useful signal that the design is the right one.
+
+It is **not** a migration target today:
+
+| | This catalog | FILE type |
+|---|---|---|
+| Table format | Iceberg on S3 Tables | **Delta only** |
+| Data on FSx for ONTAP | Referenced in place (`file_path` = `s3://<ap-arn>/<key>`) | `FILE EXTERNAL` needs a UC volume, which cannot sit on an S3 AP (BLK-001). `FILE MANAGED` copies the bytes |
+| Lifecycle | `is_deleted` / `deleted_at` columns, maintained by the FPolicy sync | Tied to the row; deleting the row collects the file. No automatic GC in Beta |
+| Maturity | Phases 1–6 verified | Beta, admin-enabled preview |
+
+Revisit if BLK-001 is resolved and FILE type reaches GA with Iceberg support. Full analysis: [databricks-file-type-evaluation](../../docs/en/databricks-file-type-evaluation.md) ([日本語](../../docs/ja/databricks-file-type-evaluation.md)).
+
+One nearer-term item does apply to this catalog: the [`_object_metadata` column](https://docs.databricks.com/aws/en/ingestion/object-metadata-column) (DBR 18.2+) reads S3 object tags into table columns, and object tagging **is** supported on an FSx for ONTAP S3 AP ([verified 2026-08-12](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml)) — tags are file-scoped and can be written in the same `PutObject` as the data. That is a candidate inlet for the `tags` map in `METADATA_SCHEMA`, subject to the ASCII-only constraint measured there.
+
 ## Directory Structure
 
 ```

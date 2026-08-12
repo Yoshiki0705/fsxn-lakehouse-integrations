@@ -56,6 +56,23 @@ cd demo/scripts
 | **Phase 5** | ✅ 検証済み | OpenSearch Serverless NextGen (scale-to-zero、kNN) | スコア 0.67、コールドスタート 10-30 秒 |
 | **Phase 6** | ✅ 検証済み | PII 匿名化 (Comprehend EN + Bedrock Claude JA) | 7/7 エンティティ検出 |
 
+## Databricks FILE 型（β、2026-08）との関係
+
+Databricks の [FILE 型](https://www.databricks.com/blog/introducing-file-type-native-column-type-multimodal-data)は、ガバナンスされたファイル参照を AI 派生列の隣の Delta 列に置く。本カタログのメタデータテーブルと同じ形である。設計の方向性が正しかったことを示す有用なシグナル。
+
+ただし現時点で移行先には**ならない**:
+
+| | 本カタログ | FILE 型 |
+|---|---|---|
+| テーブルフォーマット | S3 Tables 上の Iceberg | **Delta 限定** |
+| FSx for ONTAP 上のデータ | その場を参照（`file_path` = `s3://<ap-arn>/<key>`） | `FILE EXTERNAL` は UC Volume を要し、それは S3 AP 上に置けない（BLK-001）。`FILE MANAGED` はバイト列をコピーする |
+| ライフサイクル | `is_deleted` / `deleted_at` 列。FPolicy 同期が維持 | 行に紐づき、行削除でファイルを回収。β では自動 GC なし |
+| 成熟度 | Phase 1–6 検証済み | β、管理者が有効化するプレビュー |
+
+BLK-001 が解消し、FILE 型が Iceberg 対応で GA に達したら再評価する。完全な分析: [databricks-file-type-evaluation](../../docs/ja/databricks-file-type-evaluation.md) ([English](../../docs/en/databricks-file-type-evaluation.md))。
+
+より近い将来に本カタログへ適用できる項目が 1 つある。[`_object_metadata` 列](https://docs.databricks.com/aws/en/ingestion/object-metadata-column)（DBR 18.2+）は S3 オブジェクトタグをテーブル列へ読み込み、かつオブジェクトタグ付けは FSx for ONTAP S3 AP で**サポートされる**（[2026-08-12 検証](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml)）。タグは file-scoped で、データと同じ `PutObject` で書ける。これは `METADATA_SCHEMA` の `tags` マップへの投入口の候補になる（そこで実測した ASCII 限定の制約が前提）。
+
 ## ディレクトリ構成
 
 ```

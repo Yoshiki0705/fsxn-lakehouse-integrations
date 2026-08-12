@@ -1,0 +1,254 @@
+# Verification Evidence Record — Object tags and user metadata on an FSx for ONTAP S3 Access Point
+test_id: "S3AP-OBJECT-TAGGING-001"
+date_tested: "2026-08-12"
+tester: "Yoshiki Fujiwara"
+purpose: |
+  Databricks introduced the FILE type (Beta) for multimodal data and, separately,
+  the _object_metadata column (DBR 18.2+) which exposes cloud object tags and
+  user-defined metadata as queryable columns. Both raise the same question for
+  this repository: can object-storage-side metadata on an FSx for ONTAP S3
+  Access Point act as the carrier for data-library metadata, so that metadata
+  applied at write time is inherited by a metadata table downstream?
+
+  AWS documents PutObjectTagging / GetObjectTagging / DeleteObjectTagging as
+  supported for access points attached to FSx for ONTAP volumes, and Object
+  Annotations as not supported. That answers capability but not the operational
+  envelope: character set, size limits, durability across rewrite, and whether
+  tags are scoped to the access point or to the file. This run measures those.
+
+environment:
+  region: "ap-northeast-1"
+  aws_account: "<ACCOUNT_ID>"
+  s3_access_point: "verification-test-ap"
+  s3_ap_second_access_point: "verification-readonly-ap"  # same volume, used for scope test
+  s3_ap_network_origin: "INTERNET"
+  s3_ap_file_system_user: "root (UNIX)"
+  fsx_volume_id: "fsvol-<REDACTED>"
+  both_access_points_same_volume: true
+  client: "boto3 1.43.36 / botocore 1.43.36, AWS CLI v2"
+  caller: "IAM user with s3:*Object* and s3:*ObjectTagging on the access point"
+
+# ---------------------------------------------------------------------------
+# Capability results
+# ---------------------------------------------------------------------------
+results:
+  - id: T1
+    operation: "PutObject with user-defined metadata (x-amz-meta-*)"
+    status: "SUPPORTED"
+    detail: "Object created. ServerSideEncryption=aws:fsx, StorageClass=FSX_ONTAP."
+
+  - id: T2
+    operation: "HeadObject — user-defined metadata round-trip"
+    status: "SUPPORTED"
+    detail: 'Metadata returned as {"dept":"quality","lineid":"A12"}. Content-Type preserved.'
+
+  - id: T3
+    operation: "PutObjectTagging"
+    status: "SUPPORTED"
+    detail: "3-tag TagSet accepted."
+
+  - id: T4
+    operation: "GetObjectTagging"
+    status: "SUPPORTED"
+    detail: "TagSet returned unchanged, order preserved as submitted."
+
+  - id: T13
+    operation: "PutObject with x-amz-tagging (tag at write time, single request)"
+    status: "SUPPORTED"
+    detail: |
+      --tagging 'classification=internal&owner_team=eng' together with
+      --metadata source=fpolicy,volume=vol1 in one PutObject. Both the TagSet
+      and the user metadata were readable afterwards. This is the write-time
+      tagging path, so tagging does not require a second round trip.
+
+  - id: T11
+    operation: "GetObjectAttributes (ETag, ObjectSize, StorageClass)"
+    status: "SUPPORTED"
+    detail: "StorageClass returned as FSX_ONTAP."
+
+  - id: T12
+    operation: "Presigned GET URL"
+    status: "WORKS — and this is expected, not a contradiction"
+    detail: |
+      `aws s3 presign` produced a URL and an unauthenticated curl against it
+      returned HTTP 200 with the object body. The AWS access point compatibility
+      table lists `Presign` as "Not supported", so this initially looked like a
+      documentation contradiction. It is not a behavioural defect.
+
+      AWS Support already explained this to this account in May 2026: presigning
+      is a purely client-side SigV4 signature calculation. No request reaches AWS
+      at presign time. Using the resulting URL is simply a `GetObject`, which the
+      same table lists as Supported — so it would be structurally impossible to
+      block presigning without also breaking `GetObject`.
+
+      The correct reading of the table is therefore "not officially tested, do not
+      rely on it in production", not "will fail". That distinction is what the
+      documentation does not currently convey, and AWS has an open documentation
+      correction request tracking the wording.
+
+      Related, from the same support explanation: ONTAP S3 supports v4 presigned
+      URLs from ONTAP 9.11.1 and v2 presigned URLs from ONTAP 9.16.1, with v4
+      recommended.
+    guidance: |
+      Do not build a customer-facing recommendation on a presigned-URL workflow
+      against an FSx for ONTAP Access Point while the table says "Not supported",
+      even though it works today. Treat "Supported" as build-on-freely and
+      "Not supported" as do-not-rely-on.
+    doc_reference: "https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html"
+
+# ---------------------------------------------------------------------------
+# Limits — measured, matches native Amazon S3
+# ---------------------------------------------------------------------------
+limits_measured:
+  - constraint: "Maximum tags per object"
+    accepted: 10
+    rejected: 11
+    error: "BadRequest: Object tags cannot be greater than 10 (Status Code: 400)"
+    same_as_native_s3: true
+  - constraint: "Tag key length (ASCII)"
+    accepted: 128
+    rejected: 129
+    error: "InvalidTag: The TagKey you have provided is invalid"
+    same_as_native_s3: true
+  - constraint: "Tag value length (ASCII)"
+    accepted: 256
+    rejected: 257
+    error: "InvalidTag: The TagValue you have provided is invalid"
+    same_as_native_s3: true
+
+# ---------------------------------------------------------------------------
+# Character set — DIVERGES from native Amazon S3
+# ---------------------------------------------------------------------------
+character_set:
+  summary: |
+    Amazon S3 documents tag keys and values as Unicode, counted in UTF-16.
+    On this access point, characters in the Latin-1 range (U+0000-U+00FF) are
+    accepted, and characters at U+0100 and above are rejected with InvalidTag
+    for most strings — but not all. Acceptance is deterministic per string
+    (6/6 identical outcomes on repeat) yet follows no rule that could be
+    inferred from the observed data.
+  accepted_examples:
+    - value: "confidential"        # ASCII
+    - value: "café"                # U+00E9
+    - value: "ü"                   # U+00FC
+    - value: "ÿ"                   # U+00FF — highest accepted codepoint found
+    - value: "hello world"         # space
+    - value: "a+b-c=d.e_f:g/h"     # documented special characters
+  rejected_examples:
+    - value: "Ā"   # U+0100 — lowest rejected codepoint found
+    - value: "β"   # U+03B2 Greek
+    - value: "д"   # U+0434 Cyrillic
+    - value: "機"  # U+6A5F CJK
+    - value: "あ"  # U+3042 hiragana
+    - value: "ア"  # U+30A2 katakana
+    - value: "Ａ"  # U+FF21 fullwidth
+    - value: "🙂"   # non-BMP
+  inconsistency:
+    description: |
+      Some multibyte strings are accepted as tag KEYS while others of the same
+      length and script are rejected. Both outcomes are stable across repeats.
+    accepted_keys:   ["分類", "品質", "名古屋", "画像", "音声", "分機"]
+    rejected_keys:   ["機", "分", "類", "機機", "日本語", "東京", "機密", "工場", "検査", "文書", "製造", "動画", "公開", "部門", "大阪"]
+    determinism_test: "6 repeats per string, tagging cleared between attempts — 分類 6/6 accepted, 東京 0/6 accepted, 機密 0/6 accepted, 品質 6/6 accepted"
+    hypotheses_tested_and_rejected:
+      - "Byte length of the UTF-8 encoding (odd vs even) — contradicted by 名古屋 (9 bytes) accepted and 機機 (6 bytes) rejected"
+      - "Service validating the UTF-8 bytes as UTF-16BE — 15/21 agreement, contradicted by every accepted multibyte case"
+      - "UTF-8 bytes also decodable as euc-jp / shift_jis / cp932 / iso2022_jp / big5 / gb2312 / euc-kr — best agreement 11/16, no codec explains the split"
+    conclusion: |
+      The rule is not determinable from the outside. The actionable guidance is
+      to restrict FSx for ONTAP S3 AP object tags to ASCII, because a subset of
+      multibyte strings silently fails validation and the failing subset cannot
+      be predicted. Raised with AWS as a behaviour/documentation question.
+
+# ---------------------------------------------------------------------------
+# Scope and durability
+# ---------------------------------------------------------------------------
+scope_and_durability:
+  - id: T8
+    question: "Are tags scoped to the access point or to the file?"
+    finding: "Scoped to the file."
+    detail: |
+      Tags written through verification-test-ap were read back unchanged
+      through verification-readonly-ap, a different access point attached to
+      the same volume. Tags therefore live with the ONTAP file, not with the
+      access point that wrote them. This is what makes tagging usable for
+      existing NAS assets shared across several access points.
+
+  - id: T9
+    question: "Do tags survive an object overwrite?"
+    finding: "No. Tags are cleared."
+    detail: |
+      PutObject to the same key without x-amz-tagging returned an empty TagSet
+      afterwards. Consistent with native Amazon S3 PutObject semantics, but it
+      means any pipeline that rewrites a file must re-apply tags in the same
+      request or the metadata is lost silently.
+
+  - id: T10
+    question: "Does user-defined metadata survive an object overwrite?"
+    finding: "No. Cleared, same as tags."
+
+# ---------------------------------------------------------------------------
+# Scale characteristics
+# ---------------------------------------------------------------------------
+scale:
+  - id: T14
+    measurement: "GetObjectTagging latency, warm, single caller"
+    n: 10
+    min_ms: 57
+    median_ms: 59
+    max_ms: 64
+    interpretation: |
+      Tags are not returned by ListObjectsV2, so building a metadata table from
+      object tags costs one GetObjectTagging per file. At ~59 ms median and no
+      concurrency this is ~17 files/second per caller, so a full scan of a large
+      volume needs parallelism and is a cold-path operation. This is a sample
+      run on one access point, not a benchmark: no concurrency sweep, one
+      region, one file size, throughput capacity not varied.
+    not_measured: ["concurrency scaling", "effect of file size", "effect of throughput capacity", "cold-start latency"]
+
+# ---------------------------------------------------------------------------
+# Confirmed against AWS documentation (not re-tested here)
+# ---------------------------------------------------------------------------
+documented_not_supported:
+  - "PutObjectAnnotation / GetObjectAnnotation / ListObjectAnnotations / DeleteObjectAnnotation — Object Annotations are not supported on access points attached to FSx for ONTAP volumes"
+  - "PutObjectAcl / GetObjectAcl — only bucket-owner-full-control is accepted"
+  - "GetBucketNotificationConfiguration — consistent with BLK-003 (no S3 Event Notifications)"
+  - "ListObjectVersions, Object Lock, Object Lifecycle, conditional writes — consistent with BLK-002"
+
+# ---------------------------------------------------------------------------
+# What this does NOT establish
+# ---------------------------------------------------------------------------
+not_verified:
+  - "Whether tags or user metadata set through the access point are visible from NFS or SMB clients, or survive a rewrite performed over NFS/SMB. No NAS client was exercised in this run. This matters because the value of tagging existing NAS assets depends on multiprotocol behaviour."
+  - "Whether Databricks _object_metadata (DBR 18.2+) can read these tags through an FSx for ONTAP S3 AP path. Not tested — no Databricks workspace credentials available in this environment."
+  - "Whether tags survive ONTAP-side operations: SnapMirror replication, FlexClone, restore from Snapshot, FabricPool tiering."
+  - "Whether the accepted-multibyte subset is stable across ONTAP versions, file systems, or regions. Tested on one file system only."
+
+open_questions:
+  - id: Q1
+    to: "AWS"
+    question: "The FSx for ONTAP access point compatibility table lists Presign as Not supported, but a presigned GET returned HTTP 200 with the object body. Which is correct?"
+    status: "CLOSED — already answered, and this run should not have re-raised it"
+    resolution: |
+      Answered by AWS Support in May 2026 on a prior case from this account:
+      presigning is client-side signature computation, so the request that
+      actually reaches the service is a supported GetObject. Not a defect.
+      A separate AWS-side documentation correction request for the table wording
+      has been open since 2026-07-19 and was still in progress as of 2026-08-11.
+
+      A duplicate case opened on 2026-08-12 was withdrawn and resolved the same
+      day once the prior history was found.
+    lesson: |
+      The answer was already in this account's support history. Checking prior
+      cases before filing is cheaper than filing, and it would also have kept the
+      wrong framing ("contradicts the documentation") out of this record.
+  - id: Q2
+    to: "AWS"
+    question: "Object tag keys and values containing characters at U+0100 and above are rejected with InvalidTag for most strings but accepted for some (分類 accepted, 東京 rejected, both 2-character CJK). Is the intended behaviour ASCII-only, full Unicode as documented for Amazon S3, or something else? The current behaviour is neither."
+
+reviewer: ""
+review_date: ""
+review_notes: |
+  Cleanup: both test objects were deleted after the run and the prefix was
+  confirmed empty (KeyCount None), so no residue was left on the verification
+  volume.

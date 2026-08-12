@@ -35,6 +35,7 @@ graph TD
     SEC --> CM
     SEC --> NET[fsx-ontap-s3ap-networking]
     SEC --> ANN[s3-annotations-governance-evaluation]
+    SEC --> FT[databricks-file-type-evaluation]
     
     EXEC --> IND
     EXEC --> ARCH
@@ -256,6 +257,7 @@ graph TD
 | | [Recovery Semantics](./recovery-semantics.md) | Snapshot vs Time Travel |
 | **AI/ML** | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | AI catalog design |
 | | [Unstructured Data Access](./unstructured-data-access.md) | Unstructured data access |
+| | [Databricks FILE type Evaluation](./databricks-file-type-evaluation.md) | Multimodal data in Delta columns, object-tag bridge, three-layer metadata design |
 | | [OmniGent Evaluation](./omnigent-multi-agent-evaluation.md) | Multi-agent evaluation |
 | **Platform Evaluation** | [OpenSharing Integration](./opensharing-integration-analysis.md) | DAIS 2026 impact |
 | | [AWS Context vs UC](./aws-context-vs-unity-catalog.md) | AWS vs Databricks governance |
@@ -303,6 +305,7 @@ graph LR
 | Analyze FSx for ONTAP data in Snowflake | [Compatibility Matrix](./compatibility-matrix.md) | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) (Snowflake section) |
 | Ingest data in real-time | [Kafka-ClickHouse-UC](./kafka-clickhouse-unity-catalog-connectivity.md) | [Event-driven Architecture](./event-driven-architecture.md) |
 | Use unstructured data (images/PDFs) with AI | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | [Unstructured Data Access](./unstructured-data-access.md) |
+| Evaluate Databricks FILE type / link object metadata to a table | [Databricks FILE type Evaluation](./databricks-file-type-evaluation.md) | [S3 Annotations Evaluation](./s3-annotations-governance-evaluation.md) |
 | Verify security/compliance | [Governance and Compliance](./governance-and-compliance.md) | [Compatibility Matrix](./compatibility-matrix.md) (OT/IT security) |
 | Decide whether this pattern fits | [Industry Solution Catalog](./industry-solution-catalog.md) | [Adoption Assessment](../adoption-guide/adoption-assessment.md) |
 | Check blocked features | [Compatibility Matrix](./compatibility-matrix.md) (constraints table) | [UC Connection Guide](./fsx-ontap-to-databricks-unity-catalog-guide.md) (future outlook) |

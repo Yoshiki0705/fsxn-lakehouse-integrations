@@ -10,6 +10,14 @@ but also to unstructured data such as images, video, audio, and documents.
 Enterprise file data accumulated on file servers can be directly accessed by
 AI/ML services and analytics platforms without data copying.
 
+> **Lakehouse-native unstructured data**: the patterns below are AWS-native. For the
+> Databricks-native option — the `FILE type` column (Beta, 2026-08) — and why it does not
+> currently reach ONTAP-resident files, plus the `_object_metadata` bridge that carries
+> object tags into table columns, see
+> [databricks-file-type-evaluation](./databricks-file-type-evaluation.md).
+> The FSx for ONTAP-side object-tag behaviour is measured in
+> [s3ap-object-tagging](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml).
+
 ## Architecture
 
 ### Pattern E: Unstructured Data Processing

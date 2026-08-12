@@ -137,6 +137,8 @@ code handles an Access Point alias, or from constraints unrelated to storage.
 | 4.5 | Snowflake | A Dynamic Table cannot select from an External Table | `Object ref EXT_FMT_JSON of type EXTERNAL_TABLE not supported in Dynamic Table definition` | `COPY INTO` a standard table first, then define the Dynamic Table over that. Verified working 2026-08-06 |
 | 4.6 | Snowflake | An inline `FILE_FORMAT` is not accepted in the stage table-function form | — | Use a named `FILE FORMAT` object. Snowflake syntax, not an Access Point limitation |
 | 4.7 | ClickHouse | `s3()` cannot receive an STS session token, so temporary credentials cannot be used | `UNKNOWN_SETTING: s3_session_token is neither a builtin setting` (v26.5.1) | IAM user long-term keys, or an EC2 Instance Profile via IMDS |
+| 4.8 | Databricks FILE type (Beta) | `FILE EXTERNAL` stores references only for files inside a Unity Catalog volume, and a UC external volume cannot be created on an Access Point, so ONTAP-resident files cannot be referenced without copying | — (structural; documented restriction rather than a runtime error) | `FILE MANAGED`, which copies bytes into UC-managed storage — and then object tags are no longer readable. [Evaluation](./databricks-file-type-evaluation.md) |
+| 4.9 | Access Point object tags | Tag keys and values at U+0100 and above are rejected for most strings but accepted for a few, deterministically per string, with no rule inferable from outside | `InvalidTag: The TagValue you have provided is invalid` | Restrict object tags to ASCII; keep localised text in the metadata table. Raised with AWS ([evidence](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml)) |
 
 ### Not an Access Point problem, but it will look like one
 

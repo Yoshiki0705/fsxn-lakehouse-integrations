@@ -32,6 +32,8 @@
 
 > **ONTAP S3 の構造的制約**: これは ONTAP S3 プロトコルの構造的制約です。ONTAP S3 は S3 互換 API を提供しますが、Amazon S3 のコントロールプレーン機能（Event Notifications、S3 Metadata、Annotations）は AWS マネージドサービス側の機能であり、ONTAP S3 エンドポイントには適用されません。
 
+> **ただしオブジェクト*タグ*は別機構であり、こちらは動作する**（**Verified** 2026-08-12）。`PutObjectTagging` / `GetObjectTagging` / `DeleteObjectTagging` と `x-amz-meta-*` ユーザーメタデータは、S3 へのステージングなしに FSx for ONTAP S3 Access Point 上で直接サポートされる。タグは ONTAP ファイルとともに保存され、ある Access Point で書いたタグは同一ボリューム上の別 Access Point から読める。annotations とのトレードオフは実在する。1 MB のペイロードではなくオブジェクトあたり 10 タグであり、かつこの Access Point では**実質 ASCII 限定**（U+0100 以上の文字は大半の文字列で拒否される）。実測: [s3ap-object-tagging](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml)。タグをテーブル列へ読み込む Databricks `_object_metadata` 列を含む設計上の含意: [databricks-file-type-evaluation](./databricks-file-type-evaluation.md)。
+
 ### Q3: 「attach」と「query」の違いは何か？
 
 **A**: 2段階です:

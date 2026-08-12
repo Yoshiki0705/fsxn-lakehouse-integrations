@@ -33,7 +33,7 @@
 | Attribute | Value |
 |-----------|-------|
 | **Affected service** | Databricks Unity Catalog |
-| **Affected features** | External Location / External Table / External Volume / all UC governance |
+| **Affected features** | External Location / External Table / External Volume / all UC governance / **`FILE EXTERNAL` columns (FILE type, Beta)** — see [scope grew](#scope-grew-2026-08-12-file-type) |
 | **Root cause** | Databricks session policy generated during AssumeRole does not correctly interpret S3 AP ARNs |
 | **Confirmed** | 2026-05-26 (Databricks Support; case closed — not entitled due to support tier) |
 | **Status** | ❌ Unresolved — support case closed (not entitled); awaiting platform-level resolution |
@@ -48,6 +48,14 @@
 **Evidence**: [integrations/databricks/README.md](../../integrations/databricks/README.md)
 
 > **Impact scoping**: This blocker prevents "zero-copy governance" but copying to S3 via DataSync enables full UC governance. Evaluate the trade-off: copy cost (~$27/month/TB) vs governance value.
+
+#### Scope grew 2026-08-12: FILE type
+
+Databricks' [FILE type](https://www.databricks.com/blog/introducing-file-type-native-column-type-multimodal-data) (Beta, 2026-08) puts a governed reference to an unstructured file in a Delta column. `FILE EXTERNAL` is supported **only for files inside a Unity Catalog volume**, so it inherits this blocker exactly: no external volume on an S3 AP means no `FILE EXTERNAL` over ONTAP-resident files. The remaining option, `FILE MANAGED`, copies the bytes into UC-managed storage.
+
+What this changes is the **stake**, not the status. Resolving BLK-001 previously bought lineage, tags, masks and row filters on tabular data resident on FSx for ONTAP; it now additionally buys governed multimodal AI over images, video, documents and audio that stay on the NAS. Worth restating when the gap is raised with Databricks.
+
+Full analysis, including the separate `_object_metadata` path that is **not** blocked by this: [databricks-file-type-evaluation](./databricks-file-type-evaluation.md).
 
 ---
 

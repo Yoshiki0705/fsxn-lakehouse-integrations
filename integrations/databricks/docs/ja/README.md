@@ -327,6 +327,20 @@ FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
 - Snowflake の Directory Table や GET_PRESIGNED_URL に相当する機能なし
 - Executor スケール処理は未検証
 
+### FILE 型（β、2026-08）— 評価済み。ブロッカーは解消しない
+
+Databricks は [FILE 型](https://www.databricks.com/blog/introducing-file-type-native-column-type-multimodal-data)を導入した。非構造化ファイルへのガバナンスされた参照を Delta の列として持ち、構造化列と並べてクエリでき、AI 関数に渡せる。Unity Catalog における「ガバナンス付き非構造化データカタログ」に最も近いものである。
+
+ただし上記のステータスは変わらない。`FILE EXTERNAL` は **UC Volume 内**のファイルのみサポートされ、UC External Volume は S3 Access Point 上に作成できない（BLK-001）。到達可能なのは `FILE MANAGED` のみで、これはバイト列を UC 管理ストレージへ**コピー**する。
+
+前進したのは別機能である。[`_object_metadata` 列](https://docs.databricks.com/aws/en/ingestion/object-metadata-column)（DBR 18.2+）が S3 の**オブジェクトタグ**とユーザー定義メタデータをクエリ可能な列として公開し、かつオブジェクトタグ付けは FSx for ONTAP S3 AP で**サポートされる**（2026-08-12 検証済み）。Databricks が Access Point パス経由でそのタグを読めるかは**未検証**。
+
+| 目的 | 参照先 |
+|---|---|
+| 完全な評価、3 層設計、未解決の質問 | [databricks-file-type-evaluation](../../../../docs/ja/databricks-file-type-evaluation.md) ([English](../../../../docs/en/databricks-file-type-evaluation.md)) |
+| FSx for ONTAP 側のオブジェクトタグ実測（上限、ASCII 制約、file-scope、上書き挙動） | [s3ap-object-tagging 証拠](../../../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml) |
+| Databricks 側の実行可能な検証 | [`notebooks/10_file_type_object_metadata.py`](../../notebooks/10_file_type_object_metadata.py) · [test-cases.yaml](../../../../verification-pack/databricks/test-cases.yaml) の `DBX-FILE-*` |
+
 **FSx for ONTAP 上の非構造化データの推奨代替手段:**
 - **Snowflake**（Directory Table + GET_PRESIGNED_URL）でファイルカタログとセキュア URL 生成
 - **AWS Lambda** でサーバーレスファイル処理（[AWS チュートリアル](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html)）
@@ -356,6 +370,7 @@ FSx for ONTAP ──S3 AP──▶ Athena（SQL 分析、コピー不要）
 | [ガバナンス: タグとデータ保護 (ABAC)](ai-demo-guide.md#ガバナンスタグとデータ保護-abac) | UC ABAC、Governed Tags、カラムマスク、Row Filter — 現在の制限 |
 | [ガバナンス: ファイルレベルアクセス制御](ai-demo-guide.md#ファイルレベルのアクセス制御-ontap-ネイティブレイヤー) | ONTAP デュアルレイヤー認可、FPolicy、チームごとの S3 AP 分離（補償コントロール） |
 | [統合: ONTAP × Databricks タグ](ai-demo-guide.md#統合-ontap-ファイルレベル制御--databricks-タグガバナンス) | 組み合わせガバナンスマトリクス、現在 vs 将来、設計パターン |
+| [FILE 型（β）評価](../../../../docs/ja/databricks-file-type-evaluation.md) | FILE 列によるマルチモーダルデータ、BLK-001 が依然適用される理由、`_object_metadata` によるオブジェクトタグの橋渡し、推奨する 3 層メタデータ設計 |
 
 ## クイックスタート
 

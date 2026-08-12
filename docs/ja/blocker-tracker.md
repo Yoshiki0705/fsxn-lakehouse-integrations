@@ -33,7 +33,7 @@
 | 属性 | 値 |
 |------|---|
 | **影響サービス** | Databricks Unity Catalog |
-| **影響機能** | External Location / External Table / External Volume / UC ガバナンス全般 |
+| **影響機能** | External Location / External Table / External Volume / UC ガバナンス全般 / **`FILE EXTERNAL` 列（FILE 型、β）** — [影響範囲の拡大](#影響範囲の拡大-2026-08-12-file-型)を参照 |
 | **根本原因** | Databricks の AssumeRole 時にセッションポリシーが S3 AP ARN を正しく解釈しない |
 | **確認日** | 2026-05-26（Databricks Support 確認; ケースクローズ — サポートティア不足により資格なし） |
 | **ステータス** | ❌ 未解決 — サポートケースクローズ（資格なし）; プラットフォームレベルでの解決待ち |
@@ -48,6 +48,14 @@
 **エビデンス**: [integrations/databricks/README.md](../../integrations/databricks/README.md)
 
 > **影響の限定**: このブロッカーは「ゼロコピーのガバナンス適用」をブロックしますが、DataSync パスで S3 にコピーすれば UC のフルガバナンスは適用可能です。コピーコスト（~$27/月/TB）対ガバナンス価値のトレードオフで判断してください。
+
+#### 影響範囲の拡大 2026-08-12: FILE 型
+
+Databricks の [FILE 型](https://www.databricks.com/blog/introducing-file-type-native-column-type-multimodal-data)（β、2026-08）は、非構造化ファイルへのガバナンスされた参照を Delta の列に置く。`FILE EXTERNAL` は **Unity Catalog Volume 内のファイルのみ**サポートされるため、本ブロッカーをそのまま継承する。S3 AP 上に External Volume が作れない以上、ONTAP 常駐ファイルに対する `FILE EXTERNAL` も成立しない。残る選択肢の `FILE MANAGED` はバイト列を UC 管理ストレージへコピーする。
+
+変わるのは**重み**であってステータスではない。BLK-001 の解消は従来 FSx for ONTAP 常駐の表形式データに対する lineage・タグ・マスク・行フィルタをもたらすものだったが、いま加えて「NAS 上に留まる画像・動画・文書・音声に対するガバナンス下のマルチモーダル AI」をもたらす。Databricks にギャップを提起する際に改めて述べる価値がある。
+
+本ブロッカーの影響を受け**ない** `_object_metadata` 経路を含む完全な分析: [databricks-file-type-evaluation](./databricks-file-type-evaluation.md)。
 
 ---
 

@@ -10,6 +10,14 @@ Amazon FSx for NetApp ONTAP（FSx for ONTAP）の S3 Access Points は構造化�
 エンタープライズのファイルサーバーに蓄積された非構造化データを、
 データコピーなしで AI/ML サービスや分析プラットフォームから直接利用できます。
 
+> **レイクハウスネイティブな非構造化データ**: 以下のパターンは AWS ネイティブなものです。
+> Databricks ネイティブの選択肢である `FILE 型` 列（β、2026-08）と、それが現時点で
+> ONTAP 常駐ファイルに届かない理由、およびオブジェクトタグをテーブル列へ運ぶ
+> `_object_metadata` の橋渡しについては
+> [databricks-file-type-evaluation](./databricks-file-type-evaluation.md) を参照。
+> FSx for ONTAP 側のオブジェクトタグ挙動の実測は
+> [s3ap-object-tagging](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml) にあります。
+
 ## アーキテクチャ
 
 ### パターン E: 非構造化データ処理

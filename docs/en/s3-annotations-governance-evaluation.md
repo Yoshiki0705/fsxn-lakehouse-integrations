@@ -32,6 +32,8 @@
 
 > **ONTAP S3 structural constraint**: This is a structural constraint of the ONTAP S3 protocol. ONTAP S3 provides an S3-compatible API, but Amazon S3 control-plane features (Event Notifications, S3 Metadata, Annotations) are AWS-managed service capabilities not applicable to ONTAP S3 endpoints.
 
+> **But object *tags* are a different mechanism, and they do work** (**Verified** 2026-08-12). `PutObjectTagging` / `GetObjectTagging` / `DeleteObjectTagging` and `x-amz-meta-*` user metadata are all supported directly on an FSx for ONTAP S3 Access Point, with no staging to S3 required. Tags are stored with the ONTAP file — a tag written through one Access Point is readable through another on the same volume. The trade-offs versus annotations are real: 10 tags per object instead of a 1 MB payload, and **effectively ASCII only** on this Access Point (characters at U+0100 and above are rejected for most strings). Measurements: [s3ap-object-tagging](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml). Design implications, including the Databricks `_object_metadata` column that reads tags into table columns: [databricks-file-type-evaluation](./databricks-file-type-evaluation.md).
+
 ### Q3: What's the difference between "attach" and "query"?
 
 **A**: Two stages:

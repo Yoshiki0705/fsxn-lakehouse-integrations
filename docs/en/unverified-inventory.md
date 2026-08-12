@@ -8,7 +8,7 @@ This exists so the gaps are countable. A claim marked ⚠️ or 🔲 in the [com
 
 Things that are known **not** to work are tracked separately in the [blocker tracker](./blocker-tracker.md). This page is about the unknown, not the broken.
 
-**Total: 22 items.** Five were closed on 2026-08-06 — see Recently closed.
+**Total: 25 items.** Five were closed on 2026-08-06 — see Recently closed.
 
 ## Summary
 
@@ -16,7 +16,7 @@ Things that are known **not** to work are tracked separately in the [blocker tra
 |---|:---:|---|
 | Feasible now, not yet run | 12 | Only AWS services this project already uses. These are the realistic next candidates. |
 | Needs a Snowflake session | 1 | Credentials are not held in this repository. These are runnable in a single sitting once signed in. |
-| Needs a Databricks workspace | 3 | The workspaces used in May 2026 were torn down. Note that BLK-001 blocks the Unity Catalog path regardless. |
+| Needs a Databricks workspace | 6 | The workspaces used in May 2026 were torn down. Note that BLK-001 blocks the Unity Catalog path regardless. |
 | Needs another engine deployed | 3 | No ClickHouse instance is running. |
 | Blocked by account tier or cost | 1 | Requires a paid tier or chargeable resource. |
 | Blocked by elapsed time | 1 | Cannot be compressed. |
@@ -62,7 +62,10 @@ The workspaces used in May 2026 were torn down. Note that BLK-001 blocks the Uni
 |---|---|---|---|
 | UNV-009 | Databricks | Iceberg REST Catalog from a Databricks Spark cluster (`spark.sql.catalog.s3tables`) | A Databricks workspace with a Spark cluster. Inferred from the EMR mechanism; no run. |
 | UNV-010 | Databricks | Executor-scale boto3 access from a customer-managed VPC | A customer-managed-VPC workspace. The Databricks-managed VPC case is recorded as failing (egress to FSx blocked); the customer-VPC case is untested. |
-| UNV-011 | Databricks | 9 of the 11 cases in `verification-pack/databricks/test-cases.yaml` have no recorded run | A workspace matching each case's preconditions. |
+| UNV-011 | Databricks | 16 of the 18 cases in `verification-pack/databricks/test-cases.yaml` have no recorded run | A workspace matching each case's preconditions. |
+| UNV-028 | Databricks | FILE type (Beta) table creation — `FILE MANAGED` / `FILE EXTERNAL` on DBR 18 LTS+, and whether a FileSpace may be an external volume | A workspace on DBR 18 LTS+ with the FILE type preview enabled. Cases `DBX-FILE-001` / `-012` / `-032`. |
+| UNV-029 | Databricks | `_object_metadata.tags` against an FSx for ONTAP S3 AP path (DBR 18.2+) — the object-tag bridge | A workspace on DBR 18.2+ with `s3:GetObjectTagging`, plus a native-S3 control showing non-null tags in the same run. Case `DBX-FILE-041`. The FSx for ONTAP side is verified: tagging works on the Access Point. |
+| UNV-030 | Databricks | Whether a table containing a `FILE` column can be shared via OpenSharing | A workspace with `CREATE SHARE`. Case `DBX-FILE-050`. Undocumented either way. |
 
 ## Needs another engine deployed
 

@@ -322,6 +322,20 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 - No equivalent to Snowflake's Directory Table or GET_PRESIGNED_URL
 - Executor-scale processing not yet validated
 
+### FILE type (Beta, 2026-08) — evaluated, does not lift the blocker
+
+Databricks introduced the [FILE type](https://www.databricks.com/blog/introducing-file-type-native-column-type-multimodal-data): a Delta column holding a governed reference to an unstructured file, queryable and passable to AI functions alongside structured columns. It is the closest thing yet to a governed unstructured-data catalog in Unity Catalog.
+
+It does not change the status above. `FILE EXTERNAL` is supported only for files **inside a UC volume**, and a UC external volume cannot be created on an S3 Access Point (BLK-001), so the only reachable mode is `FILE MANAGED`, which **copies** the bytes into UC-managed storage.
+
+A separate feature did move the picture: the [`_object_metadata` column](https://docs.databricks.com/aws/en/ingestion/object-metadata-column) (DBR 18.2+) exposes S3 **object tags** and user-defined metadata as queryable columns — and object tagging **is** supported on an FSx for ONTAP S3 AP (verified 2026-08-12). Whether Databricks can read those tags through an Access Point path is **not yet verified**.
+
+| Read this for | Where |
+|---|---|
+| Full evaluation, three-layer design, open questions | [databricks-file-type-evaluation](../../docs/en/databricks-file-type-evaluation.md) ([日本語](../../docs/ja/databricks-file-type-evaluation.md)) |
+| FSx for ONTAP-side object tag measurements (limits, ASCII constraint, file-scope, overwrite behaviour) | [s3ap-object-tagging evidence](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml) |
+| Runnable verification of the Databricks side | [`notebooks/10_file_type_object_metadata.py`](notebooks/10_file_type_object_metadata.py) · cases `DBX-FILE-*` in [test-cases.yaml](../../verification-pack/databricks/test-cases.yaml) |
+
 **Recommended alternative for unstructured data on FSx for ONTAP:**
 - Use **Snowflake** (Directory Table + GET_PRESIGNED_URL) for file catalog and secure URL generation
 - Use **AWS Lambda** for serverless file processing ([AWS tutorial](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/tutorial-process-files-with-lambda.html))
@@ -351,6 +365,7 @@ FSx for ONTAP ──S3 AP──▶ Athena (SQL analytics, no copy needed)
 | [Governance: Tags & Data Protection (ABAC)](docs/en/ai-demo-guide.md#governance-tags--data-protection-abac) | UC ABAC, governed tags, column masks, row filters — current limitations |
 | [Governance: File-Level Access Control](docs/en/ai-demo-guide.md#file-level-access-control-ontap-native-layer) | ONTAP dual-layer auth, FPolicy, per-team S3 AP isolation (compensating control) |
 | [Integration: ONTAP × Databricks Tags](docs/en/ai-demo-guide.md#integration-ontap-file-level-control--databricks-tag-governance) | Combined governance matrix, current vs future state, design patterns |
+| [FILE type (Beta) evaluation](../../docs/en/databricks-file-type-evaluation.md) | Multimodal data via FILE columns, why BLK-001 still applies, the `_object_metadata` object-tag bridge, and the recommended three-layer metadata design |
 
 ## Quick Start
 

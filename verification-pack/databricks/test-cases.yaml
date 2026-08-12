@@ -218,3 +218,151 @@ test_cases:
       - "MOUNT RPC response (status, file handle length)"
       - "NFS3 operation responses"
       - "Network connectivity confirmation"
+  # --- FILE type (Beta) and _object_metadata ---
+  # Analysis: ../../docs/en/databricks-file-type-evaluation.md
+  # Runner:   ../../integrations/databricks/notebooks/10_file_type_object_metadata.py
+  # FSx-side prerequisite already verified: object tagging works on an FSx for ONTAP S3 AP
+  # (../s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml)
+  - id: DBX-FILE-001
+    name: "FILE type recognised by the workspace (Beta enablement check)"
+    category: "file-type"
+    preconditions:
+      - "DBR 18 LTS or above"
+      - "FILE type enabled by a workspace admin on the Previews page"
+      - "Not a serverless notebook (serverless SQL warehouse attachment is acceptable)"
+    steps:
+      - "CREATE TABLE <schema>.probe_ext (id BIGINT, f FILE EXTERNAL)"
+    expected_result: "Table created, or a feature/parse error naming FILE"
+    pass_criteria: "Table created"
+    fail_criteria: "Parse or feature error — Beta not enabled, or runtime too old"
+    observed_result: ""
+    evidence_required:
+      - "DBR version string"
+      - "Verbatim error if any"
+      - "Whether the Previews toggle was on"
+    why_it_matters: |
+      Separates "not supported" from "not enabled here". Without this, every later
+      failure in this group is uninterpretable.
+
+  - id: DBX-FILE-012
+    name: "FILE EXTERNAL baseline over a Unity Catalog volume"
+    category: "file-type"
+    preconditions:
+      - "DBX-FILE-001 passes"
+      - "A UC volume containing at least one file"
+    steps:
+      - "CREATE TABLE ... AS SELECT path, size, file FROM list_files('/Volumes/.../')"
+      - "SELECT file.uri, file.size, file.content_type, file.checksum FROM the table"
+    expected_result: "Table created with one row per file; metadata fields readable"
+    pass_criteria: "Row count matches the file count and dot-notation fields resolve"
+    fail_criteria: "Any error on the documented happy path"
+    observed_result: ""
+    evidence_required:
+      - "Row count"
+      - "One sample FILE value with all five fields"
+    why_it_matters: |
+      The control for the whole group. Also confirms first-hand that a FILE value carries
+      only uri/offset/size/content_type/checksum — no tag or user-metadata field — which is
+      the constraint that forces attributes into their own columns.
+
+  - id: DBX-FILE-020
+    name: "list_files against an FSx for ONTAP S3 Access Point path"
+    category: "file-type"
+    preconditions:
+      - "S3 AP alias reachable from the compute"
+      - "A native-S3 external location configured as the control (DBX-FILE-021)"
+    steps:
+      - "SELECT path, size FROM list_files('s3://<ap-alias>/<prefix>/')"
+    expected_result: "Listing, or an authorization error"
+    pass_criteria: "Rows returned"
+    fail_criteria: "LIST_FILES_AUTHORIZATION_ERROR or AccessDenied"
+    observed_result: ""
+    evidence_required:
+      - "Verbatim error including any ARN"
+      - "Whether the control path succeeded in the same run"
+    why_it_matters: |
+      The reference says list_files accepts an external location path, while FILE EXTERNAL
+      storage is volume-only. These can fail at different points. If list_files reaches the
+      Access Point but the reference cannot be stored, the gap to ask Databricks to close is
+      narrower and more specific than "S3 AP is unsupported".
+
+  - id: DBX-FILE-022
+    name: "Store a FILE EXTERNAL reference to an object on an S3 Access Point"
+    category: "file-type"
+    preconditions:
+      - "DBX-FILE-020 attempted (pass or fail, both are informative)"
+    steps:
+      - "CREATE TABLE ... AS SELECT path, size, file FROM list_files('s3://<ap-alias>/...')"
+    expected_result: "Failure — FILE EXTERNAL is documented as volume-only"
+    pass_criteria: "Table created and FILE values resolve (would contradict the docs; re-verify)"
+    fail_criteria: "Error indicating the path is not a volume, or an authorization failure"
+    observed_result: ""
+    evidence_required:
+      - "Verbatim error"
+    why_it_matters: |
+      Confirms the structural chain in BLK-001 terminates here, which is the basis for
+      stating that FILE type does not deliver zero-copy governance on FSx for ONTAP.
+
+  - id: DBX-FILE-032
+    name: "Can a FILE MANAGED FileSpace be an external volume?"
+    category: "file-type"
+    preconditions:
+      - "An external volume and a managed volume both available, clearly labelled"
+    steps:
+      - "CREATE TABLE ... (id BIGINT, f FILE MANAGED) TBLPROPERTIES ('databricks.filespace-preview' = '<external volume path>')"
+    expected_result: "Unknown — the docs say 'a Unity Catalog volume' without qualifying"
+    pass_criteria: "Accepted with an external volume"
+    fail_criteria: "Rejected, requiring a managed volume"
+    observed_result: ""
+    evidence_required:
+      - "Whether the volume used was managed or external"
+      - "Verbatim error if rejected"
+    why_it_matters: |
+      Answers open question Q4. Does not unblock FSx for ONTAP either way (BLK-001 still
+      prevents an external volume on an S3 AP), but it determines whether a resolved
+      BLK-001 would open FILE MANAGED as well as FILE EXTERNAL.
+
+  - id: DBX-FILE-041
+    name: "_object_metadata reads object tags via an FSx for ONTAP S3 Access Point"
+    category: "object-metadata"
+    preconditions:
+      - "DBR 18.2 or above"
+      - "s3:GetObjectTagging granted — otherwise tags returns null silently"
+      - "Objects on the Access Point carry ASCII tags (see s3ap-object-tagging evidence)"
+      - "Control on native S3 returns NON-NULL tags in the same run (DBX-FILE-040)"
+    steps:
+      - "spark.read.format('binaryFile').load('s3://<ap-alias>/<prefix>/')"
+      - "selectExpr('_object_metadata.tags', '_object_metadata.user_metadata', '_object_metadata.etag')"
+    expected_result: "Tags populated, or an error / null"
+    pass_criteria: "tags is non-null and matches the tags written via the Access Point"
+    fail_criteria: "Read error, or tags null while the control shows non-null"
+    observed_result: ""
+    evidence_required:
+      - "Control result (native S3) from the same run"
+      - "Confirmation that s3:GetObjectTagging was granted"
+      - "Verbatim error, or the null/non-null result per field"
+    why_it_matters: |
+      The highest-value case in this group. It decides whether object-side metadata on
+      FSx for ONTAP can be inherited into a metadata table, which is the bridge this
+      repository previously had no answer for. A null result is ambiguous without both the
+      control and the permission check, so all three must be captured together.
+
+  - id: DBX-FILE-050
+    name: "Share a table containing a FILE column via OpenSharing"
+    category: "file-type"
+    preconditions:
+      - "CREATE SHARE privilege on the metastore"
+      - "A table with a FILE column exists (DBX-FILE-012)"
+    steps:
+      - "CREATE SHARE ...; ALTER SHARE ... ADD TABLE <FILE-column table>"
+      - "If accepted, check recipient-side recognition separately"
+    expected_result: "Undocumented either way"
+    pass_criteria: "Table accepted into the share"
+    fail_criteria: "Rejected with an unsupported-type error"
+    observed_result: ""
+    evidence_required:
+      - "Verbatim error if rejected"
+      - "Recipient-side behaviour if accepted"
+    why_it_matters: |
+      Answers open question Q5 and connects to the OpenSharing work in this repository.
+      Volume sharing exists; FILE-column table sharing is unstated.

@@ -35,6 +35,7 @@ graph TD
     SEC --> CM
     SEC --> NET[fsx-ontap-s3ap-networking]
     SEC --> ANN[s3-annotations-governance-evaluation]
+    SEC --> FT[databricks-file-type-evaluation]
     
     EXEC --> IND
     EXEC --> ARCH
@@ -256,6 +257,7 @@ graph TD
 | | [Recovery Semantics](./recovery-semantics.md) | Snapshot vs Time Travel |
 | **AI/ML** | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | AI カタログ設計 |
 | | [Unstructured Data Access](./unstructured-data-access.md) | 非構造化データアクセス |
+| | [Databricks FILE 型評価](./databricks-file-type-evaluation.md) | Delta 列でのマルチモーダルデータ、オブジェクトタグの橋渡し、3 層メタデータ設計 |
 | | [OmniGent 評価](./omnigent-multi-agent-evaluation.md) | マルチエージェント評価 |
 | **プラットフォーム評価** | [OpenSharing 統合分析](./opensharing-integration-analysis.md) | DAIS 2026 影響評価 |
 | | [AWS Context vs UC](./aws-context-vs-unity-catalog.md) | AWS vs Databricks ガバナンス比較 |
@@ -303,6 +305,7 @@ graph LR
 | FSx for ONTAP データを Snowflake で分析したい | [互換性マトリクス](./compatibility-matrix.md) | [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md)（Snowflake セクション） |
 | リアルタイムでデータを取り込みたい | [Kafka-ClickHouse-UC](./kafka-clickhouse-unity-catalog-connectivity.md) | [Event-driven Architecture](./event-driven-architecture.md) |
 | 非構造化データ（画像/PDF）を AI で活用したい | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | [Unstructured Data Access](./unstructured-data-access.md) |
+| Databricks FILE 型を評価する / オブジェクトメタデータをテーブルに紐づけたい | [Databricks FILE 型評価](./databricks-file-type-evaluation.md) | [S3 Annotations 評価](./s3-annotations-governance-evaluation.md) |
 | セキュリティ/コンプライアンスを確認したい | [Governance and Compliance](./governance-and-compliance.md) | [互換性マトリクス](./compatibility-matrix.md)（OT/IT セキュリティ） |
 | このパターンが適合するか判断したい | [業界別ソリューションカタログ](./industry-solution-catalog.md) | [導入評価ガイド](../adoption-guide/adoption-assessment-ja.md) |
 | ブロックされている機能を確認したい | [互換性マトリクス](./compatibility-matrix.md)（制約テーブル） | [UC 接続総合ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md)（今後の展望） |
