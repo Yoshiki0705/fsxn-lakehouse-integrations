@@ -11,7 +11,7 @@
 
 ## エグゼクティブサマリー
 
-- **対象課題**: Databricks UC が FSx for ONTAP S3 AP を External Location としてサポートしない（session policy 制約）。S3 Annotations / Metadata で何が提案できるかを評価
+- **対象課題**: FSx for ONTAP S3 AP に対する Databricks UC の External Location は登録できるが、それ経由の読み取りが払い出しセッションポリシーに拒否される（2026-08-12 計測）。本評価では S3 Annotations / Metadata が何を提案できるかを評価する
 - **S3 Annotations の適用範囲**: ネイティブ Amazon S3 バケットのみ。FSx for ONTAP S3 AP には直接適用不可 → staged-to-S3 パターンが前提
 - **3つの提案**: (1) AI コンテキスト enrichment（Bedrock 分類結果を annotation 付与）、(2) ACL ヒント発見シグナル（permission-aware RAG 補助、強制ではない）、(3) Iceberg 層でのガバナンス適用（UC ブロッカー解消待ち）
 - **検証状況**: annotation 付与/往復は Verified（Case 1/2 実証済み）。annotation テーブル経由のスケールクエリは AWS ネイティブエンジン（Athena/Trino/Spark）でサポート済み、Databricks UC からの参照のみブロック中
@@ -193,8 +193,8 @@ annotation パイプラインは以下へのアクセスが必要:
 
 本リポジトリには、Databricks Unity Catalog（UC）と FSx for ONTAP の S3 Access Point（S3 AP）連携に関する制約が記録済みです（出典: [`integrations/databricks/README.md`](../../integrations/databricks/README.md) の "Support Confirmation, 2026-05"。**ロールベース表記**で、ケース番号・担当者名はステアリング方針どおり伏せています）。
 
-- **UC External Locations は S3 AP をストレージターゲットとしてサポートしない**（Databricks Support 2026-05 確認、evidence tier: **Project-context→Public 記録**）
-- **根本原因**: AssumeRole 時に Databricks が生成する **session policy が S3 AP ARN を正しく扱えない** → External Location / External Table / External Volume 作成がブロック
+- **UC External Location は S3 AP に対して登録できるが、それ経由の読み取りが認可されない**（根本原因は Databricks Support 2026-05 確認、機構は 2026-08-12 に実測。evidence tier: **Verified**）。払い出される down-scoped セッションポリシーがバケット形式 ARN で書かれているため、アクセスポイント ARN に対する認可評価と一致しない
+- **根本原因**: 資格情報払い出し時に Databricks が生成する **session policy が S3 AP ARN を持たない** → 作成は成功し、そのロケーション経由の読み取りがすべて拒否される
 - `access_point` フィールドは **GA リリースされず**、ドキュメントから削除。部分的成功は「サポートされたコードパスではない」
 - Instance Profile + boto3 で読めるが **UC ガバナンスを完全にバイパス**（PoC のみ）
 

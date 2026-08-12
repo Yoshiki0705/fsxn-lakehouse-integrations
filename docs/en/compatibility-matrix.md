@@ -94,7 +94,7 @@ graph TD
     style J fill:#ccffcc
 ```
 
-> **UC governance path**: When selecting Databricks, UC External Location does not directly support S3 AP (session policy constraint). Reading via Instance Profile is possible but bypasses UC governance. For UC-governed analytics, use the DataSync → standard S3 → UC External Location path.
+> **UC governance path**: When selecting Databricks, a UC External Location on an S3 AP **can be registered**, but reads through it are denied by the down-scoped session policy Unity Catalog vends (measured 2026-08-12 — [BLK-001](./blocker-tracker.md#blk-001-uc-credential-vending-does-not-authorise-s3-ap-reads)). Reading via Instance Profile is possible but bypasses UC governance. For UC-governed analytics, use the DataSync → standard S3 → UC External Location path.
 
 ## OT/IT Security Considerations
 
@@ -288,7 +288,7 @@ Lakehouse table formats (Delta Lake, Apache Iceberg, Apache Hudi) rely on specif
 | **Amazon EMR Serverless** | Iceberg | Write | ❌ Not Supported | — | S3FileIO cannot handle S3 AP alias for metadata write/verify. NullPointerException during commit. |
 | **Amazon EMR Serverless** | Delta Lake | Read | ⚠️ Experimental | Delta Lake Spark library | Log reading works |
 | **Amazon EMR Serverless** | Delta Lake | Write/MERGE | ❌ Not Supported | — | Atomic rename required for commit protocol |
-| **Databricks** | Parquet/CSV | Read (External Location) | ❌ Not supported | — | Databricks Support confirmed 2026-05-26 that S3 AP is not a supported UC External Location target and the `access_point` field is not GA. A 2026-05-24 test listed the bucket root and read explicit file paths, but that is "a side effect of incomplete internal handling, not a supported code path"; subdirectory listing and CREATE TABLE failed. Read via Instance Profile + boto3 works but bypasses UC governance (PoC only). See [Databricks integration](../../integrations/databricks/README.md#support-confirmation-2026-05-26) |
+| **Databricks** | Parquet/CSV | Read (External Location) | ⚠️ Registers, cannot read | 2026-08-12 | **Corrected 2026-08-12.** An External Location and External Volume on an S3 AP alias **are** created, with UC's own validation enabled. What is denied is the read, because the vended down-scoped session policy is written in bucket-style ARNs while AWS authorises access-point requests against the access point ARN (`because no session policy allows the s3:ListBucket action`). It reproduces outside Databricks using UC-vended credentials. Read via Instance Profile + boto3 works but bypasses UC governance (PoC only). [Evidence](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml) |
 | **Databricks** | Delta Lake | Read (External Table) | ❌ Not supported | — | Requires a UC External Location on the S3 AP, which is not supported (see row above). `CREATE TABLE` against an S3 AP path fails with `UC_CLOUD_STORAGE_ACCESS_FAILURE` |
 | **Databricks** | Delta Lake | Write/MERGE/Compaction | ❌ Not Supported | — | Delta commit protocol requires rename; S3A rename emulation (copy+delete) may fail without conditional writes |
 | **Databricks** | Unstructured (image/video/doc/audio) | `FILE EXTERNAL` column (FILE type, Beta) | ❌ Not Supported | — | `FILE EXTERNAL` is documented as supported only for files inside a Unity Catalog volume, and a UC external volume cannot be created on an S3 AP (BLK-001). Structural, not a timing issue. [Evaluation](./databricks-file-type-evaluation.md) |
@@ -674,6 +674,8 @@ This explains the observed behavior where LIST operations succeed but GetObject/
 ### AWS Support Confirmation
 
 AWS Support (verified) confirmed that the denial originates from the **session policy applied by the analytics platform during AssumeRole**, not from the IAM role policy, AP policy, or file system permissions.
+
+> **Demonstrated directly for Databricks, 2026-08-12.** Unity Catalog will hand over the credentials it vends (`POST /api/2.0/unity-catalog/temporary-path-credentials`). Used from an operator workstation, the credential vended for a native S3 path works and the credential vended for an S3 AP path is denied — same role, same session, same network. AWS names the mismatch: it evaluates `arn:aws:s3:<region>:<account>:accesspoint/<name>` while the session policy carries `arn:aws:s3:::<alias>`. [Evidence](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)
 
 ---
 

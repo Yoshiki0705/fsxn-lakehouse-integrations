@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-- **Target challenge**: Databricks UC does not support FSx for ONTAP S3 AP as External Location (session policy constraint). This evaluation assesses what S3 Annotations / Metadata can propose
+- **Target challenge**: A Databricks UC External Location on an FSx for ONTAP S3 AP registers, but reads through it are denied by the vended session policy (measured 2026-08-12). This evaluation assesses what S3 Annotations / Metadata can propose
 - **S3 Annotations applicability**: Native Amazon S3 buckets only. Cannot apply directly to FSx for ONTAP S3 AP → staged-to-S3 pattern is prerequisite
 - **Three proposals**: (1) AI context enrichment (attach Bedrock classification as annotation), (2) ACL-hint discovery signal (permission-aware RAG aid, not enforcement), (3) Governance application at Iceberg layer (pending UC blocker resolution)
 - **Verification status**: Annotation attach/roundtrip is Verified (Case 1/2 proven). Scale-query via annotation table is supported by AWS native engines (Athena/Trino/Spark); only Databricks UC reference is blocked
@@ -193,8 +193,8 @@ This evaluation is connected to:
 
 This repository already records the constraint between Databricks Unity Catalog (UC) and FSx for ONTAP S3 Access Points (S3 AP) (source: [`integrations/databricks/README.md`](../../integrations/databricks/README.md) "Support Confirmation, 2026-05" — **role-based** wording; case numbers and engineer names are withheld per steering policy).
 
-- **UC External Locations do not support S3 AP as a storage target** (confirmed by Databricks Support, 2026-05; evidence tier: **Project-context recorded as Public**)
-- **Root cause**: the **session policy** that Databricks generates during AssumeRole does not correctly handle S3 AP ARNs → External Location / External Table / External Volume creation is blocked
+- **A UC External Location on an S3 AP registers, but reads through it are not authorised** (root cause confirmed by Databricks Support 2026-05; mechanism measured 2026-08-12; evidence tier: **Verified**). The vended down-scoped session policy is written in bucket-style ARNs, which never match the access point ARN AWS authorises against
+- **Root cause**: the **session policy** Databricks generates when vending credentials does not carry S3 AP ARNs → creation succeeds, and every read through the location is denied
 - The `access_point` field was **never released as GA** and was removed from docs. Partial success is "not a supported code path."
 - Instance Profile + boto3 can read but **fully bypasses UC governance** (PoC only)
 

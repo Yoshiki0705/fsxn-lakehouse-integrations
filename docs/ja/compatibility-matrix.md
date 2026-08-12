@@ -86,7 +86,7 @@ graph TD
     style J fill:#ccffcc
 ```
 
-> **UC ガバナンスパス**: Databricks を選択する場合、UC External Location は S3 AP を直接サポートしません（session policy 制約）。Instance Profile 経由で読み取りは可能ですが UC ガバナンスをバイパスします。UC ガバナンス付きの分析には DataSync → 標準 S3 → UC External Location パスを使用してください。
+> **UC ガバナンスパス**: Databricks を選択する場合、S3 AP に対する UC External Location は**登録できます**が、それ経由の読み取りは Unity Catalog が払い出す down-scoped セッションポリシーに拒否されます（2026-08-12 計測 — [BLK-001](./blocker-tracker.md#blk-001-uc-の資格情報払い出しが-s3-ap-の読み取りを認可しない)）。Instance Profile 経由で読み取りは可能ですが UC ガバナンスをバイパスします。UC ガバナンス付きの分析には DataSync → 標準 S3 → UC External Location パスを使用してください。
 
 ## OT/IT セキュリティ考慮事項
 
@@ -280,7 +280,7 @@ Lakehouse テーブルフォーマット（Delta Lake、Apache Iceberg、Apache 
 | **Amazon EMR Serverless** | Iceberg | 書き込み | ❌ 非サポート | — | S3FileIO が メタデータの書き込み/検証で S3 AP エイリアスを処理できない。コミット時に NullPointerException が発生 |
 | **Amazon EMR Serverless** | Delta Lake | 読み取り | ⚠️ 実験的 | Delta Lake Spark ライブラリ | ログ読み取りは動作 |
 | **Amazon EMR Serverless** | Delta Lake | Write/MERGE | ❌ 非サポート | — | コミットプロトコルにアトミック rename が必要 |
-| **Databricks** | Parquet/CSV | 読み取り（External Location） | ❌ 非サポート | — | 2026-05-26 に Databricks Support が S3 AP は UC External Location のサポート対象外であり `access_point` フィールドは GA ではないことを確認。2026-05-24 のテストではバケット直下の一覧と明示パスのファイル読み取りに成功したが、これは「不完全な内部処理の副作用でありサポートされたコードパスではない」。サブディレクトリ一覧と CREATE TABLE は失敗。Instance Profile + boto3 経由の読み取りは動作するが UC ガバナンスをバイパスする（PoC 限定）。[Databricks 統合](../../integrations/databricks/README.md#support-confirmation-2026-05-26) 参照 |
+| **Databricks** | Parquet/CSV | 読み取り（External Location） | ⚠️ 登録は可・読み取りは不可 | 2026-08-12 | **2026-08-12 に訂正。** External Location と External Volume は S3 AP エイリアスに対して作成できる（UC 自身の検証を有効にしたまま）。拒否されるのは読み取りで、原因は払い出される down-scoped セッションポリシーがバケット形式 ARN で書かれ、AWS がアクセスポイント ARN に対して認可評価することの不一致（`because no session policy allows the s3:ListBucket action`）。UC が払い出した資格情報を使えば Databricks の外でも再現する。Instance Profile + boto3 経由の読み取りは動作するが UC ガバナンスをバイパスする（PoC 限定）。[エビデンス](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml) |
 | **Databricks** | Delta Lake | 読み取り（External Table） | ❌ 非サポート | — | S3 AP 上の UC External Location が前提となるが、これが非サポート（上行参照）。S3 AP パスに対する `CREATE TABLE` は `UC_CLOUD_STORAGE_ACCESS_FAILURE` で失敗 |
 | **Databricks** | Delta Lake | Write/MERGE/Compaction | ❌ 非サポート | — | Delta コミットプロトコルに rename が必要。S3A rename エミュレーション（copy+delete）は条件付き書き込みなしで失敗する可能性 |
 | **Databricks** | 非構造化（画像/動画/文書/音声） | `FILE EXTERNAL` 列（FILE 型、β） | ❌ 非サポート | — | `FILE EXTERNAL` は Unity Catalog Volume 内のファイルのみサポートと明記されており、UC External Volume は S3 AP 上に作成できない（BLK-001）。タイミングの問題ではなく構造的制約。[評価](./databricks-file-type-evaluation.md) |
@@ -661,6 +661,8 @@ Databricks と Snowflake はいずれも `AssumeRole` 時に **session policy** 
 ### AWS サポート確認
 
 AWS サポート（検証済み）は、拒否が IAM ロールポリシー・AP ポリシー・ファイルシステム権限ではなく、**分析プラットフォームが AssumeRole 時に適用する session policy** に由来することを確認しました。
+
+> **Databricks について 2026-08-12 に直接実証。** Unity Catalog は自身が払い出す資格情報を渡してくれる（`POST /api/2.0/unity-catalog/temporary-path-credentials`）。作業端末から使うと、ネイティブ S3 経路に払い出された資格情報は通り、S3 AP 経路に払い出された資格情報は拒否される。同じロール・同じセッション・同じネットワークである。AWS が不一致を名指しする。評価対象は `arn:aws:s3:<region>:<account>:accesspoint/<name>` であり、セッションポリシーが持つのは `arn:aws:s3:::<alias>` である。[エビデンス](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)
 
 ---
 

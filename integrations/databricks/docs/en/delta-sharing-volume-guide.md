@@ -789,7 +789,7 @@ This is ETL by definition. The "E" (Extract) is reading from FSx for ONTAP. The 
 | Step | Why FSx for ONTAP S3 AP alone is insufficient |
 |------|---|
 | Write Delta commit log | Conditional writes not supported on FSx for ONTAP S3 AP |
-| Register in UC | UC External Location does not support S3 AP ARNs |
+| Register in UC | Registration succeeds; reads through it are denied by the vended session policy (BLK-001, scope corrected 2026-08-12) |
 | Multi-cluster safety | No DynamoDB LogStore equivalent for FSx for ONTAP S3 AP |
 | OpenSharing | Requires UC-registered table or valid Delta Table on supported storage |
 
