@@ -13,7 +13,7 @@
 
 - **FILE 型とは**: 非構造化ファイルの**ガバナンスされた参照**（`uri`, `offset`, `size`, `content_type`, `checksum`）をバイト列の代わりに保持する Delta の列型。文書・画像・音声・動画が構造化列の隣に並び、AI 関数や UDF に列として渡せる。2026-08 にベータ発表。
 - **設計レベルの判定**: FILE 型は、本リポジトリが [Iceberg メタデータカタログ](../../integrations/iceberg-metadata-catalog/README-ja.md)で既に実装しているパターン（ファイル参照 + AI 派生列を持つメタデータテーブル）を製品化したものにほぼ等しい。設計の方向性が正しかったことを示す有用なシグナル。
-- **ただし FSx for ONTAP のブロッカーは解消しない**: `FILE EXTERNAL` は Unity Catalog Volume 内のファイルしか参照できず、UC **External Volume は S3 Access Point 上に作成できない**（[BLK-001](./blocker-tracker.md#blk-001-uc-の資格情報払い出しが-s3-ap-の読み取りを認可しない)）。残る経路は `FILE MANAGED` のみで、これはバイト列を UC 管理ストレージへ**コピー**するため、zero-copy と「データがその場に留まること」に依存する ONTAP の効率機能を失う。
+- **ただし FSx for ONTAP のブロッカーは依然として解消しない** — ただし従来の記録より狭い理由で。`FILE EXTERNAL` は Unity Catalog Volume 内のファイルしか参照できない。S3 Access Point 上の UC External Volume は**作成できる**。失敗するのは**それ経由の読み取り**であり、Unity Catalog が払い出す down-scoped セッションポリシーがバケット形式 ARN で書かれている一方、AWS はアクセスポイント経由のリクエストをアクセスポイント ARN に対して認可評価するためである（[BLK-001](./blocker-tracker.md#blk-001-uc-の資格情報払い出しが-s3-ap-の読み取りを認可しない)、2026-08-12 に影響範囲を訂正）。利用者側の回避策はない。残る経路は `FILE MANAGED` のみで、これはバイト列を UC 管理ストレージへ**コピー**するため、zero-copy と「データがその場に留まること」に依存する ONTAP の効率機能を失う。
 - **前進した点**: FILE 型とは別機能である [`_object_metadata` 列](https://docs.databricks.com/aws/en/ingestion/object-metadata-column)（DBR 18.2+）が、S3 の**オブジェクトタグ**と**ユーザー定義メタデータ**をクエリ可能な列として公開する。これはオブジェクトストレージ側メタデータとメタデータテーブルを結ぶ公式の橋であり、本リポジトリがこれまで答えを持たなかった箇所。
 - **本検証で確認**: FSx for ONTAP S3 AP はオブジェクトタグと `x-amz-meta-*` を**サポートする**。タグは **file-scoped**（同一ボリューム上の別 Access Point から読める）で、**データと同じ PutObject** で付与できる。重要な制約が 2 つ: この Access Point ではオブジェクトタグは**実質 ASCII 限定**であり、オブジェクトの上書きでタグとユーザーメタデータが**無言で消える**。
 - **2 つの機構は併用できない**: Databricks は、Databricks 管理ストレージではユーザーメタデータ・システムメタデータ・タグが `null` になると明記している。したがって同一のバイト列に対して `FILE MANAGED`（UC ストレージへコピー）と `_object_metadata`（元ストレージからタグを読む）を両立できない。**取り込み時に一度だけ読み、以降はテーブルを真実の源とする。**
@@ -266,10 +266,10 @@ Databricks ネイティブの相当機能（`list_files`、`STREAM read_files(..
 |:---:|---|---|
 | ~~Q1~~ | AWS | ~~`Presign` は Not supported と記載されているが presigned GET は HTTP 200 を返す~~ — **クローズ済み。既に回答を得ていた**。presign はクライアント側の署名計算であり、サービスに届くのはサポート対象の `GetObject` である。2026-08-12 に起票した重複ケースは過去履歴を確認した時点で取り下げた。表の表現に対する AWS 側のドキュメント修正リクエストは 2026-07-19 から起票済み。[§4.2](#presigned-url-が動作するのは期待どおり) を参照 |
 | Q2 | AWS | U+0100 以上のオブジェクトタグのキー / 値は大半の文字列で `InvalidTag` になるが、一部は受理される（`分類` は受理、`東京` は拒否。どちらも 2 文字の漢字）。意図された挙動は ASCII 限定か、Amazon S3 で文書化されている完全な Unicode か、それ以外か。現在の挙動はいずれでもない |
-| Q3 | Databricks | UC External Location が S3 AP をサポートしない（BLK-001）状況で、パスが S3 Access Point の場合に `_object_metadata` は `tags` / `user_metadata` を埋めるか。サポートされる経路は存在するか |
+| Q3 | Databricks | **2026-08-12 に再定義。** S3 Access Point エイリアスに対する External Location と External Volume は作成できるが、読み取りはすべて拒否される。down-scoped セッションポリシーがバケット形式 ARN で表現される一方、AWS はアクセスポイント経由のリクエストをアクセスポイント ARN に対して認可評価するためである（`because no session policy allows the s3:ListBucket action`）。ロケーション URL がアクセスポイントのエイリアスであるとき、Unity Catalog はアクセスポイント ARN 形式（`arn:aws:s3:<region>:<account>:accesspoint/<name>` および `.../object/*`）を出力できないか。UC が払い出した資格情報を使えば Databricks の外でも再現する |
 | Q4 | Databricks | `FILE MANAGED` の FileSpace は **External** Volume でもよいのか、Managed Volume でなければならないのか。ドキュメントは限定なしに「Unity Catalog Volume」と記載している |
 | Q5 | Databricks | `FILE` 列を含むテーブルは OpenSharing で共有でき、受信側で認識されるか。Volume 共有（`ALTER SHARE ... ADD VOLUME`）は存在するが、FILE 列を持つテーブルについては可否とも記載がない |
-| Q6 | Databricks | 新たな重みを添えて BLK-001 を再提起: `FILE EXTERNAL` により、UC External Location の S3 AP サポートは「NAS 常駐データに対するガバナンス下のマルチモーダル AI」の門になった |
+| Q6 | Databricks | 新たな重みと**訂正された影響範囲**を添えて BLK-001 を再提起: 門は登録ではなく資格情報の払い出しである。`FILE EXTERNAL` により、そのセッションポリシーが「NAS 常駐データに対するガバナンス下のマルチモーダル AI」との間に立つ唯一のものになった |
 
 ---
 
@@ -305,22 +305,38 @@ Databricks ネイティブの相当機能（`list_files`、`STREAM read_files(..
 
 当初「発見」に見えて実際は違ったサブテストが 2 件あった。共有中のため拒否された `DROP TABLE`（「ファイルが残った」は何も証明していない）と、不正な PDF を変換失敗として受け取ったもの。どちらも無効だった初回試行ごと証拠に記録している。
 
-> **意図的に外部提起しなかった観察**: FILE 列に対する `GROUP BY` は*受理された*。リファレンスは FILE 列をグループ化式に使えないと記載している。ただしテストは 3 ファイル各 1 行なので、正しくグループ化されたのか偶然かを区別できず、同じリファレンスは FILE が順序を保証しないとも述べている。文書化された制約を契約と見なし、`uri` でグループ化する。Databricks には提起していない。3 行の結果は証拠にならない。
+> **2 回目の実行で対比が揃ったので提起した**: FILE 列に対する `GROUP BY` は*受理される*。リファレンスは FILE 列をグループ化式に使えないと記載している。初回はあえて提起しなかった。3 ファイル各 1 行では、正しくグループ化されたのか偶然かを区別できないためである。2026-08-12 に提起可能になったのは、同一実行内の対比が揃ったからだ。`GROUP BY` と `SELECT DISTINCT` はどちらも受理される一方、`=` は ``The `=` does not support ordering on type "FILE"`` で拒否され、`ORDER BY` も同種のエラーになる。グループ化と DISTINCT はどちらも、エンジンが明示的に提供を拒む等価性のセマンティクスに依存している。これは行数の話ではなく型の演算子面の話である。運用上は引き続き、文書化された制約を契約と見なし `uri` でグループ化する。
 
-### 依然として未検証 — 最も重要なケース
+### 最も重要なケース — 2026-08-12 に回答
 
-**FSx for ONTAP S3 Access Point** パスに対する `_object_metadata.tags` は未解決のままであり、これが本リポジトリが実際に必要としている問いである。
+**FSx for ONTAP S3 Access Point** パスに対する `_object_metadata.tags` は、本リポジトリが実際に必要としていた問いである。ファイルシステムと同一アカウント・同一リージョンに専用作成した非トライアルワークスペースで、同一セッション内にネイティブ S3 のコントロールを置いて実施した（[エビデンス](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)）。
 
-トライアルワークスペースでは検証できない。FSx アカウントへ到達する Unity Catalog の Storage Credential と External Location が必要で、それはまさに [BLK-001](./blocker-tracker.md#blk-001-uc-の資格情報払い出しが-s3-ap-の読み取りを認可しない) がブロックしているものである。同じ理由でネイティブ S3 のコントロールも用意できない。ギャップを実行可能な状態に保つため、ランナーとケースはコミット済み: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py)、[test-cases.yaml](../../verification-pack/databricks/test-cases.yaml) の `DBX-FILE-*`。
+| 手順 | 結果 |
+|---|---|
+| **ネイティブ S3** に対する `_object_metadata`（コントロール） | ✅ `tags` / `user_metadata` / `etag` / `mime_type` / `system_metadata` がすべて入り、AWS CLI で書いた内容と一致 |
+| **S3 AP エイリアス**への Storage Credential → External Location → External Volume | ✅ UC 検証を有効にしたまま作成 |
+| S3 AP 経由での `_object_metadata` / `list_files` / `to_file` の読み取り | ❌ 403 — ただし原因は判明した |
+
+原因はサポートの欠如ではない。AWS はアクセスポイント経由のリクエストを**アクセスポイント ARN** に対して認可評価する一方、Unity Catalog が払い出す down-scoped セッションポリシーは**バケット形式** ARN で表現されているため、セッションの内側で拒否される。
+
+```
+is not authorized to perform: s3:ListBucket on resource:
+"arn:aws:s3:<region>:<account>:accesspoint/<name>"
+because no session policy allows the s3:ListBucket action
+```
+
+これは Unity Catalog が払い出した資格情報を使って **Databricks の外**でも再現し、ネットワークとコンピュート形態を原因から除外できる。それ以前に別の 7 つの説明を排除しており、再検証しないよう証拠記録に列挙している。利用者側の回避策はない。セッションポリシーは Unity Catalog が生成する。
+
+したがって「`_object_metadata` は S3 AP 経由でオブジェクトタグを読むのか」への答えは依然として不明だが、理由が 1 段先に進んだ。読み取りがタグ読み取りのコードに到達しないのである。セッションポリシーが直る日のためにランナーはコミットしたまま残す: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py)、[test-cases.yaml](../../verification-pack/databricks/test-cases.yaml) の `DBX-FILE-*`。
 
 | 項目 | 未解決の理由 |
 |---|---|
-| S3 AP パス経由の `_object_metadata.tags`（同一実行のネイティブ S3 コントロール付き） | FSx アカウントへの Storage Credential が必要 |
-| S3 AP パスに対する `list_files` / `FILE EXTERNAL` | 同じ前提条件 |
-| Q4: FileSpace に **External** Volume を使えるか | Storage Credential が必要。代わりに判明したこと: FileSpace は専用 Volume でなくてよい（ソースファイルを含む Volume が受理された） |
+| セッションポリシーが直った場合に `_object_metadata` が S3 AP 経由でタグを読むのか | 読み取りがそのコードに到達する前に拒否される |
+| VPC オリジンの Access Point、WINDOWS アイデンティティの Access Point | INTERNET オリジン・UNIX root の Access Point 1 つで実施 |
+| Q4: FileSpace に **External** Volume を使えるか | 再検証していない。別途判明: FileSpace をソースファイルのある Volume に向けると `INSERT` で `Cannot get file metadata under managed storage` になるため、専用 Volume が成立する形である |
 | 共有された FILE 列の受信側での読み取り | 相手方が必要 |
-| クラシッククラスタ / DBR 18 LTS での FILE 型 | サーバーレス SQL ウェアハウスのみで実施。DBR バージョンは報告されない |
-| 非トライアル環境で Previews トグルが必要か | 1 環境では標本にならない |
+| FILE 列に対する `GROUP BY` が大規模で*正しい*のか | 2 行で受理された。受理は正しさではない |
+| Previews トグルが必要になる場合があるのか | 独立した 2 環境で不要だった。2 は標本にならず、これは環境差でありドキュメントの誤りではない |
 
 ### 未検証 — ONTAP マルチプロトコル挙動
 
@@ -336,7 +352,7 @@ Databricks ネイティブの相当機能（`list_files`、`STREAM read_files(..
 
 **Q1. FILE 型は Databricks × FSx for ONTAP のガバナンスギャップを解決するか。**
 
-しない。`FILE EXTERNAL` は UC Volume を要求し、UC External Volume は S3 Access Point 上に作成できない（BLK-001）。`FILE MANAGED` は動作するがデータをコピーする。FILE 型は BLK-001 を修正する価値を高めるが、修正はしない。
+しない。ただし壁の位置は動いた。`FILE EXTERNAL` は UC Volume を要求し、S3 Access Point 上の UC External Volume は作成できて読めない（BLK-001、2026-08-12 に影響範囲を訂正）。`FILE MANAGED` は動作するがデータをコピーする。FILE 型は BLK-001 を修正する価値を高めるが、修正はしない。有用な変化は、残るギャップが「サポートされていない」という漠然とした話ではなく、資格情報払い出しにおける具体的で報告可能な挙動になったことである。
 
 **Q2. オブジェクトタグをアクセス制御に使えるか。**
 

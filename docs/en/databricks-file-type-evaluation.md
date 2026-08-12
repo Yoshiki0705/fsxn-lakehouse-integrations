@@ -13,7 +13,7 @@
 
 - **What FILE type is**: a Delta column type that stores a *governed reference* to an unstructured file (`uri`, `offset`, `size`, `content_type`, `checksum`) rather than its bytes, so documents, images, audio and video sit in a table next to structured columns and can be passed to AI functions and UDFs. Announced in Beta, 2026-08.
 - **Design-level verdict**: FILE type is essentially the productised form of the pattern this repository already implements in the [Iceberg metadata catalog](../../integrations/iceberg-metadata-catalog/README.md) — a metadata table that carries file references plus AI-derived columns. The convergence is a useful signal that the pattern is the right one.
-- **But it does not unblock FSx for ONTAP**: `FILE EXTERNAL` references are only supported for files inside a Unity Catalog volume, and a UC **external volume cannot be created on an S3 Access Point** ([BLK-001](./blocker-tracker.md#blk-001-uc-credential-vending-does-not-authorise-s3-ap-reads)). The only remaining route is `FILE MANAGED`, which **copies** the bytes into UC-managed storage and therefore forfeits zero-copy and the ONTAP efficiencies that depend on the data staying in place.
+- **But it still does not unblock FSx for ONTAP** — for a narrower reason than previously recorded. `FILE EXTERNAL` references are only supported for files inside a Unity Catalog volume. A UC external volume on an S3 Access Point **can be created**; what fails is **reading through it**, because the down-scoped session policy Unity Catalog vends is written in bucket-style resource ARNs while AWS authorises access-point requests against the access point ARN ([BLK-001](./blocker-tracker.md#blk-001-uc-credential-vending-does-not-authorise-s3-ap-reads), scope corrected 2026-08-12). There is no user-side workaround. The only remaining route is `FILE MANAGED`, which **copies** the bytes into UC-managed storage and therefore forfeits zero-copy and the ONTAP efficiencies that depend on the data staying in place.
 - **What did move**: a separate feature, the [`_object_metadata` column](https://docs.databricks.com/aws/en/ingestion/object-metadata-column) (DBR 18.2+), exposes S3 **object tags** and **user-defined metadata** as queryable columns. That is the documented bridge between object-storage-side metadata and a metadata table — exactly the linkage this repository had no answer for.
 - **Verified this run**: FSx for ONTAP S3 AP **does** support object tagging and `x-amz-meta-*`, tags are **file-scoped** (readable through a different Access Point on the same volume), and tags can be written **in the same PutObject** as the data. Two constraints matter: object tags are **effectively ASCII-only** on this Access Point, and an object overwrite **silently clears** tags and user metadata.
 - **The two mechanisms are mutually exclusive**: Databricks documents that user metadata, system metadata and tags are `null` for Databricks-managed storage. So `FILE MANAGED` (copy into UC storage) and `_object_metadata` (read tags from the source) cannot both be used for the same bytes. Read tags once at ingestion, then treat the table as the source of truth.
@@ -269,10 +269,10 @@ Drafts and tracking are kept outside the public tree. Raised with the respective
 |:---:|---|---|
 | ~~Q1~~ | AWS | ~~`Presign` listed as Not supported but a presigned GET returns HTTP 200~~ — **closed, already answered**. Presigning is client-side signature computation, so the request that reaches the service is a supported `GetObject`. A duplicate case raised on 2026-08-12 was withdrawn once the prior history was found; an AWS-side documentation-correction request for the table wording has been open since 2026-07-19. See [§4.2](#presigned-urls-work-and-that-is-expected) |
 | Q2 | AWS | Object tag keys/values at U+0100 and above are rejected with `InvalidTag` for most strings but accepted for some (`分類` accepted, `東京` rejected — both two-character CJK). Is the intended behaviour ASCII-only, full Unicode as documented for Amazon S3, or something else? Current behaviour is neither |
-| Q3 | Databricks | Does `_object_metadata` populate `tags` / `user_metadata` when the path is an S3 Access Point, given that UC External Locations do not support S3 AP (BLK-001)? Is there a supported path at all? |
+| Q3 | Databricks | **Reframed 2026-08-12.** An external location and external volume on an S3 Access Point alias are created successfully, but every read is denied because the down-scoped session policy is expressed in bucket-style ARNs while AWS authorises access-point requests against the access point ARN (`because no session policy allows the s3:ListBucket action`). Can Unity Catalog emit the access point ARN form (`arn:aws:s3:<region>:<account>:accesspoint/<name>` and `.../object/*`) when the location URL is an access point alias? Reproduces outside Databricks with UC-vended credentials |
 | Q4 | Databricks | Can a `FILE MANAGED` FileSpace be an **external** volume, or must it be a managed volume? The docs say "a Unity Catalog volume" without qualifying |
 | Q5 | Databricks | Can a table containing a `FILE` column be shared via OpenSharing, and is it recognised by a recipient? Volume sharing exists (`ALTER SHARE ... ADD VOLUME`) but FILE-column tables are not documented either way |
-| Q6 | Databricks | Restating BLK-001 with the new stake: `FILE EXTERNAL` makes S3 AP support in UC External Locations the gate for governed multimodal AI on NAS-resident data |
+| Q6 | Databricks | Restating BLK-001 with the new stake **and the corrected scope**: registration is not the gate — credential vending is. `FILE EXTERNAL` makes that session policy the single thing standing between governed multimodal AI and NAS-resident data |
 
 ---
 
@@ -308,22 +308,38 @@ Executed on a 14-day trial workspace via a serverless SQL warehouse (DBSQL 2026.
 
 Two sub-tests initially looked like findings and were not: a `DROP TABLE` refused because the table was still shared (so "files remained" proved nothing), and a malformed PDF fixture reported as a conversion failure. Both are recorded in the evidence with their invalid first attempt.
 
-> **One observation deliberately not escalated**: `GROUP BY` on a FILE column was *accepted*, though the reference says a FILE column cannot be a grouping expression. The test had three distinct files with one row each, so it cannot distinguish correct grouping from coincidence, and the same reference states FILE does not guarantee ordering. Treat the documented restriction as the contract and group by `uri`. Not raised with Databricks — a three-row result is not evidence.
+> **Escalated on the second run, once a contrast existed**: `GROUP BY` on a FILE column is *accepted*, though the reference says a FILE column cannot be a grouping expression. On the first run this was deliberately not raised — three files with one row each cannot distinguish correct grouping from coincidence. What made it reportable on 2026-08-12 was the contrast inside a single run: `GROUP BY` and `SELECT DISTINCT` are both accepted while `=` is refused with ``The `=` does not support ordering on type "FILE"`` and `ORDER BY` with the same class of error. Grouping and distinct both depend on the equality semantics the engine explicitly declines to provide. That is a statement about the type's operator surface rather than about row counts. Still treat the documented restriction as the contract and group by `uri`.
 
-### Still not verified — the case that matters most
+### The case that mattered most — answered 2026-08-12
 
-`_object_metadata.tags` against an **FSx for ONTAP S3 Access Point** path remains open, and it is the question this repository actually needs answered.
+`_object_metadata.tags` against an **FSx for ONTAP S3 Access Point** path was the question this repository actually needed answered. It was run on a purpose-built non-trial workspace in the same account and region as the file system, with a native-S3 control in the same session ([evidence](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)).
 
-It is not testable on a trial workspace. It needs a Unity Catalog storage credential and external location reaching into the FSx account — which is precisely what [BLK-001](./blocker-tracker.md#blk-001-uc-credential-vending-does-not-authorise-s3-ap-reads) blocks. A native-S3 control is unavailable for the same reason. The runner and its cases are committed so the gap stays executable: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py), cases `DBX-FILE-*` in [test-cases.yaml](../../verification-pack/databricks/test-cases.yaml).
+| Step | Result |
+|---|---|
+| `_object_metadata` over **native S3** (the control) | ✅ `tags`, `user_metadata`, `etag`, `mime_type`, `system_metadata` all populated and matching what the AWS CLI wrote |
+| Storage credential → external location → external volume on the **S3 AP alias** | ✅ Created, with UC validation enabled |
+| Reading `_object_metadata` / `list_files` / `to_file` through the S3 AP | ❌ 403 — and the cause is now known |
+
+The cause is not a lack of support. AWS authorises an access-point request against the **access point ARN**, while the down-scoped session policy Unity Catalog vends is expressed in **bucket-style** ARNs, so the request is denied inside the session:
+
+```
+is not authorized to perform: s3:ListBucket on resource:
+"arn:aws:s3:<region>:<account>:accesspoint/<name>"
+because no session policy allows the s3:ListBucket action
+```
+
+This reproduces **outside Databricks** using the credentials Unity Catalog vends, which is what rules out the network and the compute form. Seven other explanations were eliminated first; they are listed in the evidence record so they are not re-tested. There is no user-side workaround — the session policy is generated by Unity Catalog.
+
+So the answer to "does `_object_metadata` read object tags through an S3 AP" is still unknown, but for a reason one step further along: the read never reaches the tag-reading code. The runner stays committed for the day the session policy is fixed: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py), cases `DBX-FILE-*` in [test-cases.yaml](../../verification-pack/databricks/test-cases.yaml).
 
 | Item | Why it is still open |
 |---|---|
-| `_object_metadata.tags` via an S3 AP path, with a native-S3 control in the same run | Needs a storage credential into the FSx account |
-| `list_files` / `FILE EXTERNAL` against an S3 AP path | Same prerequisite |
-| Q4: may a FileSpace be an **external** volume? | Needs a storage credential. Established instead: the FileSpace need not be a dedicated volume — a volume already holding the source files was accepted |
+| Whether `_object_metadata` would read tags through an S3 AP if the session policy were fixed | The read is refused before it reaches that code |
+| VPC-origin Access Points, and Access Points with WINDOWS identity | One INTERNET-origin, UNIX-root Access Point was exercised |
+| Q4: may a FileSpace be an **external** volume? | Not retested. Established separately: pointing the FileSpace at the volume holding the source files fails at `INSERT` with `Cannot get file metadata under managed storage`, so a dedicated volume is the working shape |
 | Recipient-side reading of a shared FILE column | Needs a second party |
-| FILE type on a classic cluster / DBR 18 LTS | Only a serverless SQL warehouse was exercised, and it reports no DBR version |
-| Whether the Previews toggle is required on non-trial workspaces | One workspace is not a sample |
+| Whether `GROUP BY` on a FILE column is *correct* at scale | Accepted on two rows; acceptance is not correctness |
+| Whether the Previews toggle is ever required | Two independent workspaces did not need it. Two is not a sample, and this is an environment difference, not a documentation error |
 
 ### Not verified — ONTAP multiprotocol behaviour
 
@@ -339,7 +355,7 @@ It is not testable on a trial workspace. It needs a Unity Catalog storage creden
 
 **Q1. Does FILE type solve the Databricks × FSx for ONTAP governance gap?**
 
-No. `FILE EXTERNAL` requires a UC volume and a UC external volume cannot be created on an S3 Access Point (BLK-001). `FILE MANAGED` works but copies the data. FILE type raises the value of fixing BLK-001; it does not fix it.
+No, but the wall moved. `FILE EXTERNAL` requires a UC volume; a UC external volume on an S3 Access Point can be created and cannot be read (BLK-001, scope corrected 2026-08-12). `FILE MANAGED` works but copies the data. FILE type raises the value of fixing BLK-001; it does not fix it. The useful change is that the remaining gap is now a specific, reportable behaviour in credential vending rather than a blanket lack of support.
 
 **Q2. Can object tags be used for access control?**
 
