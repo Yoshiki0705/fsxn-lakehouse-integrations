@@ -55,4 +55,33 @@ if [ -n "$STAGED_WORKFLOWS" ] && command -v zizmor &> /dev/null; then
   fi
 fi
 
+# === 4. Tenant identifiers that gitleaks does not catch ===
+# gitleaks looks for credential-shaped strings. A Databricks workspace hostname or a bare
+# account UUID is not credential-shaped, so it passes gitleaks while still identifying a
+# live tenant in a public repository. This was found the hard way on 2026-08-12: values
+# committed in May-June 2026 required a full history rewrite plus a host-side purge,
+# because editing the file does not remove what is already in history.
+STAGED_TEXT=$(git diff --cached --name-only --diff-filter=ACM \
+  | grep -vE '^\.private/|^\.githooks/' || true)
+if [ -n "$STAGED_TEXT" ]; then
+  echo "🔍 tenant identifier scan..."
+  # Databricks workspace hostname (dbc-xxxxxxxx-xxxx.cloud.databricks.com).
+  # Placeholders such as dbc-xxx / <WORKSPACE_ID> are allowed.
+  DBX_HITS=$(echo "$STAGED_TEXT" | xargs grep -nIE 'dbc-[0-9a-f]{8}-[0-9a-f]{4}\.cloud\.databricks\.com' 2>/dev/null || true)
+  # Databricks workspace org id in a URL (?o=<16 digits>)
+  ORG_HITS=$(echo "$STAGED_TEXT" | xargs grep -nIE '[?&]o=[0-9]{16}' 2>/dev/null || true)
+  if [ -n "$DBX_HITS" ] || [ -n "$ORG_HITS" ]; then
+    echo ""
+    echo "❌ ERROR: a live tenant identifier is staged"
+    [ -n "$DBX_HITS" ] && echo "$DBX_HITS" | sed 's/^/   /'
+    [ -n "$ORG_HITS" ] && echo "$ORG_HITS" | sed 's/^/   /'
+    echo ""
+    echo "   Replace with a placeholder: <WORKSPACE_ID>, <WORKSPACE_ORG_ID>"
+    echo "   These are not secrets, but they identify a live tenant in a public repo,"
+    echo "   and removing them after the fact needs a history rewrite + a GitHub purge."
+    exit 1
+  fi
+  echo "✅ tenant identifier scan: clean"
+fi
+
 echo "✅ pre-commit checks passed"
