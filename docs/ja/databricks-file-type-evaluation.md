@@ -69,7 +69,7 @@
 
 ## 2. なぜ FSx for ONTAP のブロッカーが解消しないのか
 
-**Evidence tier: Verified**（2026-08-12、専用の非トライアルワークスペースでネイティブ S3 のコントロール付きで計測 — [エビデンス](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)）。
+**Evidence tier: Verified**（2026-08-12、専用の非トライアルワークスペースでネイティブ S3 のコントロール付きで計測 — [エビデンス](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)）。自分のアカウントで再現するには [検証ランブック](./databricks-verification-runbook.md) を参照。
 
 > **2026-08-12 訂正。** 本節はこれまで「S3 Access Point 上に UC External Volume は作れない」と記述していた。これは誤りである。Storage Credential・External Location・External Volume はいずれも、UC 自身の検証を有効にしたまま作成できる。失敗するのは**それ経由の読み取り**である。
 
@@ -392,6 +392,7 @@ because no session policy allows the s3:ListBucket action
 **本リポジトリ**
 - 証拠: [s3ap-object-tagging (2026-08-12)](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml) · 再現: [`probe_s3ap_object_tagging.py`](../../shared/scripts/probe_s3ap_object_tagging.py)
 - [ブロッカートラッカー](./blocker-tracker.md) — BLK-001, BLK-002, BLK-003
+- [検証ランブック](./databricks-verification-runbook.md) — 自分のアカウントでの再現手順: CloudFormation、プローブスクリプト、判定、撤去順序
 - [Databricks 統合 README](../../integrations/databricks/docs/ja/README.md) · [FSx for ONTAP → Databricks Unity Catalog 接続ガイド](./fsx-ontap-to-databricks-unity-catalog-guide.md)
 - [Iceberg メタデータカタログ](../../integrations/iceberg-metadata-catalog/README-ja.md) · [iceberg-metadata-catalog（docs）](./iceberg-metadata-catalog.md)
 - [非構造化データアクセス](./unstructured-data-access.md) · [ゼロコピーメディアガバナンス](./zero-copy-media-governance.md)

@@ -24,6 +24,7 @@
 | Connect FSx for ONTAP → Databricks Unity Catalog | [UC Connection Guide](docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) | 30 min |
 | Govern unstructured data (images/video/docs) in a lakehouse | [Databricks FILE type Evaluation](docs/en/databricks-file-type-evaluation.md) | 20 min |
 | Estimate what a Databricks verification costs before running one | [Databricks Verification Environment and Cost](docs/en/databricks-verification-environment-cost.md) | 10 min |
+| Reproduce the Unity Catalog x S3 Access Point result in your own account | [Databricks Verification Runbook](docs/en/databricks-verification-runbook.md) | 45 min hands-on |
 
 <details>
 <summary>📂 All integrations & verification status</summary>

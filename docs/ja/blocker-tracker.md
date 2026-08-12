@@ -79,6 +79,7 @@ because no session policy allows the s3:ListBucket action
 **FILE 型における重み。** `FILE EXTERNAL` は UC Volume を要し、S3 AP 上の UC Volume は作成できても読めないため、ONTAP 常駐ファイルに対する `FILE EXTERNAL` は依然として成立しない。`FILE MANAGED` はバイト列を UC 管理ストレージにコピーする。したがって本件の解消は、従来の表形式ガバナンスに加えて「NAS 上に留まるデータに対するガバナンス下のマルチモーダル AI」をもたらす。
 
 エビデンス: [evidence-record-tokyo.yaml](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)。
+再現手順: [検証ランブック](./databricks-verification-runbook.md)（IAM ロールをデプロイし、ネイティブ S3 のコントロール付きで比較を実行する）。
 `_object_metadata` 経路を含む完全な分析: [databricks-file-type-evaluation](./databricks-file-type-evaluation.md)。
 
 ---

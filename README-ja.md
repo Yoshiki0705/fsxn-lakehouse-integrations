@@ -23,6 +23,7 @@
 | FSx for ONTAP → Databricks Unity Catalog を接続する | [UC 接続ガイド](docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) | 30分 |
 | 非構造化データ（画像/動画/文書）をレイクハウスでガバナンスする | [Databricks FILE 型評価](docs/ja/databricks-file-type-evaluation.md) | 20分 |
 | Databricks 検証の実費を事前に見積もる | [Databricks 検証環境とコスト](docs/ja/databricks-verification-environment-cost.md) | 10分 |
+| Unity Catalog × S3 Access Point の結果を自分のアカウントで再現する | [Databricks 検証ランブック](docs/ja/databricks-verification-runbook.md) | 実作業 45分 |
 
 <details>
 <summary>📂 全インテグレーション・検証ステータス</summary>

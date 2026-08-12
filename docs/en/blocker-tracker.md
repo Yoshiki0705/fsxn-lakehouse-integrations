@@ -92,6 +92,7 @@ governed multimodal AI over data that stays on the NAS, on top of the tabular go
 always bought.
 
 Evidence: [evidence-record-tokyo.yaml](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml).
+Reproduce: [verification runbook](./databricks-verification-runbook.md), which deploys the IAM role and runs the comparison with a native-S3 control.
 Full analysis, including the separate `_object_metadata` path: [databricks-file-type-evaluation](./databricks-file-type-evaluation.md).
 
 ---

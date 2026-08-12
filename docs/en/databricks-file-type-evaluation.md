@@ -69,7 +69,7 @@ Because the column stores a pointer, the engine reads bytes only at the step tha
 
 ## 2. Why this does not unblock FSx for ONTAP
 
-**Evidence tier: Verified** (measured 2026-08-12 on a purpose-built non-trial workspace, with a native-S3 control — [evidence](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)).
+**Evidence tier: Verified** (measured 2026-08-12 on a purpose-built non-trial workspace, with a native-S3 control — [evidence](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)). Reproduce it in your own account with the [verification runbook](./databricks-verification-runbook.md).
 
 > **Corrected 2026-08-12.** This section previously said a UC external volume cannot be
 > created on an S3 Access Point. That is wrong. The storage credential, the external
@@ -395,6 +395,7 @@ Not today. The announcement states that support in Parquet, Delta Lake, Iceberg 
 **This repository**
 - Evidence: [s3ap-object-tagging (2026-08-12)](../../verification-pack/s3ap-object-tagging/evidence/2026-08-12/evidence-record.yaml) · Reproduce: [`probe_s3ap_object_tagging.py`](../../shared/scripts/probe_s3ap_object_tagging.py)
 - [Blocker tracker](./blocker-tracker.md) — BLK-001, BLK-002, BLK-003
+- [Verification runbook](./databricks-verification-runbook.md) — reproduce this in your own account: CloudFormation, probe script, verdicts, teardown order
 - [Databricks integration README](../../integrations/databricks/README.md) · [FSx for ONTAP → Databricks Unity Catalog guide](./fsx-ontap-to-databricks-unity-catalog-guide.md)
 - [Iceberg metadata catalog](../../integrations/iceberg-metadata-catalog/README.md) · [iceberg-metadata-catalog (docs)](./iceberg-metadata-catalog.md)
 - [Unstructured data access](./unstructured-data-access.md) · [Zero-copy media governance](./zero-copy-media-governance.md)
