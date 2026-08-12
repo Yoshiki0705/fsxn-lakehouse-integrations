@@ -1,0 +1,307 @@
+# Verification Evidence Record — FILE type and _object_metadata over an FSx for ONTAP S3 Access Point
+test_id: "DBX-FILE-TYPE-002"
+date_tested: "2026-08-12"
+tester: "Yoshiki Fujiwara"
+supersedes_partially: "DBX-FILE-TYPE-001 (trial workspace, us-west-2) — see blocker_status"
+purpose: |
+  DBX-FILE-TYPE-001 could not answer DBX-FILE-041 (_object_metadata reading object tags
+  through an FSx for ONTAP S3 Access Point) because the trial workspace had no storage
+  credential and no external location, and BLK-001 recorded that Unity Catalog does not
+  support an S3 Access Point as an external location.
+
+  This run creates a non-trial workspace in the same AWS account and region as the
+  FSx for ONTAP file system, so that a Unity Catalog storage credential can be pointed at
+  the S3 Access Point directly. The first result is that BLK-001 was wrong.
+
+environment:
+  workspace: "<WORKSPACE_ID> (non-trial, created and destroyed the same day)"
+  workspace_region: "ap-northeast-1"
+  workspace_storage_mode: "Use your existing cloud account (Databricks-managed VPC inside our AWS account)"
+  metastore_region: "ap-northeast-1"
+  compute_a: "Serverless SQL Warehouse, Small (Serverless Starter Warehouse)"
+  compute_b: "Classic single-node cluster, DBR 18.2.x-scala2.13, m5d.large, SINGLE_USER"
+  dbsql_version: "2026.20"
+  access: "Databricks SDK for Python 0.126.0 — SQL Statement Execution API"
+  token_scopes: "unity-catalog, files, sql, clusters, command-execution, workspace, instance-profiles"
+  fsx_file_system: "SINGLE_AZ_1, 128 MBps, ONTAP S3 Access Point, INTERNET origin, UNIX root identity"
+  fsx_access_point: "verification-test-ap"
+  control_storage: "purpose-built native S3 bucket in the same account and region"
+
+# ---------------------------------------------------------------------------
+# A. BLK-001 is refuted: UC external location on an FSx for ONTAP S3 AP
+# ---------------------------------------------------------------------------
+results:
+  - id: DBX-FILE-041a
+    case: "Can a Unity Catalog external location be created on an FSx for ONTAP S3 AP alias?"
+    status: "PASS — BLK-001 refuted"
+    detail: |
+      CREATE succeeded for url s3://<AP_ALIAS>/ with skip_validation=False, meaning Unity
+      Catalog ran its own read/write validation against the access point and passed.
+      An EXTERNAL VOLUME on the same location was then created successfully as well.
+    what_made_the_earlier_attempts_fail: |
+      Not a Unity Catalog limitation. Two IAM mistakes on our side:
+        1. The storage credential's external ID is the Databricks ACCOUNT UUID, not the
+           metastore ID. A trust policy conditioned on the metastore ID yields
+           403 Forbidden from the cloud storage provider.
+        2. The IAM permission policy must reference the ACCESS POINT ARN
+           (arn:aws:s3:<region>:<account>:accesspoint/<name> and .../object/*).
+           Granting only the alias-as-bucket ARN (arn:aws:s3:::<alias>) yields
+           AccessDeniedException even though the alias form works from the AWS CLI.
+    control: |
+      The same storage credential created an external location on a native S3 bucket
+      successfully, which is what isolated the failure to the IAM resource form rather
+      than to the access point.
+    caveat: |
+      One access point, one file system, one region, INTERNET origin, UNIX root identity.
+      Do not generalise to VPC-origin access points or to WINDOWS identity access points.
+
+  - id: DBX-FILE-041b
+    case: "Is the ARN-style URL accepted for the external location?"
+    status: "FAIL (by design, and the message is clear)"
+    error: "InvalidParameterValue: url does not specify a valid bucket name"
+    detail: |
+      s3://arn:aws:s3:<region>:<account>:accesspoint/<name>/ is rejected. The alias form
+      is the only one Unity Catalog accepts as an external location URL. The access point
+      ARN still has to appear in the IAM policy — the two places want different forms.
+
+# ---------------------------------------------------------------------------
+# B. _object_metadata control on native S3 — mandatory before reading any null
+# ---------------------------------------------------------------------------
+  - id: DBX-FILE-041-control
+    case: "Does _object_metadata expose S3 object tags and user metadata on native S3?"
+    status: "PASS"
+    detail: |
+      read_files over a native S3 external location returns _object_metadata with
+      populated fields:
+        etag, user_metadata, tags, mime_type, system_metadata
+      Written with the AWS CLI and read back through Databricks:
+        a.txt  tags = {"classification":"internal","quality":"gold","site":"nagoya"}
+               user_metadata = {}
+        b.txt  tags = {"classification":"public","quality":"silver"}
+               user_metadata = {"reviewer":"ops","stage":"verified"}
+      system_metadata carried x-amz-tagging-count 3 and 2 respectively, matching what the
+      CLI reported.
+    why_this_matters: |
+      Without this control, a null tags field over the access point would be
+      uninterpretable — it could equally mean "the feature does not read tags at all".
+      It reads them.
+
+# ---------------------------------------------------------------------------
+# C. Reading the S3 AP from serverless compute fails, and not on permissions
+# ---------------------------------------------------------------------------
+  - id: DBX-FILE-041c
+    case: "Read _object_metadata through the FSx for ONTAP S3 AP from a serverless SQL warehouse"
+    status: "FAIL"
+    errors_verbatim:
+      - "read_files('s3://<AP_ALIAS>/objmeta/'): /objmeta/_delta_log: Request failed, cloud: s3, operation: head, statusCode: 403, statusMessage: Forbidden"
+      - "read_files('s3://<AP_ALIAS>/objmeta/ap1.txt'): /objmeta/ap1.txt/_delta_log: Request failed, cloud: s3, operation: head, statusCode: 403, statusMessage: Forbidden"
+      - "LIST 's3://<AP_ALIAS>/objmeta/': [UNAUTHORIZED_ACCESS] /objmeta: Request failed, cloud: s3, operation: head, statusCode: 403, statusMessage: Forbidden"
+      - "list_files('/Volumes/.../vol_s3ap/'): [LIST_FILES_AUTHORIZATION_ERROR.ON_PATH] Not authorized to call list_files."
+      - "to_file('/Volumes/.../vol_s3ap/ap1.txt'): [TO_FILE_READ_UNAUTHORIZED] User is not authorized to read the source file"
+    ruled_out:
+      - claim: "Unity Catalog privileges on the volume"
+        evidence: |
+          The failing volume has an explicit GRANT READ VOLUME recorded by SHOW GRANTS.
+          The working control volume has NO grants at all. Privileges are therefore not
+          what separates them.
+      - claim: "The IAM role cannot read the access point"
+        evidence: |
+          Assuming the very same role from the operator network lists the access point
+          successfully through both the alias-as-bucket form and the access point ARN form,
+          and HEAD on an existing object returns 200.
+      - claim: "HEAD on a missing key returns 403 on the access point (404 on native S3)"
+        evidence: |
+          Tested directly with the assumed role. The access point returns 404 for
+          'objmeta', 'objmeta/', 'objmeta/_delta_log', 'objmeta/ap1.txt/_delta_log' and
+          'objmeta/nosuchkey.txt' — the same as native S3. Hypothesis rejected.
+      - claim: "x-amz-expected-bucket-owner is rejected by the access point"
+        evidence: |
+          HEAD with --expected-bucket-owner succeeds on both the access point and the
+          native bucket. Hypothesis rejected.
+    open: "Resolved by DBX-FILE-041e. See the cause below."
+    status_of_conclusion: "Mechanism established — see DBX-FILE-041e."
+
+  - id: DBX-FILE-041d
+    case: "Same reads from a classic cluster inside our own VPC (NAT egress to the internet)"
+    status: "FAIL — identically"
+    detail: |
+      Classic single-node cluster, DBR 18.2.x-scala2.13, Spark 4.1.0, inside the
+      Databricks-managed VPC in our own account, with NAT egress.
+        control (native S3)  -> _object_metadata returned, tags populated
+        S3 access point      -> [UNAUTHORIZED_ACCESS] ... getFileStatus ...
+                                AmazonS3Exception: Forbidden
+                                request: HEAD https://<AP_ALIAS>.s3.ap-northeast-1.amazonaws.com objmeta/_delta_log
+                                Hadoop 3.4.2, aws-sdk-java/1.12.681
+      Serverless and classic compute fail the same way, so the compute form is not the
+      variable.
+    incidental: |
+      The cluster has no ambient AWS credentials at all: boto3 on the driver reports
+      NoCredentialsError for sts:GetCallerIdentity. Storage access is therefore entirely
+      via Unity Catalog credential vending, which is what made DBX-FILE-041e the right
+      place to look.
+
+  - id: DBX-FILE-041e
+    case: "Why does the same IAM role succeed from the CLI and fail from Databricks?"
+    status: "CAUSE ESTABLISHED — Unity Catalog credential down-scoping"
+    method: |
+      Asked Unity Catalog to vend the credentials it would use, for both paths:
+        POST /api/2.0/unity-catalog/temporary-path-credentials  operation=PATH_READ
+      then used those vended credentials from the operator network, with no Databricks
+      compute and no Databricks network involved.
+    result: |
+      Same role, same session, same network. Only the path the credential was scoped to
+      differs:
+        vended for the native S3 path  -> ListObjectsV2 OK, HeadObject OK (22 bytes)
+        vended for the S3 access point -> AccessDenied / 403
+    error_verbatim: |
+      User: arn:aws:sts::<ACCOUNT>:assumed-role/dbx-uc-objmeta-verification/<session>
+      is not authorized to perform: s3:ListBucket on resource:
+      "arn:aws:s3:ap-northeast-1:<ACCOUNT>:accesspoint/verification-test-ap"
+      because no session policy allows the s3:ListBucket action
+    the_mechanism: |
+      AWS evaluates a request made through an access point alias against the ACCESS POINT
+      ARN. Unity Catalog's down-scoped session policy is expressed in bucket-style ARNs
+      (arn:aws:s3:::<alias>). A session policy intersects with the role policy, so the
+      access point ARN grant that exists in the role is irrelevant: the session policy
+      never mentions that resource form, and the request is denied inside the session.
+      The phrase "because no session policy allows" is the tell — this is not the role
+      being under-permissioned.
+    corroborating_control: |
+      The credential vended for the access point is also denied on the control bucket, and
+      that message names a bucket-style ARN. Down-scoping is genuinely active and
+      path-specific in both cases; only the access point form fails to match.
+    hypotheses_eliminated_before_reaching_this:
+      - "Unity Catalog volume privileges (explicit grant present on the failing volume, none on the working one)"
+      - "IAM role permissions (same role lists the access point fine when assumed without a session policy)"
+      - "HEAD on a missing key returning 403 rather than 404 (both return 404)"
+      - "x-amz-expected-bucket-owner rejection (succeeds on both)"
+      - "A different S3 endpoint hostname (both clients use <alias>.s3.<region>.amazonaws.com, which CNAMEs to s3-r-w.<region>.amazonaws.com)"
+      - "Missing compute-role permissions (the cluster has no ambient credentials at all)"
+      - "The S3 Gateway endpoint in the Databricks-managed VPC (removing its route association changed nothing; and the vended-credential test reproduces the failure entirely outside that VPC)"
+    note_on_the_gateway_endpoint: |
+      Worth recording even though it was not the cause. The Databricks-managed VPC created
+      an S3 Gateway endpoint during workspace setup, and the private route table sends the
+      S3 managed prefix list pl-61a54008 to it. The access point alias resolves into
+      3.5.152.0/21, which IS inside that prefix list. So the repository's existing warning
+      about gateway endpoints and access point traffic does apply to this VPC shape by
+      default — it simply is not what produced these 403s.
+    user_side_workaround: "NONE found. The session policy is generated by Unity Catalog; nothing in our IAM role or network can widen it."
+    what_would_fix_it: |
+      Unity Catalog emitting the access point ARN form
+      (arn:aws:s3:<region>:<account>:accesspoint/<name> and .../object/*) in the
+      down-scoped session policy when the external location URL is an access point alias.
+
+# ---------------------------------------------------------------------------
+# D. FILE type behaviours — independent corroboration of a public article
+# ---------------------------------------------------------------------------
+  - id: DBX-FILE-050
+    case: "Reproduce the caveats published by Databricks Japan on the FILE type"
+    reference: "https://qiita.com/taka_yayoi/items/ab110946862e63dca9f6 (public, Japanese)"
+    status: "REPRODUCED"
+    reproduced:
+      - point: "FileSpace must not be the same volume as the source"
+        result: "CREATE TABLE succeeds; INSERT fails with 'Cannot get file metadata under managed storage'"
+        note: "Reproduced verbatim. The failure is at INSERT, not at CREATE, which is why it is easy to hit."
+      - point: "checksum is null when the FILE value comes from list_files"
+        result: "null for both files via list_files; ETAG:\"...\" after ingesting into FILE MANAGED"
+      - point: "FILE MANAGED renames files to opaque UUIDs"
+        result: "a.txt -> 2382387d-…, b.txt -> 91219316-… ; original name and extension are gone"
+      - point: "uri carries a dbfs: prefix"
+        result: "dbfs:/Volumes/<catalog>/<schema>/<volume>/a.txt"
+    cross_check: |
+      The ETAGs that FILE MANAGED reported are byte-identical to the etag values
+      _object_metadata returned for the same source objects on native S3. The FileSpace
+      copy preserves content and the checksum genuinely originates from the object store.
+
+  - id: DBX-FILE-051
+    case: "Is the Previews toggle required to use the FILE type?"
+    status: "NOT REQUIRED in this environment"
+    detail: |
+      FILE EXTERNAL and FILE MANAGED were both usable with no Previews page visited, on a
+      second, independent workspace (the first was DBX-FILE-TYPE-001). The public article
+      states a workspace admin controls access from the Previews page.
+    interpretation: |
+      Two workspaces, both usable without the toggle. That is evidence the gate is not
+      always in the way — it is NOT evidence the documentation is wrong. Report as an
+      environment difference, not as a contradiction.
+
+# ---------------------------------------------------------------------------
+# E. Operator surface on the FILE type is internally inconsistent
+# ---------------------------------------------------------------------------
+  - id: DBX-FILE-052
+    case: "Which operations does the FILE type actually reject?"
+    status: "INCONSISTENT — escalation candidate"
+    accepted:
+      - "GROUP BY file          -> SUCCEEDED, 2 groups"
+      - "SELECT DISTINCT file   -> SUCCEEDED, 2 rows"
+      - "GROUP BY file.uri      -> SUCCEEDED (the documented approach)"
+    rejected:
+      - "d.file = r.attachment  -> [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] The `=` does not support ordering on type \"FILE\""
+      - "ORDER BY file          -> [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] The `sortorder` does not support ordering on type \"FILE EXTERNAL\""
+    the_inconsistency: |
+      GROUP BY and DISTINCT both require equality semantics to decide group membership, yet
+      both are accepted while the equality operator itself is explicitly rejected. The
+      documentation and the public article both state that a FILE column cannot be used as
+      a grouping expression.
+    why_this_is_now_reportable: |
+      An earlier single observation ("GROUP BY was accepted") was deliberately not
+      escalated because a 3-row test proves little. What makes this reportable is the
+      contrast inside one run: the engine rejects `=` with a message about ordering while
+      admitting the two operations that depend on it. That is a statement about the type's
+      operator surface, not about row counts.
+    still_a_caveat: "Two rows. Grouping may silently degrade to identity comparison rather than value equality."
+
+# ---------------------------------------------------------------------------
+# F. create_file content type inference
+# ---------------------------------------------------------------------------
+  - id: DBX-FILE-053
+    case: "Does create_file infer content_type from the bytes?"
+    status: "NO USABLE INFERENCE observed here"
+    detail: |
+      create_file with Japanese text  -> content_type "binary/octet-stream"
+      create_file with ASCII  text    -> content_type "binary/octet-stream"
+      Both written to a .txt destination path.
+    contrast_with_the_public_article: |
+      The article reports application/octet-stream for Japanese text and frames it as the
+      inference failing on Japanese. Running an ASCII control in this environment produced
+      octet-stream too, so multibyte input is not what caused it here. The article's
+      observation stands for its environment; the safe shared guidance is narrower.
+    guidance: |
+      Do not rely on inference if anything downstream branches on content_type. Pass
+      content_type explicitly. Note also that list_files DID report text/plain for the same
+      files, so the two paths infer differently.
+
+# ---------------------------------------------------------------------------
+# G. Incidental findings worth keeping
+# ---------------------------------------------------------------------------
+  - id: DBX-OPS-010
+    case: "Least-privilege token cannot call the Unity Catalog credential validation API"
+    status: "OBSERVED"
+    error: "PermissionDenied: Provided access token does not have required scopes: all-apis"
+    detail: |
+      POST /api/2.0/unity-catalog/validate-credentials requires the all-apis scope. A token
+      scoped to unity-catalog + files + sql + clusters + command-execution + workspace
+      cannot call it. This is a real cost of least privilege: the per-operation validation
+      breakdown that would have isolated DBX-FILE-041c faster was unavailable.
+
+not_verified:
+  - "VPC-origin access points, and WINDOWS identity access points"
+  - "ai_parse_document over files served from the S3 Access Point"
+  - "Whether _object_metadata reads tags through the access point at all (blocked by DBX-FILE-041c)"
+  - "Sustained throughput or latency of any of these paths"
+  - "Whether GROUP BY on a FILE column is correct at scale, or merely accepted"
+
+blocker_status:
+  BLK-001:
+    was: "Unity Catalog external location does not support an FSx for ONTAP S3 Access Point"
+    now: "REFUTED as written — external location and external volume are both created, with validation enabled"
+    replaced_by: |
+      A precise, narrower statement: creating the external location works; reading data
+      through it does not, because Unity Catalog's down-scoped session policy uses
+      bucket-style resource ARNs while AWS authorises access point requests against the
+      access point ARN. Tracked as DBX-FILE-041e. This is a product-side gap with no
+      user-side workaround, which is a different and more useful claim than "unsupported".
+    lesson: |
+      The original BLK-001 was recorded without a native-S3 control and without the access
+      point ARN in the IAM policy. A blocker asserted from a failed attempt, with no
+      control proving the harness itself was sound, outlived the thing it described.
