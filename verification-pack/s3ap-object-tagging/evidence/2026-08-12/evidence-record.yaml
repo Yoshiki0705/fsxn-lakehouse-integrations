@@ -154,6 +154,42 @@ character_set:
       - "Byte length of the UTF-8 encoding (odd vs even) — contradicted by 名古屋 (9 bytes) accepted and 機機 (6 bytes) rejected"
       - "Service validating the UTF-8 bytes as UTF-16BE — 15/21 agreement, contradicted by every accepted multibyte case"
       - "UTF-8 bytes also decodable as euc-jp / shift_jis / cp932 / iso2022_jp / big5 / gb2312 / euc-kr — best agreement 11/16, no codec explains the split"
+      # Added 2026-08-12 after AWS Support escalated this to the FSx for ONTAP
+      # service team. These three eliminate the implementation guesses a reader
+      # is most likely to make, so they are recorded to stop them being re-tested.
+      - "A per-character allowlist or blocklist — decisively contradicted. See per_character_probe below: a character rejected on its own can be accepted inside a longer string"
+      - "Statefulness, caching, or contamination from the previous tag — the same inputs give the same results when the sequence is interleaved and then reversed"
+      - "Validation specific to the tag key or the tag value — identical results in both positions; the error only names whichever field carried the string"
+    per_character_probe:
+      method: |
+        All 22 distinct characters from the strings above, each used alone as a
+        tag key with an ASCII value, 3 repeats, tagging cleared between attempts.
+        Then the full strings again in the same session.
+      accepted_alone: ["屋 U+5C4B", "画 U+753B", "像 U+50CF", "音 U+97F3"]
+      rejected_alone_count: 18
+      the_decisive_rows: |
+        分 U+5206              rejected alone
+        類 U+985E              rejected alone
+        分類 U+5206 U+985E      ACCEPTED
+        東 U+6771              rejected alone
+        京 U+4EAC              rejected alone
+        東京 U+6771 U+4EAC      rejected
+        音 U+97F3              accepted alone
+        声 U+58F0              rejected alone
+        音声 U+97F3 U+58F0      ACCEPTED
+      why_it_matters: |
+        Two two-character strings, every constituent character rejected on its
+        own, and the strings disagree with each other. Validity is a property of
+        the complete byte sequence and is not a function of the characters in it.
+        This is the single most useful constraint found, because a per-character
+        check is the natural thing to suspect and it is ruled out.
+      order_independence_control: |
+        Sequence 分 / 分類 / 分 / 屋 / 分 / 東京 / 分類 / 東 / 分類 run forward and
+        then reversed, tagging cleared between every call. Identical outcomes per
+        input in both directions.
+      position_control: |
+        分類, 屋 and 画像 accepted as tag key and as tag value. 東京 and 分 rejected
+        in both positions, with the error naming TagKey or TagValue accordingly.
     conclusion: |
       The rule is not determinable from the outside. The actionable guidance is
       to restrict FSx for ONTAP S3 AP object tags to ASCII, because a subset of
@@ -244,7 +280,28 @@ open_questions:
       wrong framing ("contradicts the documentation") out of this record.
   - id: Q2
     to: "AWS"
+    status: "ESCALATED to the FSx for ONTAP service team, 2026-08-12"
     question: "Object tag keys and values containing characters at U+0100 and above are rejected with InvalidTag for most strings but accepted for some (分類 accepted, 東京 rejected, both 2-character CJK). Is the intended behaviour ASCII-only, full Unicode as documented for Amazon S3, or something else? The current behaviour is neither."
+    aws_response_summary: |
+      AWS Support reviewed the behaviour against the S3 object tagging page, the
+      FSx for ONTAP S3 access point page and the access points usage guide, and
+      stated that the deterministic-but-inconsistent acceptance does not match any
+      intentional validation described in the documentation or identifiable
+      internally. Filed with the FSx for NetApp ONTAP service team as a potential
+      defect in the tag validation layer, root cause analysis pending. ASCII
+      remains the recommended approach for production in the meantime.
+    our_follow_up: |
+      Replied with the three eliminations recorded above, and with the observation
+      that the documented set AWS quoted (letters, whitespace, and + - = . _ : / @)
+      does not predict the split under either reading: if "letters" means Unicode
+      letters, every test string qualifies and half are rejected; if it means ASCII
+      letters, every test string should be rejected and half are accepted.
+      Codepoints were sent as U+XXXX rather than as glyphs, so that email
+      re-encoding could not corrupt the evidence being reported.
+    what_would_close_it: |
+      A determination of which it is: a defect being fixed, or an undocumented
+      restriction that gets written down. Either answer lets the guidance in this
+      repository state the constraint accurately. No workaround is needed.
 
 reviewer: ""
 review_date: ""

@@ -211,6 +211,55 @@ def run(args) -> dict:
                 })
             out["charset"] = charset
 
+            # --- is validation per-character? ---------------------------------
+            # Added 2026-08-12 after AWS Support escalated the charset behaviour
+            # to the FSx for ONTAP service team. A per-character allowlist is the
+            # natural implementation to suspect, and this rules it out: a
+            # character rejected on its own can be accepted inside a longer
+            # string. Recorded here so nobody has to re-derive it.
+            distinct = list(dict.fromkeys("".join(INCONSISTENCY_PROBES)))
+            per_char = []
+            for ch in distinct:
+                runs = [probe.try_tag(ch, "v")[0] for _ in range(args.repeats)]
+                per_char.append({
+                    "char": ch, "codepoint": f"U+{ord(ch):04X}",
+                    "accepted_runs": sum(runs), "total_runs": len(runs),
+                    "deterministic": len(set(runs)) == 1,
+                })
+            out["per_character"] = per_char
+
+            # Does the per-character result explain the whole string? On the
+            # 2026-08-12 file system it did not.
+            single = {c["char"]: c["accepted_runs"] == c["total_runs"] for c in per_char}
+            composition = []
+            for s in INCONSISTENCY_PROBES:
+                whole = probe.try_tag(s, "v")[0]
+                predicted = all(single.get(c, False) for c in s)
+                composition.append({
+                    "string": s,
+                    "codepoints": [f"U+{ord(c):04X}" for c in s],
+                    "every_char_accepted_alone": predicted,
+                    "whole_string_accepted": whole,
+                    "compositional": predicted == whole,
+                })
+            out["composition"] = composition
+
+            # --- does the position matter? -----------------------------------
+            # Same string as tag key and as tag value. On the 2026-08-12 file
+            # system the results were identical; the error only names whichever
+            # field carried the string.
+            position = []
+            for s in INCONSISTENCY_PROBES:
+                as_key, err_k = probe.try_tag(s, "probe")
+                as_val, err_v = probe.try_tag("probe", s)
+                position.append({
+                    "string": s,
+                    "as_tag_key": as_key, "key_error": err_k,
+                    "as_tag_value": as_val, "value_error": err_v,
+                    "position_independent": as_key == as_val,
+                })
+            out["position"] = position
+
             inconsistency = []
             for s in INCONSISTENCY_PROBES:
                 runs = [probe.try_tag(s, "v")[0] for _ in range(args.repeats)]
@@ -327,6 +376,26 @@ def main() -> int:
         verdict = "same as native S3" if r["matches_native_s3"] else "DIFFERS"
         print(f"  {name:20} accept@{r['accepted_at']} reject@{r['rejected_at']}  {verdict}")
 
+    if "composition" in result:
+        alone = sum(1 for c in result["per_character"]
+                    if c["accepted_runs"] == c["total_runs"])
+        non_comp = [c for c in result["composition"] if not c["compositional"]]
+        print(f"\nper-character: {alone} of {len(result['per_character'])} "
+              f"characters accepted alone")
+        print(f"composition:   {len(non_comp)} of {len(result['composition'])} "
+              f"strings are NOT explained by their characters")
+        for c in non_comp:
+            print(f"   {' '.join(c['codepoints'])}: every char accepted alone="
+                  f"{c['every_char_accepted_alone']}, whole string accepted="
+                  f"{c['whole_string_accepted']}")
+        if non_comp:
+            print("   -> validation is a property of the whole byte sequence, "
+                  "not of its characters")
+    if "position" in result:
+        dep = [x for x in result["position"] if not x["position_independent"]]
+        print("position:      " + ("independent of tag key vs tag value"
+                                   if not dep else
+                                   f"{len(dep)} string(s) differ by position"))
     if "charset" in result:
         acc = [c["label"] for c in result["charset"] if c["accepted"]]
         rej = [c["label"] for c in result["charset"] if not c["accepted"]]
