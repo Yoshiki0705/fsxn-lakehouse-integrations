@@ -1,0 +1,274 @@
+# Verification Evidence Record — Databricks FILE type (Beta) and _object_metadata
+test_id: "DBX-FILE-TYPE-001"
+date_tested: "2026-08-12"
+tester: "Yoshiki Fujiwara"
+purpose: |
+  The FILE type evaluation (docs/en/databricks-file-type-evaluation.md) was written from
+  documentation only, because no Databricks workspace credential was available. This run
+  executes the Databricks side on a 14-day trial workspace and replaces the documentation
+  reading with measurements where it can.
+
+  It cannot answer the question that matters most to this repository. DBX-FILE-041
+  (_object_metadata reading object tags through an FSx for ONTAP S3 Access Point) needs a
+  UC storage credential and external location pointing at the FSx account. A fresh trial
+  workspace has neither, and creating them is the very thing BLK-001 blocks. That case
+  stays open — see not_verified.
+
+environment:
+  workspace: "<WORKSPACE_ID> (14-day trial)"
+  workspace_region: "us-west-2 (trial default)"
+  compute: "Serverless SQL Warehouse, Small, channel CURRENT"
+  dbsql_version: "2026.20"
+  dbr_version: "null (serverless SQL warehouse does not report a DBR version)"
+  catalog: "workspace (managed catalog)"
+  storage: "Unity Catalog managed volumes only — no storage credential, no external location"
+  access: "Databricks SDK for Python 0.126.0 via the SQL Statement Execution API"
+  token_scopes: "sql, unity-catalog, files, clusters, command-execution, workspace (least privilege; 'all APIs' declined)"
+  fsx_connection: "NONE — this workspace has no link to the FSx for ONTAP account"
+
+# ---------------------------------------------------------------------------
+# Availability
+# ---------------------------------------------------------------------------
+results:
+  - id: DBX-FILE-001
+    case: "Is the FILE type recognised on this workspace?"
+    status: "PASS"
+    detail: |
+      CREATE TABLE ... (id BIGINT, f FILE EXTERNAL) succeeded with no preview toggle
+      touched on a trial workspace, on a serverless SQL warehouse on channel CURRENT.
+    note: |
+      The documentation says FILE type is Beta and that a workspace admin controls it from
+      the Previews page. It was usable here without visiting that page. Either it is on by
+      default for this workspace class, or the gate does not apply to serverless SQL
+      warehouses. Do not conclude it is universally available: this is one trial workspace.
+
+  - id: DBX-FILE-030-precondition
+    case: "FILE MANAGED without the FileSpace table property"
+    status: "FAIL (expected, and the error is precise)"
+    error: |
+      [FILE_TYPE_MISSING_FILESPACE.TABLE_PROPERTY_NOT_SET] Cannot resolve a file space for
+      a MANAGED FILE upload. Tables with FILE MANAGED columns require the
+      'databricks.filespace-preview' table property to be set. SQLSTATE: 56038
+    detail: "Confirms the FileSpace requirement first-hand rather than from the docs."
+
+# ---------------------------------------------------------------------------
+# FILE EXTERNAL over a Unity Catalog volume — the documented happy path
+# ---------------------------------------------------------------------------
+  - id: DBX-FILE-011
+    case: "list_files over a managed volume"
+    status: "PASS"
+    detail: "3 uploaded files returned with path, size, modification_time. Paths are dbfs:/Volumes/..."
+
+  - id: DBX-FILE-012
+    case: "CTAS building a FILE EXTERNAL column from list_files"
+    status: "PASS"
+    detail: |
+      CREATE TABLE ... AS SELECT path, size, file FROM list_files(...) produced 3 rows.
+      DESCRIBE TABLE reports the column type as "file external".
+
+  - id: DBX-FILE-013
+    case: "Reading FILE metadata fields with dot notation"
+    status: "PASS"
+    returned:
+      - "uri: dbfs:/Volumes/.../data.json  size: 10  content_type: application/json  checksum: NULL"
+      - "uri: dbfs:/Volumes/.../notes.txt  size: 12  content_type: text/plain        checksum: NULL"
+      - "uri: dbfs:/Volumes/.../report.txt size: 24  content_type: text/plain        checksum: NULL"
+    detail: |
+      checksum is NULL here, which matches the documented behaviour that list_files and
+      read_files do not generate checksums — only to_file, create_file and copy_file do,
+      and only when the object store returns an ETag. Confirmed by contrast below.
+    design_consequence: |
+      A FILE value exposes exactly uri, offset, size, content_type, checksum. There is no
+      field for object tags or user metadata. Any attribute to be searched or governed on
+      must be its own column. This was the central claim of the evaluation doc and it is
+      now confirmed against a running engine.
+
+  - id: to_file
+    case: "to_file / try_to_file"
+    status: "PASS"
+    detail: |
+      to_file('<volume path>') returned a FILE with checksum ETAG:f89ada7564... — so the
+      same file that list_files returned with a NULL checksum gets one via to_file.
+      try_to_file on a missing path returned NULL rather than raising.
+    inconsistency_observed: |
+      For the identical file, list_files reported content_type text/plain while to_file
+      reported application/octet-stream. Low impact, but do not treat content_type as
+      canonical across construction paths.
+
+  - id: nesting
+    case: "FILE nested in ARRAY and STRUCT"
+    status: "PASS"
+    detail: "collect_list(file) returned an array of 3; named_struct('name', path, 'f', file) rendered the nested FILE. Matches the documented allowance."
+
+# ---------------------------------------------------------------------------
+# FILE MANAGED
+# ---------------------------------------------------------------------------
+  - id: DBX-FILE-030
+    case: "FILE MANAGED table with a managed volume as FileSpace"
+    status: "PASS"
+
+  - id: DBX-FILE-031
+    case: "INSERT into FILE MANAGED (copies the bytes)"
+    status: "PASS"
+    detail: "3 rows inserted."
+    important_finding: |
+      The managed copies are stored under OPAQUE UUID NAMES, not the original filenames:
+        dbfs:/Volumes/<catalog>/<schema>/filespace/<uuid>
+        dbfs:/Volumes/<catalog>/<schema>/filespace/<uuid>
+        dbfs:/Volumes/<catalog>/<schema>/filespace/<uuid>
+      (three distinct v4-style UUIDs, one per ingested file; the literal values are
+       omitted because they identify nothing and only invite false positives in scans)
+      The original file name is not recoverable from the FILE value after ingestion into
+      FILE MANAGED. Keep the name in its own column at ingestion time or it is lost.
+      This is a practical trap that the documentation does not call out.
+    checksum_note: "FILE MANAGED values DID carry checksums (ETAG:...), unlike the list_files-built FILE EXTERNAL values."
+
+  - id: DBX-FILE-032-partial
+    case: "Q4 — may a FileSpace be an external volume?"
+    status: "NOT ANSWERED"
+    detail: |
+      A trial workspace has no storage credential, so no external volume can exist and the
+      question cannot be tested here.
+
+      What was established instead: the FileSpace does not have to be a dedicated volume.
+      A FILE MANAGED table whose FileSpace pointed at the same volume holding the source
+      files was accepted. So the constraint is "a volume", not "a volume reserved for this
+      purpose". Whether an EXTERNAL volume qualifies remains open.
+
+# ---------------------------------------------------------------------------
+# Documented limits
+# ---------------------------------------------------------------------------
+  - id: limits-partition
+    case: "PARTITIONED BY a FILE column"
+    status: "correctly REJECTED"
+    error: '[INVALID_PARTITION_COLUMN_DATA_TYPE] Cannot use "FILE EXTERNAL" for partition column. SQLSTATE: 0A000'
+
+  - id: limits-groupby
+    case: "GROUP BY a FILE column"
+    status: "ACCEPTED — differs from the documented restriction"
+    detail: |
+      The FILE type reference states a FILE column cannot be used as a grouping
+      expression, and recommends grouping by its uri field instead. Here GROUP BY on the
+      FILE column succeeded, returning the FILE rendered as a JSON struct. Grouping by
+      f.uri also worked, as documented.
+    caution: |
+      Do NOT read this as "the restriction is lifted". The test had 3 distinct files with
+      one row each, so it cannot distinguish correct grouping from coincidence, and the
+      same reference states FILE does not guarantee ordering. Treat the documented
+      restriction as the contract and group by uri.
+
+      Deliberately NOT raised with Databricks. The Presign episode on 2026-08-12 is the
+      precedent: an apparent doc-versus-behaviour gap is not a finding until it has been
+      checked against prior cases and repository history, and until the observation is
+      strong enough to mean something. A 3-row test is not.
+
+# ---------------------------------------------------------------------------
+# The AI path
+# ---------------------------------------------------------------------------
+  - id: ai_parse_document
+    case: "ai_parse_document over a FILE value"
+    status: "PASS — end to end"
+    detail: |
+      SELECT ai_parse_document(to_file('<volume>/inspection.pdf')) on a valid PDF returned
+      error_status: None and one extracted element:
+
+        type: text, confidence: 1, bbox page 0 [34,41,202,116]
+        content: "Inspection report: line A Result: PASS Defects: 0"
+
+      This is the headline claim of the FILE type announcement — pass a FILE column
+      straight to an AI function — and it works.
+    first_attempt_was_invalid: |
+      An earlier attempt used a hand-written minimal PDF and returned "Document conversion
+      failed". That was a malformed test fixture, not a product limitation. Re-run with a
+      reportlab-generated PDF. Recorded so the failed attempt is not mistaken for evidence.
+    also_observed: |
+      Passing a .txt file returned error_status "Unsupported file format: unknown" while
+      still populating file_metadata (name, path, size, modification time). So the function
+      accepts the FILE reference and reports per-page status rather than failing the query.
+
+# ---------------------------------------------------------------------------
+# Q5 — sharing
+# ---------------------------------------------------------------------------
+  - id: DBX-FILE-050
+    case: "Q5 — can a table containing a FILE column be shared via OpenSharing?"
+    status: "PASS — answered"
+    detail: |
+      Both a FILE EXTERNAL table and a FILE MANAGED table were added to a share
+      successfully, and SHOW ALL IN SHARE listed both with status ENABLED.
+    first_attempt_misleading: |
+      The first attempt failed with
+        PERMISSION_DENIED: To share ..., please grant yourself USE_CATALOG / USE_SCHEMA
+      That is a privilege problem, not a type restriction. Had it been recorded as-is it
+      would have produced the wrong answer ("FILE columns cannot be shared"). Granting
+      USE CATALOG, USE SCHEMA and SELECT made both tables shareable.
+    still_open: |
+      Recipient-side recognition is NOT tested. Adding a table to a share proves the
+      provider side accepts the type; whether a recipient can read the FILE column, and
+      whether the referenced bytes are reachable, needs a second party.
+
+# ---------------------------------------------------------------------------
+# Q3 — the object-tag bridge
+# ---------------------------------------------------------------------------
+  - id: DBX-FILE-041-partial
+    case: "Q3 — does _object_metadata expose object tags?"
+    status: "PARTIALLY ANSWERED"
+    what_was_confirmed: |
+      _object_metadata is selectable through a serverless SQL warehouse via read_files,
+      and over a Unity Catalog MANAGED volume every field came back null:
+        {"etag":null,"user_metadata":null,"tags":null,"mime_type":null,"system_metadata":null}
+      That is exactly what the documentation states for Databricks-managed storage.
+    why_this_matters: |
+      This is the load-bearing fact under the mutual-exclusion argument in the evaluation
+      doc §4.3: FILE MANAGED copies bytes into UC-managed storage, and UC-managed storage
+      returns null tags. The two mechanisms therefore cannot both apply to the same bytes.
+      That claim was taken from the documentation; it is now confirmed by measurement.
+    what_is_still_unknown: |
+      Whether _object_metadata.tags is populated when the path is an FSx for ONTAP S3
+      Access Point. Untestable on a trial workspace: it needs a UC storage credential and
+      external location into the FSx account, which is what BLK-001 blocks. A native-S3
+      control is equally unavailable for the same reason.
+
+# ---------------------------------------------------------------------------
+# Beta limitation, measured
+# ---------------------------------------------------------------------------
+  - id: managed-gc
+    case: "Is there automatic garbage collection of unreferenced managed files?"
+    status: "VERIFIED ABSENT"
+    method: |
+      3 files in the FileSpace -> removed the table from the share -> DROP TABLE succeeded
+      -> waited 10s -> 3 files still in the FileSpace.
+    first_attempt_was_invalid: |
+      The first attempt ran DROP TABLE while the table was still shared. It was refused:
+        [INVALID_STATE.DELTA_SHARING_SECURABLE_DELETE_BLOCKED.BY_SHARES] TABLE ... cannot
+        be deleted because it is being shared via OpenSharing.
+      "Files remained" after a DROP that never happened proves nothing. Re-run after
+      unsharing. Recorded because the invalid version looked like a passing test.
+    operational_consequence: |
+      Dropping a FILE MANAGED table leaves its bytes in the FileSpace volume. Storage grows
+      silently until the manual sweep notebook is run. Matches the documented Beta
+      limitation, now with a measurement behind it.
+
+# ---------------------------------------------------------------------------
+not_verified:
+  - "DBX-FILE-041 proper: _object_metadata.tags against an FSx for ONTAP S3 Access Point path, with a native-S3 control in the same run. Needs a UC storage credential and external location into the FSx account. This is the highest-value remaining case."
+  - "DBX-FILE-020 / -022: list_files and FILE EXTERNAL against an S3 Access Point path. Same prerequisite."
+  - "Q4: whether a FileSpace may be an external volume. Needs a storage credential."
+  - "Recipient-side behaviour of a shared FILE column."
+  - "FILE type on a classic cluster / DBR 18 LTS. Only a serverless SQL warehouse was exercised, and it reported no DBR version."
+  - "Whether the Previews toggle is required on non-trial workspaces."
+  - "Streaming ingestion (STREAM read_files(..., format => 'file')) and AUTO CDC. Needs a Lakeflow pipeline on the PREVIEW channel."
+
+cleanup:
+  performed: |
+    Dropped both tables, the share, both volumes and the schema; confirmed
+    SHOW SCHEMAS and SHOW SHARES return empty. Stopped the SQL warehouse to limit
+    trial consumption.
+  note: "Dropping the FileSpace volume is what actually reclaimed the managed file bytes, since dropping the table did not."
+
+reviewer: ""
+review_date: ""
+review_notes: |
+  Two sub-tests in this run initially produced results that looked like findings and were
+  not: a DROP refused by an active share, and a malformed PDF fixture. Both are recorded
+  with their invalid first attempt rather than quietly corrected, because the failure mode
+  -- a test that appears to pass while proving nothing -- is the one worth remembering.

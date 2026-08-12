@@ -278,21 +278,42 @@ Databricks ネイティブの相当機能（`list_files`、`STREAM read_files(..
 - presigned GET が HTTP 200 を返す — presign はクライアント側の処理であり、届くのはサポート対象の `GetObject` なので期待どおり。表の「Not supported」は「失敗する」ではなく「依存しない」の意
 - `GetObjectTagging` 中央値 52–59 ms（単一呼び出し元、warm — サンプル実行であってベンチマークではない）
 
-### 未検証 — Databricks ランタイムの挙動
+### Databricks 側で検証済み（2026-08-12）
 
-本環境に Databricks ワークスペースの認証情報がなかったため、**本ドキュメントの Databricks 側は一切実行していない。**
+14 日間トライアルのワークスペースで、サーバーレス SQL ウェアハウス（DBSQL 2026.20）経由で実行した。証拠: [`verification-pack/databricks/file-type/evidence/2026-08-12/`](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record.yaml)。
 
-検証は作成済みで実行可能な状態にある: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py)。ケースは [test-cases.yaml](../../verification-pack/databricks/test-cases.yaml) の `DBX-FILE-*` として記録済み。すべての Access Point ケースと並行してネイティブ S3 のコントロールを実行する設計にしてある。`_object_metadata.tags` の `null` は、そうしないと `s3:GetObjectTagging` 権限の欠落と区別できないため。
-
-具体的な未解決項目:
-
-| 項目 | 重要な理由 |
+| 主張 | 結果 |
 |---|---|
-| DBR 18 LTS での `FILE MANAGED` / `FILE EXTERNAL` テーブル作成 | ベータ有効化手順と FileSpace プロパティの確認 |
-| FSx for ONTAP S3 AP パスに対する `_object_metadata.tags` | オブジェクトタグの橋渡しが本リポジトリにとって実在するのか、ネイティブ S3 限定なのかを決める |
-| S3 AP パスに対する `list_files`（リファレンスは external location パスを許容と記載） | `FILE EXTERNAL` として保存できない場所でも列挙はできる可能性がある |
-| `FILE` 列が OpenSharing を越えられるか | マルチモーダルデータの共有シナリオ |
-| ベータでの `FILE MANAGED` ガベージコレクション挙動 | ストレージが無言で増えるリスク |
+| FILE 型が利用可能 | ✅ **Previews トグルに触れずに** `FILE EXTERNAL` 列を作成できた（channel CURRENT）。トライアル 1 環境の結果なので一般化はしない |
+| `FILE MANAGED` は FileSpace を要求する | ✅ 明確なエラー: `FILE_TYPE_MISSING_FILESPACE.TABLE_PROPERTY_NOT_SET` |
+| `list_files` → CTAS で `FILE EXTERNAL` | ✅ 3 行。`DESCRIBE` は型を `file external` と報告 |
+| `FILE` 値は文書化された 5 フィールドのみを持つ | ✅ `uri` / `size` / `content_type` が入る。**タグやユーザーメタデータのフィールドは存在しない** — 本ドキュメントの中心的制約が実機で確認された |
+| `checksum` は常に入るわけではない | ✅ `list_files` 由来では NULL、`to_file` と `FILE MANAGED` では `ETAG:…` が入る。文書化された規則どおり |
+| `ai_parse_document` が `FILE` 値を受け取る | ✅ PDF で端から端まで成功: `error_status: None`、テキスト要素 1 件を正しい内容・bbox・confidence 付きで抽出 |
+| `ARRAY` / `STRUCT` への FILE のネスト | ✅ |
+| FILE 列での `PARTITIONED BY` | ✅ 正しく拒否: `INVALID_PARTITION_COLUMN_DATA_TYPE` |
+| **Q5: FILE 列を含むテーブルは OpenSharing で共有できる** | ✅ **回答が出た。** `FILE EXTERNAL` と `FILE MANAGED` の両テーブルが共有に追加され `ENABLED` になった。受信側での読み取りは未検証 |
+| **参照されないマネージドファイルの自動 GC はない** | ✅ **実測。** 共有解除後に `DROP TABLE` が成功しても、3 ファイルすべてが FileSpace に残った。手動掃除までストレージは無言で増える |
+| `_object_metadata` は UC 管理ストレージで null を返す | ✅ **実測。** マネージド Volume 上では全フィールドが null。[§4.3](#43-相互排他) の相互排他はこの事実に依拠している |
+
+当初「発見」に見えて実際は違ったサブテストが 2 件あった。共有中のため拒否された `DROP TABLE`（「ファイルが残った」は何も証明していない）と、不正な PDF を変換失敗として受け取ったもの。どちらも無効だった初回試行ごと証拠に記録している。
+
+> **意図的に外部提起しなかった観察**: FILE 列に対する `GROUP BY` は*受理された*。リファレンスは FILE 列をグループ化式に使えないと記載している。ただしテストは 3 ファイル各 1 行なので、正しくグループ化されたのか偶然かを区別できず、同じリファレンスは FILE が順序を保証しないとも述べている。文書化された制約を契約と見なし、`uri` でグループ化する。Databricks には提起していない。3 行の結果は証拠にならない。
+
+### 依然として未検証 — 最も重要なケース
+
+**FSx for ONTAP S3 Access Point** パスに対する `_object_metadata.tags` は未解決のままであり、これが本リポジトリが実際に必要としている問いである。
+
+トライアルワークスペースでは検証できない。FSx アカウントへ到達する Unity Catalog の Storage Credential と External Location が必要で、それはまさに [BLK-001](./blocker-tracker.md#blk-001-uc-external-location-が-s3-ap-を非サポート) がブロックしているものである。同じ理由でネイティブ S3 のコントロールも用意できない。ギャップを実行可能な状態に保つため、ランナーとケースはコミット済み: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py)、[test-cases.yaml](../../verification-pack/databricks/test-cases.yaml) の `DBX-FILE-*`。
+
+| 項目 | 未解決の理由 |
+|---|---|
+| S3 AP パス経由の `_object_metadata.tags`（同一実行のネイティブ S3 コントロール付き） | FSx アカウントへの Storage Credential が必要 |
+| S3 AP パスに対する `list_files` / `FILE EXTERNAL` | 同じ前提条件 |
+| Q4: FileSpace に **External** Volume を使えるか | Storage Credential が必要。代わりに判明したこと: FileSpace は専用 Volume でなくてよい（ソースファイルを含む Volume が受理された） |
+| 共有された FILE 列の受信側での読み取り | 相手方が必要 |
+| クラシッククラスタ / DBR 18 LTS での FILE 型 | サーバーレス SQL ウェアハウスのみで実施。DBR バージョンは報告されない |
+| 非トライアル環境で Previews トグルが必要か | 1 環境では標本にならない |
 
 ### 未検証 — ONTAP マルチプロトコル挙動
 

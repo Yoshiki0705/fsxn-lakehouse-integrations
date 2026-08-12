@@ -277,21 +277,42 @@ Drafts and tracking are kept outside the public tree. Raised with the respective
 - Presigned GET returns HTTP 200 — expected, because presigning is client-side and the request is a supported `GetObject`. "Not supported" in the table means do-not-rely-on, not will-fail
 - `GetObjectTagging` median 52–59 ms (single caller, warm — sample run, not a benchmark)
 
-### Not verified — Databricks runtime behaviour
+### Verified on Databricks (2026-08-12)
 
-No Databricks workspace credentials were available in this environment, so **nothing on the Databricks side of this document has been executed**.
+Executed on a 14-day trial workspace via a serverless SQL warehouse (DBSQL 2026.20). Evidence: [`verification-pack/databricks/file-type/evidence/2026-08-12/`](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record.yaml).
 
-The verification is written and ready to run: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py), with the cases recorded as `DBX-FILE-*` in [test-cases.yaml](../../verification-pack/databricks/test-cases.yaml). It runs a native-S3 control alongside every Access Point case, because a `null` in `_object_metadata.tags` is otherwise indistinguishable from a missing `s3:GetObjectTagging` permission.
-
-Specifically open:
-
-| Item | Why it matters |
+| Claim | Result |
 |---|---|
-| `FILE MANAGED` / `FILE EXTERNAL` table creation on DBR 18 LTS | Confirms the Beta enablement path and the FileSpace property |
-| `_object_metadata.tags` against an FSx for ONTAP S3 AP path | Decides whether the object-tag bridge is real for this repository or only for native S3 |
-| `list_files` against an S3 AP path (the reference says an external location path is allowed) | Might list even where `FILE EXTERNAL` cannot be stored |
-| Whether a `FILE` column survives OpenSharing | Sharing story for multimodal data |
-| `FILE MANAGED` garbage-collection behaviour in Beta | Silent storage growth risk |
+| FILE type is available | ✅ `FILE EXTERNAL` column created with **no Previews toggle touched**, on channel CURRENT. Do not generalise from one trial workspace |
+| `FILE MANAGED` requires a FileSpace | ✅ Precise error: `FILE_TYPE_MISSING_FILESPACE.TABLE_PROPERTY_NOT_SET` |
+| `list_files` → `FILE EXTERNAL` via CTAS | ✅ 3 rows; `DESCRIBE` reports the type as `file external` |
+| A `FILE` value carries only the five documented fields | ✅ `uri`, `size`, `content_type` populated. **No tag or user-metadata field exists** — the central constraint of this document, now confirmed against a running engine |
+| `checksum` is not always present | ✅ NULL when built by `list_files`; populated (`ETAG:…`) via `to_file` and for `FILE MANAGED`. Matches the documented rule |
+| `ai_parse_document` accepts a `FILE` value | ✅ End to end on a PDF: `error_status: None`, one text element with correct content, bbox and confidence |
+| FILE nested in `ARRAY` / `STRUCT` | ✅ |
+| `PARTITIONED BY` a FILE column | ✅ Correctly rejected: `INVALID_PARTITION_COLUMN_DATA_TYPE` |
+| **Q5: a FILE-column table can be shared via OpenSharing** | ✅ **Answered.** Both `FILE EXTERNAL` and `FILE MANAGED` tables were accepted into a share (`ENABLED`). Recipient-side reading is still untested |
+| **No automatic GC of unreferenced managed files** | ✅ **Measured.** After unsharing and a successful `DROP TABLE`, all 3 managed files remained in the FileSpace. Storage grows silently until the manual sweep is run |
+| `_object_metadata` returns null for UC-managed storage | ✅ **Measured.** Every field null over a managed volume — this is the fact the mutual exclusion in [§4.3](#43-the-mutual-exclusion) rests on |
+
+Two sub-tests initially looked like findings and were not: a `DROP TABLE` refused because the table was still shared (so "files remained" proved nothing), and a malformed PDF fixture reported as a conversion failure. Both are recorded in the evidence with their invalid first attempt.
+
+> **One observation deliberately not escalated**: `GROUP BY` on a FILE column was *accepted*, though the reference says a FILE column cannot be a grouping expression. The test had three distinct files with one row each, so it cannot distinguish correct grouping from coincidence, and the same reference states FILE does not guarantee ordering. Treat the documented restriction as the contract and group by `uri`. Not raised with Databricks — a three-row result is not evidence.
+
+### Still not verified — the case that matters most
+
+`_object_metadata.tags` against an **FSx for ONTAP S3 Access Point** path remains open, and it is the question this repository actually needs answered.
+
+It is not testable on a trial workspace. It needs a Unity Catalog storage credential and external location reaching into the FSx account — which is precisely what [BLK-001](./blocker-tracker.md#blk-001-uc-external-location-does-not-support-s3-ap) blocks. A native-S3 control is unavailable for the same reason. The runner and its cases are committed so the gap stays executable: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py), cases `DBX-FILE-*` in [test-cases.yaml](../../verification-pack/databricks/test-cases.yaml).
+
+| Item | Why it is still open |
+|---|---|
+| `_object_metadata.tags` via an S3 AP path, with a native-S3 control in the same run | Needs a storage credential into the FSx account |
+| `list_files` / `FILE EXTERNAL` against an S3 AP path | Same prerequisite |
+| Q4: may a FileSpace be an **external** volume? | Needs a storage credential. Established instead: the FileSpace need not be a dedicated volume — a volume already holding the source files was accepted |
+| Recipient-side reading of a shared FILE column | Needs a second party |
+| FILE type on a classic cluster / DBR 18 LTS | Only a serverless SQL warehouse was exercised, and it reports no DBR version |
+| Whether the Previews toggle is required on non-trial workspaces | One workspace is not a sample |
 
 ### Not verified — ONTAP multiprotocol behaviour
 

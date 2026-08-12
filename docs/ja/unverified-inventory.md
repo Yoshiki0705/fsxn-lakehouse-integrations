@@ -8,7 +8,7 @@
 
 動作**しない**ことが判明している事項は [ブロッカートラッカー](./blocker-tracker.md) が扱います。本ページの対象は「壊れているもの」ではなく「未知のもの」です。
 
-**合計 25 件。** 2026-08-06 に 5 件をクローズしました（下記「直近でクローズした項目」参照）。
+**合計 24 件。** 2026-08-12 に 1 件クローズ（UNV-030、FILE 列の共有）。 2026-08-06 に 5 件をクローズしました（下記「直近でクローズした項目」参照）。
 
 ## サマリ
 
@@ -16,7 +16,7 @@
 |---|:---:|---|
 | 現在実行可能。未実施のみ | 12 | 本プロジェクトで既に使用している AWS サービスのみで完結します。次の現実的な候補です。 |
 | Snowflake セッションが必要 | 1 | 認証情報は本リポジトリに保持していません。サインインすれば一度の作業で実行可能です。 |
-| Databricks ワークスペースが必要 | 6 | 2026 年 5 月に使用したワークスペースは削除済みです。なお Unity Catalog 経路は BLK-001 により、いずれにせよブロックされます。 |
+| Databricks ワークスペースが必要 | 5 | 2026 年 5 月に使用したワークスペースは削除済みです。なお Unity Catalog 経路は BLK-001 により、いずれにせよブロックされます。 |
 | 別エンジンのデプロイが必要 | 3 | ClickHouse インスタンスは稼働していません。 |
 | アカウントティアまたはコストによる制約 | 1 | 有償ティアまたは課金リソースが必要です。 |
 | 経過時間による制約 | 1 | 短縮できません。 |
@@ -63,9 +63,9 @@
 | UNV-009 | Databricks | Iceberg REST Catalog from a Databricks Spark cluster (`spark.sql.catalog.s3tables`) | A Databricks workspace with a Spark cluster. Inferred from the EMR mechanism; no run. |
 | UNV-010 | Databricks | Executor-scale boto3 access from a customer-managed VPC | A customer-managed-VPC workspace. The Databricks-managed VPC case is recorded as failing (egress to FSx blocked); the customer-VPC case is untested. |
 | UNV-011 | Databricks | 16 of the 18 cases in `verification-pack/databricks/test-cases.yaml` have no recorded run | A workspace matching each case's preconditions. |
-| UNV-028 | Databricks | FILE 型（β）のテーブル作成 — DBR 18 LTS+ での `FILE MANAGED` / `FILE EXTERNAL`、および FileSpace に External Volume を使えるか | FILE 型プレビューを有効化した DBR 18 LTS+ のワークスペース。ケース `DBX-FILE-001` / `-012` / `-032`。 |
+| UNV-028 | Databricks | `FILE MANAGED` の FileSpace に **External** Volume を使えるか | **2026-08-12 に部分クローズ**: `FILE MANAGED` / `FILE EXTERNAL` のテーブル作成はサーバーレス SQL ウェアハウスで検証済みで、FileSpace は専用 Volume でなくてよいことも判明。External Volume の可否は Storage Credential を要し、トライアル環境では確認できない。[証拠](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record.yaml) |
 | UNV-029 | Databricks | FSx for ONTAP S3 AP パスに対する `_object_metadata.tags`（DBR 18.2+）— オブジェクトタグの橋渡し | `s3:GetObjectTagging` を持つ DBR 18.2+ のワークスペースと、同一実行内で非 null のタグを示すネイティブ S3 のコントロール。ケース `DBX-FILE-041`。FSx for ONTAP 側は検証済み（Access Point でタグ付けが動作する）。 |
-| UNV-030 | Databricks | `FILE` 列を含むテーブルを OpenSharing で共有できるか | `CREATE SHARE` 権限を持つワークスペース。ケース `DBX-FILE-050`。可否とも文書化されていない。 |
+| ~~UNV-030~~ | Databricks | ~~`FILE` 列を含むテーブルを OpenSharing で共有できるか~~ | **2026-08-12 クローズ: 可能。** `FILE EXTERNAL` / `FILE MANAGED` の両テーブルが共有に追加され `ENABLED` になった。受信側での読み取りは未検証。[証拠](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record.yaml) |
 
 ## 別エンジンのデプロイが必要
 
