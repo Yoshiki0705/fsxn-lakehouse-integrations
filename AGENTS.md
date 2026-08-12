@@ -180,11 +180,17 @@ token.
 
 **Enforcement**
 
-| Layer | Mechanism |
-|-------|-----------|
-| Disk persistence | `.kiro/hooks/redact-browser-snapshots.json` (PostToolUse on `browser_`/`devtool_`) runs `shared/scripts/redact_browser_snapshots.py` |
-| Audit on demand | `python3 shared/scripts/redact_browser_snapshots.py --check` — exit 1 if any unredacted credential shape remains |
-| Conversation record | Rules 1–3 above. No tooling can retract what was already returned |
+| Layer | Mechanism | Portable? |
+|-------|-----------|:---:|
+| Disk persistence, immediate | `.kiro/hooks/redact-browser-snapshots.json` (PostToolUse on `browser_`/`devtool_`) runs the redactor after every browser tool call | ❌ `.kiro/` is gitignored — this exists per machine and has to be recreated after a clone |
+| Disk persistence, at commit time | `.githooks/pre-commit` step 5 runs `--check` and warns loudly. Warn-only, because snapshot directories are gitignored and nothing there can reach the repository | ✅ tracked; needs `git config core.hooksPath .githooks` |
+| Audit on demand | `python3 shared/scripts/redact_browser_snapshots.py --check` — exit 1 if any unredacted credential shape remains | ✅ |
+| Conversation record | Rules 1–3 above | ❌ no tooling can retract what was already returned |
+
+Snapshot directories (`.playwright-mcp/`, `/tmp/.playwright-mcp/`) are gitignored and hold
+zero tracked files, so a leaked value cannot reach the repository through a commit. The
+exposure is local disk plus the conversation record — which is why rule 4 is rotation, not
+masking.
 
 The redactor covers Databricks PATs, AWS access key IDs, STS session tokens, bearer
 tokens, and password-field values. It is idempotent and leaves ordinary prose alone.

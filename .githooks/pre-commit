@@ -84,4 +84,25 @@ if [ -n "$STAGED_TEXT" ]; then
   echo "✅ tenant identifier scan: clean"
 fi
 
+# === 5. Credentials left in browser-automation snapshots ===
+# Snapshot directories are gitignored, so nothing here can reach the repository. The check
+# runs anyway because a commit is a natural point to notice a local leak: a browser
+# password manager autofills a sign-in form, the value lands in the accessibility tree,
+# and the tree is written to disk. Masking removes the file copy; only rotation fixes the
+# credential, which is why this warns loudly instead of staying silent.
+# Warn-only: this is not about what is being committed.
+REDACTOR=shared/scripts/redact_browser_snapshots.py
+if [ -f "$REDACTOR" ] && command -v python3 &> /dev/null; then
+  if ! python3 "$REDACTOR" --check >/tmp/.snapshot-audit 2>&1; then
+    echo ""
+    echo "⚠️  a credential is sitting unredacted in a browser snapshot on this machine"
+    sed 's/^/   /' /tmp/.snapshot-audit
+    echo ""
+    echo "   Mask it:   python3 $REDACTOR"
+    echo "   Then ROTATE the credential — masking the file does not undo the exposure."
+    echo "   (Not blocking this commit: snapshot directories are gitignored.)"
+  fi
+  rm -f /tmp/.snapshot-audit
+fi
+
 echo "✅ pre-commit checks passed"
