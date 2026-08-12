@@ -23,6 +23,7 @@
 | Distribute data with FlexCache / SnapMirror | [FlexCache/SnapMirror Considerations](docs/en/s3ap-flexcache-snapmirror-considerations.md) | 15 min |
 | Connect FSx for ONTAP → Databricks Unity Catalog | [UC Connection Guide](docs/en/fsx-ontap-to-databricks-unity-catalog-guide.md) | 30 min |
 | Govern unstructured data (images/video/docs) in a lakehouse | [Databricks FILE type Evaluation](docs/en/databricks-file-type-evaluation.md) | 20 min |
+| Estimate what a Databricks verification costs before running one | [Databricks Verification Environment and Cost](docs/en/databricks-verification-environment-cost.md) | 10 min |
 
 <details>
 <summary>📂 All integrations & verification status</summary>

@@ -258,6 +258,7 @@ graph TD
 | **AI/ML** | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | AI catalog design |
 | | [Unstructured Data Access](./unstructured-data-access.md) | Unstructured data access |
 | | [Databricks FILE type Evaluation](./databricks-file-type-evaluation.md) | Multimodal data in Delta columns, object-tag bridge, three-layer metadata design |
+| | [Databricks Verification Environment and Cost](./databricks-verification-environment-cost.md) | Trial vs non-trial workspace, what a same-day verification costs, teardown checklist |
 | | [OmniGent Evaluation](./omnigent-multi-agent-evaluation.md) | Multi-agent evaluation |
 | **Platform Evaluation** | [OpenSharing Integration](./opensharing-integration-analysis.md) | DAIS 2026 impact |
 | | [AWS Context vs UC](./aws-context-vs-unity-catalog.md) | AWS vs Databricks governance |

@@ -22,6 +22,7 @@
 | FlexCache / SnapMirror でマルチリージョン配信する | [FlexCache/SnapMirror 考慮事項](docs/ja/s3ap-flexcache-snapmirror-considerations.md) | 15分 |
 | FSx for ONTAP → Databricks Unity Catalog を接続する | [UC 接続ガイド](docs/ja/fsx-ontap-to-databricks-unity-catalog-guide.md) | 30分 |
 | 非構造化データ（画像/動画/文書）をレイクハウスでガバナンスする | [Databricks FILE 型評価](docs/ja/databricks-file-type-evaluation.md) | 20分 |
+| Databricks 検証の実費を事前に見積もる | [Databricks 検証環境とコスト](docs/ja/databricks-verification-environment-cost.md) | 10分 |
 
 <details>
 <summary>📂 全インテグレーション・検証ステータス</summary>

@@ -258,6 +258,7 @@ graph TD
 | **AI/ML** | [Iceberg Metadata Catalog](./iceberg-metadata-catalog.md) | AI カタログ設計 |
 | | [Unstructured Data Access](./unstructured-data-access.md) | 非構造化データアクセス |
 | | [Databricks FILE 型評価](./databricks-file-type-evaluation.md) | Delta 列でのマルチモーダルデータ、オブジェクトタグの橋渡し、3 層メタデータ設計 |
+| | [Databricks 検証環境とコスト](./databricks-verification-environment-cost.md) | トライアルと非トライアルの違い、当日検証の実費、撤去チェックリスト |
 | | [OmniGent 評価](./omnigent-multi-agent-evaluation.md) | マルチエージェント評価 |
 | **プラットフォーム評価** | [OpenSharing 統合分析](./opensharing-integration-analysis.md) | DAIS 2026 影響評価 |
 | | [AWS Context vs UC](./aws-context-vs-unity-catalog.md) | AWS vs Databricks ガバナンス比較 |
