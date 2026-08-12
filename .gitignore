@@ -78,6 +78,12 @@ aws-exports.js
 !**/docs/**/*credential*
 !**/snowflake/**/*credential*
 !**/opensharing-server/**/*credential*
+# "Storage credential" is the Unity Catalog object name, so an infrastructure
+# template and an example parameter file legitimately carry the word. Both hold
+# placeholders only. Narrow exceptions rather than weakening *credential*:
+# a file that silently fails to commit is worse than one that is blocked loudly.
+!integrations/databricks/uc-storage-credential-role.yaml
+!cfn-params/*credential*.example.json
 !**/docs/**/*secret*
 
 # =============================================================================
