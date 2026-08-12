@@ -199,16 +199,21 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 - **Characteristics**: Low-cost path ($0.00001/query), zero idle cost, sub-second warm latency (452ms)
 - **Benchmark**: 10K rows in 452ms (warm), 5M rows in 779ms
 
-### AWS-Native Unique Value Proposition
+### Characteristics of the AWS-native path
+
+These are the properties measured for the AWS-native engines in this repository. They are
+stated as characteristics, not as a ranking: several of them are consequences of the
+architecture rather than choices, and each has a corresponding trade-off listed in the
+engine sections above.
 
 | Characteristic | Detail |
 |-----------|--------|
-| **No session policy issues** | All AWS services use direct IAM — no intermediary session policies that block S3 AP ARN format |
+| **Direct IAM, no intermediary session policy** | AWS services authorise with the caller's own IAM context, so the down-scoped session policy that blocks the S3 AP ARN form on managed-platform paths does not apply. Trade-off: no table-level governance unless Lake Formation is added |
 | **Shared Glue Catalog** | Athena, Redshift Spectrum, EMR, Glue all share the same catalog. Register once, query from any engine. |
 | **Lake Formation multi-engine** | One governance definition applies to ALL engines simultaneously. No per-platform configuration. |
 | **Zero-copy RAG** | Bedrock KB reads directly from FSx for ONTAP S3 AP — no COPY INTO, no staging, no data movement for RAG |
-| **Serverless-first** | Athena, Glue, EMR Serverless, Lambda — zero idle cost across the entire stack |
-| **Write-back verified** | EMR, Athena CTAS, DuckDB all write flat Parquet back to FSx for ONTAP S3 AP (Snowflake/Databricks cannot) |
+| **Serverless-first** | Athena, Glue, EMR Serverless and Lambda have no idle cost. Trade-off: per-query pricing makes sustained heavy usage harder to predict than a reserved cluster |
+| **Write-back verified** | EMR, Athena CTAS and DuckDB write flat Parquet back to an FSx for ONTAP S3 AP. On the Snowflake and Databricks paths the write goes through a standard S3 stage instead — see their sections for the mechanism |
 | **Iceberg on S3** | EMR Spark creates Iceberg tables on standard S3 → registered in Glue Catalog → queryable by Athena/Redshift/Snowflake/Databricks |
 
 ### Google BigQuery Omni

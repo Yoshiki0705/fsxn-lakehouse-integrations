@@ -13,7 +13,7 @@
 
 | やりたいこと | ガイド | 所要時間 |
 |---|---|:---:|
-| 価値を理解する（専門用語なし） | [ビジネスガイド](docs/ja/quickstart-business-guide.md) | 5分 |
+| 何のための構成かを専門用語なしで把握する | [ビジネスガイド](docs/ja/quickstart-business-guide.md) | 5分 |
 | ユースケースに合うエンジンを選ぶ | [エンジン選定ガイド](docs/ja/engine-selection-guide.md) | 10分 |
 | アーキテクチャの選択肢とトレードオフを比較する | [アーキテクチャ比較](docs/adoption-guide/architecture-comparison-ja.md) | 15分 |
 | S3 AP のディレクトリ設計・性能特性を理解する | [S3 AP 設計考慮事項](docs/ja/s3ap-design-considerations.md) | 15分 |

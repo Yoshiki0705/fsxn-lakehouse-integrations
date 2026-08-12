@@ -271,7 +271,7 @@ Governed Tag (classification attribute)
 - ❌ Cannot track data lineage for FSx for ONTAP S3 AP data
 - ❌ Cannot use automated data classification on FSx for ONTAP S3 AP data
 
-**Workaround (PoC only)**: Read data via boto3 → write to UC-managed table → apply governance there. This creates a copy and breaks the "zero-copy" value proposition.
+**Workaround (PoC only)**: Read data via boto3 → write to UC-managed table → apply governance there. This creates a copy, which is the property the zero-copy design existed to avoid.
 
 ### What Would Work (When UC Session Policy Is Resolved)
 

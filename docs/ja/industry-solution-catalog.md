@@ -5,7 +5,7 @@
 # FSx for ONTAP × Databricks Unity Catalog 業界別ソリューションカタログ
 
 > **ステータス**: 初版（2026-06-19）。公開リファレンスアーキテクチャと本リポジトリの検証結果を統合。
-> **対象読者**: AWS SA、パートナー SI/ISV、業界ソリューションアーキテクト、顧客のデータ責任者。
+> **対象読者**: AWS SA、パートナー SI/ISV、業界ソリューションアーキテクト、利用組織のデータ責任者。
 > **Evidence tier**: 各主張に明記（**Public** = 公開情報で検証可能 / **Project-context** = 本リポジトリ内で再現可能 / **Archetype** = 業界標準ロールに基づく一般論）。
 > **フレーミング**: vendor-versus ではなく right-tool-for-the-job。各選択肢のトレードオフを対称に記載。
 

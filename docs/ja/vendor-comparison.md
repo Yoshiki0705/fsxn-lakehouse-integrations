@@ -199,14 +199,16 @@ Lakehouse Platform ←→ S3 Access Point ←→ FSx for NetApp ONTAP
 
 ### AWS ネイティブ構成の特徴
 
+以下は本リポジトリで AWS ネイティブ系エンジンについて計測した性質である。順位づけではなく特徴として記述する。いくつかは選択の結果ではなくアーキテクチャの帰結であり、それぞれに対応するトレードオフを上記の各エンジン節に併記している。
+
 | 特徴 | 詳細 |
 |--------|------|
-| **セッションポリシー問題なし** | 全 AWS サービスが直接 IAM を使用 — S3 AP ARN 形式をブロックする中間セッションポリシーなし |
+| **直接 IAM で、中間セッションポリシーがない** | AWS サービスは呼び出し元自身の IAM コンテキストで認可するため、マネージドプラットフォーム経路で S3 AP ARN 形式をブロックする down-scoped セッションポリシーが介在しない。トレードオフ: Lake Formation を追加しない限りテーブルレベルのガバナンスは得られない |
 | **Glue Catalog 共有** | Athena、Redshift Spectrum、EMR、Glue が同じカタログを共有。一度登録すれば全エンジンからクエリ可能 |
 | **Lake Formation マルチエンジン** | 単一のガバナンス定義が全エンジンに同時適用。プラットフォームごとの設定不要 |
 | **ゼロコピー RAG** | Bedrock KB が FSx for ONTAP S3 AP から直接読み取り — COPY INTO なし、ステージングなし、RAG のためのデータ移動なし |
-| **サーバーレスファースト** | Athena、Glue、EMR Serverless、Lambda — スタック全体でゼロアイドルコスト |
-| **書き戻し検証済み** | EMR、Athena CTAS、DuckDB が FSx for ONTAP S3 AP にフラット Parquet を書き戻し可能（Snowflake/Databricks は不可） |
+| **サーバーレスファースト** | Athena、Glue、EMR Serverless、Lambda はアイドルコストが発生しない。トレードオフ: クエリ課金のため、継続的な高負荷ではリザーブドクラスタより費用予測が難しい |
+| **書き戻し検証済み** | EMR、Athena CTAS、DuckDB は FSx for ONTAP S3 AP にフラット Parquet を書き戻す。Snowflake と Databricks の経路では書き込みが標準 S3 のステージ経由になる — 機構は各節を参照 |
 | **S3 上の Iceberg** | EMR Spark が標準 S3 に Iceberg テーブル作成 → Glue Catalog に登録 → Athena/Redshift/Snowflake/Databricks からクエリ可能 |
 - **ネットワーク**: Internet network origin
 - **特徴**: OneLake 統合、Power BI 連携

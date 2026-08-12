@@ -13,7 +13,7 @@
 
 | What you want to do | Guide | Time |
 |---|---|:---:|
-| Understand the value proposition (no jargon) | [Business Guide](docs/en/quickstart-business-guide.md) | 5 min |
+| Understand what this is for, without jargon | [Business Guide](docs/en/quickstart-business-guide.md) | 5 min |
 | Choose the right engine for your use case | [Engine Selection Guide](docs/en/engine-selection-guide.md) | 10 min |
 | Compare architecture options & trade-offs | [Architecture Comparison](docs/adoption-guide/architecture-comparison.md) | 15 min |
 | Understand S3 AP directory design & performance | [S3 AP Design Considerations](docs/en/s3ap-design-considerations.md) | 15 min |

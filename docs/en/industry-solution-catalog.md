@@ -5,7 +5,7 @@
 # FSx for ONTAP × Databricks Unity Catalog Industry Solution Catalog
 
 > **Status**: Initial edition (2026-06-19). Integrates public reference architectures and this repository's verification results.
-> **Audience**: AWS SAs, partner SI/ISVs, industry solution architects, customer data leaders.
+> **Audience**: AWS SAs, partner SI/ISVs, industry solution architects, data leaders in adopting organisations.
 > **Evidence tier** per claim: **Public** (verifiable from public sources) / **Project-context** (reproducible in this repository) / **Archetype** (general knowledge based on industry-standard roles).
 > **Framing**: right-tool-for-the-job, not vendor-versus. Trade-offs stated symmetrically per option.
 

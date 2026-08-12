@@ -197,7 +197,7 @@ Data Access (Read/Write)
 - Single source of truth for manufacturing data (on-premises ONTAP)
 - Full audit trail: who accessed what data, when, for what purpose
 
-### Value Proposition (30-second version)
+### What this buys you (30-second version)
 
 > This platform eliminates data silos between factory floor and cloud analytics.
 > Quality events are visible in real-time (seconds, not hours).

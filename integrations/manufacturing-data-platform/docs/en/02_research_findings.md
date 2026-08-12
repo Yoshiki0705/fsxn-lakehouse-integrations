@@ -157,7 +157,7 @@
 
 ### Status: Confirmed — Strong Value for Payload Storage
 
-### Validated Value Propositions
+### What was validated
 
 | Capability | Benefit for This Architecture |
 |-----------|-------------------------------|
