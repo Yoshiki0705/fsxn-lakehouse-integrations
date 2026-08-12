@@ -391,7 +391,7 @@ No. This is a vendor-neutral reference implementation for validating the protoco
 | Document | Role |
 |----------|------|
 | [OpenSharing Integration Analysis](../../docs/en/opensharing-integration-analysis.md) | Protocol-level analysis and independent verification |
-| [Part 8 Blog (OpenSharing)](../../blog/en/part8-opensharing.md) | Public article on credential vending validation |
+| Part 8 (article draft, not in this repository) | Credential vending validation. The measured result is in [opensharing-integration-analysis](../../docs/en/opensharing-integration-analysis.md) |
 | [Verification Pack](../../verification-pack/opensharing-sts-vending/) | Raw evidence from STS vending tests |
 | [README Pattern E](../../README.md) | High-level architecture pattern reference |
 

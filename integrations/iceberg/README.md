@@ -96,7 +96,7 @@ This is the core pattern implemented in [`integrations/iceberg-metadata-catalog/
 |----------|-------------|
 | [Iceberg Metadata Catalog](../iceberg-metadata-catalog/) | Full implementation: FPolicy + S3 Tables + AI enrichment |
 | [Iceberg Metadata Catalog (docs)](../../docs/en/iceberg-metadata-catalog.md) | Architecture deep-dive |
-| [Part 7: Table Format Boundaries](../../blog/en/part7-table-format-boundaries.md) | Why Delta/Iceberg/Hudi writes fail on S3 AP |
+| Part 7: Table Format Boundaries (article draft, not in this repository) | Why Delta/Iceberg/Hudi writes fail on S3 AP. The measured result is in [BLK-002](../../docs/en/blocker-tracker.md) and the [compatibility matrix](../../docs/en/compatibility-matrix.md) |
 | [Verification Evidence](../../verification-pack/iceberg/) | Raw test results |
 
 ## Evidence

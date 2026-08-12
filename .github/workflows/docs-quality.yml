@@ -91,7 +91,18 @@ jobs:
                 fi
               done
           done || true
-          echo "✓ Link check complete"
+          echo "✓ Link check complete (warn-only, and filesystem-based:"
+          echo "   see 'Check documentation references are tracked in git' for the"
+          echo "   check that fails the build and asks git rather than the disk)"
+
+      - name: Check documentation references are tracked in git
+        run: |
+          echo "🔍 Checking that referenced files are in the repository..."
+          # The link check above tests the filesystem, so a file that exists
+          # locally but is gitignored passes it. That is how a runbook came to
+          # point at two files nobody else could see. This step asks git, and
+          # unlike the check above it is allowed to fail the build.
+          python3 shared/scripts/check_doc_references_tracked.py
 
       - name: Validate YAML syntax
         run: |
