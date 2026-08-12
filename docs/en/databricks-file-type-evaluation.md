@@ -13,7 +13,7 @@
 
 - **What FILE type is**: a Delta column type that stores a *governed reference* to an unstructured file (`uri`, `offset`, `size`, `content_type`, `checksum`) rather than its bytes, so documents, images, audio and video sit in a table next to structured columns and can be passed to AI functions and UDFs. Announced in Beta, 2026-08.
 - **Design-level verdict**: FILE type is essentially the productised form of the pattern this repository already implements in the [Iceberg metadata catalog](../../integrations/iceberg-metadata-catalog/README.md) — a metadata table that carries file references plus AI-derived columns. The convergence is a useful signal that the pattern is the right one.
-- **But it does not unblock FSx for ONTAP**: `FILE EXTERNAL` references are only supported for files inside a Unity Catalog volume, and a UC **external volume cannot be created on an S3 Access Point** ([BLK-001](./blocker-tracker.md#blk-001-uc-external-location-does-not-support-s3-ap)). The only remaining route is `FILE MANAGED`, which **copies** the bytes into UC-managed storage and therefore forfeits zero-copy and the ONTAP efficiencies that depend on the data staying in place.
+- **But it does not unblock FSx for ONTAP**: `FILE EXTERNAL` references are only supported for files inside a Unity Catalog volume, and a UC **external volume cannot be created on an S3 Access Point** ([BLK-001](./blocker-tracker.md#blk-001-uc-credential-vending-does-not-authorise-s3-ap-reads)). The only remaining route is `FILE MANAGED`, which **copies** the bytes into UC-managed storage and therefore forfeits zero-copy and the ONTAP efficiencies that depend on the data staying in place.
 - **What did move**: a separate feature, the [`_object_metadata` column](https://docs.databricks.com/aws/en/ingestion/object-metadata-column) (DBR 18.2+), exposes S3 **object tags** and **user-defined metadata** as queryable columns. That is the documented bridge between object-storage-side metadata and a metadata table — exactly the linkage this repository had no answer for.
 - **Verified this run**: FSx for ONTAP S3 AP **does** support object tagging and `x-amz-meta-*`, tags are **file-scoped** (readable through a different Access Point on the same volume), and tags can be written **in the same PutObject** as the data. Two constraints matter: object tags are **effectively ASCII-only** on this Access Point, and an object overwrite **silently clears** tags and user metadata.
 - **The two mechanisms are mutually exclusive**: Databricks documents that user metadata, system metadata and tags are `null` for Databricks-managed storage. So `FILE MANAGED` (copy into UC storage) and `_object_metadata` (read tags from the source) cannot both be used for the same bytes. Read tags once at ingestion, then treat the table as the source of truth.
@@ -69,19 +69,30 @@ Because the column stores a pointer, the engine reads bytes only at the step tha
 
 ## 2. Why this does not unblock FSx for ONTAP
 
-**Evidence tier: Public** (the constraint) **+ Verified** (BLK-001, previously confirmed with Databricks Support).
+**Evidence tier: Verified** (measured 2026-08-12 on a purpose-built non-trial workspace, with a native-S3 control — [evidence](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)).
 
-The chain terminates before it reaches ONTAP:
+> **Corrected 2026-08-12.** This section previously said a UC external volume cannot be
+> created on an S3 Access Point. That is wrong. The storage credential, the external
+> location and the external volume are all created successfully, with UC's own validation
+> enabled. What fails is **reading through them**.
+
+The chain terminates one step later than previously recorded — and for a different reason:
 
 ```
 Goal: reference a file on FSx for ONTAP from a FILE column, without copying
   │
   ├─ FILE EXTERNAL?
   │    └─ supported only for files inside a Unity Catalog volume
-  │         └─ needs a UC external volume over the S3 Access Point
-  │              └─ BLOCKED — BLK-001: UC does not support S3 AP as a
-  │                 storage target; the session policy generated during
-  │                 AssumeRole does not carry S3 AP ARN patterns
+  │         └─ UC external volume over the S3 Access Point
+  │              ├─ CREATE STORAGE CREDENTIAL      → OK
+  │              ├─ CREATE EXTERNAL LOCATION       → OK (validation enabled)
+  │              ├─ CREATE EXTERNAL VOLUME         → OK
+  │              └─ READ through it                → BLOCKED (403)
+  │                   └─ BLK-001: the down-scoped session policy UC vends
+  │                      is written in bucket-style ARNs, while AWS
+  │                      authorises access-point requests against the
+  │                      access point ARN. "no session policy allows
+  │                      the s3:ListBucket action"
   │
   └─ FILE MANAGED?
        └─ works, but COPIES the bytes into UC-managed storage
@@ -91,7 +102,7 @@ Goal: reference a file on FSx for ONTAP from a FILE column, without copying
             └─ object tags on the source become unreadable (see §4)
 ```
 
-This is the same wall as every other UC governance feature on FSx for ONTAP data, and the recommended interim path is unchanged: stage to a standard S3 bucket, then govern the copy. See [BLK-001 workarounds](./blocker-tracker.md#blk-001-uc-external-location-does-not-support-s3-ap) and the [DataSync to S3 guide](./datasync-to-s3-guide.md).
+This is the same wall as every other UC governance feature on FSx for ONTAP data, and the recommended interim path is unchanged: stage to a standard S3 bucket, then govern the copy. See [BLK-001 workarounds](./blocker-tracker.md#blk-001-uc-credential-vending-does-not-authorise-s3-ap-reads) and the [DataSync to S3 guide](./datasync-to-s3-guide.md).
 
 > **What did change**: the value of resolving BLK-001 went up. Previously it bought lineage, tags, masks and row filters on tabular data resident on FSx for ONTAP. Now it additionally buys `FILE EXTERNAL` over ONTAP-resident unstructured data, which is the multimodal-AI story on data that stays on the NAS. That is worth restating when the feature gap is raised with Databricks — see the [support and forum question set](#6-open-questions-raised-externally).
 
@@ -303,7 +314,7 @@ Two sub-tests initially looked like findings and were not: a `DROP TABLE` refuse
 
 `_object_metadata.tags` against an **FSx for ONTAP S3 Access Point** path remains open, and it is the question this repository actually needs answered.
 
-It is not testable on a trial workspace. It needs a Unity Catalog storage credential and external location reaching into the FSx account — which is precisely what [BLK-001](./blocker-tracker.md#blk-001-uc-external-location-does-not-support-s3-ap) blocks. A native-S3 control is unavailable for the same reason. The runner and its cases are committed so the gap stays executable: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py), cases `DBX-FILE-*` in [test-cases.yaml](../../verification-pack/databricks/test-cases.yaml).
+It is not testable on a trial workspace. It needs a Unity Catalog storage credential and external location reaching into the FSx account — which is precisely what [BLK-001](./blocker-tracker.md#blk-001-uc-credential-vending-does-not-authorise-s3-ap-reads) blocks. A native-S3 control is unavailable for the same reason. The runner and its cases are committed so the gap stays executable: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py), cases `DBX-FILE-*` in [test-cases.yaml](../../verification-pack/databricks/test-cases.yaml).
 
 | Item | Why it is still open |
 |---|---|

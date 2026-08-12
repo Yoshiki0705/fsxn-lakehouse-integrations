@@ -13,7 +13,7 @@
 
 - **FILE 型とは**: 非構造化ファイルの**ガバナンスされた参照**（`uri`, `offset`, `size`, `content_type`, `checksum`）をバイト列の代わりに保持する Delta の列型。文書・画像・音声・動画が構造化列の隣に並び、AI 関数や UDF に列として渡せる。2026-08 にベータ発表。
 - **設計レベルの判定**: FILE 型は、本リポジトリが [Iceberg メタデータカタログ](../../integrations/iceberg-metadata-catalog/README-ja.md)で既に実装しているパターン（ファイル参照 + AI 派生列を持つメタデータテーブル）を製品化したものにほぼ等しい。設計の方向性が正しかったことを示す有用なシグナル。
-- **ただし FSx for ONTAP のブロッカーは解消しない**: `FILE EXTERNAL` は Unity Catalog Volume 内のファイルしか参照できず、UC **External Volume は S3 Access Point 上に作成できない**（[BLK-001](./blocker-tracker.md#blk-001-uc-external-location-が-s3-ap-を非サポート)）。残る経路は `FILE MANAGED` のみで、これはバイト列を UC 管理ストレージへ**コピー**するため、zero-copy と「データがその場に留まること」に依存する ONTAP の効率機能を失う。
+- **ただし FSx for ONTAP のブロッカーは解消しない**: `FILE EXTERNAL` は Unity Catalog Volume 内のファイルしか参照できず、UC **External Volume は S3 Access Point 上に作成できない**（[BLK-001](./blocker-tracker.md#blk-001-uc-の資格情報払い出しが-s3-ap-の読み取りを認可しない)）。残る経路は `FILE MANAGED` のみで、これはバイト列を UC 管理ストレージへ**コピー**するため、zero-copy と「データがその場に留まること」に依存する ONTAP の効率機能を失う。
 - **前進した点**: FILE 型とは別機能である [`_object_metadata` 列](https://docs.databricks.com/aws/en/ingestion/object-metadata-column)（DBR 18.2+）が、S3 の**オブジェクトタグ**と**ユーザー定義メタデータ**をクエリ可能な列として公開する。これはオブジェクトストレージ側メタデータとメタデータテーブルを結ぶ公式の橋であり、本リポジトリがこれまで答えを持たなかった箇所。
 - **本検証で確認**: FSx for ONTAP S3 AP はオブジェクトタグと `x-amz-meta-*` を**サポートする**。タグは **file-scoped**（同一ボリューム上の別 Access Point から読める）で、**データと同じ PutObject** で付与できる。重要な制約が 2 つ: この Access Point ではオブジェクトタグは**実質 ASCII 限定**であり、オブジェクトの上書きでタグとユーザーメタデータが**無言で消える**。
 - **2 つの機構は併用できない**: Databricks は、Databricks 管理ストレージではユーザーメタデータ・システムメタデータ・タグが `null` になると明記している。したがって同一のバイト列に対して `FILE MANAGED`（UC ストレージへコピー）と `_object_metadata`（元ストレージからタグを読む）を両立できない。**取り込み時に一度だけ読み、以降はテーブルを真実の源とする。**
@@ -69,20 +69,27 @@
 
 ## 2. なぜ FSx for ONTAP のブロッカーが解消しないのか
 
-**Evidence tier: Public**（制約）**+ Verified**（BLK-001、Databricks Support で既に確認済み）。
+**Evidence tier: Verified**（2026-08-12、専用の非トライアルワークスペースでネイティブ S3 のコントロール付きで計測 — [エビデンス](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)）。
 
-連鎖が ONTAP に届く前に終端する:
+> **2026-08-12 訂正。** 本節はこれまで「S3 Access Point 上に UC External Volume は作れない」と記述していた。これは誤りである。Storage Credential・External Location・External Volume はいずれも、UC 自身の検証を有効にしたまま作成できる。失敗するのは**それ経由の読み取り**である。
+
+連鎖が終端する位置は、従来の記録より 1 段後ろで、理由も異なる:
 
 ```
 目的: FSx for ONTAP 上のファイルを、コピーせずに FILE 列から参照する
   │
   ├─ FILE EXTERNAL？
   │    └─ Unity Catalog Volume 内のファイルのみサポート
-  │         └─ S3 Access Point 上の UC External Volume が必要
-  │              └─ ブロック — BLK-001: UC は S3 AP をストレージ
-  │                 ターゲットとしてサポートしない。AssumeRole 時に
-  │                 生成される session policy が S3 AP の ARN
-  │                 パターンを含まない
+  │         └─ S3 Access Point 上の UC External Volume
+  │              ├─ CREATE STORAGE CREDENTIAL      → 成功
+  │              ├─ CREATE EXTERNAL LOCATION       → 成功（検証有効）
+  │              ├─ CREATE EXTERNAL VOLUME         → 成功
+  │              └─ 経由での読み取り                → ブロック（403）
+  │                   └─ BLK-001: UC が払い出す down-scoped session
+  │                      policy はバケット形式 ARN で書かれ、AWS は
+  │                      アクセスポイント経由のリクエストをアクセス
+  │                      ポイント ARN に対して認可評価する。
+  │                      "no session policy allows the s3:ListBucket action"
   │
   └─ FILE MANAGED？
        └─ 動作するが、バイト列を UC 管理ストレージへコピーする
@@ -92,7 +99,7 @@
             └─ 元オブジェクトのタグが読めなくなる（§4 参照）
 ```
 
-これは FSx for ONTAP データに対する他のあらゆる UC ガバナンス機能と同じ壁であり、推奨される暫定経路も変わらない。標準 S3 バケットへステージングし、そのコピーをガバナンスする。[BLK-001 の回避策](./blocker-tracker.md#blk-001-uc-external-location-が-s3-ap-を非サポート)と [DataSync → S3 ガイド](./datasync-to-s3-guide.md)を参照。
+これは FSx for ONTAP データに対する他のあらゆる UC ガバナンス機能と同じ壁であり、推奨される暫定経路も変わらない。標準 S3 バケットへステージングし、そのコピーをガバナンスする。[BLK-001 の回避策](./blocker-tracker.md#blk-001-uc-の資格情報払い出しが-s3-ap-の読み取りを認可しない)と [DataSync → S3 ガイド](./datasync-to-s3-guide.md)を参照。
 
 > **変わったこと**: BLK-001 を解消する価値が上がった。従来は FSx for ONTAP 常駐の表形式データに対する lineage・タグ・マスク・行フィルタを得るだけだった。今は加えて ONTAP 常駐の非構造化データに対する `FILE EXTERNAL` が得られる。これは「NAS 上に留めたままのマルチモーダル AI」そのものである。Databricks に機能ギャップを提起する際に改めて述べる価値がある — [外部に提起した質問](#6-外部に提起した質問)を参照。
 
@@ -208,25 +215,25 @@ AWS の Access Point 互換性表は FSx for ONTAP ボリュームについて *
 **Evidence tier: Project-context**（推奨そのもの）。上記の **Verified** と **Public** の事実の上に構築。
 
 ```
-┌─ 強制レイヤ ─────────────────────────────────────────────────┐
-│  ONTAP ファイル ACL + S3 AP ポリシー + IAM                    │
-│  （UC へステージング済みのデータには UC 行フィルタも）          │
-│  → 実際にアクセスを拒否できる唯一の層                          │
+┌─ 強制レイヤ ───────────────────────────────────────────────────┐
+│  ONTAP ファイル ACL + S3 AP ポリシー + IAM                      │
+│  （UC へステージング済みのデータには UC 行フィルタも）               │
+│  → 実際にアクセスを拒否できる唯一の層                              │
 └──────────────────────────────────────────────────────────────┘
         ▲ すべての認可判断で参照する
         │
 ┌─ 真実の源 ───────────────────────────────────────────────────┐
-│  メタデータテーブル（現在は S3 Tables 上の Iceberg。          │
-│  BLK-001 解消後は Delta + FILE 型）                           │
-│  → 分類・要約・埋め込み・PII フラグ・ACL ヒント                │
-│  → スキーマと検証ルールは「ここ」で課す                        │
-└──────────────────────────────────────────────────────────────┘
+│  メタデータテーブル（現在は S3 Tables 上の Iceberg。             │
+│  BLK-001 解消後は Delta + FILE 型）                       　　│
+│  → 分類・要約・埋め込み・PII フラグ・ACL ヒント                  │
+│  → スキーマと検証ルールは「ここ」で課す                          │
+└────────────────────────────────────────────────────────────┘
         ▲ 取り込み時に一度だけ読む。以降は権威として扱わない
         │
 ┌─ 発見の入口 ─────────────────────────────────────────────────┐
-│  S3 オブジェクトタグ（10 個以下、ASCII、キー 128 / 値 256）    │
-│  → 既存 NAS 資産の取り込み、粗い絞り込み                       │
-└──────────────────────────────────────────────────────────────┘
+│  S3 オブジェクトタグ（10 個以下、ASCII、キー 128 / 値 256）      │
+│  → 既存 NAS 資産の取り込み、粗い絞り込み               　        │
+└────────────────────────────────────────────────────────────┘
 ```
 
 実測から導かれる 3 つの規則:
@@ -304,7 +311,7 @@ Databricks ネイティブの相当機能（`list_files`、`STREAM read_files(..
 
 **FSx for ONTAP S3 Access Point** パスに対する `_object_metadata.tags` は未解決のままであり、これが本リポジトリが実際に必要としている問いである。
 
-トライアルワークスペースでは検証できない。FSx アカウントへ到達する Unity Catalog の Storage Credential と External Location が必要で、それはまさに [BLK-001](./blocker-tracker.md#blk-001-uc-external-location-が-s3-ap-を非サポート) がブロックしているものである。同じ理由でネイティブ S3 のコントロールも用意できない。ギャップを実行可能な状態に保つため、ランナーとケースはコミット済み: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py)、[test-cases.yaml](../../verification-pack/databricks/test-cases.yaml) の `DBX-FILE-*`。
+トライアルワークスペースでは検証できない。FSx アカウントへ到達する Unity Catalog の Storage Credential と External Location が必要で、それはまさに [BLK-001](./blocker-tracker.md#blk-001-uc-の資格情報払い出しが-s3-ap-の読み取りを認可しない) がブロックしているものである。同じ理由でネイティブ S3 のコントロールも用意できない。ギャップを実行可能な状態に保つため、ランナーとケースはコミット済み: [`notebooks/10_file_type_object_metadata.py`](../../integrations/databricks/notebooks/10_file_type_object_metadata.py)、[test-cases.yaml](../../verification-pack/databricks/test-cases.yaml) の `DBX-FILE-*`。
 
 | 項目 | 未解決の理由 |
 |---|---|

@@ -14,7 +14,7 @@
 
 | ID | ブロッカー | 影響範囲 | ステータス | 回避策有無 |
 |:---:|---|---|:---:|:---:|
-| BLK-001 | UC External Location が S3 AP を非サポート | Databricks UC ガバナンス | ❌ 未解決 | ✅ あり |
+| BLK-001 | UC の資格情報払い出しが S3 AP の読み取りを認可しない（登録は通る） | Databricks UC ガバナンス | ❌ 未解決 | ✅ あり |
 | BLK-002 | Conditional Writes 非サポート | Delta Lake 書き込み（Athena 経由の Iceberg は影響なし） | ❌ 未解決 | ✅ あり |
 | BLK-003 | S3 Event Notifications 非サポート | Auto Loader 通知モード / Snowpipe | ❌ 未解決 | ✅ あり |
 | BLK-004 | SnapMirror S3 が FSx for ONTAP で無効化 | ONTAP ネイティブ S3 レプリケーション | ❌ 未解決 | ✅ あり |
@@ -28,17 +28,18 @@
 
 ## 詳細
 
-### BLK-001: UC External Location が S3 AP を非サポート
+### BLK-001: UC の資格情報払い出しが S3 AP の読み取りを認可しない
 
 | 属性 | 値 |
 |------|---|
 | **影響サービス** | Databricks Unity Catalog |
-| **影響機能** | External Location / External Table / External Volume / UC ガバナンス全般 / **`FILE EXTERNAL` 列（FILE 型、β）** — [影響範囲の拡大](#影響範囲の拡大-2026-08-12-file-型)を参照 |
-| **根本原因** | Databricks の AssumeRole 時にセッションポリシーが S3 AP ARN を正しく解釈しない |
-| **確認日** | 2026-05-26（Databricks Support 確認; ケースクローズ — サポートティア不足により資格なし） |
-| **ステータス** | ❌ 未解決 — サポートケースクローズ（資格なし）; プラットフォームレベルでの解決待ち |
-| **解除条件** | Databricks プラットフォームが S3 AP を UC External Location として GA サポート |
+| **影響機能** | S3 AP 上の External Location / External Table / External Volume に対する**読み取り** / **`FILE EXTERNAL` 列（FILE 型、β）**。登録そのものは影響を受け**ない** — [影響範囲の訂正](#影響範囲の訂正-2026-08-12-登録は通り読み取りが通らない)を参照 |
+| **根本原因** | Unity Catalog が資格情報を払い出す際に付与する down-scoped セッションポリシーが**バケット形式 ARN**（`arn:aws:s3:::<alias>`）で書かれている一方、AWS はアクセスポイント経由のリクエストを**アクセスポイント ARN** に対して認可評価する。両者は一致せず、セッションポリシーはロールポリシーと積集合を取るため、ロール本体が許可していてもセッション内で拒否される |
+| **確認日** | 2026-05-26（Databricks Support が根本原因を提示）。2026-08-12（本リポジトリ）ネイティブ S3 のコントロール付きで機構を直接実証 |
+| **ステータス** | ❌ 未解決 — **かつ 2026-08-12 まで影響範囲の記述が誤っていた**: 登録は成功し、読み取りが失敗する |
+| **解除条件** | ロケーション URL がアクセスポイントのエイリアスである場合に、Unity Catalog が down-scoped セッションポリシーへアクセスポイント ARN 形式（`arn:aws:s3:<region>:<account>:accesspoint/<name>` および `.../object/*`）を出力すること |
 | **影響度** | **Critical** — UC ガバナンス（lineage, tags, masks, row filters）を FSx for ONTAP データに直接適用できない |
+| **利用者側の回避策** | **なし。** セッションポリシーは Unity Catalog が生成するため、こちら側の IAM ポリシーやネットワーク変更では広げられない |
 
 **回避策（推奨パス）**:
 1. **DataSync → 標準 S3 → UC External Location** — 推奨。フルガバナンス適用可能。[詳細](./datasync-to-s3-guide.md)
@@ -49,13 +50,36 @@
 
 > **影響の限定**: このブロッカーは「ゼロコピーのガバナンス適用」をブロックしますが、DataSync パスで S3 にコピーすれば UC のフルガバナンスは適用可能です。コピーコスト（~$27/月/TB）対ガバナンス価値のトレードオフで判断してください。
 
-#### 影響範囲の拡大 2026-08-12: FILE 型
+#### 影響範囲の訂正 2026-08-12: 登録は通り、読み取りが通らない
 
-Databricks の [FILE 型](https://www.databricks.com/blog/introducing-file-type-native-column-type-multimodal-data)（β、2026-08）は、非構造化ファイルへのガバナンスされた参照を Delta の列に置く。`FILE EXTERNAL` は **Unity Catalog Volume 内のファイルのみ**サポートされるため、本ブロッカーをそのまま継承する。S3 AP 上に External Volume が作れない以上、ONTAP 常駐ファイルに対する `FILE EXTERNAL` も成立しない。残る選択肢の `FILE MANAGED` はバイト列を UC 管理ストレージへコピーする。
+本ブロッカーは「UC External Location が S3 AP を非サポート」と記録していた。ファイルシステムと同一アカウント・同一リージョンに専用の非トライアルワークスペースを作って計測した結果、この記述は誤りである。
 
-変わるのは**重み**であってステータスではない。BLK-001 の解消は従来 FSx for ONTAP 常駐の表形式データに対する lineage・タグ・マスク・行フィルタをもたらすものだったが、いま加えて「NAS 上に留まる画像・動画・文書・音声に対するガバナンス下のマルチモーダル AI」をもたらす。Databricks にギャップを提起する際に改めて述べる価値がある。
+| 手順 | 結果 |
+|---|---|
+| IAM ロールによる `CREATE STORAGE CREDENTIAL` | ✅ |
+| `s3://<AP エイリアス>/` に対する `CREATE EXTERNAL LOCATION`（`skip_validation=False`） | ✅ — UC 自身の読み書き検証を通過 |
+| そのロケーション上の `CREATE EXTERNAL VOLUME` | ✅ |
+| 経由での読み取り（`read_files` / `list_files` / `to_file` / `dbutils.fs.ls`） | ❌ 403 / AccessDenied |
 
-本ブロッカーの影響を受け**ない** `_object_metadata` 経路を含む完全な分析: [databricks-file-type-evaluation](./databricks-file-type-evaluation.md)。
+ここまで到達するには IAM 側で 2 点が必要で、どちらかを誤ると「S3 AP 非対応」に見える 403 が出る。
+
+1. Storage Credential の External ID は **Databricks アカウント UUID** であって metastore ID ではない
+2. IAM 権限ポリシーは**アクセスポイント ARN** を参照する必要がある。エイリアスをバケット名とした ARN のみでは失敗する（AWS CLI ではエイリアス形式で成功するにもかかわらず）
+
+読み取りの失敗はサーバーレス SQL でもクラシック DBR 18.2 クラスターでも同一で、さらに **Databricks の外**でも再現する。Unity Catalog が払い出した資格情報を作業端末から使うと同じ拒否が起きる。原因は AWS のエラー本文が名指ししている。
+
+```
+is not authorized to perform: s3:ListBucket on resource:
+"arn:aws:s3:<region>:<account>:accesspoint/<name>"
+because no session policy allows the s3:ListBucket action
+```
+
+途中で排除した仮説（再検証不要）: UC の Volume 権限、IAM ロールの権限、存在しないキーへの HEAD のステータスコード、`x-amz-expected-bucket-owner`、S3 エンドポイントのホスト名、compute role の権限（クラシッククラスターには既定の AWS 資格情報が存在しない）、Databricks 管理 VPC が作成する S3 Gateway エンドポイント。
+
+**FILE 型における重み。** `FILE EXTERNAL` は UC Volume を要し、S3 AP 上の UC Volume は作成できても読めないため、ONTAP 常駐ファイルに対する `FILE EXTERNAL` は依然として成立しない。`FILE MANAGED` はバイト列を UC 管理ストレージにコピーする。したがって本件の解消は、従来の表形式ガバナンスに加えて「NAS 上に留まるデータに対するガバナンス下のマルチモーダル AI」をもたらす。
+
+エビデンス: [evidence-record-tokyo.yaml](../../verification-pack/databricks/file-type/evidence/2026-08-12/evidence-record-tokyo.yaml)。
+`_object_metadata` 経路を含む完全な分析: [databricks-file-type-evaluation](./databricks-file-type-evaluation.md)。
 
 ---
 
