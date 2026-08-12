@@ -40,6 +40,7 @@
 | **解除条件** | ロケーション URL がアクセスポイントのエイリアスである場合に、Unity Catalog が down-scoped セッションポリシーへアクセスポイント ARN 形式（`arn:aws:s3:<region>:<account>:accesspoint/<name>` および `.../object/*`）を出力すること |
 | **影響度** | **Critical** — UC ガバナンス（lineage, tags, masks, row filters）を FSx for ONTAP データに直接適用できない |
 | **利用者側の回避策** | **なし。** セッションポリシーは Unity Catalog が生成するため、こちら側の IAM ポリシーやネットワーク変更では広げられない |
+| **報告経路** | サポートケースではなく本ドキュメントに記録している。当アカウントには Help Center のアクセス権がない（2026-08-12 に確認。2026-05 のケースも同じ理由でクローズ）。発見がサポート経路に依存しないよう、再現可能な形で書いている |
 
 **回避策（推奨パス）**:
 1. **DataSync → 標準 S3 → UC External Location** — 推奨。フルガバナンス適用可能。[詳細](./datasync-to-s3-guide.md)
