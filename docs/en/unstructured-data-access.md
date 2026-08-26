@@ -295,7 +295,7 @@ SELECT SNOWFLAKE.CORTEX.COMPLETE('pixtral-large',
 - **UNIX permissions**: FSx for ONTAP file permissions enforced via S3 AP
 - **AD integration**: Active Directory user mapping for access control
 - **Encryption**: FSx for ONTAP at-rest encryption + S3 AP in-transit encryption (TLS)
-- **Audit**: ONTAP FPolicy + CloudTrail for complete access logging
+- **Audit**: the ONTAP native audit log (`vserver audit`) + CloudTrail. **FPolicy covers NFS / SMB only and does not record operations through an S3 access point.** The audit log does record them, but not the requester, so the calling IAM principal has to be correlated with CloudTrail data events by timestamp. [The measured FPolicy / S3 access point coverage](https://github.com/Yoshiki0705/FSx-for-ONTAP-Observability-integrations/blob/main/docs/en/s3ap-monitoring-coverage-implications.md)
 
 ### ONTAP Value for Unstructured Data
 

@@ -204,7 +204,7 @@ aws athena start-query-execution \
 | FSx for ONTAP S3 AP 直接（読み取り専用） | $0（追加なし） | なし（既存 FSx for ONTAP のみ） | Athena/Glue/Snowflake 読み取り分析 |
 | DataSync → S3 → 分析 | ~$27/月（転送+S3ストレージ） | DataSync タスク + S3 バケット | UC Managed Tables / Delta / Iceberg 書き込み |
 | DataSync → S3 → Iceberg Lakehouse | ~$50-80/月（転送+S3+compute） | DataSync + S3 + EMR/Glue 変換 | フルガバナンス付き Lakehouse |
-| FPolicy → Lambda → S3（準リアルタイム） | ~$15-40/月（Lambda+S3） | Lambda + EventBridge + S3 | 準リアルタイム変更検知が必要 |
+| FPolicy → Lambda → S3（準リアルタイム） | ~$15-40/月（Lambda+S3） | Lambda + EventBridge + S3 | 準リアルタイム変更検知が必要**かつ書き込みが NFS / SMB 経由の場合のみ**。S3 Access Point 経由の書き込みは検知されません |
 
 > **長期保持の階層化**: 自動車製造環境では、品質検査データは規制要件（IATF 16949）により最低 15 年保持が必要です。S3 Lifecycle + Glacier Deep Archive を組み合わせると、長期保持コストは ~$1/TB/月まで削減できます。短期分析（直近 90 日）は Standard/IA、長期保持は Glacier という階層化が一般的です。
 
@@ -223,7 +223,7 @@ aws athena start-query-execution \
 | Object Versioning なし | S3 Object Versioning は非サポート | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | 条件付き書き込みなし | Conditional writes（`If-None-Match`）は非サポート — HTTP 501 `NotImplemented` を返す。これは**プロダクトレベルの制限**（AWS サポート確認、2026年5月）。S3 ネイティブ conditional writes（2024年8月提供開始）との parity を求める機能要望を提出済み。Delta Lake、Iceberg、Hudi のトランザクショナル書き込みをブロック。 | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | ListObjectsV2 レイテンシ | 2026-08-05 再測定: 10〜5,000 オブジェクトでネイティブ S3 比 **1.3〜1.4 倍**（5,000 件では 0.9 倍）。フラット構造・ネスト構造とも同様で、当初の目標（100 ファイル未満で 1 秒未満、1,000 ファイル未満で 3 秒未満）の範囲内。従来引用していた 30-80 倍は再現せず、撤回しました。1 ディレクトリ 5,000 オブジェクトを超える場合の挙動は未測定。 | 2026-08-05 再測定（[エビデンス](../../verification-pack/s3ap-list-latency/evidence/2026-08-05/benchmark-result.yaml)） |
-| S3 Event Notifications なし | S3 Event Notifications（s3:ObjectCreated 等）は非サポート。Snowpipe auto-ingest と Auto Loader ファイル通知モードを阻害。機能要望提出済み（2026年5月）。代替: FPolicy → Lambda またはスケジュールポーリング。 | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
+| S3 Event Notifications なし | S3 Event Notifications（s3:ObjectCreated 等）は非サポート。Snowpipe auto-ingest と Auto Loader ファイル通知モードを阻害。機能要望提出済み（2026年5月）。代替: スケジュールポーリング、または ONTAP ネイティブ監査ログ（AP 経由の操作を Source=HTTP / Source=S3 で記録）。**FPolicy → Lambda は代替になりません**: AP 経由の書き込みは FPolicy 通知を発火しません（実測 2026-08-26 / ONTAP 9.18.1P3D1）。 | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html) |
 | SnapMirror S3 なし | SnapMirror S3（ONTAP S3 バケット → AWS S3 レプリケーション）は FSx for ONTAP で**意図的に無効化**（AWS サポート確認、2026年5月）。`snapmirror object-store` コマンドと `/api/cloud/targets` REST API はサービスレベルの制限としてブロック。検証済み同期メカニズムとして AWS DataSync（NFS → S3）を使用。 | 2026年5月検証 |
 | Presigned URLs: 公式には非サポート | Presigning はクライアント側の署名計算であり、サーバー側の操作ではない。サポートされている操作（例: GetObject）の Presigned URLs は、サーバーが標準の署名付きリクエストとして認識するため実際には動作する。ただし、AWS はこれを「非サポート」としており、安定性を保証していない。**本番環境では依存しないこと。** | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)、[AWS Support (verified)](verified 2026-05-22) |
 | ListObjectVersions: 公式には非サポート | VersionId="null" で結果を返す（バージョニング未設定の S3 バケットと同じ動作）。機能的には ListObjectsV2 をバージョニングスキーマでラップしたものと同等。AWS は「非サポート」としている — **代わりに ListObjectsV2 を使用すること。** | [API サポート](https://docs.aws.amazon.com/fsx/latest/ONTAPGuide/access-points-for-fsxn-object-api-support.html)、[AWS Support (verified)](verified 2026-05-22) |

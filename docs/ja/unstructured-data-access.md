@@ -391,7 +391,7 @@ SELECT SNOWFLAKE.CORTEX.COMPLETE('pixtral-large',
 - **UNIX パーミッション**: FSx for ONTAP のファイルパーミッションが S3 AP 経由でも適用
 - **AD 統合**: Active Directory ユーザーマッピングによるアクセス制御
 - **暗号化**: FSx for ONTAP の保存時暗号化 + S3 AP の転送時暗号化（TLS）
-- **監査**: ONTAP FPolicy + CloudTrail で全アクセスを記録
+- **監査**: ONTAP ネイティブ監査ログ（`vserver audit`）+ CloudTrail。**FPolicy は NFS / SMB のみで、S3 Access Point 経由の操作は記録しません。** 監査ログは AP 経由の操作も記録しますが要求者は残らないため、要求元 IAM プリンシパルは CloudTrail データイベント側と時刻で突き合わせます。[FPolicy と S3 Access Point のカバレッジ実測](https://github.com/Yoshiki0705/FSx-for-ONTAP-Observability-integrations/blob/main/docs/ja/s3ap-monitoring-coverage-implications.md)
 
 ### ONTAP 固有の価値（非構造化データ）
 
