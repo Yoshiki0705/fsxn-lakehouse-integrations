@@ -151,12 +151,12 @@ Athena での 2 件の同時コミットは行数が正しく、ロストアッ�
 | **回避策の検証状況** | Lambda ポーリング → SNS の AWS 側は検証済み（欠陥 6 件あり）。Snowflake 側（合成通知の受理）は未検証。[Snowpipe 検証結果](../../integrations/snowflake/docs/ja/snowpipe-verification-results.md) |
 
 **回避策**:
-1. **FPolicy → Lambda → S3** — FSx for ONTAP ネイティブのファイルイベント検知で代替。[詳細](./datasync-to-s3-guide.md)（FPolicy 代替パターンセクション）
+1. ~~**FPolicy → Lambda → S3**~~ — **無効。** AP 経由の書き込みは FPolicy 通知を発火しないため、この経路では 1 件も流れません（実測 2026-08-26 / ONTAP 9.18.1P3D1）。書き込みが NFS / SMB 経由のボリュームでのみ有効です。[詳細](./datasync-to-s3-guide.md)（FPolicy 代替パターンセクション）
 2. **DataSync → 標準 S3** — 標準 S3 に同期後、Event Notifications を利用
 3. **Auto Loader リスティングモード** — ディレクトリスキャンで検知（ListObjectsV2 レイテンシの影響あり）
 4. **スケジュールポーリング** — EventBridge schedule で定期クロール
 
-> **FPolicy の運用複雑性**: FPolicy → Lambda 代替は技術的に有効ですが、運用複雑性が高い（Lambda 同時実行制限、DLQ、バックプレッシャー）。DataSync スケジュール（rate(5 minutes)）で許容できる場合はそちらを優先してください。
+> **FPolicy は S3 Access Point 経由の書き込みを検知しません**: 実測 2026-08-26 / ONTAP 9.18.1P3D1。FPolicy の event が受け付けるプロトコルは cifs / nfsv3 / nfsv4 のみで、`mandatory` 指定でも AP 経由の操作は遮断されません。書き込みが NFS / SMB 経由の場合に限り FPolicy → Lambda は技術的に有効ですが、運用複雑性が高い（Lambda 同時実行制限、DLQ、バックプレッシャー）。DataSync スケジュール（rate(5 minutes)）で許容できる場合はそちらを優先してください。
 
 ---
 
